@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "PV DataStore"
+title = "VallartaPulse"
 version = "1.0.0"
 id = "artifacts/pv-datastore"
 router = "path"
