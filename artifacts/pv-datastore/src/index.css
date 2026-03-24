@@ -14,26 +14,26 @@
 
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
-  
+
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
-  
+
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
-  
+
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
-  
+
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
-  
+
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
 
   --color-teal-main: #00C2A8;
   --color-teal-light: #00D1FF;
   --color-cta: #FF6B6B;
-  
+
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
   --color-sidebar-border: hsl(var(--border));
@@ -47,77 +47,80 @@
   --radius-2xl: calc(var(--radius) + 8px);
 }
 
-/* ── Light mode (secondary) ──────────────────────────────────── */
+/* ── Light mode ──────────────────────────────────────────────── */
 :root {
-  --background: 215 33% 97%;       /* #F5F7FA */
-  --foreground: 201 59% 10%;       /* #0B1F2A */
-  
+  --background: 215 33% 97%;
+  --foreground: 198 59% 10%;
+
   --card: 0 0% 100%;
-  --card-foreground: 201 59% 10%;
-  
+  --card-foreground: 198 59% 10%;
+
   --popover: 0 0% 100%;
-  --popover-foreground: 201 59% 10%;
-  
-  --primary: 172 100% 38%;         /* #00C2A8 */
+  --popover-foreground: 198 59% 10%;
+
+  --primary: 172 100% 38%;
   --primary-foreground: 0 0% 100%;
-  
+
   --secondary: 215 25% 90%;
-  --secondary-foreground: 201 59% 10%;
-  
+  --secondary-foreground: 198 59% 10%;
+
   --muted: 215 25% 90%;
-  --muted-foreground: 201 20% 45%;
-  
-  --accent: 191 100% 50%;          /* #00D1FF */
-  --accent-foreground: 201 59% 10%;
-  
-  --destructive: 0 100% 71%;       /* #FF6B6B */
+  --muted-foreground: 211 13% 45%;
+
+  --accent: 191 100% 50%;
+  --accent-foreground: 198 59% 8%;
+
+  --destructive: 0 100% 71%;
   --destructive-foreground: 0 0% 100%;
-  
+
   --border: 215 25% 87%;
   --input: 215 25% 87%;
   --ring: 172 100% 38%;
-  
+
   --sidebar: 0 0% 100%;
-  --sidebar-foreground: 201 59% 10%;
+  --sidebar-foreground: 198 59% 10%;
   --sidebar-accent: 172 60% 95%;
   --sidebar-accent-foreground: 172 100% 30%;
-  
+
   --radius: 0.75rem;
 }
 
 /* ── Dark mode (default) ─────────────────────────────────────── */
+/* Background:  top #0F2A36 → bottom #123847                     */
+/* Sidebar/hdr: #0A1E27                                          */
+/* Cards:       #163C4A                                          */
 .dark {
-  --background: 201 59% 10%;       /* #0B1F2A */
+  --background: 198 56% 14%;       /* #0F2A36 — content area top */
   --foreground: 215 33% 97%;       /* #F5F7FA */
-  
-  --card: 201 55% 13%;             /* slightly lighter than bg */
+
+  --card: 196 54% 19%;             /* #163C4A */
   --card-foreground: 215 33% 97%;
-  
-  --popover: 201 55% 13%;
+
+  --popover: 196 54% 19%;
   --popover-foreground: 215 33% 97%;
-  
+
   --primary: 172 100% 38%;         /* #00C2A8 */
-  --primary-foreground: 201 59% 8%;
-  
-  --secondary: 201 50% 16%;
+  --primary-foreground: 198 59% 8%;
+
+  --secondary: 197 50% 22%;
   --secondary-foreground: 215 33% 97%;
-  
-  --muted: 201 50% 16%;
-  --muted-foreground: 201 20% 58%;
-  
+
+  --muted: 197 50% 22%;
+  --muted-foreground: 211 13% 65%; /* #9AA5B1 */
+
   --accent: 191 100% 50%;          /* #00D1FF */
-  --accent-foreground: 201 59% 8%;
-  
+  --accent-foreground: 198 59% 8%;
+
   --destructive: 0 100% 71%;       /* #FF6B6B */
   --destructive-foreground: 0 0% 100%;
-  
-  --border: 201 45% 18%;
-  --input: 201 45% 18%;
+
+  --border: 197 45% 22%;
+  --input: 197 45% 22%;
   --ring: 172 100% 38%;
 
-  --sidebar: 201 62% 8%;           /* darker panel for sidebar */
+  --sidebar: 198 59% 10%;          /* #0A1E27 */
   --sidebar-foreground: 215 33% 97%;
-  --sidebar-accent: 201 50% 16%;
+  --sidebar-accent: 197 50% 22%;
   --sidebar-accent-foreground: 172 100% 38%;
 }
 
@@ -127,30 +130,46 @@
   }
   body {
     font-family: 'Inter', sans-serif;
-    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
-    background-image:
-      radial-gradient(ellipse at top right, hsla(172, 100%, 38%, 0.07) 0%, transparent 55%),
-      radial-gradient(ellipse at bottom left, hsla(191, 100%, 50%, 0.04) 0%, transparent 55%);
+    @apply text-foreground antialiased selection:bg-primary/20 selection:text-primary;
+    /* Vertical gradient: #0F2A36 → #123847 */
+    background: linear-gradient(180deg, #0F2A36 0%, #123847 100%);
     background-attachment: fixed;
+    min-height: 100vh;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Inter', sans-serif;
-    @apply font-bold tracking-tight text-foreground/90;
+    @apply font-bold tracking-tight;
   }
 }
 
-/* ── Glass utilities (dark-first) ────────────────────────────── */
+/* ── Glass utilities (tuned for lighter-dark aesthetic) ─────── */
 .glass-panel {
-  @apply bg-card/70 backdrop-blur-xl border border-white/8 shadow-xl shadow-black/30;
+  background: rgba(10, 30, 39, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-.dark .glass-panel {
-  @apply border-white/6 shadow-black/60;
-}
+
 .glass-card {
-  @apply bg-card/50 backdrop-blur-lg border border-white/10 shadow-md
-         hover:shadow-xl hover:-translate-y-0.5 hover:border-primary/30
-         transition-all duration-300;
+  background: #163C4A;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.30);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.dark .glass-card {
-  @apply border-white/6 shadow-black/40 hover:border-primary/40;
+.glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.40);
+  border-color: rgba(0, 194, 168, 0.25);
+}
+
+/* Select dropdown match theme */
+select {
+  background-color: #163C4A;
+  color: #F5F7FA;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+}
+select option {
+  background-color: #0F2A36;
 }

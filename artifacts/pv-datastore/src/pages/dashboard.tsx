@@ -17,6 +17,8 @@ import {
   ShieldAlert,
   ThermometerSun,
   Thermometer,
+  TrendingUp,
+  Zap,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -89,12 +91,41 @@ export default function Dashboard() {
   return (
     <PageWrapper>
       {/* Header + Filters */}
-      <div className="flex flex-col gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
+      <div className="flex flex-col gap-5 mb-8">
+        <div className="flex flex-col gap-3">
+          {/* Hero signal pill */}
+          <div className="flex items-center gap-2 w-fit">
+            <span
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest"
+              style={{
+                background: "rgba(0,194,168,0.12)",
+                border: "1px solid rgba(0,194,168,0.3)",
+                color: "#00C2A8",
+              }}
+            >
+              <Zap className="w-3 h-3 fill-current" />
+              {t("Peak Season Active", "Temporada Alta Activa")}
+            </span>
+            <span
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+              style={{
+                background: "rgba(0,209,255,0.08)",
+                border: "1px solid rgba(0,209,255,0.2)",
+                color: "#00D1FF",
+              }}
+            >
+              <TrendingUp className="w-3 h-3" />
+              {t("Market Momentum: Positive", "Impulso del Mercado: Positivo")}
+            </span>
+          </div>
+
+          <h1
+            className="font-bold tracking-tight"
+            style={{ fontSize: "clamp(2rem, 4vw, 2.75rem)", color: "#F5F7FA", lineHeight: 1.1 }}
+          >
             {t("Platform Overview", "Resumen de la Plataforma")}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p style={{ color: "#9AA5B1", fontSize: "15px", maxWidth: "52ch" }}>
             {t(
               "Key performance indicators for Puerto Vallarta real estate and tourism.",
               "Indicadores clave para bienes raíces y turismo en Puerto Vallarta."
