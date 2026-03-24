@@ -11,7 +11,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
     <header
       className="sticky top-0 z-40 w-full flex items-center justify-between px-6 lg:px-8"
       style={{
-        height: "80px",
+        height: "56px",
         background: "#0A1E27",
         borderBottom: "1px solid rgba(255,255,255,0.05)",
         backdropFilter: "blur(16px)",

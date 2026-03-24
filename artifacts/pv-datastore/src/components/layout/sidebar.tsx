@@ -10,9 +10,6 @@ import {
   Database,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
-import { cn } from "@/lib/utils";
-import logoDark from "@assets/vallartapulse_dark_cropped_1774384760536.png";
-import logoLight from "@assets/vallartapulse_light_cropped_1774384760536.png";
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -37,30 +34,8 @@ export function Sidebar() {
         boxShadow: "4px 0 24px rgba(0,0,0,0.4)",
       }}
     >
-      {/* Logo — 80px tall to match header */}
-      <div
-        className="flex items-center px-6"
-        style={{
-          height: "80px",
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
-        }}
-      >
-        <img
-          src={logoDark}
-          alt="VallartaPulse"
-          className="dark:block hidden"
-          style={{ height: "52px", width: "auto" }}
-        />
-        <img
-          src={logoLight}
-          alt="VallartaPulse"
-          className="dark:hidden block"
-          style={{ height: "52px", width: "auto" }}
-        />
-      </div>
-
       {/* Nav */}
-      <div className="flex-1 px-3 pt-5 space-y-0.5 overflow-y-auto pb-6">
+      <div className="flex-1 px-3 pt-8 space-y-0.5 overflow-y-auto pb-6">
         <div className="px-3 pb-4">
           <p
             className="text-[10px] font-semibold uppercase tracking-[0.14em]"
@@ -76,28 +51,22 @@ export function Sidebar() {
           return (
             <Link key={item.href} href={item.href} className="block">
               <div
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 cursor-pointer relative group",
-                  isActive ? "font-semibold" : ""
-                )}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 cursor-pointer relative"
                 style={{
                   background: isActive ? "rgba(0,194,168,0.1)" : "transparent",
                   color: isActive ? "#00C2A8" : "rgba(245,247,250,0.55)",
+                  fontWeight: isActive ? 600 : 400,
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    (e.currentTarget as HTMLDivElement).style.background =
-                      "rgba(255,255,255,0.04)";
-                    (e.currentTarget as HTMLDivElement).style.color =
-                      "rgba(245,247,250,0.85)";
+                    (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.04)";
+                    (e.currentTarget as HTMLDivElement).style.color = "rgba(245,247,250,0.85)";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive) {
-                    (e.currentTarget as HTMLDivElement).style.background =
-                      "transparent";
-                    (e.currentTarget as HTMLDivElement).style.color =
-                      "rgba(245,247,250,0.55)";
+                    (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                    (e.currentTarget as HTMLDivElement).style.color = "rgba(245,247,250,0.55)";
                   }
                 }}
               >
