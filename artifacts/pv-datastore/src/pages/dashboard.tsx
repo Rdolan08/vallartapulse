@@ -1,65 +1,198 @@
-import { useGetDashboardSummary } from "@workspace/api-client-react";
+import { useState } from "react";
+import {
+  useGetDashboardSummary,
+  useGetTourismMetrics,
+  useGetRentalMarketMetrics,
+} from "@workspace/api-client-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { StatCard } from "@/components/stat-card";
 import { useLanguage } from "@/contexts/language-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
-import { 
-  Building2, 
-  Home, 
-  Plane, 
-  Ship, 
-  ShieldAlert, 
-  ThermometerSun 
+import {
+  Building2,
+  Home,
+  Plane,
+  Ship,
+  ShieldAlert,
+  ThermometerSun,
+  Thermometer,
 } from "lucide-react";
-import { 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip 
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Mock data for charts since summary endpoint doesn't return time-series
-const mockTrendData = [
-  { month: 'Jan', occupancy: 78, rate: 120 },
-  { month: 'Feb', occupancy: 82, rate: 135 },
-  { month: 'Mar', occupancy: 85, rate: 140 },
-  { month: 'Apr', occupancy: 80, rate: 125 },
-  { month: 'May', occupancy: 65, rate: 95 },
-  { month: 'Jun', occupancy: 55, rate: 85 },
+const CURRENT_YEAR = new Date().getFullYear();
+const CURRENT_MONTH = new Date().getMonth() + 1;
+
+const YEARS = Array.from({ length: CURRENT_YEAR - 2021 }, (_, i) => CURRENT_YEAR - i);
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
+const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function cToF(c: number) {
+  return Math.round((c * 9) / 5 + 32);
+}
+
+function fmtTemp(c: number, unit: "C" | "F") {
+  return unit === "F" ? `${cToF(c)}°F` : `${c.toFixed(1)}°C`;
+}
 
 export default function Dashboard() {
   const { t } = useLanguage();
-  const { data, isLoading, error } = useGetDashboardSummary();
+
+  const [year, setYear] = useState<number>(CURRENT_YEAR);
+  const [month, setMonth] = useState<number>(CURRENT_MONTH);
+  const [tempUnit, setTempUnit] = useState<"C" | "F">("C");
+
+  const { data, isLoading, error } = useGetDashboardSummary({ year, month });
+
+  // Real chart data for the selected year
+  const { data: tourismYear } = useGetTourismMetrics({ year });
+  const { data: rentalYear } = useGetRentalMarketMetrics({ year });
+
+  // Build occupancy trend for selected year
+  const occupancyTrend = (tourismYear ?? [])
+    .sort((a, b) => a.month - b.month)
+    .map((row) => ({
+      month: MONTH_SHORT[row.month - 1],
+      occupancy: Number(row.hotelOccupancyRate.toFixed(1)),
+      arrivals: row.totalArrivals,
+    }));
+
+  // Build avg nightly rate trend: average across neighborhoods per month
+  const rateByMonth: Record<number, { sum: number; count: number }> = {};
+  for (const row of rentalYear ?? []) {
+    if (!rateByMonth[row.month]) rateByMonth[row.month] = { sum: 0, count: 0 };
+    rateByMonth[row.month].sum += row.avgNightlyRateUsd;
+    rateByMonth[row.month].count += 1;
+  }
+  const rateTrend = Object.entries(rateByMonth)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([m, v]) => ({
+      month: MONTH_SHORT[Number(m) - 1],
+      rate: Math.round(v.sum / v.count),
+    }));
+
+  const selectedMonthName = MONTH_NAMES[month - 1];
 
   return (
     <PageWrapper>
-      <div className="flex flex-col space-y-2 mb-8">
-        <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
-          {t('Platform Overview', 'Resumen de la Plataforma')}
-        </h1>
-        <p className="text-muted-foreground">
-          {t('Key performance indicators for Puerto Vallarta real estate and tourism.', 'Indicadores clave de rendimiento para bienes raíces y turismo en Puerto Vallarta.')}
-        </p>
+      {/* Header + Filters */}
+      <div className="flex flex-col gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
+            {t("Platform Overview", "Resumen de la Plataforma")}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {t(
+              "Key performance indicators for Puerto Vallarta real estate and tourism.",
+              "Indicadores clave para bienes raíces y turismo en Puerto Vallarta."
+            )}
+          </p>
+        </div>
+
+        {/* Filter bar */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Year */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              {t("Year", "Año")}
+            </span>
+            <select
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              className="glass-panel px-3 py-1.5 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {YEARS.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Month */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              {t("Month", "Mes")}
+            </span>
+            <select
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+              className="glass-panel px-3 py-1.5 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {MONTH_NAMES.map((name, i) => (
+                <option key={i + 1} value={i + 1}>{name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* °C / °F toggle */}
+          <div className="flex items-center gap-1 glass-panel rounded-xl px-1 py-1">
+            <button
+              onClick={() => setTempUnit("C")}
+              className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-semibold transition-all ${
+                tempUnit === "C"
+                  ? "bg-primary text-primary-foreground shadow"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Thermometer className="w-3.5 h-3.5" />
+              °C
+            </button>
+            <button
+              onClick={() => setTempUnit("F")}
+              className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-semibold transition-all ${
+                tempUnit === "F"
+                  ? "bg-primary text-primary-foreground shadow"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <ThermometerSun className="w-3.5 h-3.5" />
+              °F
+            </button>
+          </div>
+
+          {/* Context label */}
+          <span className="text-xs text-muted-foreground/70 italic ml-1">
+            {t(
+              `Showing data for ${selectedMonthName} ${year}`,
+              `Mostrando datos de ${selectedMonthName} ${year}`
+            )}
+          </span>
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-36 rounded-2xl" />
-          ))}
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} className="h-36 rounded-2xl" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Skeleton className="h-72 rounded-2xl" />
+            <Skeleton className="h-72 rounded-2xl" />
+          </div>
         </div>
       ) : error ? (
         <div className="p-8 text-center bg-destructive/10 text-destructive rounded-2xl border border-destructive/20">
-          <p className="font-semibold">{t('Failed to load dashboard data.', 'Error al cargar datos del tablero.')}</p>
+          <p className="font-semibold">
+            {t("Failed to load dashboard data.", "Error al cargar datos del tablero.")}
+          </p>
         </div>
       ) : data ? (
         <div className="space-y-8">
+          {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <StatCard
               titleEn="Hotel Occupancy"
@@ -111,64 +244,143 @@ export default function Dashboard() {
             <StatCard
               titleEn="Avg Temperature"
               titleEs="Temperatura Promedio"
-              value={`${data.avgTemperatureC.toFixed(1)}°C`}
+              value={fmtTemp(data.avgTemperatureC, tempUnit)}
               icon={<ThermometerSun className="text-amber-500" />}
               trend="neutral"
             />
           </div>
 
+          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Occupancy trend for selected year */}
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="font-display">
-                  {t('Tourism Trend (YTD)', 'Tendencia Turística (YTD)')}
+                  {t(`Hotel Occupancy — ${year} (%)`, `Ocupación Hotelera — ${year} (%)`)}
                 </CardTitle>
+                <p className="text-xs text-muted-foreground">DATATUR / SECTUR</p>
               </CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={mockTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart
+                    data={occupancyTrend}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
                     <defs>
                       <linearGradient id="colorOcc" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(199 89% 48%)" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="hsl(199 89% 48%)" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="hsl(199 89% 48%)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(199 89% 48%)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-                    <RechartsTooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}
-                      cursor={{ stroke: 'hsl(var(--muted))', strokeWidth: 2 }}
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="hsl(var(--border))"
                     />
-                    <Area type="monotone" dataKey="occupancy" name={t('Occupancy %', 'Ocupación %')} stroke="hsl(199 89% 48%)" strokeWidth={3} fillOpacity={1} fill="url(#colorOcc)" />
+                    <XAxis
+                      dataKey="month"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      tickFormatter={(v) => `${v}%`}
+                      domain={[40, 100]}
+                    />
+                    <RechartsTooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
+                      }}
+                      formatter={(val: number, name: string) => [
+                        `${val.toFixed(1)}%`,
+                        t("Occupancy", "Ocupación"),
+                      ]}
+                      labelFormatter={(label) => label}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="occupancy"
+                      name={t("Occupancy %", "Ocupación %")}
+                      stroke="hsl(199 89% 48%)"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#colorOcc)"
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-            
+
+            {/* Avg nightly rate trend */}
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="font-display">
-                  {t('Average Nightly Rate', 'Tarifa Promedio por Noche')}
+                  {t(
+                    `Avg Nightly Rate — ${year} (USD)`,
+                    `Tarifa Promedio por Noche — ${year} (USD)`
+                  )}
                 </CardTitle>
+                <p className="text-xs text-muted-foreground">Airbnb / VRBO</p>
               </CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={mockTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart
+                    data={rateTrend}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
                     <defs>
                       <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(12 76% 61%)" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="hsl(12 76% 61%)" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="hsl(12 76% 61%)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(12 76% 61%)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-                    <RechartsTooltip 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}
-                      formatter={(val: number) => [`$${val}`, t('Rate', 'Tarifa')]}
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="hsl(var(--border))"
                     />
-                    <Area type="monotone" dataKey="rate" stroke="hsl(12 76% 61%)" strokeWidth={3} fillOpacity={1} fill="url(#colorRate)" />
+                    <XAxis
+                      dataKey="month"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      tickFormatter={(v) => `$${v.toLocaleString()}`}
+                    />
+                    <RechartsTooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
+                      }}
+                      formatter={(val: number) => [
+                        `$${val.toLocaleString()}`,
+                        t("Avg Nightly Rate", "Tarifa Promedio por Noche"),
+                      ]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="rate"
+                      stroke="hsl(12 76% 61%)"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#colorRate)"
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>

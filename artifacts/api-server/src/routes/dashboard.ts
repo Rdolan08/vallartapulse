@@ -2,17 +2,48 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { tourismMetricsTable, rentalMarketMetricsTable, safetyMetricsTable, weatherMetricsTable } from "@workspace/db/schema";
 import { desc, eq, and, sql } from "drizzle-orm";
-import { GetDashboardSummaryResponse } from "@workspace/api-zod";
+import { GetDashboardSummaryResponse, GetDashboardSummaryQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
 router.get("/dashboard/summary", async (req, res) => {
   try {
-    const [latestTourism] = await db
+    const parsed = GetDashboardSummaryQueryParams.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid query parameters" });
+      return;
+    }
+    const { year: filterYear, month: filterMonth } = parsed.data;
+
+    // Build tourism query — if year+month supplied, use them; otherwise latest
+    const tourismQuery = db
       .select()
       .from(tourismMetricsTable)
       .orderBy(desc(tourismMetricsTable.year), desc(tourismMetricsTable.month))
       .limit(1);
+
+    const [latestTourism] = filterYear && filterMonth
+      ? await db
+          .select()
+          .from(tourismMetricsTable)
+          .where(
+            and(
+              eq(tourismMetricsTable.year, filterYear),
+              eq(tourismMetricsTable.month, filterMonth)
+            )
+          )
+          .limit(1)
+      : filterYear
+      ? await db
+          .select()
+          .from(tourismMetricsTable)
+          .where(eq(tourismMetricsTable.year, filterYear))
+          .orderBy(desc(tourismMetricsTable.month))
+          .limit(1)
+      : await tourismQuery;
+
+    const prevYear = (latestTourism?.year ?? new Date().getFullYear()) - 1;
+    const prevMonth = latestTourism?.month ?? new Date().getMonth() + 1;
 
     const [prevYearTourism] = latestTourism
       ? await db
@@ -20,14 +51,15 @@ router.get("/dashboard/summary", async (req, res) => {
           .from(tourismMetricsTable)
           .where(
             and(
-              eq(tourismMetricsTable.year, latestTourism.year - 1),
-              eq(tourismMetricsTable.month, latestTourism.month)
+              eq(tourismMetricsTable.year, prevYear),
+              eq(tourismMetricsTable.month, prevMonth)
             )
           )
           .limit(1)
       : [null];
 
-    const [latestRental] = await db
+    // Rental query
+    const rentalBase = db
       .select({
         avgNightlyRateUsd: sql<number>`avg(${rentalMarketMetricsTable.avgNightlyRateUsd})`,
         totalListings: sql<number>`sum(${rentalMarketMetricsTable.activeListings})`,
@@ -36,9 +68,34 @@ router.get("/dashboard/summary", async (req, res) => {
         month: rentalMarketMetricsTable.month,
       })
       .from(rentalMarketMetricsTable)
-      .groupBy(rentalMarketMetricsTable.year, rentalMarketMetricsTable.month)
-      .orderBy(desc(rentalMarketMetricsTable.year), desc(rentalMarketMetricsTable.month))
-      .limit(1);
+      .groupBy(rentalMarketMetricsTable.year, rentalMarketMetricsTable.month);
+
+    const [latestRental] = filterYear && filterMonth
+      ? await db
+          .select({
+            avgNightlyRateUsd: sql<number>`avg(${rentalMarketMetricsTable.avgNightlyRateUsd})`,
+            totalListings: sql<number>`sum(${rentalMarketMetricsTable.activeListings})`,
+            avgOccupancy: sql<number>`avg(${rentalMarketMetricsTable.occupancyRate})`,
+            year: rentalMarketMetricsTable.year,
+            month: rentalMarketMetricsTable.month,
+          })
+          .from(rentalMarketMetricsTable)
+          .where(
+            and(
+              eq(rentalMarketMetricsTable.year, filterYear),
+              eq(rentalMarketMetricsTable.month, filterMonth)
+            )
+          )
+          .groupBy(rentalMarketMetricsTable.year, rentalMarketMetricsTable.month)
+          .limit(1)
+      : filterYear
+      ? await rentalBase
+          .where(eq(rentalMarketMetricsTable.year, filterYear))
+          .orderBy(desc(rentalMarketMetricsTable.month))
+          .limit(1)
+      : await rentalBase
+          .orderBy(desc(rentalMarketMetricsTable.year), desc(rentalMarketMetricsTable.month))
+          .limit(1);
 
     const [prevRental] = latestRental
       ? await db
@@ -49,15 +106,16 @@ router.get("/dashboard/summary", async (req, res) => {
           .from(rentalMarketMetricsTable)
           .where(
             and(
-              eq(rentalMarketMetricsTable.year, latestRental.year - 1),
-              eq(rentalMarketMetricsTable.month, latestRental.month)
+              eq(rentalMarketMetricsTable.year, (latestRental.year ?? 2025) - 1),
+              eq(rentalMarketMetricsTable.month, latestRental.month ?? 1)
             )
           )
           .groupBy(rentalMarketMetricsTable.year, rentalMarketMetricsTable.month)
           .limit(1)
       : [null];
 
-    const [latestSafety] = await db
+    // Safety query
+    const safetyBase = db
       .select({
         totalIncidents: sql<number>`sum(${safetyMetricsTable.incidentCount})`,
         avgPer100k: sql<number>`avg(${safetyMetricsTable.incidentsPer100k})`,
@@ -65,15 +123,59 @@ router.get("/dashboard/summary", async (req, res) => {
         month: safetyMetricsTable.month,
       })
       .from(safetyMetricsTable)
-      .groupBy(safetyMetricsTable.year, safetyMetricsTable.month)
-      .orderBy(desc(safetyMetricsTable.year), desc(safetyMetricsTable.month))
-      .limit(1);
+      .groupBy(safetyMetricsTable.year, safetyMetricsTable.month);
 
-    const [latestWeather] = await db
+    const [latestSafety] = filterYear && filterMonth
+      ? await db
+          .select({
+            totalIncidents: sql<number>`sum(${safetyMetricsTable.incidentCount})`,
+            avgPer100k: sql<number>`avg(${safetyMetricsTable.incidentsPer100k})`,
+            year: safetyMetricsTable.year,
+            month: safetyMetricsTable.month,
+          })
+          .from(safetyMetricsTable)
+          .where(
+            and(
+              eq(safetyMetricsTable.year, filterYear),
+              eq(safetyMetricsTable.month, filterMonth)
+            )
+          )
+          .groupBy(safetyMetricsTable.year, safetyMetricsTable.month)
+          .limit(1)
+      : filterYear
+      ? await safetyBase
+          .where(eq(safetyMetricsTable.year, filterYear))
+          .orderBy(desc(safetyMetricsTable.month))
+          .limit(1)
+      : await safetyBase
+          .orderBy(desc(safetyMetricsTable.year), desc(safetyMetricsTable.month))
+          .limit(1);
+
+    // Weather query
+    const weatherBase = db
       .select()
       .from(weatherMetricsTable)
-      .orderBy(desc(weatherMetricsTable.year), desc(weatherMetricsTable.month))
-      .limit(1);
+      .orderBy(desc(weatherMetricsTable.year), desc(weatherMetricsTable.month));
+
+    const [latestWeather] = filterYear && filterMonth
+      ? await db
+          .select()
+          .from(weatherMetricsTable)
+          .where(
+            and(
+              eq(weatherMetricsTable.year, filterYear),
+              eq(weatherMetricsTable.month, filterMonth)
+            )
+          )
+          .limit(1)
+      : filterYear
+      ? await db
+          .select()
+          .from(weatherMetricsTable)
+          .where(eq(weatherMetricsTable.year, filterYear))
+          .orderBy(desc(weatherMetricsTable.month))
+          .limit(1)
+      : await weatherBase.limit(1);
 
     const hotelOccupancy = latestTourism ? Number(latestTourism.hotelOccupancyRate) : 72.5;
     const prevOccupancy = prevYearTourism ? Number(prevYearTourism.hotelOccupancyRate) : 68.2;
