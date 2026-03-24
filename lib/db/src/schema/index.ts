@@ -4,3 +4,4 @@ export * from "./economic_metrics";
 export * from "./safety_metrics";
 export * from "./weather_metrics";
 export * from "./data_sources";
+export * from "./airport_metrics";
