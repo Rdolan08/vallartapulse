@@ -18,7 +18,7 @@ import { formatNumber, formatPercent } from "@/lib/utils";
 
 export default function Tourism() {
   const { t } = useLanguage();
-  const [year, setYear] = useState<number>(2025);
+  const [year, setYear] = useState<number>(2026);
   
   // Try to fetch, let it fail gracefully if endpoint not wired
   const { data, isLoading, error } = useGetTourismMetrics({ year });
@@ -39,7 +39,7 @@ export default function Tourism() {
           onChange={(e) => setYear(Number(e.target.value))}
           className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
         >
-          {[2025, 2024, 2023, 2022].map(y => (
+          {[2026, 2025, 2024, 2023, 2022].map(y => (
             <option key={y} value={y}>{y}</option>
           ))}
         </select>
