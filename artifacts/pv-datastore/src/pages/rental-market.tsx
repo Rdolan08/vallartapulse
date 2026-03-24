@@ -9,7 +9,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 
-const YEARS = [2025, 2024, 2023, 2022];
+const YEARS = [2026, 2025, 2024, 2023, 2022];
 
 const NEIGHBORHOODS = [
   { value: "Zona Romántica", label: "Zona Romántica (Old Town / Emiliano Zapata)" },
@@ -23,7 +23,7 @@ const NEIGHBORHOODS = [
 
 export default function RentalMarket() {
   const { t } = useLanguage();
-  const [year, setYear] = useState<number>(2025);
+  const [year, setYear] = useState<number>(2026);
   const [neighborhood, setNeighborhood] = useState<string>("Zona Romántica");
 
   const { data, isLoading, error } = useGetRentalMarketMetrics({ year, neighborhood });

@@ -26,12 +26,12 @@ async function seed() {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
-  // ─── TOURISM METRICS (2022-2025) ──────────────────────────────────────────
+  // ─── TOURISM METRICS (2022-2026) ──────────────────────────────────────────
   const tourismData = [];
   const baseOccupancy = [62, 65, 71, 68, 58, 55, 60, 63, 59, 67, 74, 78];
   const baseArrivals   = [85000, 88000, 102000, 95000, 72000, 68000, 74000, 79000, 71000, 90000, 105000, 115000];
 
-  for (const year of [2022, 2023, 2024, 2025]) {
+  for (const year of [2022, 2023, 2024, 2025, 2026]) {
     const yGrowth = 1 + (year - 2022) * 0.04;
     for (let m = 0; m < 12; m++) {
       if (year === currentYear && m + 1 > currentMonth) continue;
@@ -67,7 +67,7 @@ async function seed() {
   ];
 
   const rentalData = [];
-  for (const year of [2022, 2023, 2024, 2025]) {
+  for (const year of [2022, 2023, 2024, 2025, 2026]) {
     const yGrowth = 1 + (year - 2022) * 0.065;
     for (let m = 0; m < 12; m++) {
       if (year === currentYear && m + 1 > currentMonth) continue;
@@ -96,7 +96,7 @@ async function seed() {
   await db.insert(rentalMarketMetricsTable).values(rentalData);
   console.log(`Inserted ${rentalData.length} rental market records`);
 
-  // ─── ECONOMIC METRICS (2020-2025) ────────────────────────────────────────
+  // ─── ECONOMIC METRICS (2020-2026) ────────────────────────────────────────
   const economicData = [];
   const indicators = [
     { indicator: "tourism_gdp_contribution_mxn", unit: "MXN millions", description: "Tourism GDP Contribution", descriptionEs: "Contribución del turismo al PIB" },
@@ -112,8 +112,8 @@ async function seed() {
     "hotel_investment_mxn": 1200,
     "real_estate_transactions": 1850,
   };
-  for (const year of [2020, 2021, 2022, 2023, 2024, 2025]) {
-    if (year === currentYear && currentMonth < 4) continue;
+  for (const year of [2020, 2021, 2022, 2023, 2024, 2025, 2026]) {
+    if (year === currentYear && currentMonth < 2) continue;
     const growthFactor = 1 + (year - 2020) * 0.08;
     for (const ind of indicators) {
       economicData.push({
@@ -128,7 +128,7 @@ async function seed() {
   await db.insert(economicMetricsTable).values(economicData);
   console.log(`Inserted ${economicData.length} economic records`);
 
-  // ─── SAFETY METRICS (2021-2025) ───────────────────────────────────────────
+  // ─── SAFETY METRICS (2021-2026) ───────────────────────────────────────────
   const safetyData = [];
   const categories = [
     { category: "Robbery", categoryEs: "Robo" },
@@ -141,7 +141,7 @@ async function seed() {
     "Robbery": 280, "Vehicle Theft": 95, "Assault": 120, "Burglary": 55, "Fraud": 35,
   };
   const population = 280000;
-  for (const year of [2021, 2022, 2023, 2024, 2025]) {
+  for (const year of [2021, 2022, 2023, 2024, 2025, 2026]) {
     const yTrend = 1 - (year - 2021) * 0.035;
     for (let m = 0; m < 12; m++) {
       if (year === currentYear && m + 1 > currentMonth) continue;
@@ -163,7 +163,7 @@ async function seed() {
   await db.insert(safetyMetricsTable).values(safetyData);
   console.log(`Inserted ${safetyData.length} safety records`);
 
-  // ─── WEATHER METRICS (2020-2025) ──────────────────────────────────────────
+  // ─── WEATHER METRICS (2020-2026) ──────────────────────────────────────────
   const weatherData = [];
   const weatherByMonth = [
     { avgTempC: 23.2, maxTempC: 28.5, minTempC: 17.9, precipMm: 18.5, humidity: 65, seaTemp: 22.0, sunshine: 7.8, rainyDays: 2 },
@@ -179,7 +179,7 @@ async function seed() {
     { avgTempC: 25.5, maxTempC: 30.0, minTempC: 20.8, precipMm: 15.0, humidity: 66, seaTemp: 25.5, sunshine: 8.1, rainyDays: 2 },
     { avgTempC: 23.8, maxTempC: 28.8, minTempC: 18.8, precipMm: 12.0, humidity: 64, seaTemp: 23.0, sunshine: 7.9, rainyDays: 1 },
   ];
-  for (const year of [2020, 2021, 2022, 2023, 2024, 2025]) {
+  for (const year of [2020, 2021, 2022, 2023, 2024, 2025, 2026]) {
     for (let m = 0; m < 12; m++) {
       if (year === currentYear && m + 1 > currentMonth) continue;
       const w = weatherByMonth[m];

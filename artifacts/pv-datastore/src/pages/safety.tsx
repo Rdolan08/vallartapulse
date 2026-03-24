@@ -8,7 +8,7 @@ import { formatNumber } from "@/lib/utils";
 
 export default function Safety() {
   const { t, lang } = useLanguage();
-  const [year, setYear] = useState<number>(2025);
+  const [year, setYear] = useState<number>(2026);
   
   const { data, isLoading, error } = useGetSafetyMetrics({ year });
 
@@ -28,7 +28,7 @@ export default function Safety() {
           onChange={(e) => setYear(Number(e.target.value))}
           className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
         >
-          {[2025, 2024, 2023, 2022].map(y => (
+          {[2026, 2025, 2024, 2023, 2022].map(y => (
             <option key={y} value={y}>{y}</option>
           ))}
         </select>

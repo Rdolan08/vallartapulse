@@ -9,14 +9,14 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar,
 } from "recharts";
 
-const YEARS = [2025, 2024, 2023, 2022, 2021, 2020];
+const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
 
 function toF(c: number) { return Math.round((c * 9/5 + 32) * 10) / 10; }
 function toIn(mm: number) { return Math.round((mm / 25.4) * 100) / 100; }
 
 export default function Weather() {
   const { t } = useLanguage();
-  const [year, setYear] = useState<number>(2025);
+  const [year, setYear] = useState<number>(2026);
   const [unit, setUnit] = useState<"metric" | "imperial">("metric");
 
   const { data, isLoading, error } = useGetWeatherMetrics({ year });
