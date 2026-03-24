@@ -1,0 +1,19 @@
+packages:
+  "recharts": "Data visualization and analytics charts"
+  "framer-motion": "Smooth page transitions and micro-interactions"
+  "clsx": "Class name merging"
+  "tailwind-merge": "Class name resolution"
+  "date-fns": "Date formatting"
+  "@radix-ui/react-slot": "For unstyled accessible UI components"
+  "@radix-ui/react-toast": "For accessible toast notifications"
+  "@radix-ui/react-tooltip": "For accessible tooltips"
+  "lucide-react": "Beautiful consistent iconography"
+
+images:
+  - path: "artifacts/pv-datastore/public/images/auth-bg.png"
+    description: "Abstract coastal aerial view of Puerto Vallarta beach, soft oceanic blue and teal colors, professional clean gradient overlay"
+    aspect_ratio: "16:9"
+
+notes:
+  - "The app assumes standard TanStack query usage from the generated hooks in @workspace/api-client-react."
+  - "Bilingual support (EN/ES) is implemented via React Context."
