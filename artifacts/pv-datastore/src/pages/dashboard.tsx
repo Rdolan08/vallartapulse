@@ -20,8 +20,6 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
-import logoDark from "@assets/vallartapulse_dark_cropped_1774384760536.png";
-import logoLight from "@assets/vallartapulse_light_cropped_1774384760536.png";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -95,22 +93,6 @@ export default function Dashboard() {
       {/* Header + Filters */}
       <div className="flex flex-col gap-5 mb-8">
         <div className="flex flex-col gap-4">
-
-          {/* Logo lockup — above page title */}
-          <div className="flex items-center gap-4">
-            <img
-              src={logoDark}
-              alt="VallartaPulse"
-              className="dark:block hidden"
-              style={{ height: "72px", width: "auto" }}
-            />
-            <img
-              src={logoLight}
-              alt="VallartaPulse"
-              className="dark:hidden block"
-              style={{ height: "72px", width: "auto" }}
-            />
-          </div>
 
           {/* Hero signal pills */}
           <div className="flex items-center gap-2 flex-wrap">
