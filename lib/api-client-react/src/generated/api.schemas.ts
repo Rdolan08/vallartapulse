@@ -139,6 +139,11 @@ export interface SyncResult {
   recordsProcessed?: number;
 }
 
+export type GetDashboardSummaryParams = {
+  year?: number;
+  month?: number;
+};
+
 export type GetTourismMetricsParams = {
   year?: number;
   month?: number;

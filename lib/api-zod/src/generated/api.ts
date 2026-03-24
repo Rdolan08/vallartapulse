@@ -18,6 +18,12 @@ export const HealthCheckResponse = zod.object({
  * Returns key performance indicators for the PV DataStore dashboard
  * @summary Dashboard KPI summary
  */
+export const GetDashboardSummaryQueryParams = zod.object({
+  year: zod.coerce.number().optional(),
+  month: zod.coerce.number().optional(),
+});
+
+
 export const GetDashboardSummaryResponse = zod.object({
   hotelOccupancyRate: zod.number().describe("Current hotel occupancy rate (%)"),
   hotelOccupancyChange: zod
