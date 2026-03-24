@@ -1,4 +1,36 @@
-# Workspace
+# PV DataStore
+
+Puerto Vallarta data aggregation and reporting platform for property managers and tourism stakeholders.
+
+## Product Overview
+
+- **Primary users**: Property managers and rental property owners in Puerto Vallarta
+- **Purpose**: Aggregate public data sources (government, satellite, tourism, crime, climate) into actionable insights
+- **Language**: Bilingual English/Spanish
+- **Data sources**: DATATUR, INEGI, Data México, SESNSP, NOAA, Airbnb/VRBO (estimated), OpenStreetMap
+
+## Data Coverage
+
+- Tourism metrics (DATATUR): hotel occupancy, tourist arrivals, cruise visitors — 2022–2024 monthly
+- Rental market (Airbnb/VRBO): avg nightly rate, occupancy %, active listings by neighborhood — 2022–2024
+- Economic indicators (Data México/INEGI): GDP contribution, employment, wages — 2020–2024 yearly
+- Safety/crime data (SESNSP): incident counts by category — 2021–2024 monthly
+- Weather/climate (NOAA): temperature, rainfall, sea temp, humidity — 2020–2024 monthly
+- Data sources registry: 10 sources with status, sync timestamps, record counts
+
+## Pages
+
+1. **Dashboard** (`/`) — KPI summary cards + mini trend charts
+2. **Tourism Metrics** (`/tourism`) — DATATUR occupancy/arrivals charts + table with filters
+3. **Rental Market** (`/rental-market`) — Airbnb/VRBO rates, occupancy by neighborhood
+4. **Economic** (`/economic`) — employment, revenue, workforce indicators
+5. **Safety & Crime** (`/safety`) — incident categories, trends, per-100k rates
+6. **Weather & Climate** (`/weather`) — temperature, rainfall, sea conditions by month
+7. **Data Sources** (`/sources`) — source registry cards with Sync Now button
+
+## Workspace
+
+
 
 ## Overview
 

@@ -1,22 +1,34 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: PV DataStore API — Puerto Vallarta data aggregation platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: dashboard
+    description: Dashboard summary
+  - name: tourism
+    description: Tourism metrics
+  - name: rental
+    description: Rental market data
+  - name: economic
+    description: Economic indicators
+  - name: safety
+    description: Safety and crime data
+  - name: weather
+    description: Weather and climate data
+  - name: sources
+    description: Data sources registry
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +36,181 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Dashboard KPI summary
+      description: Returns key performance indicators for the PV DataStore dashboard
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /metrics/tourism:
+    get:
+      operationId: getTourismMetrics
+      tags: [tourism]
+      summary: Tourism occupancy and arrivals data
+      description: Hotel occupancy rates, tourist arrivals, and cruise visitor data from DATATUR
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: month
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tourism metrics list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TourismMetric"
+
+  /metrics/rental-market:
+    get:
+      operationId: getRentalMarketMetrics
+      tags: [rental]
+      summary: Short-term rental market data
+      description: Airbnb/VRBO market metrics — average nightly rates, occupancy, active listings
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: month
+          in: query
+          schema:
+            type: integer
+        - name: neighborhood
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Rental market metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RentalMarketMetric"
+
+  /metrics/economic:
+    get:
+      operationId: getEconomicMetrics
+      tags: [economic]
+      summary: Economic indicators
+      description: Employment, tourism revenue, and workforce data from Data México and INEGI
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Economic indicators
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EconomicMetric"
+
+  /metrics/safety:
+    get:
+      operationId: getSafetyMetrics
+      tags: [safety]
+      summary: Safety and crime incident data
+      description: Crime incident statistics from SESNSP national crime database
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Safety metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SafetyMetric"
+
+  /metrics/weather:
+    get:
+      operationId: getWeatherMetrics
+      tags: [weather]
+      summary: Weather and climate data
+      description: Historical and seasonal climate data from NOAA for Puerto Vallarta
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: month
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Weather metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WeatherMetric"
+
+  /sources:
+    get:
+      operationId: getDataSources
+      tags: [sources]
+      summary: List all data sources
+      description: Registry of all data sources with their status and last sync time
+      responses:
+        "200":
+          description: Data sources list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DataSource"
+
+  /sources/{id}/sync:
+    post:
+      operationId: syncDataSource
+      tags: [sources]
+      summary: Trigger a data source sync
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sync triggered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResult"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +218,309 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    DashboardSummary:
+      type: object
+      properties:
+        hotelOccupancyRate:
+          type: number
+          description: Current hotel occupancy rate (%)
+        hotelOccupancyChange:
+          type: number
+          description: Change vs prior year (percentage points)
+        avgNightlyRate:
+          type: number
+          description: Average short-term rental nightly rate (USD)
+        avgNightlyRateChange:
+          type: number
+        activeListings:
+          type: integer
+          description: Active Airbnb/VRBO listings in PV
+        activeListingsChange:
+          type: number
+        touristArrivals:
+          type: integer
+          description: Tourist arrivals this month
+        touristArrivalsChange:
+          type: number
+        cruiseVisitors:
+          type: integer
+          description: Cruise visitors this month
+        crimeIndex:
+          type: number
+          description: Crime index (lower = safer)
+        crimeIndexChange:
+          type: number
+        avgTemperatureC:
+          type: number
+          description: Average temperature in Celsius
+        lastUpdated:
+          type: string
+          format: date-time
+      required:
+        - hotelOccupancyRate
+        - hotelOccupancyChange
+        - avgNightlyRate
+        - avgNightlyRateChange
+        - activeListings
+        - activeListingsChange
+        - touristArrivals
+        - touristArrivalsChange
+        - cruiseVisitors
+        - crimeIndex
+        - crimeIndexChange
+        - avgTemperatureC
+        - lastUpdated
+
+    TourismMetric:
+      type: object
+      properties:
+        id:
+          type: integer
+        year:
+          type: integer
+        month:
+          type: integer
+        monthName:
+          type: string
+        hotelOccupancyRate:
+          type: number
+          description: Hotel occupancy rate (%)
+        totalHotelRooms:
+          type: integer
+        internationalArrivals:
+          type: integer
+        domesticArrivals:
+          type: integer
+        totalArrivals:
+          type: integer
+        cruiseVisitors:
+          type: integer
+        avgHotelRateUsd:
+          type: number
+        revenuePerAvailableRoomUsd:
+          type: number
+        source:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - year
+        - month
+        - monthName
+        - hotelOccupancyRate
+        - totalArrivals
+        - source
+
+    RentalMarketMetric:
+      type: object
+      properties:
+        id:
+          type: integer
+        year:
+          type: integer
+        month:
+          type: integer
+        monthName:
+          type: string
+        neighborhood:
+          type: string
+        platform:
+          type: string
+          description: "airbnb, vrbo, or all"
+        activeListings:
+          type: integer
+        avgNightlyRateUsd:
+          type: number
+        medianNightlyRateUsd:
+          type: number
+        occupancyRate:
+          type: number
+          description: Rental occupancy rate (%)
+        avgReviewScore:
+          type: number
+        totalReviews:
+          type: integer
+        source:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - year
+        - month
+        - monthName
+        - neighborhood
+        - platform
+        - activeListings
+        - avgNightlyRateUsd
+        - occupancyRate
+        - source
+
+    EconomicMetric:
+      type: object
+      properties:
+        id:
+          type: integer
+        year:
+          type: integer
+        quarter:
+          type: integer
+        indicator:
+          type: string
+        value:
+          type: number
+        unit:
+          type: string
+        description:
+          type: string
+        descriptionEs:
+          type: string
+        source:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - year
+        - indicator
+        - value
+        - unit
+        - source
+
+    SafetyMetric:
+      type: object
+      properties:
+        id:
+          type: integer
+        year:
+          type: integer
+        month:
+          type: integer
+        monthName:
+          type: string
+        category:
+          type: string
+        categoryEs:
+          type: string
+        incidentCount:
+          type: integer
+        incidentsPer100k:
+          type: number
+        changeVsPriorYear:
+          type: number
+        source:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - year
+        - month
+        - category
+        - incidentCount
+        - source
+
+    WeatherMetric:
+      type: object
+      properties:
+        id:
+          type: integer
+        year:
+          type: integer
+        month:
+          type: integer
+        monthName:
+          type: string
+        avgTempC:
+          type: number
+        maxTempC:
+          type: number
+        minTempC:
+          type: number
+        precipitationMm:
+          type: number
+        avgHumidityPct:
+          type: number
+        avgSeaTempC:
+          type: number
+        sunshineHours:
+          type: number
+        rainyDays:
+          type: integer
+        source:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - year
+        - month
+        - monthName
+        - avgTempC
+        - precipitationMm
+        - source
+
+    DataSource:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nameEs:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        descriptionEs:
+          type: string
+        url:
+          type: string
+        status:
+          type: string
+          description: "active, pending, error, paused"
+        lastSyncedAt:
+          type: string
+          format: date-time
+        recordCount:
+          type: integer
+        frequency:
+          type: string
+          description: "monthly, weekly, daily"
+        isPublic:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - category
+        - status
+        - isPublic
+        - createdAt
+
+    SyncResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        sourceId:
+          type: integer
+        recordsProcessed:
+          type: integer
+      required:
+        - success
+        - message
+        - sourceId
