@@ -108,7 +108,7 @@ export const GetEconomicMetricsQueryParams = zod.object({
 export const GetEconomicMetricsResponseItem = zod.object({
   id: zod.number(),
   year: zod.number(),
-  quarter: zod.number().optional(),
+  quarter: zod.number().nullish(),
   indicator: zod.string(),
   value: zod.number(),
   unit: zod.string(),
