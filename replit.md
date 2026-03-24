@@ -1,6 +1,17 @@
-# PV DataStore
+# VallartaPulse
 
-Puerto Vallarta data aggregation and reporting platform for property managers and tourism stakeholders.
+Real-time insights for Puerto Vallarta's rental and tourism market. Bilingual (EN/ES) data platform for property managers and rental property owners.
+
+## Branding
+
+- **Name**: VallartaPulse
+- **Logo**: VP monogram (teal on dark) — images in `attached_assets/`
+  - Dark logo: `vallartapulse_dark_1774383836513.png`
+  - Light logo: `vallartapulse_light_1774383836512.png`
+- **Colors**: Background `#0B1F2A` · Primary teal `#00C2A8` · Accent `#00D1FF` · CTA `#FF6B6B` · Light `#F5F7FA`
+- **Font**: Inter (all weights)
+- **Default mode**: Dark (`.dark` class on `<html>`)
+- **Positioning**: Real-time insights for Puerto Vallarta's rental and tourism market
 
 ## Product Overview
 
