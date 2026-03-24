@@ -11,8 +11,8 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { cn } from "@/lib/utils";
-import logoDark from "@assets/vallartapulse_dark_1774383836513.png";
-import logoLight from "@assets/vallartapulse_light_1774383836512.png";
+import logoDark from "@assets/vallartapulse_dark_cropped_1774384760536.png";
+import logoLight from "@assets/vallartapulse_light_cropped_1774384760536.png";
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -49,13 +49,13 @@ export function Sidebar() {
           src={logoDark}
           alt="VallartaPulse"
           className="dark:block hidden"
-          style={{ height: "36px", width: "auto" }}
+          style={{ height: "52px", width: "auto" }}
         />
         <img
           src={logoLight}
           alt="VallartaPulse"
           className="dark:hidden block"
-          style={{ height: "36px", width: "auto" }}
+          style={{ height: "52px", width: "auto" }}
         />
       </div>
 
