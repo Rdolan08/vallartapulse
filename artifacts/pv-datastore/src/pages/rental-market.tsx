@@ -5,42 +5,66 @@ import { useLanguage } from "@/contexts/language-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from "recharts";
+
+const YEARS = [2025, 2024, 2023, 2022];
+
+const NEIGHBORHOODS = [
+  { value: "Zona Romántica", label: "Zona Romántica (Old Town / Emiliano Zapata)" },
+  { value: "Centro", label: "Centro (El Centro / Downtown)" },
+  { value: "Conchas Chinas / Amapas", label: "Conchas Chinas / Amapas (South Zone)" },
+  { value: "Versalles", label: "Versalles" },
+  { value: "Hotel Zone", label: "Hotel Zone (Las Glorias / Zona Hotelera)" },
+  { value: "Marina Vallarta", label: "Marina Vallarta" },
+  { value: "5 de Diciembre", label: "5 de Diciembre" },
+];
 
 export default function RentalMarket() {
   const { t } = useLanguage();
-  const [year, setYear] = useState<number>(new Date().getFullYear());
-  const [neighborhood, setNeighborhood] = useState<string>("Zona Romantica");
-  
+  const [year, setYear] = useState<number>(2025);
+  const [neighborhood, setNeighborhood] = useState<string>("Zona Romántica");
+
   const { data, isLoading, error } = useGetRentalMarketMetrics({ year, neighborhood });
+
+  const chartData = data?.map((row) => ({
+    name: row.monthName.slice(0, 3),
+    [t("Avg Rate", "Tarifa Prom.")]: row.avgNightlyRateUsd,
+    [t("Median Rate", "Tarifa Mediana")]: row.medianNightlyRateUsd ?? null,
+    [t("Occupancy %", "Ocupación %")]: row.occupancyRate,
+    [t("Listings", "Anuncios")]: row.activeListings,
+  }));
+
+  const latestRow = data?.[data.length - 1];
 
   return (
     <PageWrapper>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
-            {t('Rental Market', 'Mercado de Renta')}
+            {t("Rental Market", "Mercado de Renta")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {t('Short-term rental analytics from Airbnb and VRBO.', 'Análisis de rentas a corto plazo de Airbnb y VRBO.')}
+            {t("Short-term rental analytics from Airbnb and VRBO.", "Análisis de rentas a corto plazo de Airbnb y VRBO.")}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <select 
+        <div className="flex items-center gap-3 flex-wrap">
+          <select
             value={neighborhood}
             onChange={(e) => setNeighborhood(e.target.value)}
-            className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+            className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary max-w-[280px]"
           >
-            <option value="Zona Romantica">Zona Romantica</option>
-            <option value="Marina Vallarta">Marina Vallarta</option>
-            <option value="Versalles">Versalles</option>
-            <option value="Centro">Centro</option>
+            {NEIGHBORHOODS.map((n) => (
+              <option key={n.value} value={n.value}>{n.label}</option>
+            ))}
           </select>
-          <select 
+          <select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
             className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
           >
-            {[2024, 2023, 2022].map(y => (
+            {YEARS.map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
@@ -49,46 +73,131 @@ export default function RentalMarket() {
 
       {isLoading ? (
         <div className="space-y-6">
-          <Skeleton className="h-[400px] w-full rounded-2xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
+          </div>
+          <Skeleton className="h-[300px] w-full rounded-2xl" />
         </div>
       ) : error ? (
         <div className="p-12 text-center bg-secondary/30 rounded-3xl border border-dashed">
-          <div className="text-muted-foreground font-medium">API Endpoint Not Connected</div>
+          <div className="text-muted-foreground font-medium">{t("Failed to load data.", "Error al cargar datos.")}</div>
         </div>
       ) : data && data.length > 0 ? (
-        <Card className="glass-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs uppercase bg-secondary/50 text-muted-foreground border-b">
-                <tr>
-                  <th className="px-6 py-4">{t('Month', 'Mes')}</th>
-                  <th className="px-6 py-4">{t('Platform', 'Plataforma')}</th>
-                  <th className="px-6 py-4">{t('Active Listings', 'Anuncios Activos')}</th>
-                  <th className="px-6 py-4">{t('Avg Rate', 'Tarifa Promedio')}</th>
-                  <th className="px-6 py-4">{t('Occupancy', 'Ocupación')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((row) => (
-                  <tr key={row.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                    <td className="px-6 py-4 font-medium">{row.monthName}</td>
-                    <td className="px-6 py-4 capitalize">
-                      <span className={`px-2 py-1 rounded-md text-xs font-semibold ${row.platform === 'airbnb' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {row.platform}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">{formatNumber(row.activeListings)}</td>
-                    <td className="px-6 py-4 font-semibold text-primary">{formatCurrency(row.avgNightlyRateUsd)}</td>
-                    <td className="px-6 py-4">{formatPercent(row.occupancyRate)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="space-y-8">
+
+          {/* Summary KPI strip */}
+          {latestRow && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { label: t("Avg Nightly Rate", "Tarifa Noche Prom."), value: formatCurrency(latestRow.avgNightlyRateUsd), sub: t("latest month", "último mes") },
+                { label: t("Occupancy Rate", "Tasa de Ocupación"), value: formatPercent(latestRow.occupancyRate), sub: t("latest month", "último mes") },
+                { label: t("Active Listings", "Anuncios Activos"), value: formatNumber(latestRow.activeListings), sub: t("latest month", "último mes") },
+                { label: t("Avg Review Score", "Puntuación Promedio"), value: latestRow.avgReviewScore ? `${latestRow.avgReviewScore} / 5` : "—", sub: t("latest month", "último mes") },
+              ].map((kpi) => (
+                <Card key={kpi.label} className="glass-card">
+                  <CardContent className="pt-5">
+                    <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{kpi.label}</div>
+                    <div className="text-2xl font-bold text-primary mt-1">{kpi.value}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{kpi.sub}</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Nightly rate trend */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="font-display">{t("Nightly Rate Trend", "Tendencia de Tarifa Noche")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                  <Tooltip formatter={(v) => [`$${v}`]} />
+                  <Legend />
+                  <Line type="monotone" dataKey={t("Avg Rate", "Tarifa Prom.")} stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey={t("Median Rate", "Tarifa Mediana")} stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} strokeDasharray="4 2" />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Occupancy + listings */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="font-display">{t("Occupancy Rate", "Tasa de Ocupación")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis unit="%" tick={{ fontSize: 12 }} />
+                    <Tooltip formatter={(v) => [`${v}%`]} />
+                    <Bar dataKey={t("Occupancy %", "Ocupación %")} fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="font-display">{t("Active Listings", "Anuncios Activos")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Bar dataKey={t("Listings", "Anuncios")} fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           </div>
-        </Card>
+
+          {/* Detail table */}
+          <Card className="glass-card overflow-hidden">
+            <CardHeader>
+              <CardTitle className="font-display">{t("Monthly Breakdown", "Detalle Mensual")}</CardTitle>
+            </CardHeader>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs uppercase bg-secondary/50 text-muted-foreground border-b">
+                  <tr>
+                    <th className="px-6 py-4">{t("Month", "Mes")}</th>
+                    <th className="px-6 py-4">{t("Listings", "Anuncios")}</th>
+                    <th className="px-6 py-4">{t("Avg Rate", "Tarifa Prom.")}</th>
+                    <th className="px-6 py-4">{t("Median Rate", "Tarifa Mediana")}</th>
+                    <th className="px-6 py-4">{t("Occupancy", "Ocupación")}</th>
+                    <th className="px-6 py-4">{t("Avg Score", "Puntuación")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.map((row) => (
+                    <tr key={row.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                      <td className="px-6 py-4 font-medium">{row.monthName}</td>
+                      <td className="px-6 py-4">{formatNumber(row.activeListings)}</td>
+                      <td className="px-6 py-4 font-semibold text-primary">{formatCurrency(row.avgNightlyRateUsd)}</td>
+                      <td className="px-6 py-4">{row.medianNightlyRateUsd ? formatCurrency(row.medianNightlyRateUsd) : "—"}</td>
+                      <td className="px-6 py-4">{formatPercent(row.occupancyRate)}</td>
+                      <td className="px-6 py-4">{row.avgReviewScore ? `${row.avgReviewScore} ★` : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
       ) : (
         <div className="p-12 text-center text-muted-foreground bg-white/50 rounded-2xl border border-dashed">
-          {t('No data available for these filters.', 'No hay datos disponibles para estos filtros.')}
+          {t("No data available for these filters.", "No hay datos disponibles para estos filtros.")}
         </div>
       )}
     </PageWrapper>

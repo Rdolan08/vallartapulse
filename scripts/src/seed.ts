@@ -16,7 +16,6 @@ const MONTHS = [
 async function seed() {
   console.log("Seeding PV DataStore database...");
 
-  // Clear existing data
   await db.delete(tourismMetricsTable);
   await db.delete(rentalMarketMetricsTable);
   await db.delete(economicMetricsTable);
@@ -24,27 +23,30 @@ async function seed() {
   await db.delete(weatherMetricsTable);
   await db.delete(dataSourcesTable);
 
-  // ─── TOURISM METRICS (2022-2024 monthly) ─────────────────────────────────
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
+  // ─── TOURISM METRICS (2022-2025) ──────────────────────────────────────────
   const tourismData = [];
   const baseOccupancy = [62, 65, 71, 68, 58, 55, 60, 63, 59, 67, 74, 78];
   const baseArrivals   = [85000, 88000, 102000, 95000, 72000, 68000, 74000, 79000, 71000, 90000, 105000, 115000];
 
-  for (const year of [2022, 2023, 2024]) {
-    const yFactor = year === 2022 ? 0.88 : year === 2023 ? 0.95 : 1.0;
+  for (const year of [2022, 2023, 2024, 2025]) {
+    const yGrowth = 1 + (year - 2022) * 0.04;
     for (let m = 0; m < 12; m++) {
-      if (year === 2024 && m > 10) continue;
+      if (year === currentYear && m + 1 > currentMonth) continue;
       tourismData.push({
         year,
         month: m + 1,
         monthName: MONTHS[m],
-        hotelOccupancyRate: String(((baseOccupancy[m] + (year - 2022) * 2.5) * yFactor).toFixed(2)),
-        totalHotelRooms: 12400,
-        internationalArrivals: Math.floor(baseArrivals[m] * 0.62 * yFactor),
-        domesticArrivals: Math.floor(baseArrivals[m] * 0.38 * yFactor),
-        totalArrivals: Math.floor(baseArrivals[m] * yFactor),
-        cruiseVisitors: Math.floor((8000 + m * 800 + year * 200) * yFactor),
-        avgHotelRateUsd: String(((120 + m * 5 + (year - 2022) * 8) * yFactor).toFixed(2)),
-        revenuePerAvailableRoomUsd: String(((75 + m * 3 + (year - 2022) * 5) * yFactor).toFixed(2)),
+        hotelOccupancyRate: String(((baseOccupancy[m] + (year - 2022) * 2.5) * yGrowth).toFixed(2)),
+        totalHotelRooms: 13200,
+        internationalArrivals: Math.floor(baseArrivals[m] * 0.63 * yGrowth),
+        domesticArrivals: Math.floor(baseArrivals[m] * 0.37 * yGrowth),
+        totalArrivals: Math.floor(baseArrivals[m] * yGrowth),
+        cruiseVisitors: Math.floor(16000 + m * 900 + (year - 2022) * 1200),
+        avgHotelRateUsd: String(((120 + m * 5 + (year - 2022) * 9) * yGrowth).toFixed(2)),
+        revenuePerAvailableRoomUsd: String(((75 + m * 3 + (year - 2022) * 6) * yGrowth).toFixed(2)),
         source: "DATATUR / SECTUR",
       });
     }
@@ -53,34 +55,39 @@ async function seed() {
   console.log(`Inserted ${tourismData.length} tourism records`);
 
   // ─── RENTAL MARKET METRICS ────────────────────────────────────────────────
+  // Correct PV neighborhoods per user
   const neighborhoods = [
-    "Centro", "Zona Romántica", "Versalles", "Marina Vallarta",
-    "Conchas Chinas", "Amapas", "Bucerías",
+    { name: "Zona Romántica", baseRate: 145, baseListings: 680 },
+    { name: "Centro", baseRate: 98, baseListings: 420 },
+    { name: "Conchas Chinas / Amapas", baseRate: 235, baseListings: 280 },
+    { name: "Versalles", baseRate: 88, baseListings: 310 },
+    { name: "Hotel Zone", baseRate: 175, baseListings: 520 },
+    { name: "Marina Vallarta", baseRate: 165, baseListings: 590 },
+    { name: "5 de Diciembre", baseRate: 105, baseListings: 265 },
   ];
-  const baseRates: Record<string, number> = {
-    "Centro": 95, "Zona Romántica": 130, "Versalles": 85,
-    "Marina Vallarta": 160, "Conchas Chinas": 220, "Amapas": 195, "Bucerías": 110,
-  };
+
   const rentalData = [];
-  for (const year of [2022, 2023, 2024]) {
-    const yFactor = year === 2022 ? 0.88 : year === 2023 ? 0.95 : 1.0;
+  for (const year of [2022, 2023, 2024, 2025]) {
+    const yGrowth = 1 + (year - 2022) * 0.065;
     for (let m = 0; m < 12; m++) {
-      if (year === 2024 && m > 10) continue;
+      if (year === currentYear && m + 1 > currentMonth) continue;
       for (const hood of neighborhoods) {
-        const base = baseRates[hood];
-        const seasonal = 1 + (m < 2 || m > 9 ? 0.25 : -0.1);
+        // High season: Dec-Apr; Low season: Jun-Sep
+        const seasonal = (m < 4 || m >= 10) ? 1.30 : (m >= 5 && m <= 8) ? 0.75 : 1.0;
+        const listings = Math.floor(hood.baseListings * (1 + (year - 2022) * 0.08) * (0.92 + Math.random() * 0.16));
+        const avgRate = hood.baseRate * seasonal * yGrowth * (0.95 + Math.random() * 0.10);
         rentalData.push({
           year,
           month: m + 1,
           monthName: MONTHS[m],
-          neighborhood: hood,
+          neighborhood: hood.name,
           platform: "all",
-          activeListings: Math.floor((200 + Math.random() * 300) * (hood === "Marina Vallarta" ? 2 : 1) * yFactor),
-          avgNightlyRateUsd: String((base * seasonal * yFactor).toFixed(2)),
-          medianNightlyRateUsd: String((base * seasonal * yFactor * 0.88).toFixed(2)),
-          occupancyRate: String(((55 + Math.random() * 25) * seasonal * yFactor).toFixed(2)),
-          avgReviewScore: String((4.2 + Math.random() * 0.6).toFixed(2)),
-          totalReviews: Math.floor(Math.random() * 500 + 50),
+          activeListings: listings,
+          avgNightlyRateUsd: String(avgRate.toFixed(2)),
+          medianNightlyRateUsd: String((avgRate * 0.87).toFixed(2)),
+          occupancyRate: String(Math.min(98, (52 + m * 1.5 + (year - 2022) * 2) * seasonal * (0.93 + Math.random() * 0.14)).toFixed(2)),
+          avgReviewScore: String((4.25 + Math.random() * 0.55).toFixed(2)),
+          totalReviews: Math.floor(listings * (2 + Math.random() * 3)),
           source: "Airbnb / VRBO (estimated)",
         });
       }
@@ -89,7 +96,7 @@ async function seed() {
   await db.insert(rentalMarketMetricsTable).values(rentalData);
   console.log(`Inserted ${rentalData.length} rental market records`);
 
-  // ─── ECONOMIC METRICS ────────────────────────────────────────────────────
+  // ─── ECONOMIC METRICS (2020-2025) ────────────────────────────────────────
   const economicData = [];
   const indicators = [
     { indicator: "tourism_gdp_contribution_mxn", unit: "MXN millions", description: "Tourism GDP Contribution", descriptionEs: "Contribución del turismo al PIB" },
@@ -105,7 +112,8 @@ async function seed() {
     "hotel_investment_mxn": 1200,
     "real_estate_transactions": 1850,
   };
-  for (const year of [2020, 2021, 2022, 2023, 2024]) {
+  for (const year of [2020, 2021, 2022, 2023, 2024, 2025]) {
+    if (year === currentYear && currentMonth < 4) continue;
     const growthFactor = 1 + (year - 2020) * 0.08;
     for (const ind of indicators) {
       economicData.push({
@@ -120,7 +128,7 @@ async function seed() {
   await db.insert(economicMetricsTable).values(economicData);
   console.log(`Inserted ${economicData.length} economic records`);
 
-  // ─── SAFETY METRICS ──────────────────────────────────────────────────────
+  // ─── SAFETY METRICS (2021-2025) ───────────────────────────────────────────
   const safetyData = [];
   const categories = [
     { category: "Robbery", categoryEs: "Robo" },
@@ -132,13 +140,13 @@ async function seed() {
   const baseCounts: Record<string, number> = {
     "Robbery": 280, "Vehicle Theft": 95, "Assault": 120, "Burglary": 55, "Fraud": 35,
   };
-  const population = 260000;
-  for (const year of [2021, 2022, 2023, 2024]) {
-    const yTrend = 1 - (year - 2021) * 0.04;
+  const population = 280000;
+  for (const year of [2021, 2022, 2023, 2024, 2025]) {
+    const yTrend = 1 - (year - 2021) * 0.035;
     for (let m = 0; m < 12; m++) {
-      if (year === 2024 && m > 10) continue;
+      if (year === currentYear && m + 1 > currentMonth) continue;
       for (const cat of categories) {
-        const count = Math.floor(baseCounts[cat.category] * yTrend * (0.9 + Math.random() * 0.2));
+        const count = Math.floor(baseCounts[cat.category] * yTrend * (0.88 + Math.random() * 0.24));
         safetyData.push({
           year,
           month: m + 1,
@@ -146,7 +154,7 @@ async function seed() {
           ...cat,
           incidentCount: count,
           incidentsPer100k: String(((count / population) * 100000).toFixed(2)),
-          changeVsPriorYear: String((-4 + Math.random() * 8).toFixed(2)),
+          changeVsPriorYear: String((-5 + Math.random() * 10).toFixed(2)),
           source: "SESNSP",
         });
       }
@@ -155,7 +163,7 @@ async function seed() {
   await db.insert(safetyMetricsTable).values(safetyData);
   console.log(`Inserted ${safetyData.length} safety records`);
 
-  // ─── WEATHER METRICS ─────────────────────────────────────────────────────
+  // ─── WEATHER METRICS (2020-2025) ──────────────────────────────────────────
   const weatherData = [];
   const weatherByMonth = [
     { avgTempC: 23.2, maxTempC: 28.5, minTempC: 17.9, precipMm: 18.5, humidity: 65, seaTemp: 22.0, sunshine: 7.8, rainyDays: 2 },
@@ -171,23 +179,23 @@ async function seed() {
     { avgTempC: 25.5, maxTempC: 30.0, minTempC: 20.8, precipMm: 15.0, humidity: 66, seaTemp: 25.5, sunshine: 8.1, rainyDays: 2 },
     { avgTempC: 23.8, maxTempC: 28.8, minTempC: 18.8, precipMm: 12.0, humidity: 64, seaTemp: 23.0, sunshine: 7.9, rainyDays: 1 },
   ];
-  for (const year of [2020, 2021, 2022, 2023, 2024]) {
+  for (const year of [2020, 2021, 2022, 2023, 2024, 2025]) {
     for (let m = 0; m < 12; m++) {
-      if (year === 2024 && m > 10) continue;
+      if (year === currentYear && m + 1 > currentMonth) continue;
       const w = weatherByMonth[m];
-      const jitter = (v: number) => String((v + (Math.random() - 0.5) * 0.5).toFixed(2));
+      const j = (v: number) => String((v + (Math.random() - 0.5) * 0.6).toFixed(2));
       weatherData.push({
         year,
         month: m + 1,
         monthName: MONTHS[m],
-        avgTempC: jitter(w.avgTempC),
-        maxTempC: jitter(w.maxTempC),
-        minTempC: jitter(w.minTempC),
-        precipitationMm: jitter(w.precipMm),
-        avgHumidityPct: jitter(w.humidity),
-        avgSeaTempC: jitter(w.seaTemp),
-        sunshineHours: jitter(w.sunshine),
-        rainyDays: w.rainyDays + Math.floor((Math.random() - 0.5) * 2),
+        avgTempC: j(w.avgTempC),
+        maxTempC: j(w.maxTempC),
+        minTempC: j(w.minTempC),
+        precipitationMm: j(w.precipMm),
+        avgHumidityPct: j(w.humidity),
+        avgSeaTempC: j(w.seaTemp),
+        sunshineHours: j(w.sunshine),
+        rainyDays: Math.max(0, w.rainyDays + Math.floor((Math.random() - 0.5) * 3)),
         source: "NOAA / CONAGUA",
       });
     }
@@ -195,49 +203,50 @@ async function seed() {
   await db.insert(weatherMetricsTable).values(weatherData);
   console.log(`Inserted ${weatherData.length} weather records`);
 
-  // ─── DATA SOURCES ────────────────────────────────────────────────────────
+  // ─── DATA SOURCES ─────────────────────────────────────────────────────────
+  const now = new Date();
   const sources = [
     {
       name: "DATATUR – Tourism Statistics", nameEs: "DATATUR – Estadísticas de Turismo",
       category: "Tourism", description: "Hotel occupancy, tourist arrivals, and cruise visitor data from Mexico's tourism ministry.",
       descriptionEs: "Ocupación hotelera, llegadas de turistas y visitantes de crucero del ministerio de turismo.",
       url: "https://www.datatur.sectur.gob.mx/", status: "active",
-      lastSyncedAt: new Date("2024-11-01"), recordCount: 432, frequency: "monthly", isPublic: true,
+      lastSyncedAt: now, recordCount: tourismData.length, frequency: "monthly", isPublic: true,
     },
     {
       name: "INEGI – Census & Demographics", nameEs: "INEGI – Censos y Demografía",
       category: "Government", description: "Population, housing, geographic, and economic census data for Puerto Vallarta.",
       descriptionEs: "Datos censales de población, vivienda, geografía y economía de Puerto Vallarta.",
       url: "https://www.inegi.org.mx/app/areasgeograficas?ag=14067", status: "active",
-      lastSyncedAt: new Date("2024-10-15"), recordCount: 1240, frequency: "monthly", isPublic: true,
+      lastSyncedAt: now, recordCount: 1240, frequency: "monthly", isPublic: true,
     },
     {
       name: "Data México – Economic Indicators", nameEs: "Data México – Indicadores Económicos",
       category: "Economic", description: "Workforce, employment, and economic profile data for Puerto Vallarta municipality.",
       descriptionEs: "Datos de fuerza laboral, empleo y perfil económico del municipio de Puerto Vallarta.",
       url: "https://www.economia.gob.mx/datamexico/es/profile/geo/puerto-vallarta", status: "active",
-      lastSyncedAt: new Date("2024-11-05"), recordCount: 260, frequency: "monthly", isPublic: true,
+      lastSyncedAt: now, recordCount: economicData.length, frequency: "monthly", isPublic: true,
     },
     {
       name: "SESNSP – Crime Data", nameEs: "SESNSP – Datos de Incidencia Delictiva",
       category: "Safety", description: "National crime incident data by municipality from Mexico's security ministry.",
       descriptionEs: "Datos nacionales de incidencia delictiva por municipio del ministerio de seguridad.",
       url: "https://www.gob.mx/sesnsp/acciones-y-programas/datos-abiertos-de-incidencia-delictiva", status: "active",
-      lastSyncedAt: new Date("2024-10-20"), recordCount: 2880, frequency: "monthly", isPublic: true,
+      lastSyncedAt: now, recordCount: safetyData.length, frequency: "monthly", isPublic: true,
     },
     {
       name: "NOAA – Climate & Ocean Data", nameEs: "NOAA – Datos Climáticos y Oceánicos",
       category: "Climate", description: "Historical climate, precipitation, temperature, and sea surface temperature data.",
       descriptionEs: "Datos históricos de clima, precipitación, temperatura y temperatura superficial del mar.",
       url: "https://www.ncei.noaa.gov/", status: "active",
-      lastSyncedAt: new Date("2024-11-10"), recordCount: 720, frequency: "monthly", isPublic: true,
+      lastSyncedAt: now, recordCount: weatherData.length, frequency: "monthly", isPublic: true,
     },
     {
       name: "Airbnb / VRBO Listings", nameEs: "Listados Airbnb / VRBO",
-      category: "Real Estate", description: "Short-term rental listings, pricing, and occupancy data aggregated from major platforms.",
-      descriptionEs: "Listados de renta a corto plazo, precios y datos de ocupación agregados de plataformas principales.",
+      category: "Real Estate", description: "Short-term rental listings, pricing, and occupancy data aggregated across 7 PV neighborhoods.",
+      descriptionEs: "Listados de renta a corto plazo, precios y ocupación en 7 colonias de Puerto Vallarta.",
       url: "https://www.airbnb.com/", status: "active",
-      lastSyncedAt: new Date("2024-11-08"), recordCount: 18540, frequency: "weekly", isPublic: false,
+      lastSyncedAt: now, recordCount: rentalData.length, frequency: "weekly", isPublic: false,
     },
     {
       name: "Transparencia PV – Local Reports", nameEs: "Transparencia PV – Reportes Locales",
@@ -258,7 +267,7 @@ async function seed() {
       category: "Satellite", description: "Open geospatial data: neighborhoods, streets, and points of interest in Puerto Vallarta.",
       descriptionEs: "Datos geoespaciales abiertos: colonias, calles y puntos de interés en Puerto Vallarta.",
       url: "https://www.openstreetmap.org/", status: "active",
-      lastSyncedAt: new Date("2024-09-01"), recordCount: 45000, frequency: "monthly", isPublic: true,
+      lastSyncedAt: now, recordCount: 45000, frequency: "monthly", isPublic: true,
     },
     {
       name: "Inmuebles24 – Real Estate Listings", nameEs: "Inmuebles24 – Listados Inmobiliarios",
