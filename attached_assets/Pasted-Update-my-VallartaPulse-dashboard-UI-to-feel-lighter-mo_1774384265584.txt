@@ -1,0 +1,100 @@
+Update my VallartaPulse dashboard UI to feel lighter, more modern, and more premium while keeping the existing dark theme.
+
+Goals:
+- The current UI is too dark and heavy
+- The header logo is too small
+- The header lacks presence
+- The KPI cards feel flat
+- Typography hierarchy needs to be stronger
+- Overall feel should be premium, open, and modern, not like a closed-off terminal
+
+Apply the following design changes:
+
+1. COLOR / BACKGROUND
+- Replace the current main background with a lighter dark-teal hybrid
+- Use this main page background:
+  - top: #0F2A36
+  - bottom: #123847
+- Use a subtle vertical gradient for the main content background
+- Sidebar can remain darker, but should still harmonize with the new lighter content area
+- Sidebar background: #0A1E27
+- Header background: #0A1E27
+
+2. LOGO / HEADER
+- Increase the header logo size significantly
+- Logo height should be around 32px to 40px
+- Add more padding around the logo
+- Increase spacing between the icon and the VallartaPulse wordmark
+- Style the wordmark so:
+  - “Vallarta” is medium weight
+  - “Pulse” is bolder
+- Increase header height to 72px to 80px
+- Add a subtle bottom border to the header:
+  - 1px solid rgba(255,255,255,0.05)
+
+3. CARDS
+- Lighten the card background to: #163C4A
+- Add more depth with:
+  - box-shadow: 0 8px 24px rgba(0,0,0,0.3)
+- Add a subtle hover effect:
+  - transform: translateY(-2px)
+  - transition for hover
+- Keep corners rounded and modern
+- Make KPI cards feel more elevated and interactive
+
+4. TYPOGRAPHY
+- Strengthen hierarchy
+- Use Inter if available, otherwise a clean modern sans-serif
+- Page title should be larger and more prominent:
+  - 36px to 40px
+  - bold
+- Subtitle should be lighter and more muted
+- KPI values should be larger and brighter
+- KPI labels should be more muted and slightly smaller
+- Supporting metadata and labels should have clear visual hierarchy
+
+5. DATA HIGHLIGHTS
+- Add one standout “hero signal” or featured status element near the top of the dashboard
+- Example:
+  - Demand Index: High
+  - Peak Season Active
+  - Market Momentum: Positive
+- Style it with the teal accent so it becomes a focal point
+
+6. COLOR TOKENS
+Use these brand colors:
+- Main background top: #0F2A36
+- Main background bottom: #123847
+- Sidebar/header: #0A1E27
+- Card background: #163C4A
+- Brand teal: #00C2A8
+- Optional accent cyan: #00D1FF
+- Primary text on dark: #F5F7FA
+- Secondary text: #9AA5B1
+- Divider/border: rgba(255,255,255,0.05)
+
+7. CHARTS
+- Keep charts clean and modern
+- Improve readability against the lighter dark background
+- Use brand teal and complementary accent colors
+- Ensure axes, labels, and gridlines are legible but subtle
+- Maintain a premium analytics look
+
+8. LAYOUT
+- Keep the structure of the dashboard, sidebar, and cards
+- Improve spacing and breathing room throughout
+- Make the main content area feel more open and less cramped
+
+9. IMPLEMENTATION
+- Refactor the existing CSS/theme/styling only
+- Preserve the current functionality and data
+- Do not remove existing dashboard sections unless necessary
+- If using Streamlit, inject updated CSS cleanly
+- If using React/HTML/CSS, update the component styling directly
+- Make the page look polished and production-ready
+
+10. OUTPUT
+After making changes:
+- show me the updated files
+- summarize exactly what was changed
+- call out any design decisions you made beyond my instructions

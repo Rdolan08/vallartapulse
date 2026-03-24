@@ -8,46 +8,72 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { lang, toggleLanguage } = useLanguage();
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-sidebar/90 backdrop-blur-xl border-b border-border/40 h-14 flex items-center justify-between px-4 sm:px-6 lg:px-8">
-      {/* Mobile logo + hamburger */}
-      <div className="flex items-center gap-3 lg:hidden">
-        <Button variant="ghost" size="icon" onClick={onMenuClick} className="w-8 h-8 text-muted-foreground">
-          <Menu className="w-4 h-4" />
+    <header
+      className="sticky top-0 z-40 w-full flex items-center justify-between px-6 lg:px-8"
+      style={{
+        height: "80px",
+        background: "#0A1E27",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+      }}
+    >
+      {/* Mobile: hamburger + logo */}
+      <div className="flex items-center gap-4 lg:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onMenuClick}
+          className="w-9 h-9"
+          style={{ color: "rgba(154,165,177,0.8)" }}
+        >
+          <Menu className="w-5 h-5" />
         </Button>
         <img
           src={logoDark}
           alt="VallartaPulse"
-          className="h-6 w-auto dark:block hidden"
+          className="dark:block hidden"
+          style={{ height: "32px", width: "auto" }}
         />
         <img
           src={logoLight}
           alt="VallartaPulse"
-          className="h-6 w-auto dark:hidden block"
+          className="dark:hidden block"
+          style={{ height: "32px", width: "auto" }}
         />
       </div>
 
+      {/* Desktop spacer */}
       <div className="hidden lg:flex" />
 
       {/* Language toggle */}
       <div className="flex items-center">
-        <div className="flex items-center gap-0.5 bg-white/5 rounded-lg p-0.5 border border-border/50">
+        <div
+          className="flex items-center gap-0.5 rounded-lg p-0.5"
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.07)",
+          }}
+        >
           <button
-            onClick={() => lang !== 'en' && toggleLanguage()}
-            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200 ${
-              lang === 'en'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            onClick={() => lang !== "en" && toggleLanguage()}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200"
+            style={
+              lang === "en"
+                ? { background: "#00C2A8", color: "#0A1E27" }
+                : { color: "rgba(154,165,177,0.8)" }
+            }
           >
             EN
           </button>
           <button
-            onClick={() => lang !== 'es' && toggleLanguage()}
-            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200 ${
-              lang === 'es'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
+            onClick={() => lang !== "es" && toggleLanguage()}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200"
+            style={
+              lang === "es"
+                ? { background: "#00C2A8", color: "#0A1E27" }
+                : { color: "rgba(154,165,177,0.8)" }
+            }
           >
             ES
           </button>
