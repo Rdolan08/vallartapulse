@@ -33,13 +33,18 @@ export default function Weather() {
     return unit === "metric" ? `${mm}${precipLabel}` : `${toIn(mm)}${precipLabel}`;
   }
 
-  const chartData = data?.map((m) => ({
-    name: m.monthName.slice(0, 3),
-    [t("Avg Temp", "Temp. Prom")]: unit === "metric" ? m.avgTempC : toF(m.avgTempC),
-    [t("Sea Temp", "Temp. Mar")]: unit === "metric" ? (m.avgSeaTempC ?? null) : (m.avgSeaTempC ? toF(m.avgSeaTempC) : null),
-    [t("Rainfall", "Lluvia")]: unit === "metric" ? m.precipitationMm : toIn(m.precipitationMm),
-    [t("Rainy Days", "Días de Lluvia")]: m.rainyDays ?? null,
-  }));
+  const chartData = data?.map((m) => {
+    const avgTempC = parseFloat(String(m.avgTempC));
+    const avgSeaTempC = m.avgSeaTempC != null ? parseFloat(String(m.avgSeaTempC)) : null;
+    const precipMm = parseFloat(String(m.precipitationMm));
+    return {
+      name: m.monthName.slice(0, 3),
+      [t("Avg Temp", "Temp. Prom")]: unit === "metric" ? avgTempC : toF(avgTempC),
+      [t("Sea Temp", "Temp. Mar")]: avgSeaTempC != null ? (unit === "metric" ? avgSeaTempC : toF(avgSeaTempC)) : null,
+      [t("Rainfall", "Lluvia")]: unit === "metric" ? precipMm : toIn(precipMm),
+      [t("Rainy Days", "Días de Lluvia")]: m.rainyDays ?? null,
+    };
+  });
 
   return (
     <PageWrapper>
@@ -107,8 +112,8 @@ export default function Weather() {
                   <YAxis unit={tempLabel} tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(v) => [`${v}${tempLabel}`]} />
                   <Legend />
-                  <Line type="monotone" dataKey={t("Avg Temp", "Temp. Prom")} stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey={t("Sea Temp", "Temp. Mar")} stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} strokeDasharray="4 2" />
+                  <Line type="monotone" dataKey={t("Avg Temp", "Temp. Prom")} stroke="#00C2A8" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey={t("Sea Temp", "Temp. Mar")} stroke="#00D1FF" strokeWidth={2} dot={false} strokeDasharray="4 2" />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -126,7 +131,7 @@ export default function Weather() {
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis unit={precipLabel} tick={{ fontSize: 12 }} />
                   <Tooltip formatter={(v) => [`${v}${precipLabel}`]} />
-                  <Bar dataKey={t("Rainfall", "Lluvia")} fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey={t("Rainfall", "Lluvia")} fill="#3B82F6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>

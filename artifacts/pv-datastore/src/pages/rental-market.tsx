@@ -30,9 +30,9 @@ export default function RentalMarket() {
 
   const chartData = data?.map((row) => ({
     name: row.monthName.slice(0, 3),
-    [t("Avg Rate", "Tarifa Prom.")]: row.avgNightlyRateUsd,
-    [t("Median Rate", "Tarifa Mediana")]: row.medianNightlyRateUsd ?? null,
-    [t("Occupancy %", "Ocupación %")]: row.occupancyRate,
+    [t("Avg Rate", "Tarifa Prom.")]: parseFloat(String(row.avgNightlyRateUsd)),
+    [t("Median Rate", "Tarifa Mediana")]: row.medianNightlyRateUsd != null ? parseFloat(String(row.medianNightlyRateUsd)) : null,
+    [t("Occupancy %", "Ocupación %")]: parseFloat(String(row.occupancyRate)),
     [t("Listings", "Anuncios")]: row.activeListings,
   }));
 
@@ -118,8 +118,8 @@ export default function RentalMarket() {
                   <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
                   <Tooltip formatter={(v) => [`$${v}`]} />
                   <Legend />
-                  <Line type="monotone" dataKey={t("Avg Rate", "Tarifa Prom.")} stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey={t("Median Rate", "Tarifa Mediana")} stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} strokeDasharray="4 2" />
+                  <Line type="monotone" dataKey={t("Avg Rate", "Tarifa Prom.")} stroke="#00C2A8" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey={t("Median Rate", "Tarifa Mediana")} stroke="#00D1FF" strokeWidth={2} dot={false} strokeDasharray="4 2" />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -138,7 +138,7 @@ export default function RentalMarket() {
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis unit="%" tick={{ fontSize: 12 }} />
                     <Tooltip formatter={(v) => [`${v}%`]} />
-                    <Bar dataKey={t("Occupancy %", "Ocupación %")} fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey={t("Occupancy %", "Ocupación %")} fill="#F59E0B" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -155,7 +155,7 @@ export default function RentalMarket() {
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip />
-                    <Bar dataKey={t("Listings", "Anuncios")} fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey={t("Listings", "Anuncios")} fill="#6366F1" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
