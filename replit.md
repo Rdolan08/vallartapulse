@@ -39,6 +39,12 @@ Real-time insights for Puerto Vallarta's rental and tourism market. Bilingual (E
 6. **Weather & Climate** (`/weather`) — temperature, rainfall, sea conditions by month
 7. **Data Sources** (`/sources`) — source registry cards with Sync Now button
 
+## Known Fixes & Notes
+
+- **Chart colors**: Recharts `hsl(var(--chart-N))` variables are NOT defined in the design system. All chart strokes/fills must use hardcoded brand hex values: `#00C2A8` (primary teal), `#00D1FF` (accent cyan), `#F59E0B` (amber), `#6366F1` (indigo), `#3B82F6` (blue). Do not use `--chart-N` CSS variables.
+- **Numeric values from DB**: PostgreSQL `numeric`/`decimal` columns come back as strings over JSON. Always `parseFloat(String(value))` before passing to Recharts or math operations.
+- **Production build**: requires `PORT` and `BASE_PATH` env vars — use `PORT=5173 BASE_PATH="/" pnpm --filter @workspace/pv-datastore run build`
+
 ## Workspace
 
 
