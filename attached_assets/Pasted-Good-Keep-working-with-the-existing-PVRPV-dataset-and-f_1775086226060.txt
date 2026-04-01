@@ -1,0 +1,74 @@
+Good. Keep working with the existing PVRPV dataset and first-pass comps engine only.
+
+Do NOT add new external sources yet.
+Do NOT build UI yet.
+Do NOT add occupancy modeling yet.
+
+The first validation showed that the current model is directionally useful but still too blunt. Improve it using the highest-impact refinements identified in the validation report.
+
+Build version 2 of the comps engine with these changes:
+
+1. Building signal
+- derive a building_name_normalized field if needed
+- compute building-level pricing summaries where sample size allows
+- add a building match bonus to comp scoring
+- if the target building has enough peers, prioritize same-building comps heavily
+- if a building consistently prices above or below the segment median, compute a building premium/discount factor
+
+2. Price-tier segmentation
+Within each neighborhood + bedroom segment:
+- compute price tertiles or similar bands
+- classify listings into lower / middle / upper price tiers
+- when selecting comps, prefer comps from the same price tier as the target when enough candidates exist
+- fall back gracefully if the pool gets too small
+
+3. Beach tier buckets
+Create categorical beach tiers:
+- Tier A: <=100m
+- Tier B: 101–500m
+- Tier C: >500m
+Use these as an additional scoring feature and summary output.
+
+4. Neighborhood-specific weighting
+Use different scoring weights by neighborhood:
+- Zona Romantica: keep balanced weighting
+- Amapas: increase sqft weight and premium/building effects
+Document the exact weights used by neighborhood.
+
+5. Outlier handling
+- detect and exclude obvious low-end and high-end outliers from median anchoring when appropriate
+- do not let a single 14BR villa or ultra-cheap promotional listing distort recommendations
+- document the outlier rules clearly
+
+6. Recommendation logic
+Instead of using only the raw comp median:
+- produce a base recommended price from the selected comp set
+- apply building premium/discount if justified
+- apply beach-tier adjustment if justified
+- return:
+  - conservative price
+  - recommended price
+  - stretch price
+- include a short explanation of what drove the recommendation
+
+7. Validation
+Re-run leave-one-out validation on the same 5 listings plus 5 more if available:
+- keep at least 3 Zona Romantica cases
+- keep at least 3 Amapas cases
+- include both lower-priced and premium listings
+
+For each case, show:
+- actual nightly price
+- recommended price range
+- percent error
+- whether actual fell inside the recommended band
+- top drivers of the recommendation
+
+8. Output
+Provide:
+- updated scoring formula
+- updated comp selection logic
+- updated validation results
+- new MAE
+- comparison of V1 vs V2 performance
+- recommendation on whether the model is now good enough for an internal MVP
