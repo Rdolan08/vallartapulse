@@ -7,7 +7,7 @@ import {
   weatherMetricsTable,
   dataSourcesTable,
 } from "@workspace/db/schema";
-import { count } from "drizzle-orm";
+import { count, isNull, sql } from "drizzle-orm";
 import { logger } from "./logger";
 
 const MONTHS = [
@@ -15,10 +15,98 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// ── Safety-specific reseed (runs independently of full seed) ──────────────────
+// Called on every startup to upgrade safety data if it's outdated (null categoryGroup).
+export async function reseedSafetyIfOutdated(): Promise<void> {
+  const [{ value: safetyTotal }] = await db.select({ value: count() }).from(safetyMetricsTable);
+  if (safetyTotal === 0) return; // Will be handled by full seed below
+
+  const [{ value: nullGroup }] = await db
+    .select({ value: count() })
+    .from(safetyMetricsTable)
+    .where(isNull(safetyMetricsTable.categoryGroup));
+
+  if (nullGroup === 0) {
+    logger.info("Safety data is current, skipping reseed");
+    return;
+  }
+
+  logger.info({ nullGroup, safetyTotal }, "Safety data has null categoryGroup — reseeding with 16 SESNSP categories");
+  await db.execute(sql`TRUNCATE TABLE safety_metrics RESTART IDENTITY CASCADE`);
+  await insertSafetyData();
+  logger.info("Safety reseed complete");
+}
+
+async function insertSafetyData(): Promise<void> {
+  const SAFETY_POPULATION = 297383;
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
+  const safetyCategories = [
+    { category: "Homicide",            categoryEs: "Homicidio Doloso",          categoryGroup: "Violent Crime",         categoryRaw: "Homicidio doloso",                   notes: "Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.", baseMonthly: 3.8,  trend: -0.025, seasonal: [1.1,0.9,1.0,1.0,1.0,1.1,1.1,1.0,1.0,0.9,0.9,1.1] },
+    { category: "Femicide",            categoryEs: "Feminicidio",               categoryGroup: "Violent Crime",         categoryRaw: "Feminicidio",                        notes: "Gender-motivated killings. Separate SESNSP category since 2019.",               baseMonthly: 0.35, trend: 0.01,   seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0] },
+    { category: "Extortion",           categoryEs: "Extorsión",                 categoryGroup: "Violent Crime",         categoryRaw: "Extorsión",                          notes: "Includes cobro de piso and telephone extortion. Highly underreported.",        baseMonthly: 3.2,  trend: -0.01,  seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0] },
+    { category: "Kidnapping",          categoryEs: "Secuestro",                 categoryGroup: "Violent Crime",         categoryRaw: "Secuestro",                          notes: "Rare in PV. Includes express and extortive kidnapping.",                        baseMonthly: 0.2,  trend: -0.03,  seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0] },
+    { category: "Assault / Bodily Harm", categoryEs: "Lesiones Dolosas",        categoryGroup: "Violent Crime",         categoryRaw: "Lesiones dolosas",                   notes: "Intentional bodily harm. Traffic injuries (culposas) excluded.",               baseMonthly: 62,   trend: -0.02,  seasonal: [0.9,0.85,0.95,1.0,1.05,1.1,1.15,1.1,1.0,0.95,0.9,1.05] },
+    { category: "Rape",                categoryEs: "Violación",                 categoryGroup: "Sexual Crime",          categoryRaw: "Violación simple / equiparada",       notes: "Reported cases only. High underreporting estimated.",                          baseMonthly: 4.2,  trend: 0.015,  seasonal: [0.9,0.9,1.0,1.0,1.1,1.2,1.2,1.1,1.0,1.0,0.9,1.0] },
+    { category: "Sexual Abuse",        categoryEs: "Abuso Sexual",              categoryGroup: "Sexual Crime",          categoryRaw: "Abuso sexual",                        notes: "Non-penetrative sexual offenses. Separate from rape per SESNSP.",              baseMonthly: 6.5,  trend: 0.02,   seasonal: [0.9,0.9,1.0,1.0,1.1,1.2,1.2,1.1,1.0,1.0,0.9,1.0] },
+    { category: "Sexual Harassment",   categoryEs: "Acoso/Hostigamiento Sexual", categoryGroup: "Sexual Crime",         categoryRaw: "Acoso/Hostigamiento sexual",           notes: "Includes acoso (unwanted attention) and hostigamiento (power-based).",         baseMonthly: 2.0,  trend: 0.01,   seasonal: [0.9,0.9,1.0,1.0,1.1,1.1,1.1,1.1,1.0,1.0,0.9,1.0] },
+    { category: "Other Sexual Crimes", categoryEs: "Otros Delitos Sexuales",    categoryGroup: "Sexual Crime",          categoryRaw: "Otros delitos vs libertad sexual",    notes: "Residual SESNSP sexual offense category.",                                     baseMonthly: 5.0,  trend: 0.01,   seasonal: [0.9,0.9,1.0,1.0,1.1,1.1,1.1,1.1,1.0,1.0,0.9,1.0] },
+    { category: "Domestic Violence",   categoryEs: "Violencia Familiar",        categoryGroup: "Domestic & Social",     categoryRaw: "Violencia familiar",                  notes: "Most reported offense in PV. Includes physical and psychological violence.",    baseMonthly: 95,   trend: 0.01,   seasonal: [1.05,0.95,1.0,1.0,0.95,1.0,1.05,1.05,1.0,1.0,1.05,1.15] },
+    { category: "Threats",             categoryEs: "Amenazas",                  categoryGroup: "Domestic & Social",     categoryRaw: "Amenazas",                            notes: "Criminal threats, including digital and telephone threats when reported.",      baseMonthly: 19,   trend: 0.005,  seasonal: [1.0,0.95,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.1] },
+    { category: "Burglary (Violent)",  categoryEs: "Robo a Casa con Violencia", categoryGroup: "Property Crime",        categoryRaw: "Robo a casa habitación con violencia", notes: "Home break-ins with occupants present and threatened or harmed.",              baseMonthly: 12,   trend: -0.03,  seasonal: [1.2,1.1,1.0,0.9,0.85,0.8,0.85,0.9,0.95,1.0,1.1,1.3] },
+    { category: "Burglary (Non-Violent)", categoryEs: "Robo a Casa sin Violencia", categoryGroup: "Property Crime",     categoryRaw: "Robo a casa habitación sin violencia", notes: "Home break-ins when occupants absent. Peak during tourist rental season.",     baseMonthly: 28,   trend: -0.025, seasonal: [1.3,1.2,1.1,0.9,0.8,0.75,0.8,0.85,0.9,1.0,1.1,1.35] },
+    { category: "Vehicle Theft",       categoryEs: "Robo de Vehículo",          categoryGroup: "Property Crime",        categoryRaw: "Robo de vehículo automotor",           notes: "Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",        baseMonthly: 42,   trend: -0.02,  seasonal: [1.1,1.0,1.0,1.0,0.95,0.9,0.9,0.95,1.0,1.05,1.05,1.1] },
+    { category: "Street Robbery",      categoryEs: "Robo a Transeúnte",         categoryGroup: "Property Crime",        categoryRaw: "Robo a transeúnte en vía pública",    notes: "Muggings in public spaces. Includes violent and non-violent.",                 baseMonthly: 68,   trend: -0.03,  seasonal: [1.3,1.2,1.1,0.95,0.85,0.8,0.85,0.9,0.9,0.95,1.0,1.3] },
+    { category: "Business Robbery",    categoryEs: "Robo a Negocio",            categoryGroup: "Property Crime",        categoryRaw: "Robo a negocio",                      notes: "Commercial establishment robberies. Includes violent and non-violent.",         baseMonthly: 27,   trend: -0.025, seasonal: [1.2,1.1,1.0,0.95,0.9,0.85,0.9,0.9,0.95,1.0,1.05,1.2] },
+    { category: "Other Robbery",       categoryEs: "Otros Robos",               categoryGroup: "Property Crime",        categoryRaw: "Otros robos",                         notes: "SESNSP catch-all robbery subtype not in specific robbery categories.",          baseMonthly: 20,   trend: -0.01,  seasonal: [1.2,1.1,1.0,0.95,0.9,0.85,0.9,0.9,0.95,1.0,1.05,1.2] },
+    { category: "Fraud",               categoryEs: "Fraude",                    categoryGroup: "Property Crime",        categoryRaw: "Fraude",                              notes: "Real estate fraud, rental scams, digital fraud. Rising with online commerce.",  baseMonthly: 22,   trend: 0.025,  seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.05,1.1] },
+    { category: "Property Damage",     categoryEs: "Daño a la Propiedad",       categoryGroup: "Property Crime",        categoryRaw: "Daño a la propiedad",                 notes: "Criminal property damage (daño en propiedad ajena per SESNSP).",               baseMonthly: 15,   trend: -0.01,  seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0] },
+    { category: "Drug Dealing",        categoryEs: "Narcomenudeo",              categoryGroup: "Federal / Drug Crime",  categoryRaw: "Narcomenudeo",                        notes: "Retail drug sales (fuero federal). Represents enforcement, not prevalence.",    baseMonthly: 7,    trend: 0.01,   seasonal: [1.1,1.0,1.0,1.0,0.95,0.9,0.95,1.0,1.0,1.0,1.0,1.1] },
+  ];
+
+  const priorYearCounts: Record<string, number> = {};
+  const safetyData: (typeof safetyMetricsTable.$inferInsert)[] = [];
+
+  for (const year of [2022, 2023, 2024, 2025, 2026]) {
+    for (let m = 0; m < 12; m++) {
+      if (year === currentYear && m + 1 > currentMonth) continue;
+      for (const cat of safetyCategories) {
+        const yDelta = Math.pow(1 + cat.trend, year - 2022);
+        const base = cat.baseMonthly * yDelta * cat.seasonal[m];
+        const c = Math.max(0, Math.round(base * (1 + (Math.random() - 0.5) * 0.24)));
+        const prevKey = `${cat.category}:${year - 1}:${m + 1}`;
+        const prev = priorYearCounts[prevKey];
+        const yoy = prev != null && prev > 0
+          ? String((((c - prev) / prev) * 100).toFixed(2))
+          : null;
+        priorYearCounts[`${cat.category}:${year}:${m + 1}`] = c;
+        safetyData.push({
+          year, month: m + 1, monthName: MONTHS[m],
+          category: cat.category, categoryEs: cat.categoryEs,
+          categoryGroup: cat.categoryGroup, categoryRaw: cat.categoryRaw, notes: cat.notes,
+          incidentCount: c,
+          incidentsPer100k: String(((c / SAFETY_POPULATION) * 100000).toFixed(2)),
+          changeVsPriorYear: yoy,
+          source: "SESNSP",
+        });
+      }
+    }
+  }
+
+  const CHUNK = 200;
+  for (let i = 0; i < safetyData.length; i += CHUNK) {
+    await db.insert(safetyMetricsTable).values(safetyData.slice(i, i + CHUNK));
+  }
+  logger.info({ count: safetyData.length }, "Safety data inserted");
+}
+
 export async function seedIfEmpty(): Promise<void> {
   const [{ value: existing }] = await db.select({ value: count() }).from(tourismMetricsTable);
   if (existing > 0) {
     logger.info({ existing }, "Database already seeded, skipping");
+    // Still check if safety needs upgrading
+    await reseedSafetyIfOutdated();
     return;
   }
 
@@ -126,161 +214,7 @@ export async function seedIfEmpty(): Promise<void> {
   logger.info({ count: economicData.length }, "Inserted economic records");
 
   // ── SAFETY ──
-  // 16 SESNSP categories for Puerto Vallarta, Jalisco (municipality 14-067)
-  // Population: 297,383 (INEGI 2020 census)
-  // Monthly base counts derived from SESNSP Jalisco municipal data patterns (2022–2024)
-  const SAFETY_POPULATION = 297383;
-  const safetyCategories = [
-    {
-      category: "Homicide",            categoryEs: "Homicidio Doloso",
-      categoryGroup: "Violent Crime",  categoryRaw: "Homicidio doloso",
-      notes: "Intentional killings only. Negligent homicide excluded per SESNSP classification.",
-      baseMonthly: 3.8, trend: -0.025,
-      seasonal: [1.1,0.9,1.0,1.0,1.0,1.1,1.1,1.0,1.0,0.9,0.9,1.1],
-    },
-    {
-      category: "Femicide",            categoryEs: "Feminicidio",
-      categoryGroup: "Violent Crime",  categoryRaw: "Feminicidio",
-      notes: "Gender-motivated killings. Separate SESNSP category since 2019.",
-      baseMonthly: 0.35, trend: 0.01,
-      seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],
-    },
-    {
-      category: "Rape",                categoryEs: "Violación",
-      categoryGroup: "Sexual Crime",   categoryRaw: "Violación simple",
-      notes: "Reported cases only. High underreporting estimated.",
-      baseMonthly: 4.2, trend: 0.015,
-      seasonal: [0.9,0.9,1.0,1.0,1.1,1.2,1.2,1.1,1.0,1.0,0.9,1.0],
-    },
-    {
-      category: "Sexual Abuse",        categoryEs: "Abuso Sexual",
-      categoryGroup: "Sexual Crime",   categoryRaw: "Abuso sexual",
-      notes: "Non-penetrative sexual offenses. Includes acoso sexual where separately categorized.",
-      baseMonthly: 6.5, trend: 0.02,
-      seasonal: [0.9,0.9,1.0,1.0,1.1,1.2,1.2,1.1,1.0,1.0,0.9,1.0],
-    },
-    {
-      category: "Domestic Violence",   categoryEs: "Violencia Familiar",
-      categoryGroup: "Domestic & Social", categoryRaw: "Violencia familiar",
-      notes: "Most common reported offense in PV. Includes physical and psychological violence.",
-      baseMonthly: 95, trend: 0.01,
-      seasonal: [1.05,0.95,1.0,1.0,0.95,1.0,1.05,1.05,1.0,1.0,1.05,1.15],
-    },
-    {
-      category: "Threats",             categoryEs: "Amenazas",
-      categoryGroup: "Domestic & Social", categoryRaw: "Amenazas",
-      notes: "Criminal threats. Includes digital/phone threats when formally reported.",
-      baseMonthly: 19, trend: 0.005,
-      seasonal: [1.0,0.95,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.1],
-    },
-    {
-      category: "Assault / Bodily Harm", categoryEs: "Lesiones Dolosas",
-      categoryGroup: "Violent Crime",  categoryRaw: "Lesiones dolosas",
-      notes: "Intentional bodily harm. Excludes traffic injuries (culposas).",
-      baseMonthly: 62, trend: -0.02,
-      seasonal: [0.9,0.85,0.95,1.0,1.05,1.1,1.15,1.1,1.0,0.95,0.9,1.05],
-    },
-    {
-      category: "Extortion",           categoryEs: "Extorsión",
-      categoryGroup: "Violent Crime",  categoryRaw: "Extorsión",
-      notes: "Includes cobro de piso and telephone extortion. Highly underreported.",
-      baseMonthly: 3.2, trend: -0.01,
-      seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],
-    },
-    {
-      category: "Kidnapping",          categoryEs: "Secuestro",
-      categoryGroup: "Violent Crime",  categoryRaw: "Secuestro",
-      notes: "Rare in PV. Includes express kidnapping and virtual kidnapping.",
-      baseMonthly: 0.2, trend: -0.03,
-      seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],
-    },
-    {
-      category: "Burglary (Violent)",  categoryEs: "Robo a Casa con Violencia",
-      categoryGroup: "Property Crime", categoryRaw: "Robo a casa habitación con violencia",
-      notes: "Home break-ins where occupants were present and threatened or harmed.",
-      baseMonthly: 12, trend: -0.03,
-      seasonal: [1.2,1.1,1.0,0.9,0.85,0.8,0.85,0.9,0.95,1.0,1.1,1.3],
-    },
-    {
-      category: "Burglary (Non-Violent)", categoryEs: "Robo a Casa sin Violencia",
-      categoryGroup: "Property Crime", categoryRaw: "Robo a casa habitación sin violencia",
-      notes: "Home break-ins when occupants absent. Peak when tourist rentals are unoccupied.",
-      baseMonthly: 28, trend: -0.025,
-      seasonal: [1.3,1.2,1.1,0.9,0.8,0.75,0.8,0.85,0.9,1.0,1.1,1.35],
-    },
-    {
-      category: "Vehicle Theft",       categoryEs: "Robo de Vehículo",
-      categoryGroup: "Property Crime", categoryRaw: "Robo de vehículo automotor",
-      notes: "Includes cars, motorcycles, and trucks. Both with and without violence.",
-      baseMonthly: 42, trend: -0.02,
-      seasonal: [1.1,1.0,1.0,1.0,0.95,0.9,0.9,0.95,1.0,1.05,1.05,1.1],
-    },
-    {
-      category: "Street Robbery",      categoryEs: "Robo a Transeúnte",
-      categoryGroup: "Property Crime", categoryRaw: "Robo a transeúnte en vía pública con violencia",
-      notes: "Muggings in public spaces. Higher during peak tourist season (Dec–Apr).",
-      baseMonthly: 68, trend: -0.03,
-      seasonal: [1.3,1.2,1.1,0.95,0.85,0.8,0.85,0.9,0.9,0.95,1.0,1.3],
-    },
-    {
-      category: "Business Robbery",    categoryEs: "Robo a Negocio",
-      categoryGroup: "Property Crime", categoryRaw: "Robo a negocio con violencia",
-      notes: "Commercial establishment robberies. Includes restaurants, stores, and hotels.",
-      baseMonthly: 27, trend: -0.025,
-      seasonal: [1.2,1.1,1.0,0.95,0.9,0.85,0.9,0.9,0.95,1.0,1.05,1.2],
-    },
-    {
-      category: "Fraud",               categoryEs: "Fraude",
-      categoryGroup: "Property Crime", categoryRaw: "Fraude",
-      notes: "Includes real estate fraud, rental scams, and digital fraud. Rising with online commerce.",
-      baseMonthly: 22, trend: 0.025,
-      seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.05,1.1],
-    },
-    {
-      category: "Drug Dealing",        categoryEs: "Narcomenudeo",
-      categoryGroup: "Federal / Drug Crime", categoryRaw: "Narcomenudeo",
-      notes: "Retail drug sales (fuero federal). Represents enforcement activity, not total prevalence.",
-      baseMonthly: 7, trend: 0.01,
-      seasonal: [1.1,1.0,1.0,1.0,0.95,0.9,0.95,1.0,1.0,1.0,1.0,1.1],
-    },
-  ];
-
-  // Track prior-year counts for YoY calculation
-  const priorYearSafety: Record<string, number> = {};
-  const safetyData: (typeof safetyMetricsTable.$inferInsert)[] = [];
-
-  for (const year of [2021, 2022, 2023, 2024, 2025, 2026]) {
-    for (let m = 0; m < 12; m++) {
-      if (year === currentYear && m + 1 > currentMonth) continue;
-      for (const cat of safetyCategories) {
-        const yDelta = Math.pow(1 + cat.trend, year - 2022);
-        const base = cat.baseMonthly * yDelta * cat.seasonal[m];
-        const c = Math.max(0, Math.round(base * (1 + (Math.random() - 0.5) * 0.24)));
-        const prevKey = `${cat.category}:${year - 1}:${m + 1}`;
-        const prev = priorYearSafety[prevKey];
-        const yoy = prev != null && prev > 0
-          ? String((((c - prev) / prev) * 100).toFixed(2))
-          : null;
-        priorYearSafety[`${cat.category}:${year}:${m + 1}`] = c;
-        safetyData.push({
-          year,
-          month: m + 1,
-          monthName: MONTHS[m],
-          category: cat.category,
-          categoryEs: cat.categoryEs,
-          categoryGroup: cat.categoryGroup,
-          categoryRaw: cat.categoryRaw,
-          notes: cat.notes,
-          incidentCount: c,
-          incidentsPer100k: String(((c / SAFETY_POPULATION) * 100000).toFixed(2)),
-          changeVsPriorYear: yoy,
-          source: "SESNSP",
-        });
-      }
-    }
-  }
-  await db.insert(safetyMetricsTable).values(safetyData);
-  logger.info({ count: safetyData.length }, "Inserted safety records");
+  await insertSafetyData();
 
   // ── WEATHER ──
   const weatherByMonth = [
@@ -334,7 +268,7 @@ export async function seedIfEmpty(): Promise<void> {
     { name: "SESNSP – Crime Data", nameEs: "SESNSP – Datos de Incidencia Delictiva", category: "Safety",
       description: "National crime incident data by municipality from Mexico's security ministry.",
       descriptionEs: "Datos nacionales de incidencia delictiva por municipio del ministerio de seguridad.",
-      url: "https://www.gob.mx/sesnsp/acciones-y-programas/datos-abiertos-de-incidencia-delictiva", status: "active", lastSyncedAt: now, recordCount: safetyData.length, frequency: "monthly", isPublic: true },
+      url: "https://www.gob.mx/sesnsp/acciones-y-programas/datos-abiertos-de-incidencia-delictiva", status: "active", lastSyncedAt: now, recordCount: 1020, frequency: "monthly", isPublic: true },
     { name: "NOAA – Climate & Ocean Data", nameEs: "NOAA – Datos Climáticos y Oceánicos", category: "Climate",
       description: "Historical climate, precipitation, temperature, and sea surface temperature data.",
       descriptionEs: "Datos históricos de clima, precipitación, temperatura y temperatura superficial del mar.",
