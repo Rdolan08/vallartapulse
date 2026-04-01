@@ -19,7 +19,7 @@ function toIn(mm: number) { return Math.round((mm / 25.4) * 100) / 100; }
 export default function Weather() {
   const { t } = useLanguage();
   const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
-  const [unit, setUnit] = useState<"metric" | "imperial">("metric");
+  const [unit, setUnit] = useState<"metric" | "imperial">("imperial");
 
   const { data, isLoading, error } = useGetWeatherMetrics({ year });
 
