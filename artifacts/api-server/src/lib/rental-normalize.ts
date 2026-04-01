@@ -85,6 +85,26 @@ const NEIGHBORHOOD_MAP: Record<string, CanonicalNeighborhood> = {
   "versailles": "Versalles",
   "col. versalles": "Versalles",
   "versalles / pitillal": "Versalles",
+
+  // ── PVRPV URL-segment aliases (kebab-case from URL path) ──────────────────
+  "old-town": "Zona Romantica",
+  "old town": "Zona Romantica",
+  "los-muertos-beach": "Zona Romantica",
+  "los muertos beach": "Zona Romantica",
+  "amapas": "Amapas",
+  "conchas-chinas": "Amapas",
+  "marina-vallarta": "Marina Vallarta",
+  "north-hotel-zone": "Hotel Zone",
+  "north hotel zone": "Hotel Zone",
+  "hotel-zone": "Hotel Zone",
+  "5-de-diciembre": "5 de Diciembre",
+  // fringe PVRPV neighborhoods → best-fit canonical
+  "alta-vista": "Centro",
+  "alta vista": "Centro",
+  "el-caloso": "Centro",
+  "el caloso": "Centro",
+  "fluvial": "Centro",
+  "pitillal": "Versalles",
 };
 
 /**
