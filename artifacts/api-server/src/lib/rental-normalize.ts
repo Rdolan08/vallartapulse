@@ -21,7 +21,7 @@ export const CANONICAL_NEIGHBORHOODS = [
 export type CanonicalNeighborhood = (typeof CANONICAL_NEIGHBORHOODS)[number];
 
 /**
- * Maps raw strings (scraped from Airbnb/VRBO) → canonical neighborhood.
+ * Maps raw strings (scraped from Airbnb/VRBO/PVRPV) → canonical neighborhood.
  * Keys are lowercased and trimmed before lookup.
  */
 const NEIGHBORHOOD_MAP: Record<string, CanonicalNeighborhood> = {
@@ -86,12 +86,10 @@ const NEIGHBORHOOD_MAP: Record<string, CanonicalNeighborhood> = {
   "col. versalles": "Versalles",
   "versalles / pitillal": "Versalles",
 
-  // ── PVRPV URL-segment aliases (kebab-case from URL path) ──────────────────
+  // ── PVRPV URL-segment aliases (kebab-case from URL path) ─────────────────
   "old-town": "Zona Romantica",
-  "old town": "Zona Romantica",
   "los-muertos-beach": "Zona Romantica",
   "los muertos beach": "Zona Romantica",
-  "amapas": "Amapas",
   "conchas-chinas": "Amapas",
   "marina-vallarta": "Marina Vallarta",
   "north-hotel-zone": "Hotel Zone",
@@ -128,31 +126,38 @@ export const AMENITY_CATALOG: ReadonlyArray<{
   /** Raw strings that map to this key (lowercased, for matching) */
   aliases: string[];
 }> = [
-  // Pool
+  // ── Pool ──────────────────────────────────────────────────────────────────
   {
     key: "private_pool",
     category: "pool",
     label: "Private Pool",
     labelEs: "Alberca Privada",
     description: "Dedicated pool for the listing's guests only",
-    aliases: ["private pool", "private swimming pool", "alberca privada", "pool - private"],
+    aliases: [
+      "private pool", "private swimming pool", "alberca privada",
+      "pool - private", "plunge pool", "lap pool",
+    ],
   },
   {
     key: "shared_pool",
     category: "pool",
     label: "Shared Pool",
     labelEs: "Alberca Compartida",
-    aliases: ["shared pool", "community pool", "building pool", "pool - shared", "pool"],
+    aliases: [
+      "shared pool", "community pool", "building pool", "pool - shared",
+      "pool (in complex)", "rooftop pool", "infinity pool",
+      "pool", "heated pool", "outdoor pool",
+    ],
   },
   {
     key: "hot_tub",
     category: "pool",
     label: "Hot Tub / Jacuzzi",
     labelEs: "Jacuzzi",
-    aliases: ["hot tub", "jacuzzi", "whirlpool", "heated spa", "tina de hidromasaje"],
+    aliases: ["hot tub", "jacuzzi", "whirlpool", "heated spa", "tina de hidromasaje", "spa"],
   },
 
-  // Beach / water
+  // ── Beach / water ─────────────────────────────────────────────────────────
   {
     key: "beachfront",
     category: "beach",
@@ -169,23 +174,26 @@ export const AMENITY_CATALOG: ReadonlyArray<{
     aliases: ["beach access", "near beach", "walk to beach", "beach nearby", "close to beach"],
   },
 
-  // View
+  // ── View ──────────────────────────────────────────────────────────────────
   {
     key: "ocean_view",
     category: "view",
     label: "Ocean View",
     labelEs: "Vista al Mar",
-    aliases: ["ocean view", "sea view", "bay view", "water view", "vista al mar", "ocean views"],
+    aliases: [
+      "ocean view", "sea view", "bay view", "water view", "vista al mar",
+      "ocean views", "bay views", "banderas bay view", "partial ocean view",
+    ],
   },
   {
     key: "mountain_view",
     category: "view",
     label: "Mountain / Jungle View",
     labelEs: "Vista a la Montaña / Selva",
-    aliases: ["mountain view", "jungle view", "garden view", "tropical view"],
+    aliases: ["mountain view", "jungle view", "garden view", "tropical view", "mountain views"],
   },
 
-  // Kitchen
+  // ── Kitchen ───────────────────────────────────────────────────────────────
   {
     key: "full_kitchen",
     category: "kitchen",
@@ -194,8 +202,16 @@ export const AMENITY_CATALOG: ReadonlyArray<{
     description: "Stove, oven, refrigerator, and basic cookware",
     aliases: [
       "full kitchen", "kitchen", "full equipped kitchen", "fully equipped kitchen",
-      "cocina equipada", "cocina completa",
+      "cocina equipada", "cocina completa", "cooktop", "stove", "oven",
+      "blender", "coffee maker", "toaster", "coffee maker / kettle",
     ],
+  },
+  {
+    key: "dishwasher",
+    category: "kitchen",
+    label: "Dishwasher",
+    labelEs: "Lavavajillas",
+    aliases: ["dishwasher", "lavavajillas"],
   },
   {
     key: "kitchenette",
@@ -204,17 +220,45 @@ export const AMENITY_CATALOG: ReadonlyArray<{
     labelEs: "Kitchenette",
     aliases: ["kitchenette", "mini kitchen", "mini fridge", "basic kitchen"],
   },
+  {
+    key: "bbq_grill",
+    category: "outdoor",
+    label: "BBQ Grill",
+    labelEs: "Asador / BBQ",
+    aliases: [
+      "bbq grill", "bbq grill (in unit)", "bbq", "barbecue", "grill",
+      "outdoor grill", "gas bbq", "charcoal grill",
+    ],
+  },
 
-  // Laundry
+  // ── Laundry ───────────────────────────────────────────────────────────────
   {
     key: "washer_dryer",
     category: "laundry",
     label: "Washer & Dryer",
     labelEs: "Lavadora y Secadora",
-    aliases: ["washer", "dryer", "washer/dryer", "washer & dryer", "laundry", "in-unit laundry"],
+    aliases: [
+      "washer", "dryer", "washer/dryer", "washer & dryer", "laundry",
+      "in-unit laundry", "laundry - washer (in unit)", "laundry - dryer (in unit)",
+      "washer & dryer (in unit)", "washing machine",
+    ],
+  },
+  {
+    key: "iron",
+    category: "laundry",
+    label: "Iron & Ironing Board",
+    labelEs: "Plancha y Tabla de Planchar",
+    aliases: ["iron", "ironing board", "iron & ironing board", "plancha"],
+  },
+  {
+    key: "linens_provided",
+    category: "comfort",
+    label: "Linens Provided",
+    labelEs: "Ropa de Cama Incluida",
+    aliases: ["bed linens", "linens", "linens provided", "towels", "towels & linens"],
   },
 
-  // Climate
+  // ── Climate ───────────────────────────────────────────────────────────────
   {
     key: "air_conditioning",
     category: "climate",
@@ -222,47 +266,93 @@ export const AMENITY_CATALOG: ReadonlyArray<{
     labelEs: "Aire Acondicionado",
     aliases: [
       "air conditioning", "ac", "a/c", "central air", "mini split",
-      "aire acondicionado", "split ac",
+      "aire acondicionado", "split ac", "climate control (air conditioning)",
+      "central air conditioning",
     ],
   },
+  {
+    key: "ceiling_fan",
+    category: "climate",
+    label: "Ceiling Fan",
+    labelEs: "Ventilador de Techo",
+    aliases: ["ceiling fan", "ceiling fans", "climate control (ceiling fan)", "ventilador"],
+  },
 
-  // Connectivity
+  // ── Entertainment ─────────────────────────────────────────────────────────
+  {
+    key: "smart_tv",
+    category: "entertainment",
+    label: "Smart TV",
+    labelEs: "Smart TV",
+    aliases: ["smart tv", "tv", "television", "cable tv", "streaming", "netflix", "cable"],
+  },
+
+  // ── Connectivity ──────────────────────────────────────────────────────────
   {
     key: "wifi",
     category: "connectivity",
     label: "WiFi",
     labelEs: "WiFi",
-    aliases: ["wifi", "wi-fi", "wireless", "internet", "high-speed wifi", "fast wifi"],
+    aliases: ["wifi", "wi-fi", "wireless", "internet", "high-speed wifi", "fast wifi", "broadband"],
   },
 
-  // Safety
+  // ── Safety ────────────────────────────────────────────────────────────────
   {
     key: "gated_community",
     category: "safety",
-    label: "Gated Community",
-    labelEs: "Fraccionamiento Cerrado",
-    aliases: ["gated", "gated community", "gated complex", "guarded", "24hr security"],
+    label: "Gated / 24hr Security",
+    labelEs: "Fraccionamiento Cerrado / Seguridad 24h",
+    aliases: [
+      "gated", "gated community", "gated complex", "guarded",
+      "24hr security", "24-hour security", "security (24 hours)",
+      "security guard", "doorman",
+    ],
+  },
+  {
+    key: "private_entrance",
+    category: "safety",
+    label: "Private Entrance",
+    labelEs: "Entrada Privada",
+    aliases: [
+      "private entrance", "private entrance (to the unit)", "private entry",
+      "keypad entry", "self check-in",
+    ],
   },
 
-  // Parking
+  // ── Parking ───────────────────────────────────────────────────────────────
   {
     key: "parking",
     category: "parking",
     label: "Parking",
     labelEs: "Estacionamiento",
-    aliases: ["parking", "free parking", "private parking", "garage", "estacionamiento"],
+    aliases: [
+      "parking", "free parking", "private parking", "garage",
+      "estacionamiento", "parking (in complex)", "assigned parking",
+      "covered parking",
+    ],
   },
 
-  // Outdoor
+  // ── Outdoor ───────────────────────────────────────────────────────────────
   {
     key: "rooftop_terrace",
     category: "outdoor",
-    label: "Rooftop / Terrace",
-    labelEs: "Rooftop / Terraza",
-    aliases: ["rooftop", "terrace", "rooftop terrace", "balcony", "patio", "terraza"],
+    label: "Rooftop / Terrace / Balcony",
+    labelEs: "Rooftop / Terraza / Balcón",
+    aliases: [
+      "rooftop", "terrace", "rooftop terrace", "balcony", "patio", "terraza",
+      "outdoor space (patio / deck)", "balcony / terrace", "deck",
+      "outdoor living area",
+    ],
+  },
+  {
+    key: "elevator",
+    category: "accessibility",
+    label: "Elevator",
+    labelEs: "Elevador",
+    aliases: ["elevator", "elevator (in complex)", "lift", "elevador"],
   },
 
-  // Pet
+  // ── Guest policies ────────────────────────────────────────────────────────
   {
     key: "pet_friendly",
     category: "pet",
@@ -270,14 +360,21 @@ export const AMENITY_CATALOG: ReadonlyArray<{
     labelEs: "Acepta Mascotas",
     aliases: ["pets allowed", "pet friendly", "pet-friendly", "dogs allowed", "cats allowed"],
   },
+  {
+    key: "child_friendly",
+    category: "other",
+    label: "Child Friendly",
+    labelEs: "Acepta Niños",
+    aliases: ["children permitted", "kids allowed", "child friendly", "family friendly"],
+  },
 
-  // Workspace
+  // ── Workspace ─────────────────────────────────────────────────────────────
   {
     key: "dedicated_workspace",
     category: "workspace",
     label: "Dedicated Workspace",
     labelEs: "Área de Trabajo",
-    aliases: ["workspace", "dedicated workspace", "desk", "home office", "work space"],
+    aliases: ["workspace", "dedicated workspace", "desk", "home office", "work space", "office"],
   },
 ];
 
@@ -306,6 +403,103 @@ export function normalizeAmenities(rawAmenities: unknown): string[] {
   return Array.from(keys).sort();
 }
 
+// ── Beach distance ─────────────────────────────────────────────────────────
+
+/**
+ * Named beach access points used for distance_to_beach_m calculation.
+ * Each entry is a publicly known beach access point in or near Puerto Vallarta.
+ * Coordinates verified against Google Maps / OpenStreetMap.
+ */
+export const BEACH_REFERENCE_POINTS: ReadonlyArray<{
+  name: string;
+  lat: number;
+  lon: number;
+}> = [
+  { name: "Playa Los Muertos (Zona Romantica)",       lat: 20.6040, lon: -105.2382 },
+  { name: "Playa Olas Altas (Zona Romantica South)",  lat: 20.6055, lon: -105.2378 },
+  { name: "Playa Camarones (Centro / Malecon)",       lat: 20.6178, lon: -105.2363 },
+  { name: "Conchas Chinas Beach",                     lat: 20.5942, lon: -105.2354 },
+  { name: "Playa de Oro (Hotel Zone)",                lat: 20.6503, lon: -105.2393 },
+  { name: "Marina Vallarta Beach",                    lat: 20.6848, lon: -105.2673 },
+  { name: "Playa Las Glorias (Hotel Zone North)",     lat: 20.6620, lon: -105.2396 },
+];
+
+/**
+ * Haversine straight-line distance between two geographic points, in meters.
+ * Accuracy: ±0.3% at distances under 10 km (sufficient for intra-city use).
+ */
+export function haversineM(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number
+): number {
+  const R = 6_371_000; // Earth mean radius, meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(Δφ / 2) ** 2 +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * Returns the straight-line distance in meters from a point to the
+ * nearest beach reference point.  Returns null if lat/lon are null.
+ */
+export function distanceToNearestBeachM(
+  lat: number | null,
+  lon: number | null
+): number | null {
+  if (lat == null || lon == null) return null;
+  let min = Infinity;
+  for (const p of BEACH_REFERENCE_POINTS) {
+    const d = haversineM(lat, lon, p.lat, p.lon);
+    if (d < min) min = d;
+  }
+  return Math.round(min);
+}
+
+// ── sqft / sqm parsing ────────────────────────────────────────────────────
+
+const SQM_TO_SQFT = 10.7639;
+
+/**
+ * Parses a raw "Square Space" string from PVRPV into sqft.
+ * Handles:
+ *   "224.38 Square Meter/ 2414.33  Square Feet"  → 2414.33 ft²
+ *   "85 m² / 914 sq ft"                           → 914 ft²
+ *   "75 Square Meters"                            → converted: 75 × 10.764 = 807 ft²
+ *   "950 Square Feet"                             → 950 ft²
+ *
+ * Returns { sqft, convertedFromSqm } where convertedFromSqm=true means
+ * the value was derived from square meters and a warning should be emitted.
+ */
+export function parseSqft(raw: string | null | undefined): {
+  sqft: number | null;
+  convertedFromSqm: boolean;
+} {
+  if (!raw) return { sqft: null, convertedFromSqm: false };
+
+  // Try explicit feet value first
+  const feetM = raw.match(/([\d,]+\.?\d*)\s*(?:Square\s*Feet|sq\.?\s*ft\.?)/i);
+  if (feetM) {
+    const val = parseFloat(feetM[1].replace(/,/g, ""));
+    if (!isNaN(val) && val > 0) return { sqft: Math.round(val), convertedFromSqm: false };
+  }
+
+  // Fall back to square meters and convert
+  const meterM = raw.match(/([\d,]+\.?\d*)\s*(?:Square\s*Met(?:er|re)s?|m²|sq\.?\s*m\.?)/i);
+  if (meterM) {
+    const sqm = parseFloat(meterM[1].replace(/,/g, ""));
+    if (!isNaN(sqm) && sqm > 0) {
+      return { sqft: Math.round(sqm * SQM_TO_SQFT), convertedFromSqm: true };
+    }
+  }
+
+  return { sqft: null, convertedFromSqm: false };
+}
+
 // ── Data confidence scoring ────────────────────────────────────────────────
 
 /**
@@ -315,7 +509,7 @@ export function normalizeAmenities(rawAmenities: unknown): string[] {
 const CONFIDENCE_WEIGHTS = {
   title: 5,
   sourceUrl: 5,
-  neighborhoodNormalized: 10,  // bonus if normalization succeeded (vs "unclassified")
+  neighborhoodNormalized: 10,
   bedrooms: 15,
   bathrooms: 10,
   nightlyPriceUsd: 20,
@@ -324,7 +518,7 @@ const CONFIDENCE_WEIGHTS = {
   latitude: 5,
   longitude: 5,
   maxGuests: 5,
-  amenitiesNormalized: 5,      // at least 1 normalized amenity
+  amenitiesNormalized: 5,
 } as const;
 
 export interface ConfidenceInput {
