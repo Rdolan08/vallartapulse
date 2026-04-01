@@ -28,6 +28,7 @@ Real-time insights for Puerto Vallarta's rental and tourism market. Bilingual (E
 - Safety/crime data (SESNSP): incident counts by category — 2021–2024 monthly
 - Weather/climate (NOAA): temperature, rainfall, sea temp, humidity — 2020–2024 monthly
 - Data sources registry: 10 sources with status, sync timestamps, record counts
+- **Listing-level rental data** (PVRPV): 50 real scraped listings — Amapas (29) + Zona Romantica (21); tables: `rental_listings`, `rental_prices_by_date`, `rental_amenities_lookup`
 
 ## Pages
 
@@ -38,6 +39,19 @@ Real-time insights for Puerto Vallarta's rental and tourism market. Bilingual (E
 5. **Safety & Crime** (`/safety`) — incident categories, trends, per-100k rates
 6. **Weather & Climate** (`/weather`) — temperature, rainfall, sea conditions by month
 7. **Data Sources** (`/sources`) — source registry cards with Sync Now button
+
+## Listing-Level Rental Data Pipeline
+
+Three tables added to support listing-level rental analysis (not aggregate):
+- **`rental_listings`**: 26-field listing schema with lat/lon, amenities (raw + normalized), bedrooms, bathrooms, confidence scoring
+- **`rental_prices_by_date`**: Calendar-level price + availability per listing (FK to rental_listings)
+- **`rental_amenities_lookup`**: 17 canonical amenity keys across 9 categories, bilingual
+
+Normalization logic: `artifacts/api-server/src/lib/rental-normalize.ts`
+Ingestion pipeline: `artifacts/api-server/src/lib/rental-ingest.ts`
+Scraper: `scripts/src/pvrpv-scrape.ts` (run with `pnpm --filter @workspace/scripts run scrape:pvrpv`)
+
+**Current data**: 50 PVRPV listings (real, scraped), avg confidence 0.982, 100% field coverage on bedrooms/bathrooms/price/amenities/lat-lon.
 
 ## Known Fixes & Notes
 
