@@ -1,0 +1,834 @@
+year,month,month_name,date,state,municipality,category,category_es,category_group,category_raw,incident_count,incidents_per_100k,change_vs_prior_year_pct,source
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,35,11.7693,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,7,2.3539,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,9,3.0264,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,36,12.1056,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,3,1.0088,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,2,0.6725,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Femicide,Feminicidio,Violent Crime,Feminicidio,1,0.3363,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,33,11.0968,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,36,12.1056,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,4,1.3451,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,61,20.5123,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,1,0.3363,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,16,5.3803,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,8,2.6901,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,34,11.4331,N/A,SESNSP
+2022,1,January,2022-01-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,39,13.1144,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,18,6.0528,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,12,4.0352,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,6,2.0176,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,32,10.7605,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,1,0.3363,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,1,0.3363,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,23,7.7341,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,27,9.0792,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,3,1.0088,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,47,15.8045,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,1,0.3363,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,15,5.0440,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,10,3.3627,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,30,10.0880,N/A,SESNSP
+2022,2,February,2022-02-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,26,8.7429,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,27,9.0792,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,14,4.7077,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,4,1.3451,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,47,15.8045,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,6,2.0176,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,38,12.7781,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,4,1.3451,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,40,13.4507,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,10,3.3627,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,77,25.8925,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,19,6.3891,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,3,1.0088,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,41,13.7869,N/A,SESNSP
+2022,3,March,2022-03-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,26,8.7429,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,39,13.1144,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,16,5.3803,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,11,3.6989,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,38,12.7781,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,7,2.3539,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,23,7.7341,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,3,1.0088,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,54,18.1584,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,6,2.0176,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,53,17.8221,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,10,3.3627,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,5,1.6813,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,31,10.4243,N/A,SESNSP
+2022,4,April,2022-04-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,38,12.7781,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,48,16.1408,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,8,2.6901,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,8,2.6901,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,67,22.5299,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,4,1.3451,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,3,1.0088,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Femicide,Feminicidio,Violent Crime,Feminicidio,1,0.3363,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,37,12.4419,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,4,1.3451,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,33,11.0968,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,9,3.0264,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,65,21.8573,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,2,0.6725,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,21,7.0616,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,3,1.0088,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,10,3.3627,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,28,9.4155,N/A,SESNSP
+2022,5,May,2022-05-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,38,12.7781,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,41,13.7869,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,14,4.7077,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,9,3.0264,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,48,16.1408,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,1,0.3363,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,4,1.3451,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,42,14.1232,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,37,12.4419,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,5,1.6813,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,68,22.8661,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,11,3.6989,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,4,1.3451,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,10,3.3627,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,37,12.4419,N/A,SESNSP
+2022,6,June,2022-06-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,32,10.7605,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,39,13.1144,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,17,5.7165,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,3,1.0088,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,13,4.3715,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,44,14.7957,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,1,0.3363,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,3,1.0088,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,43,14.4595,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,5,1.6813,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,41,13.7869,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,7,2.3539,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,70,23.5387,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,22,7.3979,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,7,2.3539,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,40,13.4507,N/A,SESNSP
+2022,7,July,2022-07-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,56,18.8309,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,31,10.4243,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,15,5.0440,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,2,0.6725,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,14,4.7077,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,59,19.8397,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,2,0.6725,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Femicide,Feminicidio,Violent Crime,Feminicidio,1,0.3363,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,45,15.1320,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,2,0.6725,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,43,14.4595,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,10,3.3627,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,68,22.8661,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,4,1.3451,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,14,4.7077,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,3,1.0088,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,7,2.3539,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,40,13.4507,N/A,SESNSP
+2022,8,August,2022-08-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,23,7.7341,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,34,11.4331,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,13,4.3715,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,10,3.3627,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,55,18.4947,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,1,0.3363,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,5,1.6813,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,42,14.1232,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,4,1.3451,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,32,10.7605,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,6,2.0176,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,42,14.1232,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,5,1.6813,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,18,6.0528,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,11,3.6989,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,42,14.1232,N/A,SESNSP
+2022,9,September,2022-09-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,23,7.7341,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,35,11.7693,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,19,6.3891,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,18,6.0528,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,62,20.8485,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,5,1.6813,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Femicide,Feminicidio,Violent Crime,Feminicidio,2,0.6725,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,28,9.4155,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,28,9.4155,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,9,3.0264,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,36,12.1056,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,5,1.6813,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,9,3.0264,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,4,1.3451,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,5,1.6813,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,24,8.0704,N/A,SESNSP
+2022,10,October,2022-10-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,28,9.4155,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,29,9.7517,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,8,2.6901,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,20,6.7253,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,58,19.5035,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,7,2.3539,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,28,9.4155,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,43,14.4595,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,7,2.3539,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,7,2.3539,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,5,1.6813,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,20,6.7253,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,8,2.6901,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,27,9.0792,N/A,SESNSP
+2022,11,November,2022-11-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,44,14.7957,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,26,8.7429,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,16,5.3803,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,19,6.3891,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,57,19.1672,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,8,2.6901,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,31,10.4243,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,36,12.1056,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,9,3.0264,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,3,1.0088,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,24,8.0704,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,12,4.0352,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,26,8.7429,N/A,SESNSP
+2022,12,December,2022-12-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,47,15.8045,N/A,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,27,9.0792,-22.86,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,11,3.6989,57.14,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,16,5.3803,77.78,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,57,19.1672,58.33,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,1,0.3363,-66.67,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,4,1.3451,100.00,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Femicide,Feminicidio,Violent Crime,Feminicidio,1,0.3363,0.00,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,41,13.7869,24.24,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,2,0.6725,N/A,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,40,13.4507,11.11,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,10,3.3627,150.00,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,16,5.3803,-73.77,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,4,1.3451,300.00,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,19,6.3891,18.75,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,2,0.6725,N/A,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,9,3.0264,12.50,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,39,13.1144,14.71,SESNSP
+2023,1,January,2023-01-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,51,17.1496,30.77,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,40,13.4507,122.22,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,13,4.3715,8.33,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,20,6.7253,233.33,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,52,17.4859,62.50,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,6,2.0176,500.00,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,39,13.1144,69.57,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,33,11.0968,22.22,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,7,2.3539,133.33,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,9,3.0264,-80.85,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,5,1.6813,400.00,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,19,6.3891,26.67,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,7,2.3539,-30.00,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,24,8.0704,-20.00,SESNSP
+2023,2,February,2023-02-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,41,13.7869,57.69,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,30,10.0880,11.11,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,15,5.0440,7.14,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,19,6.3891,375.00,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,64,21.5211,36.17,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,5,1.6813,-16.67,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,47,15.8045,23.68,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,33,11.0968,-17.50,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,13,4.3715,30.00,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,13,4.3715,-83.12,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,6,2.0176,100.00,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,36,12.1056,89.47,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,3,1.0088,N/A,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,13,4.3715,333.33,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,37,12.4419,-9.76,SESNSP
+2023,3,March,2023-03-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,45,15.1320,73.08,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,39,13.1144,0.00,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,11,3.6989,-31.25,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,12,4.0352,9.09,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,70,23.5387,84.21,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,N/A,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,1,0.3363,-85.71,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,37,12.4419,60.87,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,-66.67,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,27,9.0792,-50.00,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,14,4.7077,133.33,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,6,2.0176,-88.68,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,1,0.3363,-66.67,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,27,9.0792,170.00,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,3,1.0088,200.00,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,12,4.0352,140.00,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,30,10.0880,-3.23,SESNSP
+2023,4,April,2023-04-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,39,13.1144,2.63,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,42,14.1232,-12.50,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,16,5.3803,100.00,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,11,3.6989,37.50,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,62,20.8485,-7.46,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,3,1.0088,0.00,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,44,14.7957,18.92,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,3,1.0088,-25.00,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,27,9.0792,-18.18,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,6,2.0176,-33.33,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,4,1.3451,-93.85,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,4,1.3451,100.00,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,23,7.7341,9.52,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,2,0.6725,-33.33,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,17,5.7165,70.00,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,42,14.1232,50.00,SESNSP
+2023,5,May,2023-05-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,38,12.7781,0.00,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,43,14.4595,4.88,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,11,3.6989,-21.43,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,16,5.3803,77.78,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,75,25.2200,56.25,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,3,1.0088,-25.00,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,41,13.7869,-2.38,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,5,1.6813,400.00,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,30,10.0880,-18.92,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,11,3.6989,120.00,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,11,3.6989,-83.82,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,4,1.3451,33.33,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,31,10.4243,181.82,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,4,1.3451,-60.00,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,52,17.4859,40.54,SESNSP
+2023,6,June,2023-06-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,28,9.4155,-12.50,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,43,14.4595,10.26,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,20,6.7253,17.65,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,15,5.0440,15.38,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,71,23.8749,61.36,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,5,1.6813,66.67,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,62,20.8485,44.19,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,3,1.0088,-40.00,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,38,12.7781,-7.32,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,19,6.3891,171.43,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,11,3.6989,-84.29,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,0.00,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,34,11.4331,54.55,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,2,0.6725,100.00,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,8,2.6901,14.29,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,55,18.4947,37.50,SESNSP
+2023,7,July,2023-07-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,31,10.4243,-44.64,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,36,12.1056,16.13,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,18,6.0528,20.00,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,2,0.6725,0.00,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,13,4.3715,-7.14,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,68,22.8661,15.25,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,3,1.0088,50.00,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,44,14.7957,-2.22,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,3,1.0088,50.00,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,37,12.4419,-13.95,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,8,2.6901,-20.00,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,10,3.3627,-85.29,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,2,0.6725,-50.00,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,22,7.3979,57.14,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,3,1.0088,0.00,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,16,5.3803,128.57,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,40,13.4507,0.00,SESNSP
+2023,8,August,2023-08-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,49,16.4771,113.04,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,37,12.4419,8.82,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,22,7.3979,69.23,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,18,6.0528,80.00,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,88,29.5915,60.00,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,1,0.3363,-80.00,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,49,16.4771,16.67,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,-75.00,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,21,7.0616,-34.38,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,5,1.6813,-16.67,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,10,3.3627,-76.19,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,4,1.3451,-20.00,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,45,15.1320,150.00,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,3,1.0088,N/A,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,15,5.0440,36.36,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,50,16.8133,19.05,SESNSP
+2023,9,September,2023-09-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,53,17.8221,130.43,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,40,13.4507,14.29,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,12,4.0352,-36.84,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,3,1.0088,200.00,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,17,5.7165,-5.56,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,67,22.5299,8.06,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,2,0.6725,-60.00,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,33,11.0968,17.86,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,0.00,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,32,10.7605,14.29,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,5,1.6813,-44.44,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,11,3.6989,-69.44,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,-40.00,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,24,8.0704,166.67,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,-75.00,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,10,3.3627,100.00,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,50,16.8133,108.33,SESNSP
+2023,10,October,2023-10-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,39,13.1144,39.29,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,37,12.4419,27.59,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,23,7.7341,187.50,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,14,4.7077,-30.00,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,50,16.8133,-13.79,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,3,1.0088,-57.14,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,49,16.4771,75.00,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,2,0.6725,100.00,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,32,10.7605,-25.58,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,7,2.3539,0.00,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,9,3.0264,28.57,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,5,1.6813,0.00,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,16,5.3803,-20.00,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,11,3.6989,37.50,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,48,16.1408,77.78,SESNSP
+2023,11,November,2023-11-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,25,8.4067,-43.18,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,40,13.4507,53.85,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,15,5.0440,-6.25,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,2,0.6725,100.00,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,14,4.7077,-26.32,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,49,16.4771,-14.04,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,0.00,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,3,1.0088,-62.50,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,29,9.7517,-6.45,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,3,1.0088,200.00,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,23,7.7341,-36.11,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,7,2.3539,-22.22,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,11,3.6989,266.67,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,5,1.6813,66.67,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,26,8.7429,8.33,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,14,4.7077,16.67,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,43,14.4595,65.38,SESNSP
+2023,12,December,2023-12-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,55,18.4947,17.02,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,38,12.7781,40.74,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,11,3.6989,0.00,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,10,3.3627,-37.50,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,62,20.8485,8.77,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,3,1.0088,-25.00,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,54,18.1584,31.71,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,-50.00,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,33,11.0968,-17.50,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,13,4.3715,30.00,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,13,4.3715,-18.75,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,-25.00,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,28,9.4155,47.37,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,4,1.3451,-55.56,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,37,12.4419,-5.13,SESNSP
+2024,1,January,2024-01-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,42,14.1232,-17.65,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,46,15.4683,15.00,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,7,2.3539,-46.15,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,9,3.0264,-55.00,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,57,19.1672,9.62,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,3,1.0088,N/A,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,2,0.6725,-66.67,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,47,15.8045,20.51,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,39,13.1144,18.18,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,2,0.6725,-71.43,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,9,3.0264,0.00,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,7,2.3539,40.00,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,30,10.0880,57.89,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,N/A,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,11,3.6989,57.14,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,38,12.7781,58.33,SESNSP
+2024,2,February,2024-02-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,40,13.4507,-2.44,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,37,12.4419,23.33,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,9,3.0264,-40.00,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,18,6.0528,-5.26,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,37,12.4419,-42.19,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,N/A,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,4,1.3451,-20.00,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,35,11.7693,-25.53,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,5,1.6813,N/A,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,29,9.7517,-12.12,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,12,4.0352,-7.69,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,7,2.3539,-46.15,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,1,0.3363,-83.33,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,29,9.7517,-19.44,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,4,1.3451,33.33,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,10,3.3627,-23.08,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,38,12.7781,2.70,SESNSP
+2024,3,March,2024-03-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,54,18.1584,20.00,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,41,13.7869,5.13,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,14,4.7077,27.27,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,14,4.7077,16.67,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,56,18.8309,-20.00,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,0.00,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,2,0.6725,100.00,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,44,14.7957,18.92,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,3,1.0088,200.00,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,37,12.4419,37.04,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,12,4.0352,-14.29,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,9,3.0264,50.00,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,1,0.3363,0.00,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,32,10.7605,18.52,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,17,5.7165,41.67,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,45,15.1320,50.00,SESNSP
+2024,4,April,2024-04-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,42,14.1232,7.69,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,47,15.8045,11.90,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,9,3.0264,-43.75,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,12,4.0352,9.09,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,67,22.5299,8.06,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,49,16.4771,11.36,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,-66.67,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,25,8.4067,-7.41,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,8,2.6901,33.33,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,9,3.0264,125.00,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,31,10.4243,34.78,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,2,0.6725,0.00,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,4,1.3451,-76.47,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,41,13.7869,-2.38,SESNSP
+2024,5,May,2024-05-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,37,12.4419,-2.63,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,33,11.0968,-23.26,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,12,4.0352,9.09,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,21,7.0616,31.25,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,53,17.8221,-29.33,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,N/A,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,1,0.3363,-66.67,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,34,11.4331,-17.07,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,-80.00,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,24,8.0704,-20.00,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,8,2.6901,-27.27,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,11,3.6989,0.00,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,-25.00,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,21,7.0616,-32.26,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,2,0.6725,N/A,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,10,3.3627,150.00,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,53,17.8221,1.92,SESNSP
+2024,6,June,2024-06-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,32,10.7605,14.29,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,42,14.1232,-2.33,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,16,5.3803,-20.00,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,8,2.6901,-46.67,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,50,16.8133,-29.58,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,1,0.3363,-80.00,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Femicide,Feminicidio,Violent Crime,Feminicidio,1,0.3363,N/A,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,27,9.0792,-56.45,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,2,0.6725,-33.33,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,21,7.0616,-44.74,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,8,2.6901,-57.89,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,7,2.3539,-36.36,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,5,1.6813,66.67,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,25,8.4067,-26.47,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,2,0.6725,0.00,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,5,1.6813,-37.50,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,30,10.0880,-45.45,SESNSP
+2024,7,July,2024-07-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,37,12.4419,19.35,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,35,11.7693,-2.78,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,19,6.3891,5.56,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,3,1.0088,50.00,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,10,3.3627,-23.08,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,57,19.1672,-16.18,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,1,0.3363,-66.67,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,40,13.4507,-9.09,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,2,0.6725,-33.33,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,31,10.4243,-16.22,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,8,2.6901,0.00,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,13,4.3715,30.00,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,5,1.6813,150.00,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,21,7.0616,-4.55,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,-66.67,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,5,1.6813,-68.75,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,37,12.4419,-7.50,SESNSP
+2024,8,August,2024-08-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,34,11.4331,-30.61,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,46,15.4683,24.32,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,11,3.6989,-50.00,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,8,2.6901,-55.56,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,48,16.1408,-45.45,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,2,0.6725,100.00,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,28,9.4155,-42.86,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,3,1.0088,200.00,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,18,6.0528,-14.29,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,11,3.6989,120.00,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,15,5.0440,50.00,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,-25.00,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,31,10.4243,-31.11,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,16,5.3803,6.67,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,37,12.4419,-26.00,SESNSP
+2024,9,September,2024-09-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,43,14.4595,-18.87,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,38,12.7781,-5.00,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,14,4.7077,16.67,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,17,5.7165,0.00,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,57,19.1672,-14.93,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,1,0.3363,-50.00,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,30,10.0880,-9.09,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,0.00,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,48,16.1408,50.00,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,4,1.3451,-20.00,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,6,2.0176,-45.45,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,0.00,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,34,11.4331,41.67,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,3,1.0088,200.00,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,15,5.0440,50.00,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,37,12.4419,-26.00,SESNSP
+2024,10,October,2024-10-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,31,10.4243,-20.51,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,38,12.7781,2.70,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,17,5.7165,-26.09,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,10,3.3627,-28.57,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,40,13.4507,-20.00,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,1,0.3363,N/A,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,18,6.0528,-63.27,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,5,1.6813,150.00,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,39,13.1144,21.88,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,8,2.6901,14.29,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,8,2.6901,-11.11,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,4,1.3451,-20.00,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,19,6.3891,18.75,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,N/A,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,14,4.7077,27.27,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,40,13.4507,-16.67,SESNSP
+2024,11,November,2024-11-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,48,16.1408,92.00,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,29,9.7517,-27.50,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,16,5.3803,6.67,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,-50.00,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,20,6.7253,42.86,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,34,11.4331,-30.61,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,24,8.0704,-17.24,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,29,9.7517,26.09,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,6,2.0176,-14.29,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,11,3.6989,0.00,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,1,0.3363,-80.00,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,31,10.4243,19.23,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,N/A,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,8,2.6901,-42.86,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,28,9.4155,-34.88,SESNSP
+2024,12,December,2024-12-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,52,17.4859,-5.45,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,35,11.7693,-7.89,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,9,3.0264,-18.18,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,16,5.3803,60.00,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,56,18.8309,-9.68,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,N/A,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,2,0.6725,-33.33,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,40,13.4507,-25.93,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,0.00,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,26,8.7429,-21.21,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,2,0.6725,-84.62,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,13,4.3715,0.00,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,1,0.3363,-66.67,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,28,9.4155,0.00,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,N/A,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,9,3.0264,125.00,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,34,11.4331,-8.11,SESNSP
+2025,1,January,2025-01-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,47,15.8045,11.90,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,42,14.1232,-8.70,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,13,4.3715,85.71,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,7,2.3539,-22.22,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,32,10.7605,-43.86,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,-33.33,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,35,11.7693,-25.53,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,N/A,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,20,6.7253,-48.72,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,7,2.3539,250.00,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,6,2.0176,-33.33,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,2,0.6725,-71.43,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,26,8.7429,-13.33,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,4,1.3451,300.00,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,12,4.0352,9.09,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,37,12.4419,-2.63,SESNSP
+2025,2,February,2025-02-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,34,11.4331,-15.00,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,40,13.4507,8.11,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,15,5.0440,66.67,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,0.00,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,20,6.7253,11.11,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,37,12.4419,0.00,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,4,1.3451,100.00,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,3,1.0088,-25.00,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,44,14.7957,25.71,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,-80.00,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,31,10.4243,6.90,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,8,2.6901,-33.33,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,6,2.0176,-14.29,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,200.00,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,38,12.7781,31.03,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,3,1.0088,-25.00,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,7,2.3539,-30.00,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,54,18.1584,42.11,SESNSP
+2025,3,March,2025-03-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,33,11.0968,-38.89,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,50,16.8133,21.95,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,8,2.6901,-42.86,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,2,0.6725,100.00,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,12,4.0352,-14.29,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,57,19.1672,1.79,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,0.00,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,1,0.3363,-50.00,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,36,12.1056,-18.18,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Kidnapping,Secuestro,Violent Crime,Secuestro,1,0.3363,N/A,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,28,9.4155,-24.32,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,5,1.6813,-58.33,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,19,6.3891,111.11,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,6,2.0176,500.00,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,47,15.8045,46.88,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,3,1.0088,N/A,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,11,3.6989,-35.29,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,69,23.2024,53.33,SESNSP
+2025,4,April,2025-04-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,42,14.1232,0.00,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,44,14.7957,-6.38,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,11,3.6989,22.22,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,8,2.6901,-33.33,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,75,25.2200,11.94,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,3,1.0088,N/A,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,4,1.3451,N/A,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Femicide,Feminicidio,Violent Crime,Feminicidio,1,0.3363,N/A,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,37,12.4419,-24.49,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,36,12.1056,44.00,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,12,4.0352,50.00,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,12,4.0352,33.33,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,1,0.3363,N/A,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,37,12.4419,19.35,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,3,1.0088,50.00,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,10,3.3627,150.00,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,48,16.1408,17.07,SESNSP
+2025,5,May,2025-05-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,34,11.4331,-8.11,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,41,13.7869,24.24,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,17,5.7165,41.67,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,0.00,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,16,5.3803,-23.81,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,55,18.4947,3.77,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,0.00,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,2,0.6725,100.00,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,25,8.4067,-26.47,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,3,1.0088,200.00,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,23,7.7341,-4.17,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,6,2.0176,-25.00,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,10,3.3627,-9.09,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,0.00,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,33,11.0968,57.14,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,-50.00,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,13,4.3715,30.00,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,45,15.1320,-15.09,SESNSP
+2025,6,June,2025-06-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,39,13.1144,21.88,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,51,17.1496,21.43,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,7,2.3539,-56.25,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,20,6.7253,150.00,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,66,22.1936,32.00,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,3,1.0088,N/A,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,4,1.3451,300.00,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,50,16.8133,85.19,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,2,0.6725,0.00,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,35,11.7693,66.67,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,12,4.0352,50.00,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,12,4.0352,71.43,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,1,0.3363,-80.00,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,36,12.1056,44.00,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,10,3.3627,100.00,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,47,15.8045,56.67,SESNSP
+2025,7,July,2025-07-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,36,12.1056,-2.70,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,58,19.5035,65.71,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,20,6.7253,5.26,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,-66.67,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,13,4.3715,30.00,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,54,18.1584,-5.26,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,N/A,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,2,0.6725,100.00,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,28,9.4155,-30.00,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,26,8.7429,-16.13,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,17,5.7165,112.50,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,9,3.0264,-30.77,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,1,0.3363,-80.00,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,33,11.0968,57.14,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,12,4.0352,140.00,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,42,14.1232,13.51,SESNSP
+2025,8,August,2025-08-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,28,9.4155,-17.65,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,52,17.4859,13.04,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,11,3.6989,0.00,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,1,0.3363,N/A,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,7,2.3539,-12.50,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,49,16.4771,2.08,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,3,1.0088,N/A,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,38,12.7781,35.71,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,1,0.3363,-66.67,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,33,11.0968,83.33,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,11,3.6989,0.00,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,7,2.3539,-53.33,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,4,1.3451,33.33,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,29,9.7517,-6.45,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,1,0.3363,N/A,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,3,1.0088,-81.25,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,36,12.1056,-2.70,SESNSP
+2025,9,September,2025-09-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,26,8.7429,-39.53,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,46,15.4683,21.05,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,14,4.7077,0.00,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,20,6.7253,17.65,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,81,27.2376,42.11,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,N/A,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Femicide,Feminicidio,Violent Crime,Feminicidio,1,0.3363,N/A,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,40,13.4507,33.33,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,2,0.6725,100.00,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,25,8.4067,-47.92,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,14,4.7077,250.00,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,11,3.6989,83.33,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,2,0.6725,-33.33,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,24,8.0704,-29.41,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,8,2.6901,-46.67,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,32,10.7605,-13.51,SESNSP
+2025,10,October,2025-10-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,34,11.4331,9.68,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,40,13.4507,5.26,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,14,4.7077,-17.65,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,19,6.3891,90.00,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,93,31.2728,132.50,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,100.00,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,1,0.3363,N/A,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,39,13.1144,116.67,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,2,0.6725,-60.00,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,30,10.0880,-23.08,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,10,3.3627,25.00,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,16,5.3803,100.00,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,-25.00,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,27,9.0792,42.11,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,4,1.3451,300.00,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,8,2.6901,-42.86,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,49,16.4771,22.50,SESNSP
+2025,11,November,2025-11-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,24,8.0704,-50.00,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,45,15.1320,55.17,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,15,5.0440,-6.25,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,15,5.0440,-25.00,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,80,26.9013,135.29,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,4,1.3451,N/A,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Extortion,Extorsión,Violent Crime,Extorsión,5,1.6813,N/A,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Femicide,Feminicidio,Violent Crime,Feminicidio,1,0.3363,N/A,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,47,15.8045,95.83,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,2,0.6725,N/A,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Kidnapping,Secuestro,Violent Crime,Secuestro,1,0.3363,N/A,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,20,6.7253,-31.03,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,5,1.6813,-16.67,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,15,5.0440,36.36,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,200.00,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,31,10.4243,0.00,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,16,5.3803,100.00,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,38,12.7781,35.71,SESNSP
+2025,12,December,2025-12-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,40,13.4507,-23.08,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,32,10.7605,-8.57,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,12,4.0352,33.33,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,6,2.0176,-62.50,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,88,29.5915,57.14,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,2,0.6725,0.00,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,44,14.7957,10.00,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,5,1.6813,400.00,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,13,4.3715,-50.00,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,18,6.0528,800.00,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,9,3.0264,-30.77,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,2,0.6725,100.00,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,31,10.4243,10.71,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,2,0.6725,100.00,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,12,4.0352,33.33,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,34,11.4331,0.00,SESNSP
+2026,1,January,2026-01-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,36,12.1056,-23.40,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,26,8.7429,-38.10,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,12,4.0352,-7.69,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,12,4.0352,71.43,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,65,21.8573,103.12,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,1,0.3363,-50.00,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Fraud,Fraude,Property Crime,Fraude,37,12.4419,5.71,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,3,1.0088,200.00,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Other Robbery,Otros Robos,Property Crime,Otros robos,20,6.7253,0.00,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,6,2.0176,-14.29,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,6,2.0176,0.00,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Rape,Violación,Sexual Crime,Violación simple / equiparada,3,1.0088,50.00,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,23,7.7341,-11.54,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,2,0.6725,-50.00,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,10,3.3627,-16.67,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Threats,Amenazas,Domestic & Social,Amenazas,30,10.0880,-18.92,SESNSP
+2026,2,February,2026-02-01,Jalisco,Puerto Vallarta,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,28,9.4155,-17.65,SESNSP
