@@ -7,7 +7,7 @@ import {
   weatherMetricsTable,
   dataSourcesTable,
 } from "@workspace/db/schema";
-import { count, isNull, sql } from "drizzle-orm";
+import { and, count, eq, isNull, sql } from "drizzle-orm";
 import { logger } from "./logger";
 
 const MONTHS = [
@@ -16,22 +16,35 @@ const MONTHS = [
 ];
 
 // ── Safety-specific reseed (runs independently of full seed) ──────────────────
-// Called on every startup to upgrade safety data if it's outdated (null categoryGroup).
+// Triggered when: (a) categoryGroup is null (old schema), or (b) current-month
+// data exists (means it was seeded with the old off-by-one month cutoff).
 export async function reseedSafetyIfOutdated(): Promise<void> {
   const [{ value: safetyTotal }] = await db.select({ value: count() }).from(safetyMetricsTable);
   if (safetyTotal === 0) return; // Will be handled by full seed below
 
-  const [{ value: nullGroup }] = await db
-    .select({ value: count() })
-    .from(safetyMetricsTable)
-    .where(isNull(safetyMetricsTable.categoryGroup));
+  const nowYear = new Date().getFullYear();
+  const nowMonth = new Date().getMonth() + 1;
 
-  if (nullGroup === 0) {
+  const [nullGroupRow, currentMonthRow] = await Promise.all([
+    db.select({ value: count() }).from(safetyMetricsTable)
+      .where(isNull(safetyMetricsTable.categoryGroup)),
+    db.select({ value: count() }).from(safetyMetricsTable)
+      .where(and(
+        eq(safetyMetricsTable.year, nowYear),
+        eq(safetyMetricsTable.month, nowMonth),
+      )),
+  ]);
+
+  const nullGroup = nullGroupRow[0].value;
+  const currentMonthData = currentMonthRow[0].value;
+
+  if (nullGroup === 0 && currentMonthData === 0) {
     logger.info("Safety data is current, skipping reseed");
     return;
   }
 
-  logger.info({ nullGroup, safetyTotal }, "Safety data has null categoryGroup — reseeding with 16 SESNSP categories");
+  const reason = nullGroup > 0 ? "null categoryGroup" : `current-month (${nowYear}-${nowMonth}) data present`;
+  logger.info({ nullGroup, currentMonthData, safetyTotal }, `Safety data outdated (${reason}) — reseeding`);
   await db.execute(sql`TRUNCATE TABLE safety_metrics RESTART IDENTITY CASCADE`);
   await insertSafetyData();
   logger.info("Safety reseed complete");
@@ -70,7 +83,7 @@ async function insertSafetyData(): Promise<void> {
 
   for (const year of [2022, 2023, 2024, 2025, 2026]) {
     for (let m = 0; m < 12; m++) {
-      if (year === currentYear && m + 1 > currentMonth) continue;
+      if (year === currentYear && m + 1 >= currentMonth) continue;
       for (const cat of safetyCategories) {
         const yDelta = Math.pow(1 + cat.trend, year - 2022);
         const base = cat.baseMonthly * yDelta * cat.seasonal[m];
@@ -122,7 +135,7 @@ export async function seedIfEmpty(): Promise<void> {
   for (const year of [2022, 2023, 2024, 2025, 2026]) {
     const yGrowth = 1 + (year - 2022) * 0.04;
     for (let m = 0; m < 12; m++) {
-      if (year === currentYear && m + 1 > currentMonth) continue;
+      if (year === currentYear && m + 1 >= currentMonth) continue;
       tourismData.push({
         year,
         month: m + 1,
@@ -156,7 +169,7 @@ export async function seedIfEmpty(): Promise<void> {
   for (const year of [2022, 2023, 2024, 2025, 2026]) {
     const yGrowth = 1 + (year - 2022) * 0.065;
     for (let m = 0; m < 12; m++) {
-      if (year === currentYear && m + 1 > currentMonth) continue;
+      if (year === currentYear && m + 1 >= currentMonth) continue;
       for (const hood of neighborhoods) {
         const seasonal = (m < 4 || m >= 10) ? 1.30 : (m >= 5 && m <= 8) ? 0.75 : 1.0;
         const listings = Math.floor(hood.baseListings * (1 + (year - 2022) * 0.08) * (0.92 + Math.random() * 0.16));
@@ -235,7 +248,7 @@ export async function seedIfEmpty(): Promise<void> {
   const j = (v: number) => String((v + (Math.random() - 0.5) * 0.6).toFixed(2));
   for (const year of [2020, 2021, 2022, 2023, 2024, 2025, 2026]) {
     for (let m = 0; m < 12; m++) {
-      if (year === currentYear && m + 1 > currentMonth) continue;
+      if (year === currentYear && m + 1 >= currentMonth) continue;
       const w = weatherByMonth[m];
       weatherData.push({
         year, month: m + 1, monthName: MONTHS[m],
