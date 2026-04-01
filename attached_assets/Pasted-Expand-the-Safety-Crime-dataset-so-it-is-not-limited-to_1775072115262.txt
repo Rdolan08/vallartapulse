@@ -1,0 +1,119 @@
+Expand the Safety & Crime dataset so it is not limited to the small set of currently displayed categories.
+
+Goal:
+Build a more comprehensive Puerto Vallarta crime dataset from the SESNSP source, using all available historical monthly data from 2022 to present, and include a broader set of offense categories.
+
+Requirements:
+
+1. Pull more crime categories
+Do not stop at assault, burglary, fraud, robbery, and vehicle theft.
+Also attempt to retrieve and normalize these categories when available in the source data:
+
+- Homicide / Murder
+- Femicide
+- Rape
+- Sexual abuse
+- Sexual harassment / other sexual offenses
+- Domestic violence / family violence
+- Kidnapping
+- Extortion
+- Threats
+- Injuries / bodily harm
+- Drug dealing / narcomenudeo
+- Property damage
+- Fraud
+- Burglary
+- Robbery
+- Vehicle theft
+- Other theft categories if broken out separately
+- Any additional major offense categories available for municipality-level reporting
+
+2. Use the full historical dataset
+Pull monthly data from 2022 through the most recent available month.
+Do not just scrape what is visible on the page.
+Inspect the underlying API calls, JSON payloads, CSV/XLSX links, embedded data objects, or downloadable files used by the source site.
+
+3. Pull municipality-level data for Puerto Vallarta
+Target Puerto Vallarta specifically.
+If the source is structured by:
+- state
+- municipality
+- offense category
+- month
+then filter to Puerto Vallarta municipality while preserving all available categories.
+
+4. Preserve raw and normalized fields
+For each row, capture:
+- year
+- month
+- month_number
+- date (YYYY-MM-01)
+- state
+- municipality
+- offense_category_raw
+- offense_category_normalized
+- incident_count
+- source
+- source_url
+- notes if category mapping is approximate
+
+5. Normalize category names
+Create a mapping layer so Spanish source labels are normalized into clean English labels.
+Examples:
+- Homicidio doloso -> Homicide
+- Feminicidio -> Femicide
+- Violación -> Rape
+- Abuso sexual -> Sexual Abuse
+- Violencia familiar -> Domestic Violence
+- Extorsión -> Extortion
+- Robo de vehículo -> Vehicle Theft
+
+Keep both the raw Spanish label and the normalized English label.
+
+6. Handle hierarchical crime categories
+If the source has parent and subcategory structure, retain both when possible:
+- category_group
+- category_subgroup
+
+Do not flatten away useful detail if separate categories exist.
+
+7. Prefer official underlying data over page text
+If the page only shows a summary, find the actual dataset behind it.
+Look for:
+- fetch/XHR requests
+- downloadable CSV/XLSX files
+- hidden JSON
+- script tags with embedded data
+- official SESNSP data files referenced by the page
+
+8. Avoid duplicates
+If the same category appears in multiple source tables, deduplicate carefully using:
+- municipality
+- year
+- month
+- category
+
+9. Build outputs for the app
+Produce:
+- a raw dataset file
+- a cleaned dataset file
+- a category dictionary / mapping file
+
+10. Add validation
+Check that:
+- data spans 2022 to latest month
+- there is more than the current 5-category subset
+- Puerto Vallarta rows are present for every month available
+- major categories like homicide, rape, domestic violence, and extortion are included if present in the source
+
+Deliverables:
+- safety_crime_raw.csv
+- safety_crime_clean.csv
+- safety_crime_category_map.csv
+
+After pulling the data, show me:
+1. all normalized categories found
+2. the date range covered
+3. row count
+4. any categories that were not available at municipality level
+5. any assumptions or mapping decisions made

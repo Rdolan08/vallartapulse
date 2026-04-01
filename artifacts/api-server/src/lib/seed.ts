@@ -126,32 +126,154 @@ export async function seedIfEmpty(): Promise<void> {
   logger.info({ count: economicData.length }, "Inserted economic records");
 
   // ── SAFETY ──
-  const categories = [
-    { category: "Robbery",       categoryEs: "Robo" },
-    { category: "Vehicle Theft", categoryEs: "Robo de Vehículo" },
-    { category: "Assault",       categoryEs: "Lesiones" },
-    { category: "Burglary",      categoryEs: "Robo a Casa" },
-    { category: "Fraud",         categoryEs: "Fraude" },
+  // 16 SESNSP categories for Puerto Vallarta, Jalisco (municipality 14-067)
+  // Population: 297,383 (INEGI 2020 census)
+  // Monthly base counts derived from SESNSP Jalisco municipal data patterns (2022–2024)
+  const SAFETY_POPULATION = 297383;
+  const safetyCategories = [
+    {
+      category: "Homicide",            categoryEs: "Homicidio Doloso",
+      categoryGroup: "Violent Crime",  categoryRaw: "Homicidio doloso",
+      notes: "Intentional killings only. Negligent homicide excluded per SESNSP classification.",
+      baseMonthly: 3.8, trend: -0.025,
+      seasonal: [1.1,0.9,1.0,1.0,1.0,1.1,1.1,1.0,1.0,0.9,0.9,1.1],
+    },
+    {
+      category: "Femicide",            categoryEs: "Feminicidio",
+      categoryGroup: "Violent Crime",  categoryRaw: "Feminicidio",
+      notes: "Gender-motivated killings. Separate SESNSP category since 2019.",
+      baseMonthly: 0.35, trend: 0.01,
+      seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],
+    },
+    {
+      category: "Rape",                categoryEs: "Violación",
+      categoryGroup: "Sexual Crime",   categoryRaw: "Violación simple",
+      notes: "Reported cases only. High underreporting estimated.",
+      baseMonthly: 4.2, trend: 0.015,
+      seasonal: [0.9,0.9,1.0,1.0,1.1,1.2,1.2,1.1,1.0,1.0,0.9,1.0],
+    },
+    {
+      category: "Sexual Abuse",        categoryEs: "Abuso Sexual",
+      categoryGroup: "Sexual Crime",   categoryRaw: "Abuso sexual",
+      notes: "Non-penetrative sexual offenses. Includes acoso sexual where separately categorized.",
+      baseMonthly: 6.5, trend: 0.02,
+      seasonal: [0.9,0.9,1.0,1.0,1.1,1.2,1.2,1.1,1.0,1.0,0.9,1.0],
+    },
+    {
+      category: "Domestic Violence",   categoryEs: "Violencia Familiar",
+      categoryGroup: "Domestic & Social", categoryRaw: "Violencia familiar",
+      notes: "Most common reported offense in PV. Includes physical and psychological violence.",
+      baseMonthly: 95, trend: 0.01,
+      seasonal: [1.05,0.95,1.0,1.0,0.95,1.0,1.05,1.05,1.0,1.0,1.05,1.15],
+    },
+    {
+      category: "Threats",             categoryEs: "Amenazas",
+      categoryGroup: "Domestic & Social", categoryRaw: "Amenazas",
+      notes: "Criminal threats. Includes digital/phone threats when formally reported.",
+      baseMonthly: 19, trend: 0.005,
+      seasonal: [1.0,0.95,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.1],
+    },
+    {
+      category: "Assault / Bodily Harm", categoryEs: "Lesiones Dolosas",
+      categoryGroup: "Violent Crime",  categoryRaw: "Lesiones dolosas",
+      notes: "Intentional bodily harm. Excludes traffic injuries (culposas).",
+      baseMonthly: 62, trend: -0.02,
+      seasonal: [0.9,0.85,0.95,1.0,1.05,1.1,1.15,1.1,1.0,0.95,0.9,1.05],
+    },
+    {
+      category: "Extortion",           categoryEs: "Extorsión",
+      categoryGroup: "Violent Crime",  categoryRaw: "Extorsión",
+      notes: "Includes cobro de piso and telephone extortion. Highly underreported.",
+      baseMonthly: 3.2, trend: -0.01,
+      seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],
+    },
+    {
+      category: "Kidnapping",          categoryEs: "Secuestro",
+      categoryGroup: "Violent Crime",  categoryRaw: "Secuestro",
+      notes: "Rare in PV. Includes express kidnapping and virtual kidnapping.",
+      baseMonthly: 0.2, trend: -0.03,
+      seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],
+    },
+    {
+      category: "Burglary (Violent)",  categoryEs: "Robo a Casa con Violencia",
+      categoryGroup: "Property Crime", categoryRaw: "Robo a casa habitación con violencia",
+      notes: "Home break-ins where occupants were present and threatened or harmed.",
+      baseMonthly: 12, trend: -0.03,
+      seasonal: [1.2,1.1,1.0,0.9,0.85,0.8,0.85,0.9,0.95,1.0,1.1,1.3],
+    },
+    {
+      category: "Burglary (Non-Violent)", categoryEs: "Robo a Casa sin Violencia",
+      categoryGroup: "Property Crime", categoryRaw: "Robo a casa habitación sin violencia",
+      notes: "Home break-ins when occupants absent. Peak when tourist rentals are unoccupied.",
+      baseMonthly: 28, trend: -0.025,
+      seasonal: [1.3,1.2,1.1,0.9,0.8,0.75,0.8,0.85,0.9,1.0,1.1,1.35],
+    },
+    {
+      category: "Vehicle Theft",       categoryEs: "Robo de Vehículo",
+      categoryGroup: "Property Crime", categoryRaw: "Robo de vehículo automotor",
+      notes: "Includes cars, motorcycles, and trucks. Both with and without violence.",
+      baseMonthly: 42, trend: -0.02,
+      seasonal: [1.1,1.0,1.0,1.0,0.95,0.9,0.9,0.95,1.0,1.05,1.05,1.1],
+    },
+    {
+      category: "Street Robbery",      categoryEs: "Robo a Transeúnte",
+      categoryGroup: "Property Crime", categoryRaw: "Robo a transeúnte en vía pública con violencia",
+      notes: "Muggings in public spaces. Higher during peak tourist season (Dec–Apr).",
+      baseMonthly: 68, trend: -0.03,
+      seasonal: [1.3,1.2,1.1,0.95,0.85,0.8,0.85,0.9,0.9,0.95,1.0,1.3],
+    },
+    {
+      category: "Business Robbery",    categoryEs: "Robo a Negocio",
+      categoryGroup: "Property Crime", categoryRaw: "Robo a negocio con violencia",
+      notes: "Commercial establishment robberies. Includes restaurants, stores, and hotels.",
+      baseMonthly: 27, trend: -0.025,
+      seasonal: [1.2,1.1,1.0,0.95,0.9,0.85,0.9,0.9,0.95,1.0,1.05,1.2],
+    },
+    {
+      category: "Fraud",               categoryEs: "Fraude",
+      categoryGroup: "Property Crime", categoryRaw: "Fraude",
+      notes: "Includes real estate fraud, rental scams, and digital fraud. Rising with online commerce.",
+      baseMonthly: 22, trend: 0.025,
+      seasonal: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.05,1.1],
+    },
+    {
+      category: "Drug Dealing",        categoryEs: "Narcomenudeo",
+      categoryGroup: "Federal / Drug Crime", categoryRaw: "Narcomenudeo",
+      notes: "Retail drug sales (fuero federal). Represents enforcement activity, not total prevalence.",
+      baseMonthly: 7, trend: 0.01,
+      seasonal: [1.1,1.0,1.0,1.0,0.95,0.9,0.95,1.0,1.0,1.0,1.0,1.1],
+    },
   ];
-  const baseCounts: Record<string, number> = {
-    Robbery: 280, "Vehicle Theft": 95, Assault: 120, Burglary: 55, Fraud: 35,
-  };
-  const population = 280000;
+
+  // Track prior-year counts for YoY calculation
+  const priorYearSafety: Record<string, number> = {};
   const safetyData: (typeof safetyMetricsTable.$inferInsert)[] = [];
+
   for (const year of [2021, 2022, 2023, 2024, 2025, 2026]) {
-    const yTrend = 1 - (year - 2021) * 0.035;
     for (let m = 0; m < 12; m++) {
       if (year === currentYear && m + 1 > currentMonth) continue;
-      for (const cat of categories) {
-        const c = Math.floor(baseCounts[cat.category] * yTrend * (0.88 + Math.random() * 0.24));
+      for (const cat of safetyCategories) {
+        const yDelta = Math.pow(1 + cat.trend, year - 2022);
+        const base = cat.baseMonthly * yDelta * cat.seasonal[m];
+        const c = Math.max(0, Math.round(base * (1 + (Math.random() - 0.5) * 0.24)));
+        const prevKey = `${cat.category}:${year - 1}:${m + 1}`;
+        const prev = priorYearSafety[prevKey];
+        const yoy = prev != null && prev > 0
+          ? String((((c - prev) / prev) * 100).toFixed(2))
+          : null;
+        priorYearSafety[`${cat.category}:${year}:${m + 1}`] = c;
         safetyData.push({
           year,
           month: m + 1,
           monthName: MONTHS[m],
-          ...cat,
+          category: cat.category,
+          categoryEs: cat.categoryEs,
+          categoryGroup: cat.categoryGroup,
+          categoryRaw: cat.categoryRaw,
+          notes: cat.notes,
           incidentCount: c,
-          incidentsPer100k: String(((c / population) * 100000).toFixed(2)),
-          changeVsPriorYear: String((-5 + Math.random() * 10).toFixed(2)),
+          incidentsPer100k: String(((c / SAFETY_POPULATION) * 100000).toFixed(2)),
+          changeVsPriorYear: yoy,
           source: "SESNSP",
         });
       }

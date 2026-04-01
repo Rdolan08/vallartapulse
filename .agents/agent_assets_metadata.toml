@@ -1,8 +1,25 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "r_sPC06tq5WvnzRnNlmxW"
 uri = "file://artifacts/pv-datastore/public/opengraph-new.png"
 type = "image"
 title = "vallartapulse og preview card"
+
+[[outputs]]
+id = "MCQLTkdEX2sA8AJ7VwI6f"
+uri = "file://scripts/output/safety_crime_raw.csv"
+type = "table"
+title = "safety_crime_raw.csv — 832 rows, all 16 categories"
+
+[[outputs]]
+id = "56-jwqHyMlnTPwEHonu5W"
+uri = "file://scripts/output/safety_crime_clean.csv"
+type = "table"
+title = "safety_crime_clean.csv — deduplicated with YoY % change"
+
+[[outputs]]
+id = "xQFqJqooTg0_Jsd3kwFdq"
+uri = "file://scripts/output/safety_crime_category_map.csv"
+type = "table"
+title = "safety_crime_category_map.csv — 16 category mappings"
