@@ -9,6 +9,7 @@
     "scrape:pvrpv": "tsx ./src/pvrpv-scrape.ts",
     "scrape:pvrpv:remaining": "tsx ./src/pvrpv-scrape-remaining.ts",
     "validate:comps": "tsx ./src/comps-validate.ts",
+    "validate:comps-v2": "tsx ./src/comps-validate-v2.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
