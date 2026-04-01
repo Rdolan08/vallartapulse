@@ -1,5 +1,5 @@
-import { ArrowDownIcon, ArrowUpIcon, MinusIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowDownIcon, ArrowUpIcon, MinusIcon, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
 import { useLanguage } from "@/contexts/language-context";
 
 interface StatCardProps {
@@ -11,6 +11,7 @@ interface StatCardProps {
   changeLabelEs?: string;
   icon: React.ReactNode;
   trend?: "up_good" | "down_good" | "neutral";
+  href?: string;
 }
 
 export function StatCard({
@@ -22,6 +23,7 @@ export function StatCard({
   changeLabelEs = "vs año anterior",
   icon,
   trend = "up_good",
+  href,
 }: StatCardProps) {
   const { t } = useLanguage();
 
@@ -34,33 +36,42 @@ export function StatCard({
     if (trend === "down_good") trendColor = isPositive ? "#F87171" : "#34D399";
   }
 
-  return (
-    <div className="glass-card overflow-hidden group" style={{ padding: "1.5rem", position: "relative" }}>
+  const inner = (
+    <div
+      className="glass-card overflow-hidden group relative"
+      style={{ padding: "1.5rem", cursor: href ? "pointer" : "default" }}
+    >
+      {/* Subtle teal border glow on hover — only when linkable */}
+      {href && (
+        <div
+          className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+          style={{
+            boxShadow: "inset 0 0 0 1px rgba(0,194,168,0.4)",
+            background: "radial-gradient(circle at 50% 0%, rgba(0,194,168,0.05) 0%, transparent 70%)",
+          }}
+        />
+      )}
+
       {/* Background icon */}
-      <div
-        className="absolute top-0 right-0 p-5 pointer-events-none"
-        style={{
-          opacity: 0.07,
-          transition: "opacity 0.4s ease, transform 0.4s ease",
-        }}
-      >
+      <div className="absolute top-0 right-0 p-5 pointer-events-none" style={{ opacity: 0.07 }}>
         <div className="w-14 h-14">{icon}</div>
       </div>
 
+      {/* Chevron — top right, fades in on hover */}
+      {href && (
+        <div className="absolute top-3 right-3 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-primary">
+          <ChevronRight className="w-4 h-4" />
+        </div>
+      )}
+
       <div className="relative flex flex-col gap-4" style={{ zIndex: 1 }}>
         {/* Label */}
-        <p
-          className="text-xs font-semibold uppercase tracking-[0.1em] leading-none"
-          style={{ color: "#9AA5B1" }}
-        >
+        <p className="text-xs font-semibold uppercase tracking-[0.1em] leading-none" style={{ color: "#9AA5B1" }}>
           {t(titleEn, titleEs)}
         </p>
 
         {/* Value */}
-        <div
-          className="text-4xl font-bold leading-none"
-          style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}
-        >
+        <div className="text-4xl font-bold leading-none" style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}>
           {value}
         </div>
 
@@ -82,7 +93,22 @@ export function StatCard({
             </span>
           </div>
         )}
+
+        {/* "View details" label — fades in at the bottom on hover */}
+        {href && (
+          <div className="flex items-center gap-0.5 text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {t("View details", "Ver detalles")} <ChevronRight className="w-3 h-3" />
+          </div>
+        )}
       </div>
     </div>
+  );
+
+  if (!href) return inner;
+
+  return (
+    <Link href={href} className="block outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl">
+      {inner}
+    </Link>
   );
 }

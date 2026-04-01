@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import {
   useGetDashboardSummary,
   useGetTourismMetrics,
@@ -11,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
 import {
   Building2,
+  ChevronRight,
   Home,
   Plane,
   Ship,
@@ -58,7 +60,7 @@ export default function Dashboard() {
 
   const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
   const [month, setMonth] = useState<number>(LAST_COMPLETED_MONTH);
-  const [tempUnit, setTempUnit] = useState<"C" | "F">("C");
+  const [tempUnit, setTempUnit] = useState<"C" | "F">("F");
 
   const { data, isLoading, error } = useGetDashboardSummary({ year, month });
 
@@ -243,6 +245,7 @@ export default function Dashboard() {
               change={data.hotelOccupancyChange}
               icon={<Building2 className="text-primary" />}
               trend="up_good"
+              href="/tourism"
             />
             <StatCard
               titleEn="Avg Nightly Rate"
@@ -251,6 +254,7 @@ export default function Dashboard() {
               change={data.avgNightlyRateChange}
               icon={<Home className="text-accent" />}
               trend="up_good"
+              href="/rental-market"
             />
             <StatCard
               titleEn="Active Listings"
@@ -259,6 +263,7 @@ export default function Dashboard() {
               change={data.activeListingsChange}
               icon={<Home className="text-emerald-500" />}
               trend="up_good"
+              href="/rental-market"
             />
             <StatCard
               titleEn="Tourist Arrivals"
@@ -267,6 +272,7 @@ export default function Dashboard() {
               change={data.touristArrivalsChange}
               icon={<Plane className="text-blue-500" />}
               trend="up_good"
+              href="/tourism"
             />
             <StatCard
               titleEn="Cruise Visitors"
@@ -274,6 +280,7 @@ export default function Dashboard() {
               value={formatNumber(data.cruiseVisitors)}
               icon={<Ship className="text-indigo-500" />}
               trend="up_good"
+              href="/tourism"
             />
             <StatCard
               titleEn="Crime Index"
@@ -282,6 +289,7 @@ export default function Dashboard() {
               change={data.crimeIndexChange}
               icon={<ShieldAlert className="text-rose-500" />}
               trend="down_good"
+              href="/safety"
             />
             <StatCard
               titleEn="Avg Temperature"
@@ -289,6 +297,7 @@ export default function Dashboard() {
               value={fmtTemp(data.avgTemperatureC, tempUnit)}
               icon={<ThermometerSun className="text-amber-500" />}
               trend="neutral"
+              href="/weather"
             />
           </div>
 
@@ -297,9 +306,17 @@ export default function Dashboard() {
             {/* Occupancy trend for selected year */}
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle className="font-display">
-                  {t(`Hotel Occupancy — ${year} (%)`, `Ocupación Hotelera — ${year} (%)`)}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="font-display">
+                    {t(`Hotel Occupancy — ${year} (%)`, `Ocupación Hotelera — ${year} (%)`)}
+                  </CardTitle>
+                  <Link
+                    href="/tourism"
+                    className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-accent transition-colors"
+                  >
+                    {t("View all", "Ver todo")} <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
                 <p className="text-xs text-muted-foreground">DATATUR / SECTUR</p>
               </CardHeader>
               <CardContent className="h-72">
@@ -364,12 +381,20 @@ export default function Dashboard() {
             {/* Avg nightly rate trend */}
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle className="font-display">
-                  {t(
-                    `Avg Nightly Rate — ${year} (USD)`,
-                    `Tarifa Promedio por Noche — ${year} (USD)`
-                  )}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="font-display">
+                    {t(
+                      `Avg Nightly Rate — ${year} (USD)`,
+                      `Tarifa Promedio por Noche — ${year} (USD)`
+                    )}
+                  </CardTitle>
+                  <Link
+                    href="/rental-market"
+                    className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-accent transition-colors"
+                  >
+                    {t("View all", "Ver todo")} <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
                 <p className="text-xs text-muted-foreground">Airbnb / VRBO</p>
               </CardHeader>
               <CardContent className="h-72">
