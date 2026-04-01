@@ -31,16 +31,19 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const CURRENT_YEAR = new Date().getFullYear();
-const CURRENT_MONTH = new Date().getMonth() + 1;
+import {
+  CURRENT_YEAR,
+  LAST_COMPLETED_MONTH,
+  LAST_COMPLETED_YEAR,
+  MONTHLY_DATA_YEARS,
+  MONTH_NAMES,
+  MONTH_SHORT,
+  availableMonths,
+  clampMonth,
+  yearLabel,
+} from "@/lib/data-availability";
 
-const YEARS = Array.from({ length: CURRENT_YEAR - 2021 }, (_, i) => CURRENT_YEAR - i);
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const YEARS = MONTHLY_DATA_YEARS.slice().reverse();
 
 function cToF(c: number) {
   return Math.round((c * 9) / 5 + 32);
@@ -53,8 +56,8 @@ function fmtTemp(c: number, unit: "C" | "F") {
 export default function Dashboard() {
   const { t } = useLanguage();
 
-  const [year, setYear] = useState<number>(CURRENT_YEAR);
-  const [month, setMonth] = useState<number>(CURRENT_MONTH);
+  const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
+  const [month, setMonth] = useState<number>(LAST_COMPLETED_MONTH);
   const [tempUnit, setTempUnit] = useState<"C" | "F">("C");
 
   const { data, isLoading, error } = useGetDashboardSummary({ year, month });
@@ -146,16 +149,20 @@ export default function Dashboard() {
             </span>
             <select
               value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
+              onChange={(e) => {
+                const y = Number(e.target.value);
+                setYear(y);
+                setMonth((prev) => clampMonth(y, prev));
+              }}
               className="glass-panel px-3 py-1.5 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {YEARS.map((y) => (
-                <option key={y} value={y}>{y}</option>
+                <option key={y} value={y}>{yearLabel(y)}</option>
               ))}
             </select>
           </div>
 
-          {/* Month */}
+          {/* Month — only show available months for the selected year */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               {t("Month", "Mes")}
@@ -165,8 +172,8 @@ export default function Dashboard() {
               onChange={(e) => setMonth(Number(e.target.value))}
               className="glass-panel px-3 py-1.5 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              {MONTH_NAMES.map((name, i) => (
-                <option key={i + 1} value={i + 1}>{name}</option>
+              {availableMonths(year).map((m) => (
+                <option key={m} value={m}>{MONTH_NAMES[m - 1]}</option>
               ))}
             </select>
           </div>
