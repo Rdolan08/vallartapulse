@@ -13,6 +13,9 @@ export interface SafetyMetric {
   monthName?: string;
   category: string;
   categoryEs?: string;
+  categoryGroup?: string;
+  categoryRaw?: string;
+  notes?: string;
   incidentCount: number;
   incidentsPer100k?: number;
   changeVsPriorYear?: number;

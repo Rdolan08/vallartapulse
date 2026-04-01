@@ -143,11 +143,14 @@ export const GetSafetyMetricsResponseItem = zod.object({
   monthName: zod.string().optional(),
   category: zod.string(),
   categoryEs: zod.string().optional(),
+  categoryGroup: zod.string().optional(),
+  categoryRaw: zod.string().optional(),
+  notes: zod.string().optional(),
   incidentCount: zod.number(),
   incidentsPer100k: zod.number().optional(),
   changeVsPriorYear: zod.number().optional(),
   source: zod.string(),
-  createdAt: zod.date().optional(),
+  createdAt: zod.coerce.date().optional(),
 });
 export const GetSafetyMetricsResponse = zod.array(GetSafetyMetricsResponseItem);
 
