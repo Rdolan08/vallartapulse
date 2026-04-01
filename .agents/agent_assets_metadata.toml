@@ -10,16 +10,16 @@ title = "vallartapulse og preview card"
 id = "MCQLTkdEX2sA8AJ7VwI6f"
 uri = "file://scripts/output/safety_crime_raw.csv"
 type = "table"
-title = "safety_crime_raw.csv — 832 rows, all 16 categories"
+title = "safety_crime_raw.csv — 1,890 rows (real SESNSP row-level data)"
 
 [[outputs]]
 id = "56-jwqHyMlnTPwEHonu5W"
 uri = "file://scripts/output/safety_crime_clean.csv"
 type = "table"
-title = "safety_crime_clean.csv — deduplicated with YoY % change"
+title = "safety_crime_clean.csv — 833 rows aggregated with YoY change"
 
 [[outputs]]
 id = "xQFqJqooTg0_Jsd3kwFdq"
 uri = "file://scripts/output/safety_crime_category_map.csv"
 type = "table"
-title = "safety_crime_category_map.csv — 16 category mappings"
+title = "safety_crime_category_map.csv — 20 category mappings with notes"

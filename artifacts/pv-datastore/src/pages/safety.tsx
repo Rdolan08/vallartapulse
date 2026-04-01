@@ -10,7 +10,7 @@ import {
   ResponsiveContainer, LineChart, Line,
 } from "recharts";
 
-const YEARS = [2026, 2025, 2024, 2023, 2022];
+const YEARS = [2026, 2025, 2024, 2023, 2022]; // SESNSP data available from 2022 (official municipal-level file)
 
 const GROUP_COLORS: Record<string, string> = {
   "Violent Crime":       "#ef4444",

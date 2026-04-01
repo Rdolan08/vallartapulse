@@ -1,0 +1,21 @@
+category_raw,category_normalized,category_es,category_group,notes
+Homicidio doloso,Homicide,Homicidio Doloso,Violent Crime,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.
+Feminicidio,Femicide,Feminicidio,Violent Crime,Gender-motivated killings per NOM-046. Tracked separately by SESNSP since 2019.
+Extorsión,Extortion,Extorsión,Violent Crime,Includes cobro de piso and telephone extortion. Highly underreported.
+Secuestro,Kidnapping,Secuestro,Violent Crime,Includes express and extortive kidnapping. Rare in Puerto Vallarta.
+Lesiones dolosas,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Intentional bodily harm. Traffic injuries (lesiones culposas) excluded.
+Violación simple / equiparada,Rape,Violación,Sexual Crime,Includes violación simple and violación equiparada. Reported cases only — high underreporting.
+Abuso sexual,Sexual Abuse,Abuso Sexual,Sexual Crime,Non-penetrative sexual offenses. Separate legal category from rape.
+Acoso/Hostigamiento sexual,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Includes both acoso (unwanted attention) and hostigamiento (power-based harassment).
+Otros delitos vs libertad sexual,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Residual SESNSP sexual offense category.
+Violencia familiar,Domestic Violence,Violencia Familiar,Domestic & Social,Most reported offense in PV. Physical and psychological violence within families.
+Amenazas,Threats,Amenazas,Domestic & Social,"Criminal threats, including digital and telephone threats when formally reported."
+Robo a casa habitación con violencia,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Home break-ins with occupants present and threatened or harmed.
+Robo a casa habitación sin violencia,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Home break-ins when occupants absent. Peak during tourist rental season.
+Robo de vehículo automotor,Vehicle Theft,Robo de Vehículo,Property Crime,"Cars, motorcycles, and trucks. All vehicle theft modalidades aggregated."
+Robo a transeúnte en vía pública,Street Robbery,Robo a Transeúnte,Property Crime,Muggings in public spaces. Includes violent and non-violent.
+Robo a negocio,Business Robbery,Robo a Negocio,Property Crime,Commercial establishment robberies. Includes violent and non-violent.
+Otros robos,Other Robbery,Otros Robos,Property Crime,SESNSP catch-all robbery subtype not classified into specific categories.
+Fraude,Fraud,Fraude,Property Crime,"Real estate fraud, rental scams, digital fraud. Rising with online commerce."
+Daño a la propiedad,Property Damage,Daño a la Propiedad,Property Crime,Criminal property damage (daño en propiedad ajena per SESNSP).
+Narcomenudeo,Drug Dealing,Narcomenudeo,Federal / Drug Crime,"Retail drug sales (fuero federal). Represents enforcement, not total prevalence."
