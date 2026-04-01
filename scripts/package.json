@@ -8,6 +8,7 @@
     "seed": "tsx ./src/seed.ts",
     "scrape:pvrpv": "tsx ./src/pvrpv-scrape.ts",
     "scrape:pvrpv:remaining": "tsx ./src/pvrpv-scrape-remaining.ts",
+    "validate:comps": "tsx ./src/comps-validate.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
