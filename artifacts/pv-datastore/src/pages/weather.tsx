@@ -9,14 +9,16 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar,
 } from "recharts";
 
-const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
+import { MONTHLY_DATA_YEARS, LAST_COMPLETED_YEAR, yearLabel } from "@/lib/data-availability";
+
+const WEATHER_YEARS = [2020, 2021, ...MONTHLY_DATA_YEARS].filter((v, i, a) => a.indexOf(v) === i).reverse();
 
 function toF(c: number) { return Math.round((c * 9/5 + 32) * 10) / 10; }
 function toIn(mm: number) { return Math.round((mm / 25.4) * 100) / 100; }
 
 export default function Weather() {
   const { t } = useLanguage();
-  const [year, setYear] = useState<number>(2026);
+  const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
   const [unit, setUnit] = useState<"metric" | "imperial">("metric");
 
   const { data, isLoading, error } = useGetWeatherMetrics({ year });
@@ -78,8 +80,8 @@ export default function Weather() {
             onChange={(e) => setYear(Number(e.target.value))}
             className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
           >
-            {YEARS.map((y) => (
-              <option key={y} value={y}>{y}</option>
+            {WEATHER_YEARS.map((y) => (
+              <option key={y} value={y}>{yearLabel(y)}</option>
             ))}
           </select>
         </div>

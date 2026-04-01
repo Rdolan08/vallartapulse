@@ -10,7 +10,9 @@ import {
   ResponsiveContainer, LineChart, Line,
 } from "recharts";
 
-const YEARS = [2026, 2025, 2024, 2023, 2022]; // SESNSP data available from 2022 (official municipal-level file)
+import { MONTHLY_DATA_YEARS, LAST_COMPLETED_YEAR, yearLabel } from "@/lib/data-availability";
+
+const YEARS = [...MONTHLY_DATA_YEARS].reverse();
 
 const GROUP_COLORS: Record<string, string> = {
   "Violent Crime":       "#ef4444",
@@ -47,7 +49,7 @@ const GROUPS_ES: Record<string, string> = {
 
 export default function Safety() {
   const { t, lang } = useLanguage();
-  const [year, setYear]       = useState<number>(2026);
+  const [year, setYear]       = useState<number>(LAST_COMPLETED_YEAR);
   const [group, setGroup]     = useState<string>("All");
 
   const { data, isLoading, error } = useGetSafetyMetrics({ year });
@@ -114,7 +116,7 @@ export default function Safety() {
             onChange={(e) => setYear(Number(e.target.value))}
             className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
           >
-            {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+            {YEARS.map((y) => <option key={y} value={y}>{yearLabel(y)}</option>)}
           </select>
         </div>
       </div>

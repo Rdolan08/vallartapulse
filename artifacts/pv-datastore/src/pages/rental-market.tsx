@@ -9,7 +9,9 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 
-const YEARS = [2026, 2025, 2024, 2023, 2022];
+import { MONTHLY_DATA_YEARS, LAST_COMPLETED_YEAR, yearLabel } from "@/lib/data-availability";
+
+const YEARS = [...MONTHLY_DATA_YEARS].reverse();
 
 const NEIGHBORHOODS = [
   { value: "Zona Romántica", label: "Zona Romántica (Old Town / Emiliano Zapata)" },
@@ -23,7 +25,7 @@ const NEIGHBORHOODS = [
 
 export default function RentalMarket() {
   const { t } = useLanguage();
-  const [year, setYear] = useState<number>(2026);
+  const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
   const [neighborhood, setNeighborhood] = useState<string>("Zona Romántica");
 
   const { data, isLoading, error } = useGetRentalMarketMetrics({ year, neighborhood });
@@ -65,7 +67,7 @@ export default function RentalMarket() {
             className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {YEARS.map((y) => (
-              <option key={y} value={y}>{y}</option>
+              <option key={y} value={y}>{yearLabel(y)}</option>
             ))}
           </select>
         </div>

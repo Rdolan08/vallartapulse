@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useGetTourismMetrics } from "@workspace/api-client-react";
+import { MONTHLY_DATA_YEARS, LAST_COMPLETED_YEAR, yearLabel } from "@/lib/data-availability";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,9 +17,11 @@ import {
 } from "recharts";
 import { formatNumber, formatPercent } from "@/lib/utils";
 
+const YEARS = [...MONTHLY_DATA_YEARS].reverse();
+
 export default function Tourism() {
   const { t } = useLanguage();
-  const [year, setYear] = useState<number>(2026);
+  const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
   
   // Try to fetch, let it fail gracefully if endpoint not wired
   const { data, isLoading, error } = useGetTourismMetrics({ year });
@@ -39,8 +42,8 @@ export default function Tourism() {
           onChange={(e) => setYear(Number(e.target.value))}
           className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
         >
-          {[2026, 2025, 2024, 2023, 2022].map(y => (
-            <option key={y} value={y}>{y}</option>
+          {YEARS.map(y => (
+            <option key={y} value={y}>{yearLabel(y)}</option>
           ))}
         </select>
       </div>
