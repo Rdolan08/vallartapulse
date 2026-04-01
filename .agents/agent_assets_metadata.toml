@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "r_sPC06tq5WvnzRnNlmxW"
+uri = "file://artifacts/pv-datastore/public/opengraph-new.png"
+type = "image"
+title = "vallartapulse og preview card"
