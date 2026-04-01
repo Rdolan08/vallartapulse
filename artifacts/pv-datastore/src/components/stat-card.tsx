@@ -38,7 +38,7 @@ export function StatCard({
 
   const inner = (
     <div
-      className="glass-card overflow-hidden group relative"
+      className="glass-card overflow-hidden group relative h-full"
       style={{ padding: "1.5rem", cursor: href ? "pointer" : "default" }}
     >
       {/* Subtle teal border glow on hover — only when linkable */}
@@ -107,7 +107,7 @@ export function StatCard({
   if (!href) return inner;
 
   return (
-    <Link href={href} className="block outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl">
+    <Link href={href} className="block h-full outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl">
       {inner}
     </Link>
   );
