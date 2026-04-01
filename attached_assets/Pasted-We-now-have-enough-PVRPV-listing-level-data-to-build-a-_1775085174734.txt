@@ -1,0 +1,86 @@
+We now have enough PVRPV listing-level data to build a first comparable-property model for pricing.
+
+Do NOT add any new external sources yet.
+Do NOT build occupancy-based pricing yet.
+Do NOT build front-end UI yet.
+
+Build a first-pass comps engine using the current PVRPV dataset only.
+
+Requirements:
+
+1. Comparable eligibility rules
+Only include listings that:
+- are in Zona Romantica or Amapas
+- have bedrooms between 1 and 4
+- have nightly_price_usd present
+- have latitude/longitude present
+- have distance_to_beach_m present
+- have sqft present, if available
+Exclude:
+- listings with 6+ bedrooms
+- listings over $1000/night
+- obvious outliers or flagged bad sqft rows
+- low-confidence rows only if they are missing more than rating data
+
+2. Primary comp segmentation
+Segment first by:
+- neighborhood_normalized
+- bedrooms
+
+3. Similarity scoring
+Create a comparable score from 0 to 100 using weighted factors:
+- same neighborhood: required
+- same bedroom count: strongest weight
+- bathroom similarity
+- sqft similarity
+- distance_to_beach_m similarity
+- amenity similarity
+- rating similarity if present
+
+Use a weighted formula and document the weights clearly.
+
+4. Target property input
+Create a function that accepts a target property object with:
+- neighborhood_normalized
+- bedrooms
+- bathrooms
+- sqft
+- distance_to_beach_m
+- amenities_normalized
+- rating_overall (optional)
+
+5. Comp selection
+For each target property:
+- return the top 5 to 10 best comps
+- include comp score
+- include reasons it matched
+- include nightly_price_usd
+- include median and average price of selected comps
+- include recommended price range
+
+6. Recommended price range logic
+Use comp medians, not means, as the main anchor.
+Return:
+- conservative price
+- recommended price
+- stretch price
+
+Document the adjustment logic clearly.
+
+7. Validation
+Run the model against 5 real listings from the dataset:
+- at least 3 Zona Romantica listings
+- at least 2 Amapas listings
+
+For each one, do a leave-one-out test:
+- remove the target listing from the comp pool
+- generate comps and a recommended price
+- compare the recommendation to the actual nightly_price_usd
+
+8. Output
+Provide:
+- the scoring formula
+- the comp selection logic
+- 5 validation examples
+- observations on where the model seems too aggressive or too conservative
+- recommendations for the next improvement step
