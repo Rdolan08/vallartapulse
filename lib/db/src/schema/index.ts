@@ -5,3 +5,6 @@ export * from "./safety_metrics";
 export * from "./weather_metrics";
 export * from "./data_sources";
 export * from "./airport_metrics";
+export * from "./rental_listings";
+export * from "./rental_prices_by_date";
+export * from "./rental_amenities_lookup";
