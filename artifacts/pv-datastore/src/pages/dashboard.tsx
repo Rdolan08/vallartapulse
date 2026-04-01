@@ -15,7 +15,6 @@ import {
   ChevronRight,
   Home,
   Plane,
-  Ship,
   ShieldAlert,
   ThermometerSun,
   Thermometer,
@@ -275,12 +274,12 @@ export default function Dashboard() {
               href="/tourism"
             />
             <StatCard
-              titleEn="Cruise Visitors"
-              titleEs="Visitantes de Cruceros"
-              value={formatNumber(data.cruiseVisitors)}
-              icon={<Ship className="text-indigo-500" />}
-              trend="up_good"
-              href="/tourism"
+              titleEn="Avg Temperature"
+              titleEs="Temperatura Promedio"
+              value={fmtTemp(data.avgTemperatureC, tempUnit)}
+              icon={<ThermometerSun className="text-amber-500" />}
+              trend="neutral"
+              href="/weather"
             />
             <StatCard
               titleEn="Crime Index"
@@ -290,14 +289,6 @@ export default function Dashboard() {
               icon={<ShieldAlert className="text-rose-500" />}
               trend="down_good"
               href="/safety"
-            />
-            <StatCard
-              titleEn="Avg Temperature"
-              titleEs="Temperatura Promedio"
-              value={fmtTemp(data.avgTemperatureC, tempUnit)}
-              icon={<ThermometerSun className="text-amber-500" />}
-              trend="neutral"
-              href="/weather"
             />
           </div>
 
