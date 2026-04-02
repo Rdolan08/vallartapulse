@@ -7,6 +7,9 @@ on:
   workflow_dispatch:
     # Also allow manual runs from the GitHub Actions tab
 
+permissions:
+  contents: write
+
 jobs:
   capture:
     name: Screenshot & commit OG images
