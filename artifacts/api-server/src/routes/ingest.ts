@@ -15,8 +15,11 @@ import { rentalListingsTable } from "@workspace/db/schema";
 import { count, sql, desc, eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { fetchPvrpvListing } from "../lib/ingest/pvrpv-adapter.js";
+import { fetchAirbnbListing } from "../lib/ingest/airbnb-adapter.js";
+import { fetchVrboListing } from "../lib/ingest/vrbo-adapter.js";
 import { persistNormalized } from "../lib/ingest/persist.js";
 import { fetchAndParseICal, parseICalText } from "../lib/ingest/ical-parser.js";
+import type { SourceKey } from "../lib/ingest/types.js";
 
 const router = Router();
 
@@ -107,6 +110,13 @@ const RunSchema = z.object({
   persist: z.boolean().optional().default(false),
 });
 
+function detectSource(url: string): SourceKey | null {
+  if (url.includes("pvrpv.com")) return "pvrpv";
+  if (url.includes("airbnb.com")) return "airbnb";
+  if (url.includes("vrbo.com") || url.includes("homeaway.com")) return "vrbo";
+  return null;
+}
+
 router.post("/ingest/run", async (req, res) => {
   const parsed = RunSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -115,18 +125,23 @@ router.post("/ingest/run", async (req, res) => {
 
   const { url, persist } = parsed.data;
 
-  // Only PVRPV supported in Phase 1
-  const isPvrpv = url.includes("pvrpv.com");
-  if (!isPvrpv) {
+  const source = detectSource(url);
+  if (!source) {
     return res.status(400).json({
       error: "Unsupported source",
-      message: "Phase 1 supports pvrpv.com URLs only",
+      message: "Supported: pvrpv.com, airbnb.com, vrbo.com, homeaway.com",
     });
   }
 
   try {
-    req.log.info({ url, persist }, "ingest/run: fetching PVRPV listing");
-    const normalized = await fetchPvrpvListing(url);
+    req.log.info({ url, source, persist }, "ingest/run: fetching listing");
+
+    const normalized =
+      source === "pvrpv"
+        ? await fetchPvrpvListing(url)
+        : source === "airbnb"
+        ? await fetchAirbnbListing(url)
+        : await fetchVrboListing(url);
 
     let result: { listing_id?: number; warnings: string[]; persisted: boolean; error?: string } = {
       persisted: false,
@@ -143,14 +158,9 @@ router.post("/ingest/run", async (req, res) => {
       };
     }
 
-    res.json({
-      source: "pvrpv",
-      url,
-      normalized,
-      ...result,
-    });
+    res.json({ source, url, normalized, ...result });
   } catch (err) {
-    req.log.error({ err, url }, "ingest/run failed");
+    req.log.error({ err, url, source }, "ingest/run failed");
     res.status(500).json({
       error: "Adapter failed",
       message: err instanceof Error ? err.message : String(err),
@@ -183,6 +193,67 @@ router.post("/ingest/ical", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "ingest/ical failed");
     res.status(500).json({ error: "iCal parse failed", message: String(err) });
+  }
+});
+
+// ── POST /ingest/inject ───────────────────────────────────────────────────
+// Accepts a pre-scraped NormalizedRentalListing (e.g. from a Playwright
+// scraper, residential-proxy agent, or CSV import) and persists it.
+// This is the production path for sources that require JS rendering.
+
+const VALID_SOURCES = ["airbnb", "vrbo", "pvrpv", "local_agency", "owner_direct", "manual", "csv"] as const;
+
+const InjectSchema = z.object({
+  source: z.enum(VALID_SOURCES),
+  source_listing_id: z.string().min(1),
+  source_url: z.string().url(),
+  title: z.string().optional(),
+  neighborhood: z.string().optional(),
+  neighborhood_normalized: z.string().optional(),
+  building_name: z.string().optional(),
+  property_type: z.string().optional(),
+  bedrooms: z.number().int().min(0).optional(),
+  bathrooms: z.number().min(0).optional(),
+  max_guests: z.number().int().min(1).optional(),
+  sqft: z.number().optional().nullable(),
+  year_built: z.number().int().optional().nullable(),
+  price_nightly_usd: z.number().optional().nullable(),
+  cleaning_fee_usd: z.number().optional().nullable(),
+  min_nights: z.number().int().optional().nullable(),
+  latitude: z.number().optional().nullable(),
+  longitude: z.number().optional().nullable(),
+  amenities_raw: z.array(z.string()).optional(),
+  amenities_normalized: z.array(z.string()).optional(),
+  rating_value: z.number().min(0).max(5).optional().nullable(),
+  review_count: z.number().int().min(0).optional().nullable(),
+  scraped_at: z.string().optional(),
+});
+
+router.post("/ingest/inject", async (req, res) => {
+  const parsed = InjectSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+  }
+
+  const normalized = {
+    ...parsed.data,
+    scraped_at: parsed.data.scraped_at ?? new Date().toISOString(),
+  };
+
+  try {
+    req.log.info({ source: normalized.source, source_listing_id: normalized.source_listing_id }, "ingest/inject: persisting");
+    const result = await persistNormalized(normalized);
+    res.json({
+      ok: result.ok,
+      source: normalized.source,
+      listing_id: result.listing_id,
+      warnings: result.warnings,
+      error: result.error,
+      normalized,
+    });
+  } catch (err) {
+    req.log.error({ err }, "ingest/inject failed");
+    res.status(500).json({ error: "Persist failed", message: String(err) });
   }
 });
 
