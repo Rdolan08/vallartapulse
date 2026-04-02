@@ -1,0 +1,99 @@
+Next step: make the comps endpoint front-end friendly.
+
+Do NOT add new external data sources yet.
+Do NOT change the core V2 pricing logic yet.
+
+Build the support layer needed so a front-end can safely call POST /api/rental/comps without requiring exact internal values from the user.
+
+Requirements:
+
+1. Building-name support
+Create a building lookup + fuzzy-match helper for PVRPV buildings.
+
+Add:
+- a normalized building alias map
+- support for common variants, punctuation differences, casing differences, accents, and partial matches
+- a helper that returns:
+  - canonical_building_name
+  - matched_alias
+  - match_confidence
+  - suggestions if no confident match
+
+If confidence is low, do not silently force a match. Return suggestions.
+
+2. Amenity metadata support
+Create an endpoint to expose the valid canonical amenity keys for the front end.
+
+Add:
+GET /api/rental/amenities
+
+Response:
+- amenity_key
+- display_label
+- category
+- description if available
+
+3. Building metadata support
+Create an endpoint to expose known buildings for the front end.
+
+Add:
+GET /api/rental/buildings?neighborhood=Zona%20Romantica
+GET /api/rental/buildings?neighborhood=Amapas
+
+Response:
+- canonical_building_name
+- neighborhood_normalized
+- aliases
+- listing_count
+- median_price
+- avg_price
+- confidence/usefulness flag if sample size is thin
+
+4. Input-helper endpoint
+Create a helper endpoint for front-end validation before calling comps.
+
+Add:
+POST /api/rental/comps/prepare
+
+Input:
+- neighborhood_normalized
+- building_name (optional)
+- amenities_normalized (optional string[])
+- bedrooms
+- bathrooms
+- sqft
+- distance_to_beach_m
+- rating_overall (optional)
+
+Response:
+- cleaned_input
+- canonical_building_name if matched
+- building_match_confidence
+- amenity_validation:
+  - accepted_keys
+  - rejected_keys
+  - suggested_keys
+- warnings
+- ready_for_comps (boolean)
+
+5. Validation behavior
+- Do not reject a request just because building_name is fuzzy
+- Do reject unsupported neighborhoods
+- Do validate amenity keys against the canonical lookup
+- Return useful warnings when values are technically allowed but weak for modeling
+
+6. Testing
+Show example requests and responses for:
+- a clean building match ("The Park")
+- a fuzzy building match ("the park pv")
+- a near miss with suggestions
+- a request with invalid amenity keys
+- a request with mixed valid and invalid amenities
+
+7. Final summary
+After everything is working, summarize:
+- new routes
+- request/response schema
+- how fuzzy matching works
+- what the front end should call first before POST /api/rental/comps
+- any remaining blockers before building the UI

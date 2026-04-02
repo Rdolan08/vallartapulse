@@ -8,6 +8,7 @@ import safetyRouter from "./safety";
 import weatherRouter from "./weather";
 import sourcesRouter from "./sources";
 import compsRouter from "./comps";
+import rentalHelpersRouter from "./rental-helpers";
 
 const router: IRouter = Router();
 
@@ -19,6 +20,7 @@ router.use(economicRouter);
 router.use(safetyRouter);
 router.use(weatherRouter);
 router.use(sourcesRouter);
+router.use(rentalHelpersRouter); // must be before compsRouter (comps/prepare vs comps)
 router.use(compsRouter);
 
 export default router;
