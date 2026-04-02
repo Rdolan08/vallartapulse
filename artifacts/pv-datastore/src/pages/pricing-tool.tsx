@@ -396,49 +396,172 @@ function BuildingCombobox({ buildings, value, onChange, disabled }: {
   );
 }
 
-// Amenity multi-select
-function AmenityPicker({ amenities, selected, onToggle }: {
+// Amenity compact dropdown + chips
+const AMENITY_CATEGORY_ORDER = ["pool", "view", "beach", "kitchen", "outdoor", "climate", "laundry", "connectivity", "workspace", "parking", "pet", "safety"];
+const AMENITY_CATEGORY_LABEL: Record<string, string> = {
+  pool: "Pool & Water", view: "View", beach: "Beach", kitchen: "Kitchen",
+  outdoor: "Outdoor", climate: "Climate", laundry: "Laundry", connectivity: "Connectivity",
+  workspace: "Workspace", parking: "Parking", pet: "Pet-Friendly", safety: "Safety",
+};
+
+function AmenityDropdown({ amenities, selected, onToggle }: {
   amenities: AmenityDef[];
   selected: string[];
   onToggle: (key: string) => void;
 }) {
   const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  useEffect(() => {
+    if (open) setTimeout(() => searchRef.current?.focus(), 50);
+  }, [open]);
+
   const grouped = amenities.reduce<Record<string, AmenityDef[]>>((acc, a) => {
     if (!acc[a.category]) acc[a.category] = [];
     acc[a.category].push(a);
     return acc;
   }, {});
-  const order = ["beach", "climate", "view", "pool", "kitchen", "outdoor", "laundry", "connectivity", "workspace", "parking", "pet", "safety"];
-  const sorted = order.filter(c => grouped[c]).concat(Object.keys(grouped).filter(c => !order.includes(c)));
+  const sorted = AMENITY_CATEGORY_ORDER.filter(c => grouped[c])
+    .concat(Object.keys(grouped).filter(c => !AMENITY_CATEGORY_ORDER.includes(c)));
+
+  const query = search.trim().toLowerCase();
+  const filteredGroups = sorted.map(cat => ({
+    cat,
+    items: (grouped[cat] ?? []).filter(a =>
+      !query || t(a.display_label, a.display_label_es).toLowerCase().includes(query)
+    ),
+  })).filter(g => g.items.length > 0);
+
+  const selectedDefs = amenities.filter(a => selected.includes(a.amenity_key));
 
   if (amenities.length === 0) {
     return <p className="text-xs text-muted-foreground">Loading amenities…</p>;
   }
 
   return (
-    <div className="space-y-4">
-      {sorted.map(cat => (
-        <div key={cat}>
-          <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 capitalize" style={{ color: "rgba(154,165,177,0.5)" }}>{cat}</p>
-          <div className="flex flex-wrap gap-2">
-            {(grouped[cat] ?? []).map(a => {
-              const isOn = selected.includes(a.amenity_key);
-              const label = t(a.display_label, a.display_label_es);
-              return (
-                <button key={a.amenity_key} type="button" onClick={() => onToggle(a.amenity_key)}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 border"
-                  style={{
-                    background: isOn ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
-                    borderColor: isOn ? "rgba(0,194,168,0.5)" : "rgba(255,255,255,0.08)",
-                    color: isOn ? "#00C2A8" : "rgba(245,247,250,0.6)",
-                  }}>
-                  {label}
+    <div ref={containerRef} className="space-y-2">
+      {/* Trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm border text-left transition-colors"
+        style={{
+          background: "#163C4A",
+          borderColor: open ? "rgba(0,194,168,0.4)" : "rgba(255,255,255,0.08)",
+          color: selected.length > 0 ? "rgb(245,247,250)" : "rgba(154,165,177,0.45)",
+          boxShadow: open ? "0 0 0 2px rgba(0,194,168,0.2)" : "none",
+        }}
+      >
+        <Tag className="w-3.5 h-3.5 shrink-0" style={{ color: selected.length > 0 ? "#00C2A8" : "rgba(154,165,177,0.4)" }} />
+        <span className="flex-1 text-sm">
+          {selected.length === 0
+            ? t("Add amenities…", "Agregar amenidades…")
+            : t(`${selected.length} amenit${selected.length === 1 ? "y" : "ies"} selected`, `${selected.length} amenidad${selected.length === 1 ? "" : "es"} seleccionada${selected.length === 1 ? "" : "s"}`)}
+        </span>
+        <ChevronDown className="w-3.5 h-3.5 shrink-0 transition-transform" style={{
+          color: "rgba(154,165,177,0.4)",
+          transform: open ? "rotate(180deg)" : "rotate(0deg)",
+        }} />
+      </button>
+
+      {/* Dropdown */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}
+            className="rounded-xl overflow-hidden"
+            style={{ background: "#0D2533", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 8px 32px rgba(0,0,0,0.45)" }}
+          >
+            {/* Search */}
+            <div className="px-3 pt-2.5 pb-2 border-b border-white/6">
+              <input
+                ref={searchRef}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={t("Search amenities…", "Buscar amenidades…")}
+                className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 outline-none"
+              />
+            </div>
+            {/* Groups */}
+            <div style={{ maxHeight: "240px", overflowY: "auto" }}>
+              {filteredGroups.length === 0 && (
+                <p className="px-3 py-3 text-xs text-muted-foreground">{t("No amenities match", "Sin resultados")}</p>
+              )}
+              {filteredGroups.map(({ cat, items }) => (
+                <div key={cat}>
+                  <p className="px-3 pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-widest"
+                    style={{ color: "rgba(154,165,177,0.4)" }}>
+                    {AMENITY_CATEGORY_LABEL[cat] ?? cat}
+                  </p>
+                  {items.map(a => {
+                    const isOn = selected.includes(a.amenity_key);
+                    const label = t(a.display_label, a.display_label_es);
+                    return (
+                      <button
+                        key={a.amenity_key} type="button"
+                        onClick={() => onToggle(a.amenity_key)}
+                        className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-left transition-colors hover:bg-white/4"
+                        style={{ color: isOn ? "#00C2A8" : "rgba(245,247,250,0.75)" }}
+                      >
+                        <span className="w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors"
+                          style={{
+                            background: isOn ? "rgba(0,194,168,0.2)" : "transparent",
+                            borderColor: isOn ? "rgba(0,194,168,0.6)" : "rgba(255,255,255,0.15)",
+                          }}>
+                          {isOn && <CheckCircle2 className="w-2.5 h-2.5" style={{ color: "#00C2A8" }} />}
+                        </span>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+            {/* Footer */}
+            {selected.length > 0 && (
+              <div className="px-3 py-2 border-t border-white/6 flex items-center justify-between">
+                <span className="text-[11px]" style={{ color: "rgba(0,194,168,0.7)" }}>
+                  {selected.length} {t("selected", "seleccionados")}
+                </span>
+                <button type="button" onClick={() => { selected.forEach(k => onToggle(k)); }}
+                  className="text-[11px] hover:text-foreground transition-colors"
+                  style={{ color: "rgba(154,165,177,0.5)" }}>
+                  {t("Clear all", "Limpiar todo")}
                 </button>
-              );
-            })}
-          </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Selected chips */}
+      {selectedDefs.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pt-0.5">
+          {selectedDefs.map(a => (
+            <span key={a.amenity_key}
+              className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] font-medium"
+              style={{ background: "rgba(0,194,168,0.12)", border: "1px solid rgba(0,194,168,0.25)", color: "#00C2A8" }}>
+              {t(a.display_label, a.display_label_es)}
+              <button type="button" onClick={() => onToggle(a.amenity_key)}
+                className="w-3.5 h-3.5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors ml-0.5">
+                <XCircle className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -635,7 +758,7 @@ function PrimaryButton({ onClick, loading, disabled, children }: {
 }
 
 // ── Main page ──────────────────────────────────────────────────────────────────
-type Phase = "form" | "prepare_loading" | "prepared" | "comps_loading" | "results" | "error";
+type Phase = "form" | "loading" | "results" | "error";
 
 const DEFAULT_FORM: FormValues = {
   neighborhood: "Zona Romantica",
@@ -673,6 +796,7 @@ export default function PricingTool() {
   const [compsResult, setCompsResult] = useState<CompsResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showLimitations, setShowLimitations] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Resolved GPS coordinates from OSM street autocomplete (for future geolocation use)
   const [street1Coords, setStreet1Coords] = useState<[number, number] | null>(null);
@@ -720,14 +844,14 @@ export default function PricingTool() {
   function setField<K extends keyof FormValues>(key: K, val: FormValues[K]) {
     setForm(prev => ({ ...prev, [key]: val }));
     setFormErrors(prev => ({ ...prev, [key]: undefined }));
-    if (phase !== "form" && phase !== "prepare_loading") {
+    if (phase !== "form" && phase !== "loading") {
       setPhase("form"); setPrepareResult(null); setCompsResult(null);
     }
   }
 
   function toggleAmenity(key: string) {
     setSelectedAmenities(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
-    if (phase !== "form" && phase !== "prepare_loading") {
+    if (phase !== "form" && phase !== "loading") {
       setPhase("form"); setPrepareResult(null); setCompsResult(null);
     }
   }
@@ -752,14 +876,14 @@ export default function PricingTool() {
     return Object.keys(errs).length === 0;
   }
 
-  const handleValidate = useCallback(async () => {
+  const handleGetPrice = useCallback(async () => {
     if (!validate()) return;
-    setPhase("prepare_loading");
+    setPhase("loading");
     setErrorMsg(null);
     try {
       const distanceM = toMeters(Number(form.distance), units);
       const sizeSqft = form.size ? toSqft(Number(form.size), units) : undefined;
-      const body = {
+      const prepareBody = {
         neighborhood_normalized: form.neighborhood,
         bedrooms: form.bedrooms,
         bathrooms: form.bathrooms,
@@ -769,38 +893,21 @@ export default function PricingTool() {
         ...(form.ratingOverall ? { rating_overall: Number(form.ratingOverall) } : {}),
         ...(form.buildingName.trim() ? { building_name: form.buildingName.trim() } : {}),
       };
-      const result = await apiFetch<PrepareResult>("/api/rental/comps/prepare", {
+      const prepared = await apiFetch<PrepareResult>("/api/rental/comps/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(prepareBody),
       });
-      setPrepareResult(result);
-      setPhase("prepared");
-    } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Validation failed. Please try again.");
-      setPhase("error");
-      setTimeout(() => errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, selectedAmenities, units]);
-
-  const handleGetPricing = useCallback(async () => {
-    if (!prepareResult) return;
-    setPhase("comps_loading");
-    setErrorMsg(null);
-    try {
-      const distanceM = toMeters(Number(form.distance), units);
-      const sizeSqft = form.size ? toSqft(Number(form.size), units) : undefined;
-      const body = {
+      setPrepareResult(prepared);
+      const compsBody = {
         neighborhood_normalized: form.neighborhood,
         bedrooms: form.bedrooms,
         bathrooms: form.bathrooms,
         ...(sizeSqft ? { sqft: sizeSqft } : {}),
         distance_to_beach_m: distanceM,
-        amenities_normalized: prepareResult.cleaned_input.amenities_normalized,
+        amenities_normalized: prepared.cleaned_input.amenities_normalized,
         ...(form.ratingOverall ? { rating_overall: Number(form.ratingOverall) } : {}),
-        ...(prepareResult.cleaned_input.building_name ? { building_name: prepareResult.cleaned_input.building_name } : {}),
-        // V3
+        ...(prepared.cleaned_input.building_name ? { building_name: prepared.cleaned_input.building_name } : {}),
         month: form.month,
         view_type: form.viewType,
         rooftop_pool: form.rooftopPool,
@@ -809,18 +916,18 @@ export default function PricingTool() {
       const result = await apiFetch<CompsResult>("/api/rental/comps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(compsBody),
       });
       setCompsResult(result);
       setPhase("results");
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Failed to get pricing. Please try again.");
+      setErrorMsg(e instanceof Error ? e.message : "Something went wrong. Please try again.");
       setPhase("error");
       setTimeout(() => errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, prepareResult, units]);
+  }, [form, selectedAmenities, units]);
 
   function handleReset() {
     setForm(DEFAULT_FORM);
@@ -836,7 +943,7 @@ export default function PricingTool() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  const isLoading = phase === "prepare_loading" || phase === "comps_loading";
+  const isLoading = phase === "loading";
   const distLabel = units === "imperial" ? "ft" : "m";
   const sizeLabel = units === "imperial" ? "sq ft" : "m²";
   const beachPresets = units === "imperial" ? BEACH_PRESETS_IMPERIAL : BEACH_PRESETS_METRIC;
@@ -876,17 +983,17 @@ export default function PricingTool() {
         </div>
       )}
 
-      <div className="space-y-5">
+      <div className="space-y-4">
 
         {/* ── Form card ── */}
         <Card className="glass-card">
-          <CardHeader>
+          <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Building2 className="w-4 h-4" style={{ color: "#00C2A8" }} />
               {t("Property Details", "Detalles de la Propiedad")}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-4">
 
             {/* ── Month selector ── */}
             <div>
@@ -917,38 +1024,47 @@ export default function PricingTool() {
                   );
                 })}
               </div>
-              <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.4)" }}>
-                {t("Seasonality multipliers: Peak (blue), High (teal), Shoulder (amber), Low (orange). Events stack on top.",
-                   "Multiplicadores de temporada: Pico (azul), Alta (teal), Hombro (ámbar), Baja (naranja).")}
+              <p className="text-[11px] mt-1" style={{ color: "rgba(154,165,177,0.4)" }}>
+                {t("Peak (blue) · High (teal) · Shoulder (amber) · Low (orange) · events stack on top",
+                   "Pico (azul) · Alta (teal) · Hombro (ámbar) · Baja (naranja)")}
               </p>
             </div>
 
-            {/* Neighborhood */}
-            <div>
-              <FieldLabel>{t("Neighborhood", "Colonia")}</FieldLabel>
-              <StyledSelect value={form.neighborhood}
-                onChange={e => setField("neighborhood", e.target.value as Neighborhood)} disabled={isLoading}>
-                <optgroup label="Puerto Vallarta">
-                  <option value="Zona Romantica">Zona Romántica</option>
-                  <option value="Amapas">Amapas / Conchas Chinas</option>
-                  <option value="Centro">Centro / Alta Vista</option>
-                  <option value="Hotel Zone">Hotel Zone / Malecón</option>
-                  <option value="5 de Diciembre">5 de Diciembre</option>
-                  <option value="Old Town">Old Town (ambiguous side of river)</option>
-                  <option value="Versalles">Versalles</option>
-                  <option value="Marina Vallarta">Marina Vallarta</option>
-                  <option value="Mismaloya">Mismaloya</option>
-                </optgroup>
-                <optgroup label="Riviera Nayarit">
-                  <option value="Nuevo Vallarta">Nuevo Vallarta</option>
-                  <option value="Bucerias">Bucerías</option>
-                  <option value="La Cruz de Huanacaxtle">La Cruz de Huanacaxtle</option>
-                  <option value="Punta Mita">Punta Mita</option>
-                  <option value="El Anclote">El Anclote</option>
-                  <option value="Sayulita">Sayulita</option>
-                  <option value="San Pancho">San Pancho</option>
-                </optgroup>
-              </StyledSelect>
+            {/* Neighborhood + Bedrooms */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <FieldLabel>{t("Neighborhood", "Colonia")}</FieldLabel>
+                <StyledSelect value={form.neighborhood}
+                  onChange={e => setField("neighborhood", e.target.value as Neighborhood)} disabled={isLoading}>
+                  <optgroup label="Puerto Vallarta">
+                    <option value="Zona Romantica">Zona Romántica</option>
+                    <option value="Amapas">Amapas / Conchas Chinas</option>
+                    <option value="Centro">Centro / Alta Vista</option>
+                    <option value="Hotel Zone">Hotel Zone / Malecón</option>
+                    <option value="5 de Diciembre">5 de Diciembre</option>
+                    <option value="Old Town">Old Town</option>
+                    <option value="Versalles">Versalles</option>
+                    <option value="Marina Vallarta">Marina Vallarta</option>
+                    <option value="Mismaloya">Mismaloya</option>
+                  </optgroup>
+                  <optgroup label="Riviera Nayarit">
+                    <option value="Nuevo Vallarta">Nuevo Vallarta</option>
+                    <option value="Bucerias">Bucerías</option>
+                    <option value="La Cruz de Huanacaxtle">La Cruz de Huanacaxtle</option>
+                    <option value="Punta Mita">Punta Mita</option>
+                    <option value="El Anclote">El Anclote</option>
+                    <option value="Sayulita">Sayulita</option>
+                    <option value="San Pancho">San Pancho</option>
+                  </optgroup>
+                </StyledSelect>
+              </div>
+              <div>
+                <FieldLabel>{t("Bedrooms", "Recámaras")}</FieldLabel>
+                <StyledSelect value={form.bedrooms}
+                  onChange={e => setField("bedrooms", Number(e.target.value) as 1 | 2 | 3 | 4)} disabled={isLoading}>
+                  {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} {t("BR", "Rec.")}</option>)}
+                </StyledSelect>
+              </div>
             </div>
 
             {/* Building */}
@@ -961,110 +1077,53 @@ export default function PricingTool() {
                 <BuildingCombobox buildings={buildings} value={form.buildingName}
                   onChange={v => setField("buildingName", v)} disabled={isLoading} />
               )}
-              <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.45)" }}>
-                {t("If your condo is part of a known complex, selecting it improves pricing accuracy. If not listed, type it or skip.",
-                   "Si el condo pertenece a un complejo conocido, seleccionarlo mejora la precisión. Si no está, escríbelo u omítelo.")}
+              <p className="text-[11px] mt-1" style={{ color: "rgba(154,165,177,0.45)" }}>
+                {t("Selecting a known complex improves accuracy. Skip if unknown.",
+                   "Seleccionarlo mejora la precisión. Omite si no sabes el nombre.")}
               </p>
             </div>
 
-            {/* Cross streets — OSM autocomplete */}
-            <div>
-              <FieldLabel optional>
-                <Crosshair className="inline w-3.5 h-3.5 mr-1" />
-                {t("Nearest cross streets", "Calles cercanas")}
+            {/* Beach distance */}
+            <div ref={distanceRef}>
+              <FieldLabel>
+                <Waves className="inline w-3.5 h-3.5 mr-1" />
+                {t(`Distance to beach (${distLabel})`, `Distancia a la playa (${distLabel})`)}
               </FieldLabel>
-              <div className="flex items-center gap-2">
-                <StreetAutocomplete
-                  placeholder={t("Street 1", "Calle 1")}
-                  value={form.crossStreet1}
-                  onChange={v => setField("crossStreet1", v)}
-                  onSelectCoords={c => setStreet1Coords(c)}
-                  disabled={isLoading}
-                />
-                <span className="text-muted-foreground font-medium text-sm shrink-0">×</span>
-                <StreetAutocomplete
-                  placeholder={t("Street 2", "Calle 2")}
-                  value={form.crossStreet2}
-                  onChange={v => setField("crossStreet2", v)}
-                  onSelectCoords={c => setStreet2Coords(c)}
-                  disabled={isLoading}
-                />
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {beachPresets.map(p => {
+                  const val = String(units === "imperial" ? p.ft : p.m);
+                  return (
+                    <button key={p.label} type="button"
+                      onClick={() => setField("distance", val)}
+                      disabled={isLoading}
+                      className="px-2 py-1 rounded-lg text-[11px] border transition-all"
+                      style={{
+                        background: form.distance === val ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
+                        borderColor: form.distance === val ? "rgba(0,194,168,0.4)" : "rgba(255,255,255,0.08)",
+                        color: form.distance === val ? "#00C2A8" : "rgba(245,247,250,0.5)",
+                      }}>
+                      {p.label}
+                    </button>
+                  );
+                })}
               </div>
-              <div className="flex items-center gap-3 mt-1.5">
-                <p className="text-[11px]" style={{ color: "rgba(154,165,177,0.45)" }}>
-                  {t("Helps locate the property when no building name is known.", "Ayuda a ubicar la propiedad si no se conoce el edificio.")}
-                </p>
-                {street1Coords && street2Coords && (
-                  <span className="flex items-center gap-1 text-[10px] font-medium shrink-0"
-                    style={{ color: "#00C2A8" }}>
-                    <MapPin className="w-2.5 h-2.5" />
-                    {t("Both streets located", "Ambas calles ubicadas")}
-                  </span>
-                )}
-                {(street1Coords || street2Coords) && !(street1Coords && street2Coords) && (
-                  <span className="flex items-center gap-1 text-[10px] shrink-0"
-                    style={{ color: "rgba(245,158,11,0.8)" }}>
-                    <MapPin className="w-2.5 h-2.5" />
-                    {t("1 of 2 streets located", "1 de 2 calles ubicadas")}
-                  </span>
-                )}
-              </div>
+              <StyledInput type="number" min={0}
+                placeholder={units === "imperial" ? "or enter feet (e.g. 500)" : "or enter meters (e.g. 150)"}
+                value={form.distance} onChange={e => setField("distance", e.target.value)} disabled={isLoading} />
+              {formErrors.distance && <p className="text-xs mt-1 text-destructive">{formErrors.distance}</p>}
             </div>
 
-            {/* Building year */}
-            <div className="max-w-xs">
-              <FieldLabel optional>
-                <CalendarClock className="inline w-3.5 h-3.5 mr-1" />
-                {t("Approx. year built", "Año de construcción aprox.")}
-              </FieldLabel>
-              <StyledSelect
-                value={form.buildingYear}
-                onChange={e => setField("buildingYear", e.target.value)}
-                disabled={isLoading}
-                style={{ background: "#163C4A", border: "1px solid rgba(255,255,255,0.08)", color: form.buildingYear ? "rgb(245,247,250)" : "rgba(154,165,177,0.4)" }}
-              >
-                <option value="">— Unknown —</option>
-                <option value="2020+">2020 or later</option>
-                <option value="2015-2019">2015–2019</option>
-                <option value="2010-2014">2010–2014</option>
-                <option value="2000-2009">2000–2009</option>
-                <option value="1990-1999">1990–1999</option>
-                <option value="pre-1990">pre-1990</option>
-              </StyledSelect>
-            </div>
-
-            {/* Listing URL — AI evaluation (future) */}
-            <div>
-              <FieldLabel optional>
-                <Link2 className="inline w-3.5 h-3.5 mr-1" />
-                {t("Listing URL", "URL del Listado")}
-                <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                  style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)", color: "#818CF8" }}>
-                  <Sparkles className="w-2.5 h-2.5" />
-                  {t("AI Evaluation — Coming Soon", "Evaluación IA — Próximamente")}
-                </span>
-              </FieldLabel>
-              <StyledInput
-                type="url"
-                placeholder={t("e.g. https://www.airbnb.com/rooms/12345678 or PVRPV link", "e.g. enlace de Airbnb, VRBO o PVRPV")}
-                value={form.listingUrl}
-                onChange={e => setField("listingUrl", e.target.value)}
-                disabled={isLoading}
-              />
-              <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.45)" }}>
-                {t("Paste your Airbnb, VRBO, or PVRPV listing link. A future AI feature will analyze your listing photos and description to refine the estimate.",
-                   "Pega tu enlace de Airbnb, VRBO o PVRPV. Una futura función de IA analizará tus fotos y descripción para refinar la estimación.")}
-              </p>
-            </div>
-
-            {/* Bedrooms + Bathrooms */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Size + Bathrooms */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <FieldLabel>{t("Bedrooms", "Recámaras")}</FieldLabel>
-                <StyledSelect value={form.bedrooms}
-                  onChange={e => setField("bedrooms", Number(e.target.value) as 1 | 2 | 3 | 4)} disabled={isLoading}>
-                  {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} {t("BR", "Rec.")}</option>)}
-                </StyledSelect>
+                <FieldLabel optional>
+                  <Ruler className="inline w-3.5 h-3.5 mr-1" />
+                  {t(`Size (${sizeLabel})`, `Tamaño (${sizeLabel})`)}
+                </FieldLabel>
+                <StyledInput type="number" min={0}
+                  placeholder={units === "imperial" ? "e.g. 900" : "e.g. 84"}
+                  value={form.size} onChange={e => setField("size", e.target.value)} disabled={isLoading} />
+                {formErrors.size && <p className="text-xs mt-1 text-destructive">{formErrors.size}</p>}
               </div>
               <div>
                 <FieldLabel>{t("Bathrooms", "Baños")}</FieldLabel>
@@ -1073,63 +1132,6 @@ export default function PricingTool() {
                   {BATH_OPTIONS.map(n => <option key={n} value={n}>{n} {t("BA", "Baño")}</option>)}
                 </StyledSelect>
               </div>
-            </div>
-
-            {/* Size + Beach distance */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <FieldLabel optional>
-                  <Ruler className="inline w-3.5 h-3.5 mr-1" />
-                  {t(`Unit size (${sizeLabel})`, `Tamaño (${sizeLabel})`)}
-                </FieldLabel>
-                <StyledInput type="number" min={0}
-                  placeholder={units === "imperial" ? "e.g. 900" : "e.g. 84"}
-                  value={form.size} onChange={e => setField("size", e.target.value)} disabled={isLoading} />
-                {formErrors.size && <p className="text-xs mt-1 text-destructive">{formErrors.size}</p>}
-              </div>
-
-              <div ref={distanceRef}>
-                <FieldLabel>
-                  <Waves className="inline w-3.5 h-3.5 mr-1" />
-                  {t(`Distance to beach (${distLabel})`, `Distancia a la playa (${distLabel})`)}
-                </FieldLabel>
-                {/* Quick-select presets */}
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {beachPresets.map(p => {
-                    const val = String(units === "imperial" ? p.ft : p.m);
-                    return (
-                      <button key={p.label} type="button"
-                        onClick={() => setField("distance", val)}
-                        disabled={isLoading}
-                        className="px-2 py-1 rounded-lg text-[11px] border transition-all"
-                        style={{
-                          background: form.distance === val ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
-                          borderColor: form.distance === val ? "rgba(0,194,168,0.4)" : "rgba(255,255,255,0.08)",
-                          color: form.distance === val ? "#00C2A8" : "rgba(245,247,250,0.5)",
-                        }}>
-                        {p.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <StyledInput type="number" min={0}
-                  placeholder={units === "imperial" ? "or enter feet (e.g. 500)" : "or enter meters (e.g. 150)"}
-                  value={form.distance} onChange={e => setField("distance", e.target.value)} disabled={isLoading} />
-                {formErrors.distance && <p className="text-xs mt-1 text-destructive">{formErrors.distance}</p>}
-              </div>
-            </div>
-
-            {/* Rating */}
-            <div className="max-w-xs">
-              <FieldLabel optional>
-                <Star className="inline w-3.5 h-3.5 mr-1" />
-                {t("Current guest rating", "Calificación de huéspedes")}
-              </FieldLabel>
-              <StyledSelect value={form.ratingOverall}
-                onChange={e => setField("ratingOverall", e.target.value)} disabled={isLoading}>
-                <option value="">— Not rated yet —</option>
-                {RATING_OPTIONS.map(r => <option key={r} value={r}>{r.toFixed(1)} ★</option>)}
-              </StyledSelect>
             </div>
 
             {/* ── View type ── */}
@@ -1164,60 +1166,153 @@ export default function PricingTool() {
               </div>
             </div>
 
-            {/* ── Rooftop pool toggle ── */}
-            <div className="flex items-center justify-between p-3 rounded-xl border"
-              style={{ background: form.rooftopPool ? "rgba(0,194,168,0.08)" : "rgba(255,255,255,0.03)", borderColor: form.rooftopPool ? "rgba(0,194,168,0.3)" : "rgba(255,255,255,0.07)" }}>
-              <div className="flex items-center gap-2">
-                <Droplets className="w-4 h-4" style={{ color: form.rooftopPool ? "#00C2A8" : "rgba(154,165,177,0.5)" }} />
-                <div>
-                  <p className="text-sm font-medium">{t("Rooftop Pool", "Alberca en Azotea")}</p>
-                  <p className="text-[11px]" style={{ color: "rgba(154,165,177,0.5)" }}>
-                    {t("+12–15% premium over standard pool comps", "+12–15% sobre comps con alberca estándar")}
-                  </p>
+            {/* ── Rooftop pool toggle + Rating ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between p-3 rounded-xl border"
+                style={{ background: form.rooftopPool ? "rgba(0,194,168,0.08)" : "rgba(255,255,255,0.03)", borderColor: form.rooftopPool ? "rgba(0,194,168,0.3)" : "rgba(255,255,255,0.07)" }}>
+                <div className="flex items-center gap-2">
+                  <Droplets className="w-4 h-4" style={{ color: form.rooftopPool ? "#00C2A8" : "rgba(154,165,177,0.5)" }} />
+                  <div>
+                    <p className="text-sm font-medium">{t("Rooftop Pool", "Alberca en Azotea")}</p>
+                    <p className="text-[11px]" style={{ color: "rgba(154,165,177,0.5)" }}>+12–15% premium</p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setField("rooftopPool", !form.rooftopPool)}
+                  disabled={isLoading}
+                  className="relative w-10 h-6 rounded-full transition-all duration-200 shrink-0"
+                  style={{ background: form.rooftopPool ? "#00C2A8" : "rgba(255,255,255,0.12)" }}
+                >
+                  <span
+                    className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200"
+                    style={{ left: form.rooftopPool ? "calc(100% - 20px)" : "4px" }}
+                  />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setField("rooftopPool", !form.rooftopPool)}
-                disabled={isLoading}
-                className="relative w-10 h-6 rounded-full transition-all duration-200 shrink-0"
-                style={{ background: form.rooftopPool ? "#00C2A8" : "rgba(255,255,255,0.12)" }}
-              >
-                <span
-                  className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200"
-                  style={{ left: form.rooftopPool ? "calc(100% - 20px)" : "4px" }}
-                />
-              </button>
+              <div>
+                <FieldLabel optional>
+                  <Star className="inline w-3.5 h-3.5 mr-1" />
+                  {t("Guest rating", "Calificación")}
+                </FieldLabel>
+                <StyledSelect value={form.ratingOverall}
+                  onChange={e => setField("ratingOverall", e.target.value)} disabled={isLoading}>
+                  <option value="">— Not rated yet —</option>
+                  {RATING_OPTIONS.map(r => <option key={r} value={r}>{r.toFixed(1)} ★</option>)}
+                </StyledSelect>
+              </div>
             </div>
 
-            {/* Amenities */}
+            {/* ── Amenities dropdown ── */}
             <div>
               <FieldLabel optional>
-                <Tag className="inline w-3.5 h-3.5 mr-1" />
                 {t("Amenities", "Amenidades")}
-                {selectedAmenities.length > 0 && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold"
-                    style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}>
-                    {selectedAmenities.length} {t("selected", "seleccionados")}
-                  </span>
-                )}
               </FieldLabel>
               {loadingMeta
-                ? <div className="flex flex-wrap gap-2">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-8 w-24 rounded-full" />)}</div>
-                : <AmenityPicker amenities={amenities} selected={selectedAmenities} onToggle={toggleAmenity} />}
+                ? <div className="flex flex-wrap gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-8 w-24 rounded-full" />)}</div>
+                : <AmenityDropdown amenities={amenities} selected={selectedAmenities} onToggle={toggleAmenity} />}
             </div>
 
-            {/* Validate CTA */}
-            <div className="flex items-center gap-4 pt-2 border-t border-white/5">
-              <PrimaryButton onClick={handleValidate} loading={phase === "prepare_loading"} disabled={isLoading}>
-                {phase === "prepare_loading" ? t("Validating…", "Validando…") : t("Validate & Continue", "Validar y Continuar")}
-                {phase !== "prepare_loading" && <ArrowRight className="w-4 h-4" />}
-              </PrimaryButton>
-              {phase === "prepared" && (
-                <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "#00C2A8" }}>
-                  <CheckCircle2 className="w-3.5 h-3.5" /> {t("Inputs validated", "Datos validados")}
+            {/* ── Advanced (collapsed) ── */}
+            <div>
+              <button type="button" onClick={() => setShowAdvanced(v => !v)} disabled={isLoading}
+                className="flex items-center gap-1.5 text-xs transition-colors"
+                style={{ color: "rgba(154,165,177,0.5)" }}>
+                {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                {t("Advanced options", "Opciones avanzadas")}
+                <span className="text-[10px]" style={{ color: "rgba(154,165,177,0.35)" }}>
+                  {t("(location hint · year built · listing URL)", "(ubicación · año · enlace)")}
                 </span>
-              )}
+              </button>
+              <AnimatePresence>
+                {showAdvanced && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+                    <div className="space-y-4 pt-4">
+
+                      {/* Location hint */}
+                      <div>
+                        <FieldLabel optional>
+                          <Crosshair className="inline w-3.5 h-3.5 mr-1" />
+                          {t("Location hint (cross streets or landmark)", "Ubicación (calles o referencia)")}
+                        </FieldLabel>
+                        <div className="flex items-center gap-2">
+                          <StreetAutocomplete
+                            placeholder={t("e.g. Olas Altas, or Basilio Badillo", "e.g. Olas Altas")}
+                            value={form.crossStreet1}
+                            onChange={v => setField("crossStreet1", v)}
+                            onSelectCoords={c => setStreet1Coords(c)}
+                            disabled={isLoading}
+                          />
+                          <span className="text-muted-foreground text-sm shrink-0">×</span>
+                          <StreetAutocomplete
+                            placeholder={t("2nd street (optional)", "2ª calle (opcional)")}
+                            value={form.crossStreet2}
+                            onChange={v => setField("crossStreet2", v)}
+                            onSelectCoords={c => setStreet2Coords(c)}
+                            disabled={isLoading}
+                          />
+                        </div>
+                        <p className="text-[11px] mt-1" style={{ color: "rgba(154,165,177,0.4)" }}>
+                          {t("Enter cross streets or a nearby landmark — both are accepted.", "Ingresa calles o un punto de referencia cercano.")}
+                          {(street1Coords || street2Coords) && (
+                            <span className="ml-2" style={{ color: "#00C2A8" }}>
+                              <MapPin className="inline w-2.5 h-2.5 mr-0.5" />
+                              {street1Coords && street2Coords ? t("Both located ✓", "Ambas ubicadas ✓") : t("1 located ✓", "1 ubicada ✓")}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Year built + Listing URL */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <FieldLabel optional>
+                            <CalendarClock className="inline w-3.5 h-3.5 mr-1" />
+                            {t("Year built", "Año de construcción")}
+                          </FieldLabel>
+                          <StyledSelect value={form.buildingYear}
+                            onChange={e => setField("buildingYear", e.target.value)}
+                            disabled={isLoading}
+                            style={{ background: "#163C4A", border: "1px solid rgba(255,255,255,0.08)", color: form.buildingYear ? "rgb(245,247,250)" : "rgba(154,165,177,0.4)" }}>
+                            <option value="">— Unknown —</option>
+                            <option value="2020+">2020 or later</option>
+                            <option value="2015-2019">2015–2019</option>
+                            <option value="2010-2014">2010–2014</option>
+                            <option value="2000-2009">2000–2009</option>
+                            <option value="1990-1999">1990–1999</option>
+                            <option value="pre-1990">pre-1990</option>
+                          </StyledSelect>
+                        </div>
+                        <div>
+                          <FieldLabel optional>
+                            <Link2 className="inline w-3.5 h-3.5 mr-1" />
+                            {t("Listing URL", "URL del Listado")}
+                            <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
+                              style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)", color: "#818CF8" }}>
+                              <Sparkles className="w-2 h-2" /> AI soon
+                            </span>
+                          </FieldLabel>
+                          <StyledInput type="url"
+                            placeholder="airbnb.com/rooms/…"
+                            value={form.listingUrl}
+                            onChange={e => setField("listingUrl", e.target.value)}
+                            disabled={isLoading} />
+                        </div>
+                      </div>
+
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* ── Single CTA ── */}
+            <div className="pt-2 border-t border-white/5">
+              <PrimaryButton onClick={handleGetPrice} loading={isLoading} disabled={isLoading}>
+                {isLoading ? t("Running pricing engine…", "Ejecutando motor…") : t("Get My Price", "Obtener Mi Precio")}
+                {!isLoading && <BarChart3 className="w-4 h-4" />}
+              </PrimaryButton>
             </div>
           </CardContent>
         </Card>
@@ -1232,97 +1327,11 @@ export default function PricingTool() {
               <div>
                 <p className="text-sm font-semibold text-foreground">{t("Something went wrong", "Algo salió mal")}</p>
                 <p className="text-xs mt-1 text-muted-foreground">{errorMsg}</p>
-                <button onClick={handleValidate}
+                <button onClick={handleGetPrice}
                   className="mt-2 text-xs font-medium flex items-center gap-1" style={{ color: "#00C2A8" }}>
                   <RefreshCw className="w-3 h-3" /> {t("Try again", "Intentar de nuevo")}
                 </button>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ── Input Summary ── */}
-        <AnimatePresence>
-          {(phase === "prepared" || phase === "comps_loading" || phase === "results") && prepareResult && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4" style={{ color: "#00C2A8" }} />
-                    {t("Input Summary", "Resumen de Entrada")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Building resolution */}
-                  <div>
-                    <SectionLabel>{t("Building", "Edificio")}</SectionLabel>
-                    {prepareResult.building_resolution?.canonical_building_name ? (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold">{prepareResult.building_resolution.canonical_building_name}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border"
-                          style={{
-                            background: prepareResult.building_resolution.confidence_tier === "high" ? "rgba(0,194,168,0.12)" : "rgba(245,158,11,0.12)",
-                            borderColor: prepareResult.building_resolution.confidence_tier === "high" ? "rgba(0,194,168,0.3)" : "rgba(245,158,11,0.3)",
-                            color: prepareResult.building_resolution.confidence_tier === "high" ? "#00C2A8" : "#F59E0B",
-                          }}>
-                          {prepareResult.building_resolution.confidence_tier} match
-                          {prepareResult.building_resolution.match_confidence != null
-                            ? ` · ${Math.round(prepareResult.building_resolution.match_confidence * 100)}%` : ""}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm text-muted-foreground">{t("No building — general comps", "Sin edificio — comparables generales")}</span>
-                        {(prepareResult.building_resolution?.suggestions?.length ?? 0) > 0 && (
-                          <span className="text-[11px]" style={{ color: "#F59E0B" }}>
-                            {t("Did you mean:", "¿Quisiste decir:")} <strong>{prepareResult.building_resolution!.suggestions[0]?.canonical}</strong>?
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Amenities */}
-                  <div>
-                    <SectionLabel>{t("Amenities accepted by engine", "Amenidades aceptadas")}</SectionLabel>
-                    {prepareResult.amenity_validation.accepted_keys.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {prepareResult.amenity_validation.accepted_keys.map(k => (
-                          <span key={k} className="px-2 py-0.5 rounded-full text-[11px] font-medium"
-                            style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}>
-                            ✓ {k.replace(/_/g, " ")}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">{t("None selected", "Ninguna seleccionada")}</p>
-                    )}
-                    {prepareResult.amenity_validation.rejected_keys.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-1.5">
-                        {prepareResult.amenity_validation.rejected_keys.map(k => (
-                          <span key={k} className="px-2 py-0.5 rounded-full text-[11px]"
-                            style={{ background: "rgba(239,68,68,0.08)", color: "#EF4444" }}>✗ {k}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Warnings */}
-                  {prepareResult.warnings.length > 0 && (
-                    <div className="space-y-2">
-                      {prepareResult.warnings.map((w, i) => <WarningRow key={i} text={w} />)}
-                    </div>
-                  )}
-
-                  {/* Get Pricing CTA */}
-                  <div className="pt-1 border-t border-white/5">
-                    <PrimaryButton onClick={handleGetPricing} loading={phase === "comps_loading"} disabled={isLoading}>
-                      {phase === "comps_loading" ? t("Running pricing engine…", "Ejecutando motor…") : t("Get Pricing Recommendation", "Obtener Recomendación")}
-                      {phase !== "comps_loading" && <BarChart3 className="w-4 h-4" />}
-                    </PrimaryButton>
-                  </div>
-                </CardContent>
-              </Card>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1597,10 +1606,10 @@ export default function PricingTool() {
         {/* Empty state */}
         {phase === "form" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-            className="flex flex-col items-center py-12 text-center" style={{ color: "rgba(154,165,177,0.3)" }}>
-            <BarChart3 className="w-10 h-10 mb-3" />
-            <p className="text-sm max-w-sm">
-              {t("Fill in your property details above and click Validate & Continue.", "Ingresa los detalles de la propiedad y haz clic en Validar y Continuar.")}
+            className="flex flex-col items-center py-10 text-center" style={{ color: "rgba(154,165,177,0.3)" }}>
+            <BarChart3 className="w-8 h-8 mb-2" />
+            <p className="text-sm max-w-xs">
+              {t("Fill in the details above and hit Get My Price.", "Ingresa los detalles y haz clic en Obtener Mi Precio.")}
             </p>
           </motion.div>
         )}
