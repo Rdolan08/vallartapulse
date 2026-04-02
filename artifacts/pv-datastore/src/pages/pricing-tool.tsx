@@ -58,7 +58,7 @@ interface FormValues {
   crossStreet2: string;
   buildingYear: string;
   listingUrl: string;
-  bedrooms: 1 | 2 | 3 | 4;
+  bedrooms: 0 | 1 | 2 | 3 | 4;
   bathrooms: number;
   size: string;
   distance: string;
@@ -178,25 +178,42 @@ interface CompsResult {
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const BATH_OPTIONS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+const BATH_OPTIONS = [
+  { value: 1, label: "1 BA" },
+  { value: 2, label: "2 BA" },
+  { value: 3, label: "3 BA" },
+  { value: 4, label: "3+ BA" },
+];
+const BR_OPTIONS = [
+  { value: 0, label: "Studio" },
+  { value: 1, label: "1 BR" },
+  { value: 2, label: "2 BR" },
+  { value: 3, label: "3 BR" },
+  { value: 4, label: "3+ BR" },
+];
+// Descending order — best rating first
 const RATING_OPTIONS = Array.from({ length: 41 }, (_, i) =>
-  parseFloat((1 + i * 0.1).toFixed(1))
+  parseFloat((5.0 - i * 0.1).toFixed(1))
 );
 
 const MONTHS = [
-  { n: 1,  abbr: "Jan", season: "high"     },
-  { n: 2,  abbr: "Feb", season: "peak"     },
-  { n: 3,  abbr: "Mar", season: "peak"     },
-  { n: 4,  abbr: "Apr", season: "high"     },
-  { n: 5,  abbr: "May", season: "shoulder" },
-  { n: 6,  abbr: "Jun", season: "low"      },
-  { n: 7,  abbr: "Jul", season: "low"      },
-  { n: 8,  abbr: "Aug", season: "low"      },
-  { n: 9,  abbr: "Sep", season: "low"      },
-  { n: 10, abbr: "Oct", season: "shoulder" },
-  { n: 11, abbr: "Nov", season: "high"     },
-  { n: 12, abbr: "Dec", season: "peak"     },
+  { n: 1,  abbr: "Jan", full: "January",   season: "high"     },
+  { n: 2,  abbr: "Feb", full: "February",  season: "peak"     },
+  { n: 3,  abbr: "Mar", full: "March",     season: "peak"     },
+  { n: 4,  abbr: "Apr", full: "April",     season: "high"     },
+  { n: 5,  abbr: "May", full: "May",       season: "shoulder" },
+  { n: 6,  abbr: "Jun", full: "June",      season: "low"      },
+  { n: 7,  abbr: "Jul", full: "July",      season: "low"      },
+  { n: 8,  abbr: "Aug", full: "August",    season: "low"      },
+  { n: 9,  abbr: "Sep", full: "September", season: "low"      },
+  { n: 10, abbr: "Oct", full: "October",   season: "shoulder" },
+  { n: 11, abbr: "Nov", full: "November",  season: "high"     },
+  { n: 12, abbr: "Dec", full: "December",  season: "peak"     },
 ] as const;
+
+const SEASON_LABEL: Record<string, string> = {
+  peak: "Peak season", high: "High season", shoulder: "Shoulder season", low: "Low season",
+};
 
 const SEASON_COLOR: Record<string, { text: string; bg: string; border: string }> = {
   peak:     { text: "#3B82F6", bg: "rgba(59,130,246,0.15)",  border: "rgba(59,130,246,0.4)"  },
@@ -993,45 +1010,41 @@ export default function PricingTool() {
               {t("Property Details", "Detalles de la Propiedad")}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-0 divide-y divide-white/5">
 
-            {/* ── Month selector ── */}
-            <div>
-              <FieldLabel>
-                <Calendar className="inline w-3.5 h-3.5 mr-1" />
-                {t("Pricing month", "Mes de referencia")}
-              </FieldLabel>
-              <div className="grid grid-cols-6 sm:grid-cols-12 gap-1">
-                {MONTHS.map(m => {
-                  const sc = SEASON_COLOR[m.season];
-                  const isSelected = form.month === m.n;
-                  return (
-                    <button
-                      key={m.n}
-                      type="button"
-                      onClick={() => setField("month", m.n)}
-                      disabled={isLoading}
-                      className="flex flex-col items-center py-2 px-1 rounded-xl text-[11px] font-semibold transition-all border"
-                      style={{
-                        background: isSelected ? sc.bg : "rgba(255,255,255,0.03)",
-                        borderColor: isSelected ? sc.border : "rgba(255,255,255,0.07)",
-                        color: isSelected ? sc.text : "rgba(154,165,177,0.5)",
-                        boxShadow: isSelected ? `0 0 0 1px ${sc.border}` : "none",
-                      }}
-                    >
-                      {m.abbr}
-                    </button>
-                  );
-                })}
+            {/* ══ Group 1: Pricing context ══ */}
+            <div className="space-y-3 pb-5">
+
+              {/* Month — compact select + season badge */}
+              <div>
+                <FieldLabel>{t("Pricing month", "Mes de referencia")}</FieldLabel>
+                <div className="flex items-center gap-3">
+                  <StyledSelect
+                    value={form.month}
+                    onChange={e => setField("month", Number(e.target.value) as typeof form.month)}
+                    disabled={isLoading}
+                    className="max-w-[160px]"
+                  >
+                    {MONTHS.map(m => (
+                      <option key={m.n} value={m.n}>{m.full}</option>
+                    ))}
+                  </StyledSelect>
+                  {(() => {
+                    const m = MONTHS.find(m => m.n === form.month);
+                    if (!m) return null;
+                    const sc = SEASON_COLOR[m.season];
+                    return (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border shrink-0"
+                        style={{ background: sc.bg, borderColor: sc.border, color: sc.text }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: sc.text }} />
+                        {SEASON_LABEL[m.season]}
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
-              <p className="text-[11px] mt-1" style={{ color: "rgba(154,165,177,0.4)" }}>
-                {t("Peak (blue) · High (teal) · Shoulder (amber) · Low (orange) · events stack on top",
-                   "Pico (azul) · Alta (teal) · Hombro (ámbar) · Baja (naranja)")}
-              </p>
-            </div>
 
-            {/* Neighborhood + Bedrooms */}
-            <div className="grid grid-cols-2 gap-3">
+              {/* Neighborhood */}
               <div>
                 <FieldLabel>{t("Neighborhood", "Colonia")}</FieldLabel>
                 <StyledSelect value={form.neighborhood}
@@ -1058,66 +1071,47 @@ export default function PricingTool() {
                   </optgroup>
                 </StyledSelect>
               </div>
+
+              {/* Building name */}
               <div>
-                <FieldLabel>{t("Bedrooms", "Recámaras")}</FieldLabel>
-                <StyledSelect value={form.bedrooms}
-                  onChange={e => setField("bedrooms", Number(e.target.value) as 1 | 2 | 3 | 4)} disabled={isLoading}>
-                  {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} {t("BR", "Rec.")}</option>)}
-                </StyledSelect>
+                <FieldLabel optional>{t("Property / Building Name", "Nombre del Edificio")}</FieldLabel>
+                {loadingMeta ? <Skeleton className="h-10 rounded-xl" /> : (
+                  <BuildingCombobox buildings={buildings} value={form.buildingName}
+                    onChange={v => setField("buildingName", v)} disabled={isLoading} />
+                )}
+                <p className="text-[11px] mt-1" style={{ color: "rgba(154,165,177,0.4)" }}>
+                  {t("Selecting a known complex improves accuracy.", "Seleccionarlo mejora la precisión.")}
+                </p>
               </div>
             </div>
 
-            {/* Building */}
-            <div>
-              <FieldLabel optional>
-                <Building className="inline w-3.5 h-3.5 mr-1" />
-                {t("Property / Building Name", "Nombre de la Propiedad / Edificio")}
-              </FieldLabel>
-              {loadingMeta ? <Skeleton className="h-10 rounded-xl" /> : (
-                <BuildingCombobox buildings={buildings} value={form.buildingName}
-                  onChange={v => setField("buildingName", v)} disabled={isLoading} />
-              )}
-              <p className="text-[11px] mt-1" style={{ color: "rgba(154,165,177,0.45)" }}>
-                {t("Selecting a known complex improves accuracy. Skip if unknown.",
-                   "Seleccionarlo mejora la precisión. Omite si no sabes el nombre.")}
+            {/* ══ Group 2: Property basics ══ */}
+            <div className="space-y-3 py-5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "rgba(154,165,177,0.4)" }}>
+                {t("Property", "Propiedad")}
               </p>
-            </div>
 
-            {/* Beach distance */}
-            <div ref={distanceRef}>
-              <FieldLabel>
-                <Waves className="inline w-3.5 h-3.5 mr-1" />
-                {t(`Distance to beach (${distLabel})`, `Distancia a la playa (${distLabel})`)}
-              </FieldLabel>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {beachPresets.map(p => {
-                  const val = String(units === "imperial" ? p.ft : p.m);
-                  return (
-                    <button key={p.label} type="button"
-                      onClick={() => setField("distance", val)}
-                      disabled={isLoading}
-                      className="px-2 py-1 rounded-lg text-[11px] border transition-all"
-                      style={{
-                        background: form.distance === val ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
-                        borderColor: form.distance === val ? "rgba(0,194,168,0.4)" : "rgba(255,255,255,0.08)",
-                        color: form.distance === val ? "#00C2A8" : "rgba(245,247,250,0.5)",
-                      }}>
-                      {p.label}
-                    </button>
-                  );
-                })}
+              {/* Bedrooms + Bathrooms */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <FieldLabel>{t("Bedrooms", "Recámaras")}</FieldLabel>
+                  <StyledSelect value={form.bedrooms}
+                    onChange={e => setField("bedrooms", Number(e.target.value) as 0 | 1 | 2 | 3 | 4)} disabled={isLoading}>
+                    {BR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </StyledSelect>
+                </div>
+                <div>
+                  <FieldLabel>{t("Bathrooms", "Baños")}</FieldLabel>
+                  <StyledSelect value={form.bathrooms}
+                    onChange={e => setField("bathrooms", Number(e.target.value))} disabled={isLoading}>
+                    {BATH_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </StyledSelect>
+                </div>
               </div>
-              <StyledInput type="number" min={0}
-                placeholder={units === "imperial" ? "or enter feet (e.g. 500)" : "or enter meters (e.g. 150)"}
-                value={form.distance} onChange={e => setField("distance", e.target.value)} disabled={isLoading} />
-              {formErrors.distance && <p className="text-xs mt-1 text-destructive">{formErrors.distance}</p>}
-            </div>
 
-            {/* Size + Bathrooms */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
+              {/* Size */}
+              <div className="max-w-[220px]">
                 <FieldLabel optional>
-                  <Ruler className="inline w-3.5 h-3.5 mr-1" />
                   {t(`Size (${sizeLabel})`, `Tamaño (${sizeLabel})`)}
                 </FieldLabel>
                 <StyledInput type="number" min={0}
@@ -1125,120 +1119,130 @@ export default function PricingTool() {
                   value={form.size} onChange={e => setField("size", e.target.value)} disabled={isLoading} />
                 {formErrors.size && <p className="text-xs mt-1 text-destructive">{formErrors.size}</p>}
               </div>
-              <div>
-                <FieldLabel>{t("Bathrooms", "Baños")}</FieldLabel>
-                <StyledSelect value={form.bathrooms}
-                  onChange={e => setField("bathrooms", Number(e.target.value))} disabled={isLoading}>
-                  {BATH_OPTIONS.map(n => <option key={n} value={n}>{n} {t("BA", "Baño")}</option>)}
-                </StyledSelect>
-              </div>
             </div>
 
-            {/* ── View type ── */}
-            <div>
-              <FieldLabel>
-                <Eye className="inline w-3.5 h-3.5 mr-1" />
-                {t("View type", "Tipo de vista")}
-              </FieldLabel>
-              <div className="flex flex-wrap gap-2">
-                {VIEW_OPTIONS.map(v => {
-                  const isSelected = form.viewType === v.value;
-                  return (
-                    <button
-                      key={v.value}
-                      type="button"
-                      onClick={() => setField("viewType", v.value)}
-                      disabled={isLoading}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all border"
-                      style={{
-                        background: isSelected ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
-                        borderColor: isSelected ? "rgba(0,194,168,0.5)" : "rgba(255,255,255,0.08)",
-                        color: isSelected ? "#00C2A8" : "rgba(154,165,177,0.7)",
-                        boxShadow: isSelected ? "0 0 0 1px rgba(0,194,168,0.3)" : "none",
-                      }}
-                    >
-                      <span>{v.icon}</span>
-                      <span>{t(v.label, v.labelEs)}</span>
-                      <span className="text-[10px] font-normal opacity-70 ml-0.5">{v.pct}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            {/* ══ Group 3: Location / positioning ══ */}
+            <div className="space-y-3 py-5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "rgba(154,165,177,0.4)" }}>
+                {t("Location & View", "Ubicación y Vista")}
+              </p>
 
-            {/* ── Rooftop pool toggle + Rating ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex items-center justify-between p-3 rounded-xl border"
-                style={{ background: form.rooftopPool ? "rgba(0,194,168,0.08)" : "rgba(255,255,255,0.03)", borderColor: form.rooftopPool ? "rgba(0,194,168,0.3)" : "rgba(255,255,255,0.07)" }}>
-                <div className="flex items-center gap-2">
-                  <Droplets className="w-4 h-4" style={{ color: form.rooftopPool ? "#00C2A8" : "rgba(154,165,177,0.5)" }} />
-                  <div>
-                    <p className="text-sm font-medium">{t("Rooftop Pool", "Alberca en Azotea")}</p>
-                    <p className="text-[11px]" style={{ color: "rgba(154,165,177,0.5)" }}>+12–15% premium</p>
-                  </div>
+              {/* Beach distance */}
+              <div ref={distanceRef}>
+                <FieldLabel>{t(`Distance to beach (${distLabel})`, `Distancia a la playa (${distLabel})`)}</FieldLabel>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {beachPresets.map(p => {
+                    const val = String(units === "imperial" ? p.ft : p.m);
+                    return (
+                      <button key={p.label} type="button"
+                        onClick={() => setField("distance", val)}
+                        disabled={isLoading}
+                        className="px-2 py-1 rounded-lg text-[11px] border transition-all"
+                        style={{
+                          background: form.distance === val ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
+                          borderColor: form.distance === val ? "rgba(0,194,168,0.4)" : "rgba(255,255,255,0.08)",
+                          color: form.distance === val ? "#00C2A8" : "rgba(245,247,250,0.5)",
+                        }}>
+                        {p.label}
+                      </button>
+                    );
+                  })}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setField("rooftopPool", !form.rooftopPool)}
-                  disabled={isLoading}
-                  className="relative w-10 h-6 rounded-full transition-all duration-200 shrink-0"
-                  style={{ background: form.rooftopPool ? "#00C2A8" : "rgba(255,255,255,0.12)" }}
-                >
-                  <span
-                    className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200"
-                    style={{ left: form.rooftopPool ? "calc(100% - 20px)" : "4px" }}
-                  />
+                <StyledInput type="number" min={0}
+                  placeholder={units === "imperial" ? "or enter feet (e.g. 500)" : "or enter meters (e.g. 150)"}
+                  value={form.distance} onChange={e => setField("distance", e.target.value)} disabled={isLoading} />
+                {formErrors.distance && <p className="text-xs mt-1 text-destructive">{formErrors.distance}</p>}
+              </div>
+
+              {/* View type */}
+              <div>
+                <FieldLabel>{t("View", "Vista")}</FieldLabel>
+                <div className="flex flex-wrap gap-2">
+                  {VIEW_OPTIONS.map(v => {
+                    const isSelected = form.viewType === v.value;
+                    return (
+                      <button key={v.value} type="button"
+                        onClick={() => setField("viewType", v.value)}
+                        disabled={isLoading}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all border"
+                        style={{
+                          background: isSelected ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
+                          borderColor: isSelected ? "rgba(0,194,168,0.5)" : "rgba(255,255,255,0.08)",
+                          color: isSelected ? "#00C2A8" : "rgba(154,165,177,0.7)",
+                          boxShadow: isSelected ? "0 0 0 1px rgba(0,194,168,0.25)" : "none",
+                        }}>
+                        <span>{v.icon}</span>
+                        <span>{t(v.label, v.labelEs)}</span>
+                        <span className="text-[10px] font-normal opacity-60 ml-0.5">{v.pct}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Rooftop pool */}
+              <div className="flex items-center justify-between py-2.5 px-3 rounded-xl border"
+                style={{ background: form.rooftopPool ? "rgba(0,194,168,0.07)" : "rgba(255,255,255,0.02)", borderColor: form.rooftopPool ? "rgba(0,194,168,0.25)" : "rgba(255,255,255,0.07)" }}>
+                <div>
+                  <p className="text-sm font-medium">{t("Rooftop pool", "Alberca en azotea")}</p>
+                  <p className="text-[11px]" style={{ color: "rgba(154,165,177,0.5)" }}>+12–15% premium over standard pool</p>
+                </div>
+                <button type="button" onClick={() => setField("rooftopPool", !form.rooftopPool)} disabled={isLoading}
+                  className="relative w-9 h-5 rounded-full transition-all duration-200 shrink-0"
+                  style={{ background: form.rooftopPool ? "#00C2A8" : "rgba(255,255,255,0.1)" }}>
+                  <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all duration-200"
+                    style={{ left: form.rooftopPool ? "calc(100% - 18px)" : "2px" }} />
                 </button>
               </div>
-              <div>
-                <FieldLabel optional>
-                  <Star className="inline w-3.5 h-3.5 mr-1" />
-                  {t("Guest rating", "Calificación")}
-                </FieldLabel>
+            </div>
+
+            {/* ══ Group 4: Market / quality signals ══ */}
+            <div className="space-y-3 py-5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "rgba(154,165,177,0.4)" }}>
+                {t("Quality Signals", "Señales de Calidad")}
+              </p>
+
+              {/* Guest rating */}
+              <div className="max-w-[200px]">
+                <FieldLabel optional>{t("Guest rating", "Calificación de huéspedes")}</FieldLabel>
                 <StyledSelect value={form.ratingOverall}
                   onChange={e => setField("ratingOverall", e.target.value)} disabled={isLoading}>
-                  <option value="">— Not rated yet —</option>
+                  <option value="">— Not yet rated —</option>
                   {RATING_OPTIONS.map(r => <option key={r} value={r}>{r.toFixed(1)} ★</option>)}
                 </StyledSelect>
               </div>
+
+              {/* Amenities */}
+              <div>
+                <FieldLabel optional>{t("Amenities", "Amenidades")}</FieldLabel>
+                {loadingMeta
+                  ? <div className="flex flex-wrap gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-8 w-24 rounded-full" />)}</div>
+                  : <AmenityDropdown amenities={amenities} selected={selectedAmenities} onToggle={toggleAmenity} />}
+              </div>
             </div>
 
-            {/* ── Amenities dropdown ── */}
-            <div>
-              <FieldLabel optional>
-                {t("Amenities", "Amenidades")}
-              </FieldLabel>
-              {loadingMeta
-                ? <div className="flex flex-wrap gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-8 w-24 rounded-full" />)}</div>
-                : <AmenityDropdown amenities={amenities} selected={selectedAmenities} onToggle={toggleAmenity} />}
-            </div>
-
-            {/* ── Advanced (collapsed) ── */}
-            <div>
+            {/* ══ Group 5: Advanced (collapsed) ══ */}
+            <div className="pt-4">
               <button type="button" onClick={() => setShowAdvanced(v => !v)} disabled={isLoading}
-                className="flex items-center gap-1.5 text-xs transition-colors"
-                style={{ color: "rgba(154,165,177,0.5)" }}>
+                className="flex items-center gap-1.5 text-xs transition-colors mb-0"
+                style={{ color: "rgba(154,165,177,0.45)" }}>
                 {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                {t("Advanced options", "Opciones avanzadas")}
-                <span className="text-[10px]" style={{ color: "rgba(154,165,177,0.35)" }}>
-                  {t("(location hint · year built · listing URL)", "(ubicación · año · enlace)")}
+                {t("Advanced", "Avanzado")}
+                <span style={{ color: "rgba(154,165,177,0.3)" }}>
+                  · {t("location hint · year built · listing URL", "ubicación · año · enlace")}
                 </span>
               </button>
               <AnimatePresence>
                 {showAdvanced && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-                    <div className="space-y-4 pt-4">
+                    exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} className="overflow-hidden">
+                    <div className="space-y-3 pt-3">
 
-                      {/* Location hint */}
                       <div>
-                        <FieldLabel optional>
-                          <Crosshair className="inline w-3.5 h-3.5 mr-1" />
-                          {t("Location hint (cross streets or landmark)", "Ubicación (calles o referencia)")}
-                        </FieldLabel>
+                        <FieldLabel optional>{t("Location hint", "Referencia de ubicación")}</FieldLabel>
                         <div className="flex items-center gap-2">
                           <StreetAutocomplete
-                            placeholder={t("e.g. Olas Altas, or Basilio Badillo", "e.g. Olas Altas")}
+                            placeholder={t("Cross street or landmark", "Calle o referencia")}
                             value={form.crossStreet1}
                             onChange={v => setField("crossStreet1", v)}
                             onSelectCoords={c => setStreet1Coords(c)}
@@ -1246,34 +1250,29 @@ export default function PricingTool() {
                           />
                           <span className="text-muted-foreground text-sm shrink-0">×</span>
                           <StreetAutocomplete
-                            placeholder={t("2nd street (optional)", "2ª calle (opcional)")}
+                            placeholder={t("2nd street (optional)", "2ª calle")}
                             value={form.crossStreet2}
                             onChange={v => setField("crossStreet2", v)}
                             onSelectCoords={c => setStreet2Coords(c)}
                             disabled={isLoading}
                           />
                         </div>
-                        <p className="text-[11px] mt-1" style={{ color: "rgba(154,165,177,0.4)" }}>
-                          {t("Enter cross streets or a nearby landmark — both are accepted.", "Ingresa calles o un punto de referencia cercano.")}
+                        <p className="text-[11px] mt-1" style={{ color: "rgba(154,165,177,0.38)" }}>
+                          {t("Cross streets or a nearby landmark — both accepted.", "Calles cruzadas o punto de referencia.")}
                           {(street1Coords || street2Coords) && (
                             <span className="ml-2" style={{ color: "#00C2A8" }}>
                               <MapPin className="inline w-2.5 h-2.5 mr-0.5" />
-                              {street1Coords && street2Coords ? t("Both located ✓", "Ambas ubicadas ✓") : t("1 located ✓", "1 ubicada ✓")}
+                              {street1Coords && street2Coords ? "Both located ✓" : "1 located ✓"}
                             </span>
                           )}
                         </p>
                       </div>
 
-                      {/* Year built + Listing URL */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <FieldLabel optional>
-                            <CalendarClock className="inline w-3.5 h-3.5 mr-1" />
-                            {t("Year built", "Año de construcción")}
-                          </FieldLabel>
+                          <FieldLabel optional>{t("Year built", "Año de construcción")}</FieldLabel>
                           <StyledSelect value={form.buildingYear}
-                            onChange={e => setField("buildingYear", e.target.value)}
-                            disabled={isLoading}
+                            onChange={e => setField("buildingYear", e.target.value)} disabled={isLoading}
                             style={{ background: "#163C4A", border: "1px solid rgba(255,255,255,0.08)", color: form.buildingYear ? "rgb(245,247,250)" : "rgba(154,165,177,0.4)" }}>
                             <option value="">— Unknown —</option>
                             <option value="2020+">2020 or later</option>
@@ -1286,18 +1285,14 @@ export default function PricingTool() {
                         </div>
                         <div>
                           <FieldLabel optional>
-                            <Link2 className="inline w-3.5 h-3.5 mr-1" />
                             {t("Listing URL", "URL del Listado")}
                             <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
                               style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)", color: "#818CF8" }}>
                               <Sparkles className="w-2 h-2" /> AI soon
                             </span>
                           </FieldLabel>
-                          <StyledInput type="url"
-                            placeholder="airbnb.com/rooms/…"
-                            value={form.listingUrl}
-                            onChange={e => setField("listingUrl", e.target.value)}
-                            disabled={isLoading} />
+                          <StyledInput type="url" placeholder="airbnb.com/rooms/…"
+                            value={form.listingUrl} onChange={e => setField("listingUrl", e.target.value)} disabled={isLoading} />
                         </div>
                       </div>
 
@@ -1307,8 +1302,8 @@ export default function PricingTool() {
               </AnimatePresence>
             </div>
 
-            {/* ── Single CTA ── */}
-            <div className="pt-2 border-t border-white/5">
+            {/* ── CTA ── */}
+            <div className="pt-5">
               <PrimaryButton onClick={handleGetPrice} loading={isLoading} disabled={isLoading}>
                 {isLoading ? t("Running pricing engine…", "Ejecutando motor…") : t("Get My Price", "Obtener Mi Precio")}
                 {!isLoading && <BarChart3 className="w-4 h-4" />}
