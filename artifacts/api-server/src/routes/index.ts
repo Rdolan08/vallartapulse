@@ -7,6 +7,7 @@ import economicRouter from "./economic";
 import safetyRouter from "./safety";
 import weatherRouter from "./weather";
 import sourcesRouter from "./sources";
+import compsRouter from "./comps";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(economicRouter);
 router.use(safetyRouter);
 router.use(weatherRouter);
 router.use(sourcesRouter);
+router.use(compsRouter);
 
 export default router;
