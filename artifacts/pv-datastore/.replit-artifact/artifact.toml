@@ -1,31 +1,104 @@
 kind = "web"
-previewPath = "/"
-title = "VallartaPulse"
-version = "1.0.0"
-id = "artifacts/pv-datastore"
-router = "path"
+  previewPath = "/"
+  title = "VallartaPulse"
+  version = "1.0.0"
+  id = "artifacts/pv-datastore"
+  router = "path"
 
-[[integratedSkills]]
-name = "react-vite"
-version = "1.0.0"
+  [[integratedSkills]]
+  name = "react-vite"
+  version = "1.0.0"
 
-[[services]]
-name = "web"
-paths = [ "/" ]
-localPort = 24154
+  [[services]]
+  name = "web"
+  paths = [ "/" ]
+  localPort = 24154
 
-[services.development]
-run = "pnpm --filter @workspace/pv-datastore run dev"
+  [services.development]
+  run = "pnpm --filter @workspace/pv-datastore run dev"
 
-[services.production]
-build = [ "pnpm", "--filter", "@workspace/pv-datastore", "run", "build" ]
-publicDir = "artifacts/pv-datastore/dist/public"
-serve = "static"
+  [services.production]
+  build = [ "pnpm", "--filter", "@workspace/pv-datastore", "run", "build" ]
+  publicDir = "artifacts/pv-datastore/dist/public"
+  serve = "static"
 
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
+  [[services.production.rewrites]]
+  from = "/tourism"
+  to = "/tourism/index.html"
 
-[services.env]
-PORT = "24154"
-BASE_PATH = "/"
+  [[services.production.rewrites]]
+  from = "/tourism/*"
+  to = "/tourism/index.html"
+
+  [[services.production.rewrites]]
+  from = "/rental-market"
+  to = "/rental-market/index.html"
+
+  [[services.production.rewrites]]
+  from = "/rental-market/*"
+  to = "/rental-market/index.html"
+
+  [[services.production.rewrites]]
+  from = "/pricing-tool"
+  to = "/pricing-tool/index.html"
+
+  [[services.production.rewrites]]
+  from = "/pricing-tool/*"
+  to = "/pricing-tool/index.html"
+
+  [[services.production.rewrites]]
+  from = "/economic"
+  to = "/economic/index.html"
+
+  [[services.production.rewrites]]
+  from = "/economic/*"
+  to = "/economic/index.html"
+
+  [[services.production.rewrites]]
+  from = "/safety"
+  to = "/safety/index.html"
+
+  [[services.production.rewrites]]
+  from = "/safety/*"
+  to = "/safety/index.html"
+
+  [[services.production.rewrites]]
+  from = "/weather"
+  to = "/weather/index.html"
+
+  [[services.production.rewrites]]
+  from = "/weather/*"
+  to = "/weather/index.html"
+
+  [[services.production.rewrites]]
+  from = "/sources"
+  to = "/sources/index.html"
+
+  [[services.production.rewrites]]
+  from = "/sources/*"
+  to = "/sources/index.html"
+
+  [[services.production.rewrites]]
+  from = "/about"
+  to = "/about/index.html"
+
+  [[services.production.rewrites]]
+  from = "/about/*"
+  to = "/about/index.html"
+
+  [[services.production.rewrites]]
+  from = "/contact"
+  to = "/contact/index.html"
+
+  [[services.production.rewrites]]
+  from = "/contact/*"
+  to = "/contact/index.html"
+
+  [[services.production.rewrites]]
+  from = "/*"
+  to = "/index.html"
+
+  [services.env]
+  PORT = "24154"
+  BASE_PATH = "/"
+  
