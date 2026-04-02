@@ -10,7 +10,7 @@
  * database-write pipeline. Scrapers call ingestListing() after fetching.
  */
 
-import { sql } from "drizzle-orm";
+import { sql, count } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   rentalListingsTable,
@@ -338,4 +338,75 @@ export async function seedAmenitiesLookup(): Promise<void> {
     });
 
   logger.info({ count: rows.length }, "Amenities lookup seeded");
+}
+
+// ── PVRPV listing seed ────────────────────────────────────────────────────────
+
+/**
+ * Seeds the rental_listings table from the static PVRPV dataset scraped in
+ * April 2026. Safe to re-run — upserts on (source_platform, source_url).
+ * Only runs if the table is currently empty to avoid overwriting live data.
+ */
+export async function seedRentalListings(): Promise<void> {
+  const [{ value: existing }] = await db.select({ value: count(rentalListingsTable.id) }).from(rentalListingsTable);
+  if (existing > 0) {
+    logger.info({ existing }, "Rental listings already seeded, skipping");
+    return;
+  }
+
+  const { PVRPV_SEED_LISTINGS } = await import("./listing-seed-data.js");
+  const SCRAPE_DATE = new Date("2026-04-01T00:00:00Z");
+
+  const rows: InsertRentalListing[] = (PVRPV_SEED_LISTINGS as readonly any[]).map((r) => ({
+    sourcePlatform:         r.source_platform,
+    sourceUrl:              r.source_url,
+    externalId:             r.external_id ?? null,
+    title:                  r.title,
+    neighborhoodRaw:        r.neighborhood_raw,
+    neighborhoodNormalized: r.neighborhood_normalized,
+    buildingName:           r.building_name ?? null,
+    latitude:               r.latitude ?? null,
+    longitude:              r.longitude ?? null,
+    distanceToBeachM:       r.distance_to_beach_m ?? null,
+    bedrooms:               r.bedrooms,
+    bathrooms:              r.bathrooms,
+    maxGuests:              r.max_guests ?? null,
+    sqft:                   r.sqft ?? null,
+    amenitiesRaw:           r.amenities_raw ?? null,
+    amenitiesNormalized:    r.amenities_normalized ?? null,
+    ratingOverall:          r.rating_overall ?? null,
+    ratingCount:            r.rating_count ?? null,
+    reviewCount:            r.review_count ?? null,
+    nightlyPriceUsd:        r.nightly_price_usd ?? null,
+    cleaningFeeUsd:         r.cleaning_fee_usd ?? null,
+    minNights:              r.min_nights ?? null,
+    scrapedAt:              SCRAPE_DATE,
+    dataConfidenceScore:    r.data_confidence_score ?? 0,
+    isActive:               r.is_active ?? true,
+  }));
+
+  await db
+    .insert(rentalListingsTable)
+    .values(rows)
+    .onConflictDoUpdate({
+      target: [rentalListingsTable.sourcePlatform, rentalListingsTable.sourceUrl],
+      set: {
+        externalId:             sql`excluded.external_id`,
+        title:                  sql`excluded.title`,
+        neighborhoodNormalized: sql`excluded.neighborhood_normalized`,
+        buildingName:           sql`excluded.building_name`,
+        distanceToBeachM:       sql`excluded.distance_to_beach_m`,
+        bedrooms:               sql`excluded.bedrooms`,
+        bathrooms:              sql`excluded.bathrooms`,
+        sqft:                   sql`excluded.sqft`,
+        amenitiesNormalized:    sql`excluded.amenities_normalized`,
+        ratingOverall:          sql`excluded.rating_overall`,
+        reviewCount:            sql`excluded.review_count`,
+        nightlyPriceUsd:        sql`excluded.nightly_price_usd`,
+        dataConfidenceScore:    sql`excluded.data_confidence_score`,
+        isActive:               sql`excluded.is_active`,
+      },
+    });
+
+  logger.info({ count: rows.length }, "PVRPV rental listings seeded");
 }
