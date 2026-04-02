@@ -29,18 +29,20 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
         >
           <Menu className="w-5 h-5" />
         </Button>
-        <img
-          src={logoDark}
-          alt="VallartaPulse"
-          className="dark:block hidden"
-          style={{ height: "44px", width: "auto" }}
-        />
-        <img
-          src={logoLight}
-          alt="VallartaPulse"
-          className="dark:hidden block"
-          style={{ height: "44px", width: "auto" }}
-        />
+        <a href="/" aria-label="Go to dashboard">
+          <img
+            src={logoDark}
+            alt="VallartaPulse"
+            className="dark:block hidden"
+            style={{ height: "44px", width: "auto" }}
+          />
+          <img
+            src={logoLight}
+            alt="VallartaPulse"
+            className="dark:hidden block"
+            style={{ height: "44px", width: "auto" }}
+          />
+        </a>
       </div>
 
       {/* Language toggle */}
