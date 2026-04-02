@@ -53,6 +53,31 @@ Scraper: `scripts/src/pvrpv-scrape.ts` (run with `pnpm --filter @workspace/scrip
 
 **Current data**: 50 PVRPV listings (real, scraped), avg confidence 0.982, 100% field coverage on bedrooms/bathrooms/price/amenities/lat-lon.
 
+## Comps Engine V2 — Rental Pricing Tool
+
+Internal comparable-property pricing engine for Zona Romantica + Amapas listings. Used to recommend nightly rates for rental properties based on similar PVRPV listings.
+
+**Engine file**: `artifacts/api-server/src/lib/comps-engine-v2.ts` (also mirrored at `scripts/src/comps-engine-v2.ts` for validation runs)
+
+**Validation results** (leave-one-out, 10 cases): **MAE = 22.9%** (Tier 2 — good enough for internal MVP)
+
+**Key design decisions**:
+- Beach tier bucketing: Tier A ≤100m, B 101–500m, C >500m
+- ZR Tier A commands ~90% premium vs Tier B (beachfront sub-market)
+- Amapas Tier C (hillside) commands ~25% premium vs Tier B
+- Building median anchor: when raw building premium >40%, use building median directly (not inflated comp median) — critical for Molino de Agua ($499 vs $175 segment)
+- IQR trimming skipped for mixed-tier comp sets to avoid eliminating the most relevant same-tier comp
+
+**API endpoint**: `POST /api/rental/comps`
+- Required: `neighborhood_normalized` (Zona Romantica | Amapas), `bedrooms` (1–4), `bathrooms`, `distance_to_beach_m`, `amenities_normalized`
+- Optional: `sqft`, `rating_overall`, `building_name`
+- Response: `conservative_price`, `recommended_price`, `stretch_price`, `confidence_label` (high/medium/low/guidance_only), `selected_comps`, `top_drivers`, `warnings`, `explanation`
+- Engine is cached in memory (5-min TTL) — loads all eligible DB rows at startup
+
+**Scripts**:
+- `pnpm --filter @workspace/scripts run validate:comps-v2` — leave-one-out validation against 10 cases
+- `pnpm --filter @workspace/scripts run comps <listing-id>` — run engine on a specific listing
+
 ## Known Fixes & Notes
 
 - **Chart colors**: Recharts `hsl(var(--chart-N))` variables are NOT defined in the design system. All chart strokes/fills must use hardcoded brand hex values: `#00C2A8` (primary teal), `#00D1FF` (accent cyan), `#F59E0B` (amber), `#6366F1` (indigo), `#3B82F6` (blue). Do not use `--chart-N` CSS variables.
