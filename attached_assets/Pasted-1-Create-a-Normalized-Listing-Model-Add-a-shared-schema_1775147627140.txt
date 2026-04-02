@@ -1,0 +1,134 @@
+1) Create a Normalized Listing Model
+
+Add a shared schema to ensure all sources (Airbnb, VRBO, local agencies) speak the same language:
+
+TypeScript
+type NormalizedRentalListing = {
+  source: "airbnb" | "vrbo" | "local_agency" | "owner_direct" | "manual";
+  source_listing_id: string;
+  source_url?: string;
+  title?: string;
+  neighborhood?: string;
+  building_name?: string;
+  cross_streets?: string;
+  bedrooms?: number;
+  bathrooms_text?: string;
+  bathrooms_bucket?: "1" | "2" | "3+";
+  max_guests?: number;
+  sqft?: number | null;
+  price_nightly_mxn?: number | null;
+  price_nightly_usd?: number | null;
+  cleaning_fee?: number | null;
+  taxes_fee?: number | null;
+  currency?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  rooftop_pool?: boolean | null;
+  private_pool?: boolean | null;
+  view_tier?: "none" | "partial_ocean" | "full_ocean" | null;
+  quality_tier?: "standard" | "premium" | "luxury" | null;
+  year_built_or_renovated?: number | null;
+  amenities_raw?: string[];
+  amenities_normalized?: string[];
+  rating_value?: number | null;
+  review_count?: number | null;
+  availability_calendar_url?: string | null;
+  scraped_at?: string;
+}
+2) Add Source Adapter Architecture
+
+Create modular adapters under src/server/ingest/sources/. Each adapter handles the specific scraping or API logic for a provider and returns NormalizedRentalListing[].
+
+Airbnb Adapter: To handle listing extraction and metadata.
+
+VRBO Adapter: To handle listing extraction and metadata.
+
+Owner-Direct/Agency Adapters: For local Puerto Vallarta sites.
+
+iCal Adapter: To process availability feeds.
+
+3) Add Source Registry/Config
+
+Create a config-driven registry to manage scrapers:
+
+Source key: (e.g., airbnb-pv, vrbo-mex)
+
+Base URL & Patterns: URL structures for search and detail pages.
+
+Parser strategy: (e.g., Headless browser for Airbnb/VRBO, HTML parsing for local sites).
+
+Priority weight: To favor direct sources over third-party platforms if duplicates exist.
+
+4) Add Normalization Helpers
+
+Create reusable utilities to clean messy data:
+
+Price & Currency: Normalize Airbnb/VRBO prices to USD/MXN.
+
+Geography: Map "Romantic Zone" or "Amapas" from various source strings to a master VallartaPulse neighborhood list.
+
+Building Inference: Identify "Ciye" or "Sayan" from titles/descriptions.
+
+View & Quality Tiers: Heuristics to determine "Full Ocean" or "Luxury" based on keywords and photos/amenities.
+
+Duplicate Detection: Identify when the same condo is listed on both Airbnb and VRBO.
+
+5) Add iCal Ingestion
+
+Utility to parse iCal feeds from Airbnb/VRBO/Direct sites to store:
+
+Blocked/booked dates.
+
+Sync metadata to ensure pricing is date-aware.
+
+6) Add Owner-Submitted Source Intake
+
+A path to manually submit a listing (e.g., an Airbnb URL or a local agency link) that triggers the specific adapter or queues it for manual review.
+
+7) Add First Wave of Source Coverage
+
+Prioritize high-density data:
+
+Airbnb & VRBO: For broad market coverage.
+
+Local PV Agencies: (e.g., PVRPV, Applegate) for localized accuracy.
+
+CSV Seed: For initial manual data points.
+
+8) Persist and Inspect Results
+
+Store in a database with the ability to:
+
+Filter by source (inspect only VRBO vs. only Airbnb).
+
+Identify missing fields (e.g., listings without "Building Name").
+
+Flag likely duplicates across platforms.
+
+9) Add Internal Debug Endpoints
+
+Routes for system health:
+
+GET /api/ingest/run?source=airbnb
+
+GET /api/ingest/duplicates
+
+GET /api/ingest/stats (Comparison counts across sources).
+
+10) Prepare for Pricing-Tool Integration
+
+Refactor the engine to consume the expanded pool, using Source Weighting (e.g., give direct agency prices more weight than Airbnb prices which include platform service fees).
+
+11) Keep it Incremental
+
+Prove the pipeline by implementing Airbnb end-to-end first, then add VRBO and local sources.
+
+12) Add Comments for Future Model Evolution
+
+Mark code blocks for:
+
+Pricing logic: Subtracting Airbnb/VRBO service fees to find "Net" nightly rates.
+
+Event Multipliers: Adjusting comps during PV events (Pride, Semana Santa).
+
+Location Scoring: Proximity to the beach or Malecon.
