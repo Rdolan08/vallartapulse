@@ -9,6 +9,7 @@ export type SourceKey =
   | "pvrpv"
   | "airbnb"
   | "vrbo"
+  | "vacation_vallarta"
   | "local_agency"
   | "owner_direct"
   | "manual"

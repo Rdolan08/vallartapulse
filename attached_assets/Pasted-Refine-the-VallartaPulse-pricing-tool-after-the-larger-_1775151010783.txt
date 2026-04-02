@@ -1,0 +1,427 @@
+Refine the VallartaPulse pricing tool after the larger Greater Puerto Vallarta scrape is complete.
+
+We are now moving beyond a small Zona Romántica and Amapas sample. Rework the pricing engine so it behaves like a true Puerto Vallarta short-term rental pricing tool and not a generic STR calculator.
+
+Primary objective
+
+Rebuild the pricing model so it reflects what actually drives nightly rates in Puerto Vallarta and surrounding markets:
+
+1. Seasonality is one of the most important pricing drivers and must be treated as a major input
+2. Building and unit quality matter more than simple beach distance
+3. Micro-location matters more than broad neighborhood labels
+4. Rooftop pool and premium common areas matter a lot
+5. The model must support a much larger Greater PV geography
+6. Outputs must be explainable and believable to owners and property managers
+
+Critical market-specific requirement: seasonality
+
+In Puerto Vallarta, seasonality is absolutely critical and must be weighted heavily in the model.
+
+General seasonal pattern:
+- High season generally begins in October
+- High season runs through May
+- Summer is rainy season and is materially weaker for pricing and demand
+- June through September should generally be treated as lower-demand season unless a specific demand driver is present
+
+Seasonality cannot be a minor modifier. It should be a core pricing layer.
+
+The pricing engine must support:
+- monthly seasonality factors
+- holiday and event overlays
+- shoulder season behavior
+- low season / rainy season discounts
+- premium peak periods
+
+At minimum, create a seasonal demand calendar for Puerto Vallarta with adjustable multipliers.
+
+Use these broad market assumptions as a starting point:
+- October: start of recovery into high season
+- November: strong high season, including US and Canadian Thanksgiving travel
+- December: high season with major peak around Christmas and New Year’s
+- January: very strong high season, including MLK weekend
+- February: very strong high season, including Bear Week / Beef Dip and golf-related demand
+- March: very strong high season, including Spring Break demand
+- April: strong high season, often influenced by Easter / Semana Santa
+- May: still strong, especially around Pride, but beginning to soften later in the month
+- June: meaningful seasonal drop
+- July: low / rainy season
+- August: low / rainy season
+- September: typically weakest or among the weakest months
+- October again ramps up into high season
+
+Build event overlays for the following demand peaks where applicable:
+- Christmas
+- New Year’s
+- Bear Week / Beef Dip
+- major golf tournament periods
+- Pride
+- Easter / Semana Santa
+- Spring Break
+- MLK weekend
+- US Thanksgiving
+- Canadian Thanksgiving
+
+Architect this so event and holiday premiums can stack on top of baseline monthly seasonality.
+
+Important: rainy season matters
+Summertime in PV is rainy season and that should be explicitly reflected in the pricing model. This is not a subtle effect. The engine should recognize that summer demand is generally weaker and should price accordingly unless a listing has unusual strengths or a special event period offsets the softness.
+
+Expand geographic logic
+
+Stop assuming the market is just Zona Romántica and Amapas.
+
+Create a broader Greater Puerto Vallarta market structure that includes at least:
+- Zona Romántica
+- Amapas
+- Emiliano Zapata
+- Alta Vista
+- Centro
+- 5 de Diciembre
+- Versalles
+- Fluvial Vallarta
+- Marina Vallarta
+- Hotel Zone
+- Conchas Chinas
+- Mismaloya
+- Nuevo Vallarta / Nuevo Nayarit
+- Bucerías
+- La Cruz
+- Punta Mita if enough sample exists
+
+For each listing, assign:
+- broad market area
+- submarket / neighborhood
+- micro-location cluster
+- canonical building name if known
+
+Do not force listings into only broad neighborhoods if cross streets, landmarks, or building names allow better clustering.
+
+Location logic
+
+Distance to beach should remain in the model, but it should not dominate. In PV, many units are relatively close to the beach compared with other markets, so the model should focus more on quality and micro-location nuance.
+
+Add location features such as:
+- nearest beach access distance
+- walkability to restaurants, nightlife, beach clubs, and the Malecón
+- slope or hillside penalty where relevant
+- cross streets
+- ocean view / partial ocean view / city view / no view
+- direct beach access or not
+- “quiet luxury” areas versus high-energy walkable areas
+- proximity to top landmarks and premium corridors
+
+Cross streets and building names should become important pricing clues.
+
+Building-level intelligence
+
+This is a major improvement area.
+
+For each recognized building:
+- compute building median nightly rate
+- compute building rate by bedroom bucket
+- compute building sample size
+- compute building quality tier
+- compute building seasonal behavior if enough data exists
+- flag thin sample buildings
+
+Create a building premium layer that can strongly influence pricing.
+
+If the selected unit is in a recognized building with enough sample size, anchor heavily to building-level comps before falling back to neighborhood-level logic.
+
+Building-level drivers may include:
+- newer construction
+- strong reputation
+- design quality
+- rooftop pool
+- direct beach access or beach club access
+- gym
+- concierge or staffed lobby
+- luxury common areas
+- stronger views
+- consistent unit quality within the building
+
+Quality scoring
+
+Create a composite unit quality score. This should be a major input.
+
+Quality score should consider:
+- year built or building age
+- renovation recency if inferable
+- finish quality
+- kitchen modernity
+- bathroom modernity
+- furniture quality
+- decor quality
+- photography quality
+- view quality
+- balcony / terrace quality
+- rooftop pool
+- standard pool
+- hot tub
+- luxury amenities
+- review score if available
+- review count as a confidence input
+
+Output a normalized quality score, such as 0 to 100 or 1 to 10.
+
+Bathrooms
+
+Simplify bathrooms to:
+- 1
+- 2
+- 3+
+
+Bathrooms should matter, but less than:
+- building
+- seasonality
+- views
+- rooftop pool
+- quality
+- micro-location
+
+Amenities UI cleanup
+
+The amenities selector is too long and clunky.
+
+Replace it with a tighter grouped UI using chips, toggles, or dropdowns.
+
+Suggested amenity groups:
+- Views: ocean, partial ocean, city, garden, none
+- Building amenities: rooftop pool, regular pool, gym, elevator, concierge, parking
+- Lifestyle amenities: beach access, pet friendly, workspace, washer/dryer
+- Luxury amenities: hot tub, terrace, luxury kitchen, designer interior
+
+Weight major amenities more heavily than small convenience amenities.
+Rooftop pool should have substantially more pricing power than a standard pool.
+Building amenities should generally matter more than minor in-unit amenities.
+
+Pricing model architecture
+
+Refactor the engine into layers in this order:
+
+Layer 1: Seasonal market base
+Calculate a base nightly rate using:
+- month / seasonal period
+- event overlays if applicable
+- broad market area
+- submarket
+- bedroom bucket
+- bathroom bucket
+
+Layer 2: Building anchor
+If the building is known and has enough sample size:
+- anchor strongly to building median / building comps
+- apply building-specific seasonal behavior if available
+
+Layer 3: Micro-location adjustment
+Adjust for:
+- cross streets
+- view class
+- beach access
+- walkability
+- hillside penalty
+- premium corridor bonus
+
+Layer 4: Unit quality adjustment
+Adjust for the quality score.
+
+Layer 5: Amenity adjustment
+Apply premiums for major amenities, especially rooftop pool and premium common areas.
+
+Layer 6: Confidence adjustment
+Incorporate data quality, comp quality, building certainty, and sample depth.
+
+Layer 7: Guardrails
+Prevent unrealistic outputs with:
+- min / max bounds by area and bedroom count
+- outlier clipping
+- thin-sample warnings
+- confidence warnings
+
+Comps engine improvements
+
+Improve comp selection. Prioritize comps in this order:
+1. same building
+2. same micro-cluster or nearby cross streets
+3. same submarket
+4. same bedroom bucket
+5. similar quality score
+6. similar view class
+7. similar amenity tier
+8. similar seasonal period
+
+De-prioritize listings that are geographically close but clearly lower quality or in a different building class.
+
+Show comp explanations such as:
+- 5 same-building comps used
+- 8 nearby premium comps used
+- 4 fallback submarket comps used
+- seasonal weighting applied based on April high-season behavior
+
+Confidence scoring
+
+Every pricing output should include:
+- recommended nightly rate
+- low and high range
+- confidence score
+- explanation of main pricing drivers
+
+Confidence should increase when:
+- building is matched exactly
+- many similar comps exist
+- same season comps exist
+- quality tier is clear
+- area has strong coverage
+
+Confidence should decrease when:
+- building is unknown
+- sample is thin
+- listing type is unusual
+- seasonality data is weak
+- geography is underrepresented
+
+Data engineering tasks
+
+Implement the following backend improvements:
+
+1. Normalize building names aggressively
+- fuzzy match aliases
+- canonical names
+- building match confidence
+
+2. Create reusable lookup tables for:
+- buildings
+- neighborhoods
+- micro-clusters
+- amenity tiers
+- view classes
+- seasonality calendar
+- event premium calendar
+
+3. Store derived fields for each listing:
+- canonical building
+- inferred quality tier
+- quality score
+- view class
+- rooftop pool boolean
+- premium building boolean
+- walkability proxy
+- beach proximity bucket
+- luxury tier
+- seasonal demand month
+- event period flag
+
+4. Flag data issues:
+- suspiciously low or high nightly prices
+- miscategorized bedrooms
+- miscategorized bathrooms
+- duplicate listings
+- stale listings if detectable
+
+UX improvements
+
+Update the pricing tool so it feels tighter and more owner-friendly.
+
+Inputs should include:
+- market area / neighborhood
+- building
+- bedrooms
+- bathrooms: 1, 2, 3+
+- sleeps
+- year built or age band
+- view type
+- rooftop pool yes/no
+- other premium amenities
+- cross streets
+- target month or stay period
+- notes
+
+Important: the user must be able to price by stay month or target date period. Pricing without time context is not good enough for PV.
+
+Outputs should return:
+- recommended nightly price
+- likely range
+- confidence
+- top pricing drivers
+- closest comps
+- building premium if applicable
+- seasonal multiplier if applicable
+- event premium if applicable
+- plain-English explanation
+
+Example output:
+Recommended price: $412/night.
+This estimate is anchored primarily on same-building comps, strong walkability, partial bay views, a rooftop pool premium, and April high-season demand. Confidence is high because 12 close comps were available, including 5 in the same building.
+
+Explainability
+
+For every estimate, expose a clear pricing breakdown such as:
+- base seasonal submarket rate: $240
+- April high-season adjustment: +$52
+- building premium: +$68
+- view premium: +$24
+- rooftop pool premium: +$18
+- quality adjustment: +$10
+- final recommendation: $412
+
+The engine must explain itself clearly so owners trust the result.
+
+Testing requirements
+
+After refactoring, test these scenarios:
+1. same building, luxury unit, rooftop pool, high season
+2. same building, lower-quality unit, high season
+3. same building, luxury unit, rainy season
+4. unknown building but premium cross streets
+5. thin-sample neighborhood
+6. oceanfront or beachfront premium unit
+7. standard inland condo with no view
+8. Bucerías versus Nuevo Vallarta comparison
+9. Zona Romántica versus Conchas Chinas for similar bedroom count
+10. 1 bathroom versus 2 bathrooms versus 3+
+11. building exact match versus fuzzy match
+12. Christmas / New Year peak pricing
+13. Pride pricing behavior
+14. MLK weekend pricing behavior
+15. September rainy-season weakness
+
+Show where estimates changed versus the old model.
+
+Deliverables
+
+When finished, provide:
+1. summary of model changes
+2. list of new derived fields
+3. description of pricing formula and layer order
+4. list of UI improvements
+5. before versus after estimate examples
+6. known weak spots in the current data
+7. explanation of how seasonality is being modeled
+8. list of event periods currently supported
+
+Important guidance
+
+Do not build this as a generic STR pricing model.
+
+This must behave like a Puerto Vallarta-aware pricing engine that understands:
+- seasonality as a major driver
+- rainy season weakness in summer
+- October through May high season
+- Christmas and New Year peaks
+- Bear Week / Beef Dip
+- golf tournament demand
+- Pride
+- Easter / Semana Santa
+- Spring Break
+- MLK weekend
+- US and Canadian Thanksgiving travel
+- building-level premiums
+- rooftop pools
+- design quality
+- views
+- walkability
+- cross streets
+- luxury tiers
+- differences across Greater PV
+
+The goal is not just model accuracy. The goal is to produce prices that a local owner or manager would say are smart, locally aware, and believable.

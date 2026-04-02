@@ -25,7 +25,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-export type BuildingNeighborhood = "Zona Romantica" | "Amapas";
+export type BuildingNeighborhood = string;
 
 export interface BuildingEntry {
   canonical: string;
@@ -553,36 +553,54 @@ export function mergeBuildingStats(
   }>
 ): BuildingStats[] {
   const byCanonical = new Map<string, {
-    entry: BuildingEntry;
+    canonical: string;
+    neighborhood: string;
+    aliases: string[];
+    bedroomBrackets: number[];
     prices: number[];
     count: number;
   }>();
 
   for (const row of dbRows) {
-    // Skip non-target neighborhoods
-    if (row.neighborhood_normalized !== "Zona Romantica" && row.neighborhood_normalized !== "Amapas") {
-      continue;
-    }
+    if (!row.building_name?.trim()) continue;
 
-    // Find the catalog entry for this raw building name
+    // Try to match against the static catalog first (ZR/Amapas have rich catalog entries)
     const slug = toSlug(row.building_name);
     const match = CANDIDATE_INDEX.find(
       (c) =>
         (c.canonicalSlug === slug || c.aliasSlugs.includes(slug)) &&
-        c.entry.neighborhood === (row.neighborhood_normalized as BuildingNeighborhood)
+        c.entry.neighborhood === row.neighborhood_normalized
     );
-    const entry = match?.entry;
-    if (!entry) continue; // skip buildings not in catalog
 
-    const key = `${entry.canonical}|${entry.neighborhood}`;
+    let canonical: string;
+    let neighborhood: string;
+    let aliases: string[];
+    let bedroomBrackets: number[];
+
+    if (match) {
+      canonical = match.entry.canonical;
+      neighborhood = match.entry.neighborhood;
+      aliases = match.entry.aliases;
+      bedroomBrackets = match.entry.bedroomBrackets ?? [];
+    } else {
+      // For neighborhoods not in the static catalog, use the DB row directly
+      canonical = row.building_name.trim();
+      neighborhood = row.neighborhood_normalized;
+      aliases = [];
+      bedroomBrackets = [];
+    }
+
+    const key = `${canonical}|${neighborhood}`;
     const existing = byCanonical.get(key);
     if (existing) {
-      // Accumulate count; use provided avg/median directly per row
       existing.count += row.cnt;
       if (row.median_price) existing.prices.push(row.median_price);
     } else {
       byCanonical.set(key, {
-        entry,
+        canonical,
+        neighborhood,
+        aliases,
+        bedroomBrackets,
         count: row.cnt,
         prices: row.median_price ? [row.median_price] : [],
       });
@@ -590,30 +608,26 @@ export function mergeBuildingStats(
   }
 
   const results: BuildingStats[] = [];
-  for (const { entry, count, prices } of byCanonical.values()) {
+  for (const { canonical, neighborhood, aliases, bedroomBrackets, count, prices } of byCanonical.values()) {
     const sortedPrices = [...prices].sort((a, b) => a - b);
     const median =
       sortedPrices.length > 0
-        ? parseFloat(
-            sortedPercentile(sortedPrices, 50).toFixed(0)
-          )
+        ? parseFloat(sortedPercentile(sortedPrices, 50).toFixed(0))
         : null;
     const avg =
       prices.length > 0
-        ? parseFloat(
-            (prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(0)
-          )
+        ? parseFloat((prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(0))
         : null;
     const thin = count < 3;
 
     results.push({
-      canonical_building_name: entry.canonical,
-      neighborhood_normalized: entry.neighborhood,
-      aliases: entry.aliases,
+      canonical_building_name: canonical,
+      neighborhood_normalized: neighborhood,
+      aliases,
       listing_count: count,
       median_price: median,
       avg_price: avg,
-      bedroom_brackets: entry.bedroomBrackets ?? [],
+      bedroom_brackets: bedroomBrackets,
       thin_sample: thin,
       note: thin
         ? `Only ${count} listing(s) — building premium is not computed for thin samples (min 2 needed).`
