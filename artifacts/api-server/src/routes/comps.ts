@@ -30,6 +30,7 @@ import {
   type CompResultV2,
   type BeachTier,
 } from "../lib/comps-engine-v2";
+import { lookupBuilding } from "../lib/building-lookup";
 
 const router: IRouter = Router();
 
@@ -226,6 +227,48 @@ router.post("/rental/comps", async (req, res) => {
   try {
     const { engine, listingCount } = await getEngine();
 
+    // Building name resolution: fuzzy-match raw input to canonical building name.
+    // High/medium confidence matches are used automatically (with a warning for medium).
+    // Low-confidence matches are dropped to avoid building-premium contamination.
+    let resolvedBuildingName: string | null = input.building_name ?? null;
+    const buildingResolutionWarnings: string[] = [];
+
+    if (input.building_name) {
+      const bLookup = lookupBuilding(
+        input.building_name,
+        input.neighborhood_normalized as "Zona Romantica" | "Amapas"
+      );
+      if (bLookup.match && bLookup.match.confidence_tier !== "low") {
+        resolvedBuildingName = bLookup.match.canonical_building_name;
+        if (bLookup.match.confidence_tier === "medium") {
+          buildingResolutionWarnings.push(
+            `Building name "${input.building_name}" partially matched to "${resolvedBuildingName}" ` +
+            `(${Math.round(bLookup.match.match_confidence * 100)}% confidence). ` +
+            "Use POST /api/rental/comps/prepare to confirm."
+          );
+        }
+        if (bLookup.match.neighborhood_normalized !== input.neighborhood_normalized) {
+          resolvedBuildingName = null;
+          buildingResolutionWarnings.push(
+            `Building "${bLookup.match.canonical_building_name}" is in ${bLookup.match.neighborhood_normalized}, ` +
+            `not ${input.neighborhood_normalized}. Building premium will not be applied.`
+          );
+        }
+      } else if (bLookup.match && bLookup.match.confidence_tier === "low") {
+        resolvedBuildingName = null;
+        buildingResolutionWarnings.push(
+          `Building name "${input.building_name}" could not be confidently matched. ` +
+          "Building premium not applied. Use POST /api/rental/comps/prepare for resolution."
+        );
+      } else {
+        resolvedBuildingName = null;
+        buildingResolutionWarnings.push(
+          bLookup.warning ??
+          `Building name "${input.building_name}" not recognized. Building premium not applied.`
+        );
+      }
+    }
+
     const target: TargetPropertyV2 = {
       neighborhoodNormalized: input.neighborhood_normalized,
       bedrooms: input.bedrooms,
@@ -234,7 +277,7 @@ router.post("/rental/comps", async (req, res) => {
       distanceToBeachM: input.distance_to_beach_m,
       amenitiesNormalized: input.amenities_normalized,
       ratingOverall: input.rating_overall ?? null,
-      buildingName: input.building_name ?? null,
+      buildingName: resolvedBuildingName,
     };
 
     const result = engine.run(target);
@@ -255,7 +298,10 @@ router.post("/rental/comps", async (req, res) => {
       "comps recommendation generated"
     );
 
-    const warnings = buildWarnings(input, poolSize, expandedPool, confidence, result.targetBeachTier);
+    const warnings = [
+      ...buildingResolutionWarnings,
+      ...buildWarnings(input, poolSize, expandedPool, confidence, result.targetBeachTier),
+    ];
 
     const thinPoolWarning = confidence === "guidance_only" || confidence === "low";
 
