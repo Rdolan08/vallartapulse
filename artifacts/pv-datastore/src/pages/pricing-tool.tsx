@@ -4,18 +4,43 @@ import {
   Building2, MapPin, BedDouble, Bath, Ruler, Waves, Star,
   CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronUp,
   Info, TrendingUp, ArrowRight, Loader2, RefreshCw, RotateCcw,
-  Tag, DollarSign, BarChart3, Building,
+  Tag, DollarSign, BarChart3, Building, ArrowLeftRight,
 } from "lucide-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Unit system ────────────────────────────────────────────────────────────────
+type UnitSystem = "imperial" | "metric";
 
+// Convert user-facing distance → meters for API
+function toMeters(val: number, units: UnitSystem) {
+  return units === "imperial" ? Math.round(val * 0.3048) : Math.round(val);
+}
+// Convert user-facing size → sqft for API
+function toSqft(val: number, units: UnitSystem) {
+  return units === "imperial" ? Math.round(val) : Math.round(val * 10.764);
+}
+
+const BEACH_PRESETS_IMPERIAL = [
+  { label: "Beachfront (≤150 ft)", ft: 50 },
+  { label: "Beach block / steps (~150 ft)", ft: 150 },
+  { label: "1–2 blocks (~300 ft)", ft: 300 },
+  { label: "3–5 blocks (~600 ft)", ft: 600 },
+  { label: "6–10 blocks (~1200 ft)", ft: 1200 },
+];
+const BEACH_PRESETS_METRIC = [
+  { label: "Beachfront (≤50 m)", m: 15 },
+  { label: "Beach block / steps (~50 m)", m: 50 },
+  { label: "1–2 blocks (~100 m)", m: 100 },
+  { label: "3–5 blocks (~200 m)", m: 200 },
+  { label: "6–10 blocks (~400 m)", m: 400 },
+];
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 type Neighborhood = "Zona Romantica" | "Amapas";
 
 interface FormValues {
@@ -23,15 +48,15 @@ interface FormValues {
   buildingName: string;
   bedrooms: 1 | 2 | 3 | 4;
   bathrooms: number;
-  sqft: string;
-  distanceToBeach: string;
+  size: string;       // sqft (imperial) or m² (metric) — display unit
+  distance: string;   // ft (imperial) or m (metric) — display unit
   ratingOverall: string;
 }
 
 interface AmenityDef {
   amenity_key: string;
-  label_en: string;
-  label_es: string;
+  display_label: string;
+  display_label_es: string;
   category: string;
 }
 
@@ -51,7 +76,7 @@ interface PrepareResult {
     match_strategy: string | null;
     suggestions: { canonical: string; neighborhood: string; score: number }[];
     warning: string | null;
-  };
+  } | null;
   amenity_validation: {
     accepted_keys: string[];
     rejected_keys: string[];
@@ -79,12 +104,9 @@ interface CompEntry {
   building_name: string | null;
   score: number;
   match_reasons: string[];
-  top_drivers: string[];
 }
 
 interface CompsResult {
-  model_version: string;
-  eligible_listing_count: number;
   target_summary: {
     neighborhood: string;
     bedrooms: number;
@@ -100,7 +122,6 @@ interface CompsResult {
   conservative_price: number;
   recommended_price: number;
   stretch_price: number;
-  comp_prices: number[];
   building_adjustment_pct: number | null;
   beach_tier_adjustment_pct: number | null;
   selected_comps: CompEntry[];
@@ -111,49 +132,43 @@ interface CompsResult {
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-
 const BATH_OPTIONS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
 const RATING_OPTIONS = Array.from({ length: 41 }, (_, i) =>
   parseFloat((1 + i * 0.1).toFixed(1))
 );
 
 const CONFIDENCE_CONFIG: Record<string, { label: string; labelEs: string; color: string; bg: string; border: string }> = {
-  high:          { label: "High Confidence",     labelEs: "Alta Confianza",      color: "#00C2A8", bg: "rgba(0,194,168,0.12)",  border: "rgba(0,194,168,0.3)" },
-  medium:        { label: "Medium Confidence",   labelEs: "Confianza Media",     color: "#F59E0B", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.3)" },
-  low:           { label: "Low Confidence",      labelEs: "Baja Confianza",      color: "#F97316", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.3)" },
-  guidance_only: { label: "Guidance Only",       labelEs: "Solo Orientativo",    color: "#EF4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)" },
+  high:          { label: "High Confidence",   labelEs: "Alta Confianza",    color: "#00C2A8", bg: "rgba(0,194,168,0.12)",  border: "rgba(0,194,168,0.3)" },
+  medium:        { label: "Medium Confidence", labelEs: "Confianza Media",   color: "#F59E0B", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.3)" },
+  low:           { label: "Low Confidence",    labelEs: "Baja Confianza",    color: "#F97316", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.3)" },
+  guidance_only: { label: "Guidance Only",     labelEs: "Solo Orientativo",  color: "#EF4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)" },
 };
 
 const DRIVER_LABELS: Record<string, { en: string; es: string }> = {
-  beach_distance:    { en: "Beach Distance",    es: "Dist. a la playa" },
-  sqft:              { en: "Square Footage",    es: "Metros cuadrados" },
-  bathrooms:         { en: "Bathrooms",         es: "Baños" },
-  amenities:         { en: "Amenities",         es: "Amenidades" },
-  rating:            { en: "Guest Rating",      es: "Calificación" },
-  beach_tier_match:  { en: "Beach Tier",        es: "Categoría playa" },
-  price_tier_match:  { en: "Price Tier",        es: "Categoría precio" },
-  building_match:    { en: "Same Building",     es: "Mismo edificio" },
+  beach_distance:   { en: "Beach Distance",  es: "Dist. a la playa" },
+  sqft:             { en: "Square Footage",  es: "Metros cuadrados" },
+  bathrooms:        { en: "Bathrooms",       es: "Baños" },
+  amenities:        { en: "Amenities",       es: "Amenidades" },
+  rating:           { en: "Guest Rating",    es: "Calificación" },
+  beach_tier_match: { en: "Beach Tier",      es: "Categoría playa" },
+  price_tier_match: { en: "Price Tier",      es: "Categoría precio" },
+  building_match:   { en: "Same Building",   es: "Mismo edificio" },
 };
 
 // ── API helpers ────────────────────────────────────────────────────────────────
-
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(path, options);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+    throw new Error((err as { message?: string }).message ?? `API error: HTTP ${res.status}`);
   }
   return res.json() as Promise<T>;
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
-
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p
-      className="text-[10px] font-semibold uppercase tracking-widest mb-2"
-      style={{ color: "rgba(154,165,177,0.6)" }}
-    >
+    <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(154,165,177,0.6)" }}>
       {children}
     </p>
   );
@@ -164,9 +179,7 @@ function FieldLabel({ children, optional }: { children: React.ReactNode; optiona
     <label className="block text-sm font-medium text-foreground mb-1.5">
       {children}
       {optional && (
-        <span className="ml-1.5 text-[10px] font-normal" style={{ color: "rgba(154,165,177,0.5)" }}>
-          optional
-        </span>
+        <span className="ml-1.5 text-[10px] font-normal" style={{ color: "rgba(154,165,177,0.5)" }}>optional</span>
       )}
     </label>
   );
@@ -177,9 +190,8 @@ function StyledInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={cn(
-        "w-full px-3 py-2.5 rounded-xl text-sm bg-[#163C4A] border text-foreground",
-        "placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50",
-        "border-white/8 transition-colors",
+        "w-full px-3 py-2.5 rounded-xl text-sm bg-[#163C4A] border border-white/8 text-foreground",
+        "placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors",
         props.className,
       )}
     />
@@ -190,23 +202,38 @@ function StyledSelect(props: React.SelectHTMLAttributes<HTMLSelectElement> & { c
   return (
     <select
       {...props}
-      className={cn(
-        "w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50",
-        props.className,
-      )}
+      className={cn("w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50", props.className)}
     >
       {props.children}
     </select>
   );
 }
 
-// Building typeahead combobox
-function BuildingCombobox({
-  buildings,
-  value,
-  onChange,
-  disabled,
-}: {
+// Unit toggle
+function UnitToggle({ value, onChange }: { value: UnitSystem; onChange: (v: UnitSystem) => void }) {
+  return (
+    <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
+      {(["imperial", "metric"] as UnitSystem[]).map(u => (
+        <button
+          key={u}
+          type="button"
+          onClick={() => onChange(u)}
+          className="px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150"
+          style={{
+            background: value === u ? "#163C4A" : "transparent",
+            color: value === u ? "#00C2A8" : "rgba(154,165,177,0.6)",
+            boxShadow: value === u ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
+          }}
+        >
+          {u === "imperial" ? "Imperial (ft / sqft)" : "Metric (m / m²)"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Building typeahead
+function BuildingCombobox({ buildings, value, onChange, disabled }: {
   buildings: BuildingEntry[];
   value: string;
   onChange: (v: string) => void;
@@ -220,9 +247,7 @@ function BuildingCombobox({
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
@@ -230,9 +255,7 @@ function BuildingCombobox({
 
   const filtered = query.trim().length === 0
     ? buildings
-    : buildings.filter(b =>
-        b.canonical_building_name.toLowerCase().includes(query.toLowerCase())
-      );
+    : buildings.filter(b => b.canonical_building_name.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <div ref={containerRef} className="relative">
@@ -240,13 +263,9 @@ function BuildingCombobox({
         <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: "rgba(154,165,177,0.5)" }} />
         <input
           value={query}
-          onChange={e => {
-            setQuery(e.target.value);
-            onChange(e.target.value);
-            setOpen(true);
-          }}
+          onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          placeholder="Search or type building name…"
+          placeholder={buildings.length > 0 ? `Search ${buildings.length} known buildings…` : "Type building name…"}
           disabled={disabled}
           className={cn(
             "w-full pl-8 pr-8 py-2.5 rounded-xl text-sm bg-[#163C4A] border border-white/8",
@@ -256,59 +275,40 @@ function BuildingCombobox({
           )}
         />
         {query && (
-          <button
-            type="button"
-            onClick={() => { setQuery(""); onChange(""); }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <button type="button" onClick={() => { setQuery(""); onChange(""); }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
             <XCircle className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
-
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
+            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
             className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden"
-            style={{
-              background: "#0F2A36",
-              border: "1px solid rgba(255,255,255,0.08)",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-              maxHeight: "220px",
-              overflowY: "auto",
-            }}
+            style={{ background: "#0F2A36", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 8px 24px rgba(0,0,0,0.4)", maxHeight: "220px", overflowY: "auto" }}
           >
-            <div
-              className="px-3 py-2 text-xs cursor-pointer hover:bg-white/5 transition-colors"
+            <div className="px-3 py-2 text-xs cursor-pointer hover:bg-white/5 transition-colors"
               style={{ color: "rgba(154,165,177,0.6)" }}
-              onMouseDown={() => { onChange(""); setQuery(""); setOpen(false); }}
-            >
-              Skip / no specific building
+              onMouseDown={() => { onChange(""); setQuery(""); setOpen(false); }}>
+              No specific building / skip
             </div>
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }} />
             {filtered.length === 0 && (
               <div className="px-3 py-2 text-xs text-muted-foreground">
-                No matching buildings — your text will be fuzzy-matched.
+                No match — your text will be fuzzy-matched by the engine.
               </div>
             )}
             {filtered.map(b => (
-              <div
-                key={b.canonical_building_name}
+              <div key={b.canonical_building_name}
                 className="px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors"
-                onMouseDown={() => {
-                  onChange(b.canonical_building_name);
-                  setQuery(b.canonical_building_name);
-                  setOpen(false);
-                }}
-              >
+                onMouseDown={() => { onChange(b.canonical_building_name); setQuery(b.canonical_building_name); setOpen(false); }}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm text-foreground">{b.canonical_building_name}</span>
                   <span className="text-[10px] shrink-0" style={{ color: "rgba(154,165,177,0.5)" }}>
-                    {b.listing_count} listings · {b.median_price != null ? formatCurrency(b.median_price) : "—"} median
+                    {b.listing_count} listings{b.median_price != null ? ` · ${formatCurrency(b.median_price)} med.` : ""}
+                    {b.thin_sample ? " ⚠" : ""}
                   </span>
                 </div>
               </div>
@@ -320,12 +320,8 @@ function BuildingCombobox({
   );
 }
 
-// Amenity multi-select grouped by category
-function AmenityPicker({
-  amenities,
-  selected,
-  onToggle,
-}: {
+// Amenity multi-select
+function AmenityPicker({ amenities, selected, onToggle }: {
   amenities: AmenityDef[];
   selected: string[];
   onToggle: (key: string) => void;
@@ -336,33 +332,31 @@ function AmenityPicker({
     acc[a.category].push(a);
     return acc;
   }, {});
+  const order = ["beach", "climate", "view", "pool", "kitchen", "outdoor", "laundry", "connectivity", "workspace", "parking", "pet", "safety"];
+  const sorted = order.filter(c => grouped[c]).concat(Object.keys(grouped).filter(c => !order.includes(c)));
 
-  const categoryOrder = ["beach", "climate", "view", "pool", "kitchen", "outdoor", "laundry", "connectivity", "workspace", "parking", "pet", "safety"];
-  const sorted = categoryOrder.filter(c => grouped[c]).concat(Object.keys(grouped).filter(c => !categoryOrder.includes(c)));
+  if (amenities.length === 0) {
+    return <p className="text-xs text-muted-foreground">Loading amenities…</p>;
+  }
 
   return (
     <div className="space-y-4">
       {sorted.map(cat => (
         <div key={cat}>
-          <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 capitalize" style={{ color: "rgba(154,165,177,0.5)" }}>
-            {cat}
-          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 capitalize" style={{ color: "rgba(154,165,177,0.5)" }}>{cat}</p>
           <div className="flex flex-wrap gap-2">
             {(grouped[cat] ?? []).map(a => {
               const isOn = selected.includes(a.amenity_key);
+              const label = t(a.display_label, a.display_label_es);
               return (
-                <button
-                  key={a.amenity_key}
-                  type="button"
-                  onClick={() => onToggle(a.amenity_key)}
+                <button key={a.amenity_key} type="button" onClick={() => onToggle(a.amenity_key)}
                   className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 border"
                   style={{
                     background: isOn ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
                     borderColor: isOn ? "rgba(0,194,168,0.5)" : "rgba(255,255,255,0.08)",
-                    color: isOn ? "#00C2A8" : "rgba(245,247,250,0.55)",
-                  }}
-                >
-                  {t(a.label_en, a.label_es)}
+                    color: isOn ? "#00C2A8" : "rgba(245,247,250,0.6)",
+                  }}>
+                  {label}
                 </button>
               );
             })}
@@ -373,69 +367,49 @@ function AmenityPicker({
   );
 }
 
-// Confidence tier badge
 function ConfidenceBadge({ label }: { label: string }) {
   const cfg = CONFIDENCE_CONFIG[label] ?? CONFIDENCE_CONFIG.guidance_only;
   return (
-    <span
-      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
-      style={{ background: cfg.bg, borderColor: cfg.border, color: cfg.color }}
-    >
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
+      style={{ background: cfg.bg, borderColor: cfg.border, color: cfg.color }}>
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.color }} />
       {cfg.label}
     </span>
   );
 }
 
-// Warning / notice row
 function WarningRow({ text, level = "warn" }: { text: string; level?: "warn" | "info" }) {
   return (
-    <div
-      className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs"
+    <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs"
       style={{
         background: level === "warn" ? "rgba(245,158,11,0.08)" : "rgba(0,209,255,0.08)",
         border: `1px solid ${level === "warn" ? "rgba(245,158,11,0.2)" : "rgba(0,209,255,0.15)"}`,
-        color: level === "warn" ? "#F59E0B" : "#00D1FF",
-      }}
-    >
-      {level === "warn" ? <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> : <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />}
+      }}>
+      {level === "warn" ? <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#F59E0B" }} />
+        : <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#00D1FF" }} />}
       <span style={{ color: "rgba(245,247,250,0.8)" }}>{text}</span>
     </div>
   );
 }
 
-// Primary action button
-function PrimaryButton({
-  onClick,
-  loading,
-  disabled,
-  children,
-}: {
-  onClick: () => void;
-  loading?: boolean;
-  disabled?: boolean;
-  children: React.ReactNode;
+function PrimaryButton({ onClick, loading, disabled, children }: {
+  onClick: () => void; loading?: boolean; disabled?: boolean; children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled || loading}
+    <button type="button" onClick={onClick} disabled={disabled || loading}
       className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
       style={{
         background: disabled || loading ? "rgba(0,194,168,0.4)" : "#00C2A8",
         color: "#0A1E27",
         boxShadow: disabled || loading ? "none" : "0 4px 16px rgba(0,194,168,0.3)",
-      }}
-    >
-      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+      }}>
+      {loading && <Loader2 className="w-4 h-4 animate-spin" />}
       {children}
     </button>
   );
 }
 
 // ── Main page ──────────────────────────────────────────────────────────────────
-
 type Phase = "form" | "prepare_loading" | "prepared" | "comps_loading" | "results" | "error";
 
 const DEFAULT_FORM: FormValues = {
@@ -443,37 +417,37 @@ const DEFAULT_FORM: FormValues = {
   buildingName: "",
   bedrooms: 1,
   bathrooms: 1,
-  sqft: "",
-  distanceToBeach: "",
+  size: "",
+  distance: "",
   ratingOverall: "",
 };
 
 export default function PricingTool() {
   const { t, lang } = useLanguage();
+  const [units, setUnits] = useState<UnitSystem>("imperial");
 
-  // Static data
   const [amenities, setAmenities] = useState<AmenityDef[]>([]);
   const [buildingsByNeighborhood, setBuildingsByNeighborhood] = useState<Record<string, BuildingEntry[]>>({});
   const [loadingMeta, setLoadingMeta] = useState(true);
+  const [metaError, setMetaError] = useState<string | null>(null);
 
-  // Form
   const [form, setForm] = useState<FormValues>(DEFAULT_FORM);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
 
-  // Phase flow
   const [phase, setPhase] = useState<Phase>("form");
   const [prepareResult, setPrepareResult] = useState<PrepareResult | null>(null);
   const [compsResult, setCompsResult] = useState<CompsResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  // UI extras
   const [showLimitations, setShowLimitations] = useState(false);
+
   const resultsRef = useRef<HTMLDivElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const distanceRef = useRef<HTMLDivElement>(null);
 
   const buildings = buildingsByNeighborhood[form.neighborhood] ?? [];
 
-  // Load amenities + buildings on mount
+  // Load amenities + buildings
   useEffect(() => {
     async function loadMeta() {
       try {
@@ -487,8 +461,8 @@ export default function PricingTool() {
           "Zona Romantica": zrRes.buildings,
           "Amapas": ampRes.buildings,
         });
-      } catch {
-        // non-fatal — graceful degradation
+      } catch (e) {
+        setMetaError(e instanceof Error ? e.message : "Failed to load form data. Check your connection.");
       } finally {
         setLoadingMeta(false);
       }
@@ -496,46 +470,45 @@ export default function PricingTool() {
     loadMeta();
   }, []);
 
-  // Reset building when neighborhood changes
+  // Reset building + results when neighborhood changes
   useEffect(() => {
     setForm(prev => ({ ...prev, buildingName: "" }));
-    if (phase !== "form") {
-      setPhase("form");
-      setPrepareResult(null);
-      setCompsResult(null);
-    }
+    if (phase !== "form") { setPhase("form"); setPrepareResult(null); setCompsResult(null); }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.neighborhood]);
 
   function setField<K extends keyof FormValues>(key: K, val: FormValues[K]) {
     setForm(prev => ({ ...prev, [key]: val }));
     setFormErrors(prev => ({ ...prev, [key]: undefined }));
-    // If user edits form after validation, go back to form phase
     if (phase !== "form" && phase !== "prepare_loading") {
-      setPhase("form");
-      setPrepareResult(null);
-      setCompsResult(null);
+      setPhase("form"); setPrepareResult(null); setCompsResult(null);
     }
   }
 
   function toggleAmenity(key: string) {
-    setSelectedAmenities(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    );
+    setSelectedAmenities(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+    if (phase !== "form" && phase !== "prepare_loading") {
+      setPhase("form"); setPrepareResult(null); setCompsResult(null);
+    }
   }
 
   function validate(): boolean {
     const errs: Partial<Record<keyof FormValues, string>> = {};
-    if (!form.distanceToBeach || isNaN(Number(form.distanceToBeach)) || Number(form.distanceToBeach) < 0) {
-      errs.distanceToBeach = "Required — enter approx. walking distance to beach";
+    if (!form.distance.trim() || isNaN(Number(form.distance)) || Number(form.distance) <= 0) {
+      errs.distance = units === "imperial"
+        ? "Required — enter distance in feet, or use the quick-select above."
+        : "Required — enter distance in meters.";
     }
-    if (form.sqft && (isNaN(Number(form.sqft)) || Number(form.sqft) <= 0)) {
-      errs.sqft = "Enter a valid square footage";
+    if (form.size && (isNaN(Number(form.size)) || Number(form.size) <= 0)) {
+      errs.size = `Enter a valid size in ${units === "imperial" ? "sq ft" : "m²"}.`;
     }
     if (form.ratingOverall && (isNaN(Number(form.ratingOverall)) || Number(form.ratingOverall) < 1 || Number(form.ratingOverall) > 5)) {
-      errs.ratingOverall = "Rating must be between 1.0 and 5.0";
+      errs.ratingOverall = "Rating must be 1.0 – 5.0.";
     }
     setFormErrors(errs);
+    if (errs.distance) {
+      setTimeout(() => distanceRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+    }
     return Object.keys(errs).length === 0;
   }
 
@@ -544,12 +517,14 @@ export default function PricingTool() {
     setPhase("prepare_loading");
     setErrorMsg(null);
     try {
+      const distanceM = toMeters(Number(form.distance), units);
+      const sizeSqft = form.size ? toSqft(Number(form.size), units) : undefined;
       const body = {
         neighborhood_normalized: form.neighborhood,
         bedrooms: form.bedrooms,
         bathrooms: form.bathrooms,
-        ...(form.sqft ? { sqft: Number(form.sqft) } : {}),
-        distance_to_beach_m: Number(form.distanceToBeach),
+        ...(sizeSqft ? { sqft: sizeSqft } : {}),
+        distance_to_beach_m: distanceM,
         amenities_normalized: selectedAmenities,
         ...(form.ratingOverall ? { rating_overall: Number(form.ratingOverall) } : {}),
         ...(form.buildingName.trim() ? { building_name: form.buildingName.trim() } : {}),
@@ -562,28 +537,29 @@ export default function PricingTool() {
       setPrepareResult(result);
       setPhase("prepared");
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      setErrorMsg(e instanceof Error ? e.message : "Validation failed. Please try again.");
       setPhase("error");
+      setTimeout(() => errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, selectedAmenities]);
+  }, [form, selectedAmenities, units]);
 
   const handleGetPricing = useCallback(async () => {
     if (!prepareResult) return;
     setPhase("comps_loading");
     setErrorMsg(null);
     try {
+      const distanceM = toMeters(Number(form.distance), units);
+      const sizeSqft = form.size ? toSqft(Number(form.size), units) : undefined;
       const body = {
         neighborhood_normalized: form.neighborhood,
         bedrooms: form.bedrooms,
         bathrooms: form.bathrooms,
-        ...(form.sqft ? { sqft: Number(form.sqft) } : {}),
-        distance_to_beach_m: Number(form.distanceToBeach),
+        ...(sizeSqft ? { sqft: sizeSqft } : {}),
+        distance_to_beach_m: distanceM,
         amenities_normalized: prepareResult.cleaned_input.amenities_normalized,
         ...(form.ratingOverall ? { rating_overall: Number(form.ratingOverall) } : {}),
-        ...(prepareResult.cleaned_input.building_name
-          ? { building_name: prepareResult.cleaned_input.building_name }
-          : {}),
+        ...(prepareResult.cleaned_input.building_name ? { building_name: prepareResult.cleaned_input.building_name } : {}),
       };
       const result = await apiFetch<CompsResult>("/api/rental/comps", {
         method: "POST",
@@ -592,13 +568,14 @@ export default function PricingTool() {
       });
       setCompsResult(result);
       setPhase("results");
-      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      setErrorMsg(e instanceof Error ? e.message : "Failed to get pricing. Please try again.");
       setPhase("error");
+      setTimeout(() => errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, prepareResult]);
+  }, [form, prepareResult, units]);
 
   function handleReset() {
     setForm(DEFAULT_FORM);
@@ -609,43 +586,50 @@ export default function PricingTool() {
     setPhase("form");
     setErrorMsg(null);
     setShowLimitations(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   const isLoading = phase === "prepare_loading" || phase === "comps_loading";
-  const showResults = phase === "results" && compsResult;
-
-  // ── Render ───────────────────────────────────────────────────────────────────
+  const distLabel = units === "imperial" ? "ft" : "m";
+  const sizeLabel = units === "imperial" ? "sq ft" : "m²";
+  const beachPresets = units === "imperial" ? BEACH_PRESETS_IMPERIAL : BEACH_PRESETS_METRIC;
 
   return (
     <PageWrapper>
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-1">
             <DollarSign className="w-5 h-5" style={{ color: "#00C2A8" }} />
             <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
               {t("Rental Pricing Tool", "Herramienta de Precios")}
             </h1>
           </div>
-          <p className="text-muted-foreground">
-            {t(
-              "Comp-based nightly rate guidance for Puerto Vallarta condos — powered by PVRPV listing data.",
-              "Guía de precios por noche basada en comparables para condos en Puerto Vallarta."
-            )}
+          <p className="text-muted-foreground text-sm">
+            {t("Comp-based nightly rate guidance for Puerto Vallarta condos — powered by PVRPV listing data.", "Guía de precios por noche basada en comparables para condos en Puerto Vallarta.")}
           </p>
         </div>
-        {phase !== "form" && (
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground transition-colors border border-white/8 hover:border-white/16"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            {t("Start over", "Comenzar de nuevo")}
-          </button>
-        )}
+        <div className="flex items-center gap-3 flex-wrap">
+          <UnitToggle value={units} onChange={v => { setUnits(v); setField("distance", ""); setField("size", ""); }} />
+          {phase !== "form" && (
+            <button onClick={handleReset}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-muted-foreground hover:text-foreground border border-white/8 hover:border-white/16 transition-colors">
+              <RotateCcw className="w-3 h-3" /> {t("Start over", "Comenzar")}
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="space-y-6">
+      {/* Meta error */}
+      {metaError && (
+        <div className="mb-4 flex items-start gap-2 p-3 rounded-xl text-xs"
+          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#EF4444" }}>
+          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <span>{metaError}</span>
+        </div>
+      )}
+
+      <div className="space-y-5">
 
         {/* ── Form card ── */}
         <Card className="glass-card">
@@ -655,182 +639,164 @@ export default function PricingTool() {
               {t("Property Details", "Detalles de la Propiedad")}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-5">
 
-            {/* Row 1: Neighborhood */}
+            {/* Neighborhood */}
             <div>
               <FieldLabel>{t("Neighborhood", "Colonia")}</FieldLabel>
-              <StyledSelect
-                value={form.neighborhood}
-                onChange={e => setField("neighborhood", e.target.value as Neighborhood)}
-                disabled={isLoading}
-              >
+              <StyledSelect value={form.neighborhood}
+                onChange={e => setField("neighborhood", e.target.value as Neighborhood)} disabled={isLoading}>
                 <option value="Zona Romantica">Zona Romántica</option>
                 <option value="Amapas">Amapas</option>
               </StyledSelect>
             </div>
 
-            {/* Row 2: Building */}
+            {/* Building */}
             <div>
               <FieldLabel optional>
-                {t("Building / Complex", "Edificio / Complejo")}
+                <Building className="inline w-3.5 h-3.5 mr-1" />
+                {t("Property / Building Name", "Nombre de la Propiedad / Edificio")}
               </FieldLabel>
-              {loadingMeta ? (
-                <Skeleton className="h-10 rounded-xl" />
-              ) : (
-                <BuildingCombobox
-                  buildings={buildings}
-                  value={form.buildingName}
-                  onChange={v => setField("buildingName", v)}
-                  disabled={isLoading}
-                />
+              {loadingMeta ? <Skeleton className="h-10 rounded-xl" /> : (
+                <BuildingCombobox buildings={buildings} value={form.buildingName}
+                  onChange={v => setField("buildingName", v)} disabled={isLoading} />
               )}
-              {buildings.length > 0 && (
-                <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.5)" }}>
-                  {t(
-                    `${buildings.length} known buildings in ${form.neighborhood}. Free text is also accepted — we'll fuzzy-match it.`,
-                    `${buildings.length} edificios conocidos. También puede escribir libremente — lo emparejamos automáticamente.`
-                  )}
-                </p>
-              )}
+              <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.45)" }}>
+                {t("If your condo is part of a known complex, selecting it improves pricing accuracy. If not listed, type it or skip.",
+                   "Si el condo pertenece a un complejo conocido, seleccionarlo mejora la precisión. Si no está, escríbelo u omítelo.")}
+              </p>
             </div>
 
-            {/* Row 3: Bedrooms + Bathrooms */}
+            {/* Bedrooms + Bathrooms */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <FieldLabel>{t("Bedrooms", "Recámaras")}</FieldLabel>
-                <StyledSelect
-                  value={form.bedrooms}
-                  onChange={e => setField("bedrooms", Number(e.target.value) as 1 | 2 | 3 | 4)}
-                  disabled={isLoading}
-                >
-                  {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} {t("BR", "Rec")}</option>)}
+                <StyledSelect value={form.bedrooms}
+                  onChange={e => setField("bedrooms", Number(e.target.value) as 1 | 2 | 3 | 4)} disabled={isLoading}>
+                  {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} {t("BR", "Rec.")}</option>)}
                 </StyledSelect>
               </div>
               <div>
                 <FieldLabel>{t("Bathrooms", "Baños")}</FieldLabel>
-                <StyledSelect
-                  value={form.bathrooms}
-                  onChange={e => setField("bathrooms", Number(e.target.value))}
-                  disabled={isLoading}
-                >
-                  {BATH_OPTIONS.map(n => (
-                    <option key={n} value={n}>{n} {t("BA", "Baño")}</option>
-                  ))}
+                <StyledSelect value={form.bathrooms}
+                  onChange={e => setField("bathrooms", Number(e.target.value))} disabled={isLoading}>
+                  {BATH_OPTIONS.map(n => <option key={n} value={n}>{n} {t("BA", "Baño")}</option>)}
                 </StyledSelect>
               </div>
             </div>
 
-            {/* Row 4: Sqft + Beach distance */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Size + Beach distance */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <FieldLabel optional>
                   <Ruler className="inline w-3.5 h-3.5 mr-1" />
-                  {t("Size (sq ft)", "Tamaño (pies²)")}
+                  {t(`Unit size (${sizeLabel})`, `Tamaño (${sizeLabel})`)}
                 </FieldLabel>
-                <StyledInput
-                  type="number"
-                  min={0}
-                  placeholder="e.g. 1200"
-                  value={form.sqft}
-                  onChange={e => setField("sqft", e.target.value)}
-                  disabled={isLoading}
-                />
-                {formErrors.sqft && <p className="text-xs mt-1 text-destructive">{formErrors.sqft}</p>}
+                <StyledInput type="number" min={0}
+                  placeholder={units === "imperial" ? "e.g. 900" : "e.g. 84"}
+                  value={form.size} onChange={e => setField("size", e.target.value)} disabled={isLoading} />
+                {formErrors.size && <p className="text-xs mt-1 text-destructive">{formErrors.size}</p>}
               </div>
-              <div>
+
+              <div ref={distanceRef}>
                 <FieldLabel>
                   <Waves className="inline w-3.5 h-3.5 mr-1" />
-                  {t("Distance to beach (m)", "Distancia a la playa (m)")}
+                  {t(`Distance to beach (${distLabel})`, `Distancia a la playa (${distLabel})`)}
                 </FieldLabel>
-                <StyledInput
-                  type="number"
-                  min={0}
-                  placeholder="e.g. 150"
-                  value={form.distanceToBeach}
-                  onChange={e => setField("distanceToBeach", e.target.value)}
-                  disabled={isLoading}
-                />
-                {formErrors.distanceToBeach && <p className="text-xs mt-1 text-destructive">{formErrors.distanceToBeach}</p>}
-                <p className="text-[11px] mt-1" style={{ color: "rgba(154,165,177,0.45)" }}>
-                  {t("Straight-line estimate is fine.", "Estimación en línea recta está bien.")}
-                </p>
+                {/* Quick-select presets */}
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {beachPresets.map(p => {
+                    const val = String(units === "imperial" ? p.ft : p.m);
+                    return (
+                      <button key={p.label} type="button"
+                        onClick={() => setField("distance", val)}
+                        disabled={isLoading}
+                        className="px-2 py-1 rounded-lg text-[11px] border transition-all"
+                        style={{
+                          background: form.distance === val ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
+                          borderColor: form.distance === val ? "rgba(0,194,168,0.4)" : "rgba(255,255,255,0.08)",
+                          color: form.distance === val ? "#00C2A8" : "rgba(245,247,250,0.5)",
+                        }}>
+                        {p.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <StyledInput type="number" min={0}
+                  placeholder={units === "imperial" ? "or enter feet (e.g. 500)" : "or enter meters (e.g. 150)"}
+                  value={form.distance} onChange={e => setField("distance", e.target.value)} disabled={isLoading} />
+                {formErrors.distance && <p className="text-xs mt-1 text-destructive">{formErrors.distance}</p>}
               </div>
             </div>
 
-            {/* Row 5: Rating */}
+            {/* Rating */}
             <div className="max-w-xs">
               <FieldLabel optional>
                 <Star className="inline w-3.5 h-3.5 mr-1" />
                 {t("Current guest rating", "Calificación de huéspedes")}
               </FieldLabel>
-              <StyledSelect
-                value={form.ratingOverall}
-                onChange={e => setField("ratingOverall", e.target.value)}
-                disabled={isLoading}
-              >
-                <option value="">— No rating yet —</option>
-                {RATING_OPTIONS.map(r => (
-                  <option key={r} value={r}>{r.toFixed(1)} ★</option>
-                ))}
+              <StyledSelect value={form.ratingOverall}
+                onChange={e => setField("ratingOverall", e.target.value)} disabled={isLoading}>
+                <option value="">— Not rated yet —</option>
+                {RATING_OPTIONS.map(r => <option key={r} value={r}>{r.toFixed(1)} ★</option>)}
               </StyledSelect>
             </div>
 
-            {/* Row 6: Amenities */}
+            {/* Amenities */}
             <div>
               <FieldLabel optional>
                 <Tag className="inline w-3.5 h-3.5 mr-1" />
                 {t("Amenities", "Amenidades")}
                 {selectedAmenities.length > 0 && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}>
-                    {selectedAmenities.length} selected
+                  <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                    style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}>
+                    {selectedAmenities.length} {t("selected", "seleccionados")}
                   </span>
                 )}
               </FieldLabel>
-              {loadingMeta ? (
-                <div className="space-y-2">
-                  {[80, 60, 70].map((w, i) => <Skeleton key={i} className={`h-6 rounded-full w-[${w}px]`} />)}
-                </div>
-              ) : (
-                <AmenityPicker
-                  amenities={amenities}
-                  selected={selectedAmenities}
-                  onToggle={toggleAmenity}
-                />
-              )}
+              {loadingMeta
+                ? <div className="flex flex-wrap gap-2">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-8 w-24 rounded-full" />)}</div>
+                : <AmenityPicker amenities={amenities} selected={selectedAmenities} onToggle={toggleAmenity} />}
             </div>
 
             {/* Validate CTA */}
-            <div className="flex items-center gap-4 pt-2">
-              <PrimaryButton
-                onClick={handleValidate}
-                loading={phase === "prepare_loading"}
-                disabled={isLoading}
-              >
-                {phase === "prepare_loading"
-                  ? t("Validating…", "Validando…")
-                  : t("Validate Inputs", "Validar Datos")}
+            <div className="flex items-center gap-4 pt-2 border-t border-white/5">
+              <PrimaryButton onClick={handleValidate} loading={phase === "prepare_loading"} disabled={isLoading}>
+                {phase === "prepare_loading" ? t("Validating…", "Validando…") : t("Validate & Continue", "Validar y Continuar")}
                 {phase !== "prepare_loading" && <ArrowRight className="w-4 h-4" />}
               </PrimaryButton>
               {phase === "prepared" && (
-                <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "#00C2A8" }}>
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  {t("Inputs validated", "Datos validados")}
-                </div>
+                <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "#00C2A8" }}>
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {t("Inputs validated", "Datos validados")}
+                </span>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {/* ── Prepare result panel ── */}
+        {/* ── Error panel ── */}
+        <AnimatePresence>
+          {phase === "error" && errorMsg && (
+            <motion.div ref={errorRef} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="flex items-start gap-3 p-4 rounded-xl"
+              style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)" }}>
+              <XCircle className="w-5 h-5 mt-0.5 shrink-0" style={{ color: "#EF4444" }} />
+              <div>
+                <p className="text-sm font-semibold text-foreground">{t("Something went wrong", "Algo salió mal")}</p>
+                <p className="text-xs mt-1 text-muted-foreground">{errorMsg}</p>
+                <button onClick={handleValidate}
+                  className="mt-2 text-xs font-medium flex items-center gap-1" style={{ color: "#00C2A8" }}>
+                  <RefreshCw className="w-3 h-3" /> {t("Try again", "Intentar de nuevo")}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Input Summary ── */}
         <AnimatePresence>
           {(phase === "prepared" || phase === "comps_loading" || phase === "results") && prepareResult && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
               <Card className="glass-card">
                 <CardHeader>
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -838,100 +804,72 @@ export default function PricingTool() {
                     {t("Input Summary", "Resumen de Entrada")}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-5">
-
+                <CardContent className="space-y-4">
                   {/* Building resolution */}
                   <div>
                     <SectionLabel>{t("Building", "Edificio")}</SectionLabel>
-                    {prepareResult.building_resolution.canonical_building_name ? (
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-semibold text-foreground">
-                          {prepareResult.building_resolution.canonical_building_name}
-                        </span>
-                        <span
-                          className="text-[10px] px-2 py-0.5 rounded-full font-semibold border"
+                    {prepareResult.building_resolution?.canonical_building_name ? (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold">{prepareResult.building_resolution.canonical_building_name}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border"
                           style={{
-                            background: prepareResult.building_resolution.confidence_tier === "high"
-                              ? "rgba(0,194,168,0.12)" : "rgba(245,158,11,0.12)",
-                            borderColor: prepareResult.building_resolution.confidence_tier === "high"
-                              ? "rgba(0,194,168,0.3)" : "rgba(245,158,11,0.3)",
-                            color: prepareResult.building_resolution.confidence_tier === "high"
-                              ? "#00C2A8" : "#F59E0B",
-                          }}
-                        >
-                          {prepareResult.building_resolution.confidence_tier} match ·{" "}
+                            background: prepareResult.building_resolution.confidence_tier === "high" ? "rgba(0,194,168,0.12)" : "rgba(245,158,11,0.12)",
+                            borderColor: prepareResult.building_resolution.confidence_tier === "high" ? "rgba(0,194,168,0.3)" : "rgba(245,158,11,0.3)",
+                            color: prepareResult.building_resolution.confidence_tier === "high" ? "#00C2A8" : "#F59E0B",
+                          }}>
+                          {prepareResult.building_resolution.confidence_tier} match
                           {prepareResult.building_resolution.match_confidence != null
-                            ? `${Math.round(prepareResult.building_resolution.match_confidence * 100)}%`
-                            : ""}
+                            ? ` · ${Math.round(prepareResult.building_resolution.match_confidence * 100)}%` : ""}
                         </span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">{t("No building — general market comps", "Sin edificio — comparables generales")}</span>
-                        {prepareResult.building_resolution.suggestions.length > 0 && (
-                          <span className="text-[11px]" style={{ color: "rgba(154,165,177,0.6)" }}>
-                            {t("Did you mean:", "¿Quisiste decir:")} <span className="text-foreground">{prepareResult.building_resolution.suggestions[0]?.canonical}</span>?
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm text-muted-foreground">{t("No building — general comps", "Sin edificio — comparables generales")}</span>
+                        {(prepareResult.building_resolution?.suggestions?.length ?? 0) > 0 && (
+                          <span className="text-[11px]" style={{ color: "#F59E0B" }}>
+                            {t("Did you mean:", "¿Quisiste decir:")} <strong>{prepareResult.building_resolution!.suggestions[0]?.canonical}</strong>?
                           </span>
                         )}
                       </div>
                     )}
                   </div>
 
-                  {/* Amenities summary */}
+                  {/* Amenities */}
                   <div>
-                    <SectionLabel>{t("Amenities", "Amenidades")}</SectionLabel>
-                    <div className="space-y-2">
-                      {prepareResult.amenity_validation.accepted_keys.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {prepareResult.amenity_validation.accepted_keys.map(k => (
-                            <span
-                              key={k}
-                              className="px-2 py-0.5 rounded-full text-[11px] font-medium"
-                              style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}
-                            >
-                              ✓ {k.replace(/_/g, " ")}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {prepareResult.amenity_validation.rejected_keys.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {prepareResult.amenity_validation.rejected_keys.map(k => (
-                            <span
-                              key={k}
-                              className="px-2 py-0.5 rounded-full text-[11px] font-medium"
-                              style={{ background: "rgba(239,68,68,0.08)", color: "#EF4444" }}
-                            >
-                              ✗ {k}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {prepareResult.amenity_validation.accepted_keys.length === 0 && prepareResult.amenity_validation.rejected_keys.length === 0 && (
-                        <p className="text-xs text-muted-foreground">{t("No amenities selected", "Sin amenidades seleccionadas")}</p>
-                      )}
-                    </div>
+                    <SectionLabel>{t("Amenities accepted by engine", "Amenidades aceptadas")}</SectionLabel>
+                    {prepareResult.amenity_validation.accepted_keys.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {prepareResult.amenity_validation.accepted_keys.map(k => (
+                          <span key={k} className="px-2 py-0.5 rounded-full text-[11px] font-medium"
+                            style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}>
+                            ✓ {k.replace(/_/g, " ")}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">{t("None selected", "Ninguna seleccionada")}</p>
+                    )}
+                    {prepareResult.amenity_validation.rejected_keys.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {prepareResult.amenity_validation.rejected_keys.map(k => (
+                          <span key={k} className="px-2 py-0.5 rounded-full text-[11px]"
+                            style={{ background: "rgba(239,68,68,0.08)", color: "#EF4444" }}>✗ {k}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Warnings */}
                   {prepareResult.warnings.length > 0 && (
                     <div className="space-y-2">
-                      {prepareResult.warnings.map((w, i) => (
-                        <WarningRow key={i} text={w} />
-                      ))}
+                      {prepareResult.warnings.map((w, i) => <WarningRow key={i} text={w} />)}
                     </div>
                   )}
 
                   {/* Get Pricing CTA */}
-                  <div className="flex items-center gap-4 pt-1">
-                    <PrimaryButton
-                      onClick={handleGetPricing}
-                      loading={phase === "comps_loading"}
-                      disabled={isLoading}
-                    >
-                      {phase === "comps_loading"
-                        ? t("Running pricing engine…", "Ejecutando motor de precios…")
-                        : t("Get Pricing Recommendation", "Obtener Recomendación de Precio")}
+                  <div className="pt-1 border-t border-white/5">
+                    <PrimaryButton onClick={handleGetPricing} loading={phase === "comps_loading"} disabled={isLoading}>
+                      {phase === "comps_loading" ? t("Running pricing engine…", "Ejecutando motor…") : t("Get Pricing Recommendation", "Obtener Recomendación")}
                       {phase !== "comps_loading" && <BarChart3 className="w-4 h-4" />}
                     </PrimaryButton>
                   </div>
@@ -941,103 +879,61 @@ export default function PricingTool() {
           )}
         </AnimatePresence>
 
-        {/* ── Error ── */}
+        {/* ── Results ── */}
         <AnimatePresence>
-          {phase === "error" && errorMsg && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex items-start gap-3 p-4 rounded-xl"
-              style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)" }}
-            >
-              <XCircle className="w-5 h-5 mt-0.5 shrink-0" style={{ color: "#EF4444" }} />
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  {t("Something went wrong", "Algo salió mal")}
-                </p>
-                <p className="text-xs mt-1 text-muted-foreground">{errorMsg}</p>
-                <button
-                  onClick={handleValidate}
-                  className="mt-2 text-xs font-medium flex items-center gap-1"
-                  style={{ color: "#00C2A8" }}
-                >
-                  <RefreshCw className="w-3 h-3" /> {t("Try again", "Intentar de nuevo")}
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          {phase === "results" && compsResult && (
+            <motion.div ref={resultsRef} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className="space-y-5">
 
-        {/* ── Results panel ── */}
-        <AnimatePresence>
-          {showResults && compsResult && (
-            <motion.div
-              ref={resultsRef}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="space-y-6"
-            >
-
-              {/* ── Price hero ── */}
-              <div
-                className="rounded-2xl p-6"
+              {/* Price hero */}
+              <div className="rounded-2xl p-6"
                 style={{
                   background: "linear-gradient(135deg, #0F2A36 0%, #163C4A 100%)",
                   border: "1px solid rgba(0,194,168,0.2)",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 0 60px rgba(0,194,168,0.03)",
-                }}
-              >
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                }}>
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "rgba(0,194,168,0.7)" }}>
                       {t("Recommended Nightly Rate", "Tarifa Nocturna Recomendada")}
                     </p>
-                    <div className="flex items-baseline gap-3">
+                    <div className="flex items-baseline gap-2">
                       <span className="text-6xl font-extrabold tracking-tight" style={{ color: "#00C2A8" }}>
                         {formatCurrency(compsResult.recommended_price)}
                       </span>
                       <span className="text-lg font-medium text-muted-foreground">/night</span>
                     </div>
-                    <div className="flex items-center gap-4 mt-3">
+                    <div className="flex items-center gap-6 mt-3">
                       <div>
                         <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{t("Conservative", "Conservador")}</p>
-                        <p className="text-xl font-bold text-foreground">{formatCurrency(compsResult.conservative_price)}</p>
+                        <p className="text-xl font-bold">{formatCurrency(compsResult.conservative_price)}</p>
                       </div>
-                      <div className="text-muted-foreground">—</div>
+                      <ArrowLeftRight className="w-4 h-4 text-muted-foreground" />
                       <div>
                         <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{t("Stretch", "Máximo")}</p>
-                        <p className="text-xl font-bold text-foreground">{formatCurrency(compsResult.stretch_price)}</p>
+                        <p className="text-xl font-bold">{formatCurrency(compsResult.stretch_price)}</p>
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2 items-start md:items-end">
+                  <div className="flex flex-col gap-2 items-start md:items-end shrink-0">
                     <ConfidenceBadge label={compsResult.confidence_label} />
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <BarChart3 className="w-3.5 h-3.5" />
-                      {compsResult.pool_size} {t("comparable listings", "listados comparables")}
+                      {compsResult.pool_size} {t("comparable listings", "comparables")}
                     </div>
                     {compsResult.thin_pool_warning && (
-                      <div
-                        className="text-[11px] px-2 py-1 rounded-lg"
-                        style={{ background: "rgba(249,115,22,0.12)", color: "#F97316", border: "1px solid rgba(249,115,22,0.2)" }}
-                      >
-                        ⚠ {t("Thin comp pool — use the range, not the point estimate", "Pocos comparables — use el rango, no el valor exacto")}
+                      <div className="text-[11px] px-2 py-1 rounded-lg"
+                        style={{ background: "rgba(249,115,22,0.12)", color: "#F97316", border: "1px solid rgba(249,115,22,0.2)" }}>
+                        ⚠ {t("Thin pool — use the range", "Pocos comparables — use el rango")}
                       </div>
                     )}
-                    <p className="text-[10px] text-right max-w-[200px]" style={{ color: "rgba(154,165,177,0.4)" }}>
-                      PVRPV platform data only
-                    </p>
+                    <p className="text-[10px]" style={{ color: "rgba(154,165,177,0.35)" }}>PVRPV platform data only</p>
                   </div>
                 </div>
               </div>
 
-              {/* ── Two-col row: adjustments + top drivers ── */}
+              {/* Adjustments + Drivers */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                {/* Adjustments applied */}
                 <Card className="glass-card">
                   <CardHeader>
                     <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -1046,25 +942,19 @@ export default function PricingTool() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between py-1.5">
-                      <span className="text-sm text-muted-foreground">{t("Segment baseline (P50)", "Mediana del segmento (P50)")}</span>
+                    <div className="flex justify-between py-1 border-b border-white/5">
+                      <span className="text-sm text-muted-foreground">{t("Segment P50", "Mediana del segmento")}</span>
                       <span className="text-sm font-semibold">{formatCurrency(compsResult.target_summary.segment_median)}</span>
                     </div>
                     {compsResult.building_adjustment_pct != null && (
-                      <div
-                        className="flex items-center justify-between py-1.5 px-2 rounded-lg"
-                        style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.15)" }}
-                      >
+                      <div className="flex justify-between py-1 px-2 rounded-lg"
+                        style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.15)" }}>
                         <div>
-                          <p className="text-sm text-foreground">
-                            {compsResult.target_summary.building_normalized
-                              ? `${compsResult.target_summary.building_normalized}`
-                              : t("Building premium", "Prima de edificio")}
-                          </p>
-                          <p className="text-[11px]" style={{ color: "rgba(154,165,177,0.5)" }}>
+                          <p className="text-sm">{compsResult.target_summary.building_normalized ?? t("Building", "Edificio")}</p>
+                          <p className="text-[10px] text-muted-foreground">
                             {compsResult.building_adjustment_pct > 40
-                              ? t("Anchor mode — building median used directly", "Modo ancla — mediana del edificio usada directamente")
-                              : t("Applied as comp-set inflation", "Aplicada como inflación de comparables")}
+                              ? t("Anchor mode", "Modo ancla")
+                              : t("Premium applied", "Prima aplicada")}
                           </p>
                         </div>
                         <span className="text-sm font-bold" style={{ color: "#6366F1" }}>
@@ -1073,17 +963,11 @@ export default function PricingTool() {
                       </div>
                     )}
                     {compsResult.beach_tier_adjustment_pct != null && (
-                      <div
-                        className="flex items-center justify-between py-1.5 px-2 rounded-lg"
-                        style={{ background: "rgba(0,209,255,0.08)", border: "1px solid rgba(0,209,255,0.12)" }}
-                      >
+                      <div className="flex justify-between py-1 px-2 rounded-lg"
+                        style={{ background: "rgba(0,209,255,0.08)", border: "1px solid rgba(0,209,255,0.12)" }}>
                         <div>
-                          <p className="text-sm text-foreground">
-                            {t("Beach tier", "Categoría de playa")} ({compsResult.target_summary.beach_tier})
-                          </p>
-                          <p className="text-[11px]" style={{ color: "rgba(154,165,177,0.5)" }}>
-                            {t("Cross-tier adjustment", "Ajuste entre categorías de playa")}
-                          </p>
+                          <p className="text-sm">{t("Beach tier", "Categoría playa")} ({compsResult.target_summary.beach_tier})</p>
+                          <p className="text-[10px] text-muted-foreground">{t("Cross-tier adjustment", "Ajuste entre categorías")}</p>
                         </div>
                         <span className="text-sm font-bold" style={{ color: "#00D1FF" }}>
                           {compsResult.beach_tier_adjustment_pct > 0 ? "+" : ""}{compsResult.beach_tier_adjustment_pct.toFixed(1)}%
@@ -1091,19 +975,16 @@ export default function PricingTool() {
                       </div>
                     )}
                     {compsResult.building_adjustment_pct == null && compsResult.beach_tier_adjustment_pct == null && (
-                      <p className="text-sm text-muted-foreground">
-                        {t("No specific adjustments applied — direct comp-set median.", "Sin ajustes específicos — mediana directa de comparables.")}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{t("Direct comp-set median — no specific adjustments.", "Mediana directa de comparables.")}</p>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* Top match drivers */}
                 <Card className="glass-card">
                   <CardHeader>
                     <CardTitle className="text-sm font-semibold flex items-center gap-2">
                       <MapPin className="w-4 h-4" style={{ color: "#00C2A8" }} />
-                      {t("Top Pricing Drivers", "Principales Factores de Precio")}
+                      {t("Top Pricing Drivers", "Factores Clave")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1112,15 +993,9 @@ export default function PricingTool() {
                         const lbl = DRIVER_LABELS[d];
                         return (
                           <div key={d} className="flex items-center gap-3">
-                            <span
-                              className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                              style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}
-                            >
-                              {i + 1}
-                            </span>
-                            <span className="text-sm text-foreground">
-                              {lbl ? (lang === "es" ? lbl.es : lbl.en) : d.replace(/_/g, " ")}
-                            </span>
+                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                              style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}>{i + 1}</span>
+                            <span className="text-sm">{lbl ? (lang === "es" ? lbl.es : lbl.en) : d.replace(/_/g, " ")}</span>
                           </div>
                         );
                       })}
@@ -1129,7 +1004,7 @@ export default function PricingTool() {
                 </Card>
               </div>
 
-              {/* ── Explanation ── */}
+              {/* Explanation */}
               <Card className="glass-card">
                 <CardContent className="pt-5">
                   <div className="flex items-start gap-3">
@@ -1139,23 +1014,21 @@ export default function PricingTool() {
                 </CardContent>
               </Card>
 
-              {/* ── Engine warnings ── */}
+              {/* Warnings */}
               {compsResult.warnings.length > 0 && (
                 <div className="space-y-2">
                   {compsResult.warnings.map((w, i) => <WarningRow key={i} text={w} />)}
                 </div>
               )}
 
-              {/* ── Comps table ── */}
+              {/* Comparable listings */}
               <Card className="glass-card">
                 <CardHeader>
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <BarChart3 className="w-4 h-4" style={{ color: "#00C2A8" }} />
                     {t("Comparable Listings", "Listados Comparables")}
-                    <span
-                      className="text-[11px] font-normal px-2 py-0.5 rounded-full"
-                      style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}
-                    >
+                    <span className="text-[11px] font-normal px-2 py-0.5 rounded-full"
+                      style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}>
                       {compsResult.selected_comps.length} {t("comps", "comparables")}
                     </span>
                   </CardTitle>
@@ -1163,62 +1036,36 @@ export default function PricingTool() {
                 <CardContent>
                   <div className="space-y-3">
                     {compsResult.selected_comps.map(comp => (
-                      <div
-                        key={comp.external_id}
-                        className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-xl"
-                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
-                      >
-                        {/* Rank + price */}
+                      <div key={comp.external_id} className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-xl"
+                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
                         <div className="flex items-center gap-3 sm:flex-col sm:items-center sm:min-w-[56px]">
-                          <span
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                            style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}
-                          >
-                            #{comp.rank}
-                          </span>
-                          <span className="text-base font-bold text-foreground sm:text-center">
-                            {formatCurrency(comp.nightly_price_usd)}
-                          </span>
+                          <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                            style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}>#{comp.rank}</span>
+                          <span className="text-base font-bold">{formatCurrency(comp.nightly_price_usd)}</span>
                         </div>
-
-                        {/* Main info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <p className="text-sm font-semibold text-foreground truncate">
-                              {comp.building_name ?? comp.external_id}
-                            </p>
-                            <a
-                              href={comp.source_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[10px] underline shrink-0"
-                              style={{ color: "rgba(0,209,255,0.7)" }}
-                            >
+                            <p className="text-sm font-semibold truncate">{comp.building_name ?? comp.external_id}</p>
+                            <a href={comp.source_url} target="_blank" rel="noopener noreferrer"
+                              className="text-[10px] underline shrink-0" style={{ color: "rgba(0,209,255,0.7)" }}>
                               PVRPV ↗
                             </a>
                           </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground mb-2">
-                            <span><BedDouble className="inline w-3 h-3 mr-1" />{comp.bedrooms}BR / {comp.bathrooms}BA</span>
-                            {comp.sqft && <span><Ruler className="inline w-3 h-3 mr-1" />{comp.sqft.toLocaleString()} sqft</span>}
-                            <span><Waves className="inline w-3 h-3 mr-1" />{comp.distance_to_beach_m}m · Tier {comp.beach_tier}</span>
-                            {comp.rating_overall && <span><Star className="inline w-3 h-3 mr-1" />{comp.rating_overall}</span>}
+                          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-muted-foreground mb-2">
+                            <span><BedDouble className="inline w-3 h-3 mr-0.5" />{comp.bedrooms}BR / {comp.bathrooms}BA</span>
+                            {comp.sqft != null && <span><Ruler className="inline w-3 h-3 mr-0.5" />{comp.sqft.toLocaleString()} sqft</span>}
+                            <span><Waves className="inline w-3 h-3 mr-0.5" />{comp.distance_to_beach_m}m · Tier {comp.beach_tier}</span>
+                            {comp.rating_overall != null && <span><Star className="inline w-3 h-3 mr-0.5" />{comp.rating_overall}</span>}
                           </div>
                           <div className="flex flex-wrap gap-1.5">
                             {comp.match_reasons.slice(0, 4).map((r, i) => (
-                              <span
-                                key={i}
-                                className="px-2 py-0.5 rounded-full text-[10px]"
-                                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(245,247,250,0.5)" }}
-                              >
-                                {r}
-                              </span>
+                              <span key={i} className="px-2 py-0.5 rounded-full text-[10px]"
+                                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(245,247,250,0.45)" }}>{r}</span>
                             ))}
                           </div>
                         </div>
-
-                        {/* Score */}
                         <div className="sm:text-right shrink-0">
-                          <p className="text-[10px] text-muted-foreground">{t("Match score", "Puntaje")}</p>
+                          <p className="text-[10px] text-muted-foreground">{t("Score", "Puntaje")}</p>
                           <p className="text-lg font-bold" style={{ color: "#00C2A8" }}>{comp.score.toFixed(1)}</p>
                         </div>
                       </div>
@@ -1227,29 +1074,19 @@ export default function PricingTool() {
                 </CardContent>
               </Card>
 
-              {/* ── Model limitations ── */}
+              {/* Model limitations */}
               <div>
-                <button
-                  type="button"
-                  onClick={() => setShowLimitations(v => !v)}
-                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
+                <button type="button" onClick={() => setShowLimitations(v => !v)}
+                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
                   {showLimitations ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                  {t("Model limitations & data scope", "Limitaciones del modelo y alcance de datos")}
+                  {t("Model limitations & data scope", "Limitaciones del modelo")}
                 </button>
                 <AnimatePresence>
                   {showLimitations && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                       <div className="mt-3 space-y-2">
-                        {compsResult.model_limitations.map((lim, i) => (
-                          <WarningRow key={i} text={lim} level="info" />
-                        ))}
+                        {compsResult.model_limitations.map((lim, i) => <WarningRow key={i} text={lim} level="info" />)}
                       </div>
                     </motion.div>
                   )}
@@ -1260,21 +1097,13 @@ export default function PricingTool() {
           )}
         </AnimatePresence>
 
-        {/* ── Empty state hint ── */}
+        {/* Empty state */}
         {phase === "form" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="flex flex-col items-center py-12 text-center"
-            style={{ color: "rgba(154,165,177,0.35)" }}
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+            className="flex flex-col items-center py-12 text-center" style={{ color: "rgba(154,165,177,0.3)" }}>
             <BarChart3 className="w-10 h-10 mb-3" />
-            <p className="text-sm">
-              {t(
-                "Fill in your property details above, then click Validate Inputs to get started.",
-                "Ingresa los detalles de tu propiedad arriba y haz clic en Validar Datos para comenzar."
-              )}
+            <p className="text-sm max-w-sm">
+              {t("Fill in your property details above and click Validate & Continue.", "Ingresa los detalles de la propiedad y haz clic en Validar y Continuar.")}
             </p>
           </motion.div>
         )}
