@@ -1,9 +1,11 @@
 import { PageWrapper } from "@/components/layout/page-wrapper";
+import { useLanguage } from "@/contexts/language-context";
 import { useState } from "react";
 
 type Status = "idle" | "sending" | "success" | "error";
 
 export default function Contact() {
+  const { t } = useLanguage();
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -26,14 +28,14 @@ export default function Contact() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setErrorMsg(data.error || "Something went wrong. Please try again.");
+        setErrorMsg(data.error || t("Something went wrong. Please try again.", "Algo salió mal. Por favor intenta de nuevo."));
         setStatus("error");
       } else {
         setStatus("success");
         setForm({ name: "", email: "", subject: "", message: "" });
       }
     } catch {
-      setErrorMsg("Unable to send your message. Please try again later.");
+      setErrorMsg(t("Unable to send your message. Please try again later.", "No se pudo enviar tu mensaje. Por favor intenta más tarde."));
       setStatus("error");
     }
   };
@@ -63,10 +65,13 @@ export default function Contact() {
       <div className="max-w-xl mx-auto py-10 px-4">
 
         <h1 className="text-3xl font-bold mb-1" style={{ color: "rgba(245,247,250,0.95)" }}>
-          Contact Us
+          {t("Contact Us", "Contáctanos")}
         </h1>
         <p className="text-sm mb-10" style={{ color: "rgba(154,165,177,0.6)" }}>
-          Have a question, suggestion, or data request? We'd love to hear from you.
+          {t(
+            "Have a question, suggestion, or data request? We'd love to hear from you.",
+            "¿Tienes una pregunta, sugerencia o solicitud de datos? Nos encantaría escucharte."
+          )}
         </p>
 
         {status === "success" ? (
@@ -76,17 +81,20 @@ export default function Contact() {
           >
             <div className="text-3xl mb-3">✓</div>
             <h2 className="text-lg font-semibold mb-2" style={{ color: "#00C2A8" }}>
-              Message received
+              {t("Message received", "Mensaje recibido")}
             </h2>
             <p className="text-sm" style={{ color: "rgba(154,165,177,0.7)" }}>
-              Thanks for reaching out. We'll get back to you as soon as we can.
+              {t(
+                "Thanks for reaching out. We'll get back to you as soon as we can.",
+                "Gracias por comunicarte. Te responderemos a la brevedad posible."
+              )}
             </p>
             <button
               onClick={() => setStatus("idle")}
               className="mt-6 text-sm underline"
               style={{ color: "rgba(154,165,177,0.5)" }}
             >
-              Send another message
+              {t("Send another message", "Enviar otro mensaje")}
             </button>
           </div>
         ) : (
@@ -98,12 +106,14 @@ export default function Contact() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label style={labelStyle}>Your name <span style={{ color: "#00C2A8" }}>*</span></label>
+                  <label style={labelStyle}>
+                    {t("Your name", "Tu nombre")} <span style={{ color: "#00C2A8" }}>*</span>
+                  </label>
                   <input
                     name="name"
                     value={form.name}
                     onChange={handleChange}
-                    placeholder="Jane Smith"
+                    placeholder={t("Jane Smith", "Juan García")}
                     required
                     style={inputStyle}
                     onFocus={(e) => (e.target.style.borderColor = "rgba(0,194,168,0.5)")}
@@ -111,7 +121,9 @@ export default function Contact() {
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>Your email <span style={{ color: "#00C2A8" }}>*</span></label>
+                  <label style={labelStyle}>
+                    {t("Your email", "Tu correo")} <span style={{ color: "#00C2A8" }}>*</span>
+                  </label>
                   <input
                     name="email"
                     type="email"
@@ -127,30 +139,32 @@ export default function Contact() {
               </div>
 
               <div>
-                <label style={labelStyle}>Subject</label>
+                <label style={labelStyle}>{t("Subject", "Asunto")}</label>
                 <select
                   name="subject"
                   value={form.subject}
                   onChange={handleChange}
                   style={{ ...inputStyle, cursor: "pointer" }}
                 >
-                  <option value="">Select a topic...</option>
-                  <option value="General question">General question</option>
-                  <option value="Data request">Data request or suggestion</option>
-                  <option value="Pricing tool feedback">Pricing tool feedback</option>
-                  <option value="Bug or issue">Bug or issue</option>
-                  <option value="Partnership">Partnership inquiry</option>
-                  <option value="Other">Other</option>
+                  <option value="">{t("Select a topic...", "Selecciona un tema...")}</option>
+                  <option value="General question">{t("General question", "Pregunta general")}</option>
+                  <option value="Data request">{t("Data request or suggestion", "Solicitud o sugerencia de datos")}</option>
+                  <option value="Pricing tool feedback">{t("Pricing tool feedback", "Comentarios sobre la herramienta de precios")}</option>
+                  <option value="Bug or issue">{t("Bug or issue", "Error o problema técnico")}</option>
+                  <option value="Partnership">{t("Partnership inquiry", "Consulta de colaboración")}</option>
+                  <option value="Other">{t("Other", "Otro")}</option>
                 </select>
               </div>
 
               <div>
-                <label style={labelStyle}>Message <span style={{ color: "#00C2A8" }}>*</span></label>
+                <label style={labelStyle}>
+                  {t("Message", "Mensaje")} <span style={{ color: "#00C2A8" }}>*</span>
+                </label>
                 <textarea
                   name="message"
                   value={form.message}
                   onChange={handleChange}
-                  placeholder="Tell us what's on your mind..."
+                  placeholder={t("Tell us what's on your mind...", "Cuéntanos qué tienes en mente...")}
                   required
                   rows={6}
                   style={{ ...inputStyle, resize: "vertical" }}
@@ -174,7 +188,7 @@ export default function Contact() {
                   cursor: status === "sending" ? "not-allowed" : "pointer",
                 }}
               >
-                {status === "sending" ? "Sending…" : "Send Message"}
+                {status === "sending" ? t("Sending…", "Enviando…") : t("Send Message", "Enviar Mensaje")}
               </button>
 
             </form>
