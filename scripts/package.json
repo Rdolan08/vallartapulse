@@ -10,7 +10,8 @@
     "scrape:pvrpv:remaining": "tsx ./src/pvrpv-scrape-remaining.ts",
     "validate:comps": "tsx ./src/comps-validate.ts",
     "validate:comps-v2": "tsx ./src/comps-validate-v2.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "og": "tsx ./src/generate-og.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "playwright": "^1.59.1",
     "tsx": "catalog:"
   }
 }
