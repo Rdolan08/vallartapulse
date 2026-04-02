@@ -1,0 +1,110 @@
+Next step: build the first front-end MVP for the Puerto Vallarta pricing tool using the live rental comps endpoints.
+
+Do NOT add new data sources yet.
+Do NOT change the core comps engine logic yet.
+
+Build a new front-end page/module for an internal MVP pricing tool that lets a user enter property details, validates the input, and returns a recommended nightly rate range.
+
+Goal:
+Create a clean, credible, data-forward pricing experience for Puerto Vallarta condo owners using:
+- GET /api/rental/amenities
+- GET /api/rental/buildings
+- POST /api/rental/comps/prepare
+- POST /api/rental/comps
+
+Requirements:
+
+1. New page
+Create a page called:
+- /pricing-tool
+or
+- /rental-pricing
+Use the existing VallartaPulse style system if available.
+
+2. Form inputs
+Include:
+- neighborhood_normalized
+  - dropdown, only:
+    - Zona Romantica
+    - Amapas
+- building_name
+  - searchable typeahead using GET /api/rental/buildings filtered by neighborhood
+  - allow free text entry too
+- bedrooms
+  - dropdown 1, 2, 3, 4
+- bathrooms
+  - numeric stepper or dropdown (allow 0.5 increments)
+- sqft
+  - numeric input
+- distance_to_beach_m
+  - numeric input
+  - helper text explaining approximate walking/straight-line estimate is okay for now
+- amenities_normalized
+  - multi-select using GET /api/rental/amenities grouped by category
+- rating_overall
+  - optional numeric input or dropdown from 1.0 to 5.0
+
+3. Input flow
+Before submitting to /api/rental/comps:
+- call POST /api/rental/comps/prepare
+- show:
+  - cleaned building name if matched
+  - building match confidence
+  - accepted amenities
+  - rejected amenities
+  - warnings
+- if ready_for_comps is true, allow user to continue
+- if not, explain what needs to be fixed
+
+4. Results panel
+After POST /api/rental/comps returns, display:
+- recommended_price prominently
+- conservative_price
+- stretch_price
+- confidence_label
+- pool_size
+- thin_pool_warning if present
+- explanation
+- top_drivers
+- building adjustment if present
+- beach tier adjustment if present
+- warnings
+- model limitations
+
+5. Comps display
+Show the selected comps in a clean table or cards:
+- building / listing name
+- neighborhood
+- bedrooms / bathrooms
+- sqft if available
+- distance_to_beach_m
+- nightly_price_usd
+- comp score
+- top match reasons
+
+6. UX rules
+- make the page feel premium, clean, and trustworthy
+- clearly label the output as:
+  - PVRPV-based pricing guidance
+- prominently display when the pool is thin or confidence is medium/low
+- do not overstate certainty
+- do not expose raw internal debug noise
+
+7. State handling
+- loading state while prepare/comps calls run
+- empty state before results
+- graceful error state if an API call fails
+- preserve the last entered form values so the user can tweak and resubmit
+
+8. Nice-to-have if easy
+- add a “Use one of our known buildings” hint when building name is blank
+- auto-populate neighborhood-specific building suggestions
+- allow a “Skip building” flow if no match is found
+
+9. Final output
+After building, summarize:
+- route/page path
+- components created
+- API calls used
+- sample successful flow
+- any remaining blockers before making it visible from the main navigation

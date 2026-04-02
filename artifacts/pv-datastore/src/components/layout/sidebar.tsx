@@ -9,6 +9,7 @@ import {
   CloudSun,
   Database,
   X,
+  DollarSign,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 
@@ -25,6 +26,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
     { href: "/", icon: LayoutDashboard, labelEn: "Dashboard", labelEs: "Tablero" },
     { href: "/tourism", icon: Map, labelEn: "Tourism Metrics", labelEs: "Métricas Turísticas" },
     { href: "/rental-market", icon: Home, labelEn: "Rental Market", labelEs: "Mercado de Renta" },
+    { href: "/pricing-tool", icon: DollarSign, labelEn: "Pricing Tool", labelEs: "Herramienta de Precios", highlight: true },
     { href: "/economic", icon: TrendingUp, labelEn: "Economic", labelEs: "Económico" },
     { href: "/safety", icon: ShieldAlert, labelEn: "Safety & Crime", labelEs: "Seguridad y Crimen" },
     { href: "/weather", icon: CloudSun, labelEn: "Weather & Climate", labelEs: "Clima" },
@@ -45,6 +47,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
       {navItems.map((item) => {
         const isActive = location === item.href;
         const Icon = item.icon;
+        const isHighlight = (item as { highlight?: boolean }).highlight;
         return (
           <Link
             key={item.href}
@@ -55,9 +58,14 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
             <div
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 cursor-pointer relative"
               style={{
-                background: isActive ? "rgba(0,194,168,0.1)" : "transparent",
+                background: isActive
+                  ? "rgba(0,194,168,0.1)"
+                  : isHighlight && !isActive
+                  ? "rgba(0,194,168,0.04)"
+                  : "transparent",
                 color: isActive ? "#00C2A8" : "rgba(245,247,250,0.55)",
                 fontWeight: isActive ? 600 : 400,
+                border: isHighlight && !isActive ? "1px solid rgba(0,194,168,0.12)" : "1px solid transparent",
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
@@ -86,8 +94,18 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
                 className="w-4 h-4 flex-shrink-0"
                 style={{ color: isActive ? "#00C2A8" : "rgba(154,165,177,0.7)" }}
               />
-              <div className="flex flex-col min-w-0">
-                <span className="text-sm leading-tight">{item.labelEn}</span>
+              <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm leading-tight">{item.labelEn}</span>
+                  {isHighlight && !isActive && (
+                    <span
+                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                      style={{ background: "rgba(0,194,168,0.2)", color: "#00C2A8", letterSpacing: "0.05em" }}
+                    >
+                      NEW
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] leading-none mt-0.5" style={{ opacity: 0.4 }}>
                   {item.labelEs}
                 </span>

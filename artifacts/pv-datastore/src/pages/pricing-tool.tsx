@@ -1,0 +1,1285 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Building2, MapPin, BedDouble, Bath, Ruler, Waves, Star,
+  CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronUp,
+  Info, TrendingUp, ArrowRight, Loader2, RefreshCw, RotateCcw,
+  Tag, DollarSign, BarChart3, Building,
+} from "lucide-react";
+import { PageWrapper } from "@/components/layout/page-wrapper";
+import { useLanguage } from "@/contexts/language-context";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+
+// ── Types ──────────────────────────────────────────────────────────────────────
+
+type Neighborhood = "Zona Romantica" | "Amapas";
+
+interface FormValues {
+  neighborhood: Neighborhood;
+  buildingName: string;
+  bedrooms: 1 | 2 | 3 | 4;
+  bathrooms: number;
+  sqft: string;
+  distanceToBeach: string;
+  ratingOverall: string;
+}
+
+interface AmenityDef {
+  amenity_key: string;
+  label_en: string;
+  label_es: string;
+  category: string;
+}
+
+interface BuildingEntry {
+  canonical_building_name: string;
+  listing_count: number;
+  median_price: number | null;
+  thin_sample: boolean;
+}
+
+interface PrepareResult {
+  ready_for_comps: boolean;
+  building_resolution: {
+    canonical_building_name: string | null;
+    match_confidence: number | null;
+    confidence_tier: "high" | "medium" | "low" | null;
+    match_strategy: string | null;
+    suggestions: { canonical: string; neighborhood: string; score: number }[];
+    warning: string | null;
+  };
+  amenity_validation: {
+    accepted_keys: string[];
+    rejected_keys: string[];
+    suggested_corrections: { input: string; suggestion: string }[];
+  };
+  cleaned_input: {
+    building_name: string | null;
+    amenities_normalized: string[];
+  };
+  warnings: string[];
+}
+
+interface CompEntry {
+  rank: number;
+  external_id: string;
+  source_url: string;
+  neighborhood: string;
+  bedrooms: number;
+  bathrooms: number;
+  sqft: number | null;
+  distance_to_beach_m: number;
+  beach_tier: string;
+  nightly_price_usd: number;
+  rating_overall: number | null;
+  building_name: string | null;
+  score: number;
+  match_reasons: string[];
+  top_drivers: string[];
+}
+
+interface CompsResult {
+  model_version: string;
+  eligible_listing_count: number;
+  target_summary: {
+    neighborhood: string;
+    bedrooms: number;
+    bathrooms: number;
+    beach_tier: string;
+    building_normalized: string | null;
+    building_premium_pct: number | null;
+    segment_median: number;
+  };
+  pool_size: number;
+  thin_pool_warning: boolean;
+  confidence_label: "high" | "medium" | "low" | "guidance_only";
+  conservative_price: number;
+  recommended_price: number;
+  stretch_price: number;
+  comp_prices: number[];
+  building_adjustment_pct: number | null;
+  beach_tier_adjustment_pct: number | null;
+  selected_comps: CompEntry[];
+  top_drivers: string[];
+  explanation: string;
+  warnings: string[];
+  model_limitations: string[];
+}
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const BATH_OPTIONS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+const RATING_OPTIONS = Array.from({ length: 41 }, (_, i) =>
+  parseFloat((1 + i * 0.1).toFixed(1))
+);
+
+const CONFIDENCE_CONFIG: Record<string, { label: string; labelEs: string; color: string; bg: string; border: string }> = {
+  high:          { label: "High Confidence",     labelEs: "Alta Confianza",      color: "#00C2A8", bg: "rgba(0,194,168,0.12)",  border: "rgba(0,194,168,0.3)" },
+  medium:        { label: "Medium Confidence",   labelEs: "Confianza Media",     color: "#F59E0B", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.3)" },
+  low:           { label: "Low Confidence",      labelEs: "Baja Confianza",      color: "#F97316", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.3)" },
+  guidance_only: { label: "Guidance Only",       labelEs: "Solo Orientativo",    color: "#EF4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)" },
+};
+
+const DRIVER_LABELS: Record<string, { en: string; es: string }> = {
+  beach_distance:    { en: "Beach Distance",    es: "Dist. a la playa" },
+  sqft:              { en: "Square Footage",    es: "Metros cuadrados" },
+  bathrooms:         { en: "Bathrooms",         es: "Baños" },
+  amenities:         { en: "Amenities",         es: "Amenidades" },
+  rating:            { en: "Guest Rating",      es: "Calificación" },
+  beach_tier_match:  { en: "Beach Tier",        es: "Categoría playa" },
+  price_tier_match:  { en: "Price Tier",        es: "Categoría precio" },
+  building_match:    { en: "Same Building",     es: "Mismo edificio" },
+};
+
+// ── API helpers ────────────────────────────────────────────────────────────────
+
+async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(path, options);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { message?: string }).message ?? `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      className="text-[10px] font-semibold uppercase tracking-widest mb-2"
+      style={{ color: "rgba(154,165,177,0.6)" }}
+    >
+      {children}
+    </p>
+  );
+}
+
+function FieldLabel({ children, optional }: { children: React.ReactNode; optional?: boolean }) {
+  return (
+    <label className="block text-sm font-medium text-foreground mb-1.5">
+      {children}
+      {optional && (
+        <span className="ml-1.5 text-[10px] font-normal" style={{ color: "rgba(154,165,177,0.5)" }}>
+          optional
+        </span>
+      )}
+    </label>
+  );
+}
+
+function StyledInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={cn(
+        "w-full px-3 py-2.5 rounded-xl text-sm bg-[#163C4A] border text-foreground",
+        "placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50",
+        "border-white/8 transition-colors",
+        props.className,
+      )}
+    />
+  );
+}
+
+function StyledSelect(props: React.SelectHTMLAttributes<HTMLSelectElement> & { children: React.ReactNode }) {
+  return (
+    <select
+      {...props}
+      className={cn(
+        "w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50",
+        props.className,
+      )}
+    >
+      {props.children}
+    </select>
+  );
+}
+
+// Building typeahead combobox
+function BuildingCombobox({
+  buildings,
+  value,
+  onChange,
+  disabled,
+}: {
+  buildings: BuildingEntry[];
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(value);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setQuery(value); }, [value]);
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const filtered = query.trim().length === 0
+    ? buildings
+    : buildings.filter(b =>
+        b.canonical_building_name.toLowerCase().includes(query.toLowerCase())
+      );
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: "rgba(154,165,177,0.5)" }} />
+        <input
+          value={query}
+          onChange={e => {
+            setQuery(e.target.value);
+            onChange(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search or type building name…"
+          disabled={disabled}
+          className={cn(
+            "w-full pl-8 pr-8 py-2.5 rounded-xl text-sm bg-[#163C4A] border border-white/8",
+            "text-foreground placeholder:text-muted-foreground/40",
+            "focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors",
+            disabled && "opacity-50 cursor-not-allowed",
+          )}
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => { setQuery(""); onChange(""); }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.12 }}
+            className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden"
+            style={{
+              background: "#0F2A36",
+              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+              maxHeight: "220px",
+              overflowY: "auto",
+            }}
+          >
+            <div
+              className="px-3 py-2 text-xs cursor-pointer hover:bg-white/5 transition-colors"
+              style={{ color: "rgba(154,165,177,0.6)" }}
+              onMouseDown={() => { onChange(""); setQuery(""); setOpen(false); }}
+            >
+              Skip / no specific building
+            </div>
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }} />
+            {filtered.length === 0 && (
+              <div className="px-3 py-2 text-xs text-muted-foreground">
+                No matching buildings — your text will be fuzzy-matched.
+              </div>
+            )}
+            {filtered.map(b => (
+              <div
+                key={b.canonical_building_name}
+                className="px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors"
+                onMouseDown={() => {
+                  onChange(b.canonical_building_name);
+                  setQuery(b.canonical_building_name);
+                  setOpen(false);
+                }}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-foreground">{b.canonical_building_name}</span>
+                  <span className="text-[10px] shrink-0" style={{ color: "rgba(154,165,177,0.5)" }}>
+                    {b.listing_count} listings · {b.median_price != null ? formatCurrency(b.median_price) : "—"} median
+                  </span>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Amenity multi-select grouped by category
+function AmenityPicker({
+  amenities,
+  selected,
+  onToggle,
+}: {
+  amenities: AmenityDef[];
+  selected: string[];
+  onToggle: (key: string) => void;
+}) {
+  const { t } = useLanguage();
+  const grouped = amenities.reduce<Record<string, AmenityDef[]>>((acc, a) => {
+    if (!acc[a.category]) acc[a.category] = [];
+    acc[a.category].push(a);
+    return acc;
+  }, {});
+
+  const categoryOrder = ["beach", "climate", "view", "pool", "kitchen", "outdoor", "laundry", "connectivity", "workspace", "parking", "pet", "safety"];
+  const sorted = categoryOrder.filter(c => grouped[c]).concat(Object.keys(grouped).filter(c => !categoryOrder.includes(c)));
+
+  return (
+    <div className="space-y-4">
+      {sorted.map(cat => (
+        <div key={cat}>
+          <p className="text-[10px] font-semibold uppercase tracking-widest mb-2 capitalize" style={{ color: "rgba(154,165,177,0.5)" }}>
+            {cat}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(grouped[cat] ?? []).map(a => {
+              const isOn = selected.includes(a.amenity_key);
+              return (
+                <button
+                  key={a.amenity_key}
+                  type="button"
+                  onClick={() => onToggle(a.amenity_key)}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-150 border"
+                  style={{
+                    background: isOn ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
+                    borderColor: isOn ? "rgba(0,194,168,0.5)" : "rgba(255,255,255,0.08)",
+                    color: isOn ? "#00C2A8" : "rgba(245,247,250,0.55)",
+                  }}
+                >
+                  {t(a.label_en, a.label_es)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Confidence tier badge
+function ConfidenceBadge({ label }: { label: string }) {
+  const cfg = CONFIDENCE_CONFIG[label] ?? CONFIDENCE_CONFIG.guidance_only;
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
+      style={{ background: cfg.bg, borderColor: cfg.border, color: cfg.color }}
+    >
+      <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.color }} />
+      {cfg.label}
+    </span>
+  );
+}
+
+// Warning / notice row
+function WarningRow({ text, level = "warn" }: { text: string; level?: "warn" | "info" }) {
+  return (
+    <div
+      className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-xs"
+      style={{
+        background: level === "warn" ? "rgba(245,158,11,0.08)" : "rgba(0,209,255,0.08)",
+        border: `1px solid ${level === "warn" ? "rgba(245,158,11,0.2)" : "rgba(0,209,255,0.15)"}`,
+        color: level === "warn" ? "#F59E0B" : "#00D1FF",
+      }}
+    >
+      {level === "warn" ? <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> : <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />}
+      <span style={{ color: "rgba(245,247,250,0.8)" }}>{text}</span>
+    </div>
+  );
+}
+
+// Primary action button
+function PrimaryButton({
+  onClick,
+  loading,
+  disabled,
+  children,
+}: {
+  onClick: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled || loading}
+      className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+      style={{
+        background: disabled || loading ? "rgba(0,194,168,0.4)" : "#00C2A8",
+        color: "#0A1E27",
+        boxShadow: disabled || loading ? "none" : "0 4px 16px rgba(0,194,168,0.3)",
+      }}
+    >
+      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+      {children}
+    </button>
+  );
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────────
+
+type Phase = "form" | "prepare_loading" | "prepared" | "comps_loading" | "results" | "error";
+
+const DEFAULT_FORM: FormValues = {
+  neighborhood: "Zona Romantica",
+  buildingName: "",
+  bedrooms: 1,
+  bathrooms: 1,
+  sqft: "",
+  distanceToBeach: "",
+  ratingOverall: "",
+};
+
+export default function PricingTool() {
+  const { t, lang } = useLanguage();
+
+  // Static data
+  const [amenities, setAmenities] = useState<AmenityDef[]>([]);
+  const [buildingsByNeighborhood, setBuildingsByNeighborhood] = useState<Record<string, BuildingEntry[]>>({});
+  const [loadingMeta, setLoadingMeta] = useState(true);
+
+  // Form
+  const [form, setForm] = useState<FormValues>(DEFAULT_FORM);
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
+
+  // Phase flow
+  const [phase, setPhase] = useState<Phase>("form");
+  const [prepareResult, setPrepareResult] = useState<PrepareResult | null>(null);
+  const [compsResult, setCompsResult] = useState<CompsResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // UI extras
+  const [showLimitations, setShowLimitations] = useState(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  const buildings = buildingsByNeighborhood[form.neighborhood] ?? [];
+
+  // Load amenities + buildings on mount
+  useEffect(() => {
+    async function loadMeta() {
+      try {
+        const [amenitiesRes, zrRes, ampRes] = await Promise.all([
+          apiFetch<{ amenities: AmenityDef[] }>("/api/rental/amenities"),
+          apiFetch<{ buildings: BuildingEntry[] }>("/api/rental/buildings?neighborhood=Zona%20Romantica"),
+          apiFetch<{ buildings: BuildingEntry[] }>("/api/rental/buildings?neighborhood=Amapas"),
+        ]);
+        setAmenities(amenitiesRes.amenities);
+        setBuildingsByNeighborhood({
+          "Zona Romantica": zrRes.buildings,
+          "Amapas": ampRes.buildings,
+        });
+      } catch {
+        // non-fatal — graceful degradation
+      } finally {
+        setLoadingMeta(false);
+      }
+    }
+    loadMeta();
+  }, []);
+
+  // Reset building when neighborhood changes
+  useEffect(() => {
+    setForm(prev => ({ ...prev, buildingName: "" }));
+    if (phase !== "form") {
+      setPhase("form");
+      setPrepareResult(null);
+      setCompsResult(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.neighborhood]);
+
+  function setField<K extends keyof FormValues>(key: K, val: FormValues[K]) {
+    setForm(prev => ({ ...prev, [key]: val }));
+    setFormErrors(prev => ({ ...prev, [key]: undefined }));
+    // If user edits form after validation, go back to form phase
+    if (phase !== "form" && phase !== "prepare_loading") {
+      setPhase("form");
+      setPrepareResult(null);
+      setCompsResult(null);
+    }
+  }
+
+  function toggleAmenity(key: string) {
+    setSelectedAmenities(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  }
+
+  function validate(): boolean {
+    const errs: Partial<Record<keyof FormValues, string>> = {};
+    if (!form.distanceToBeach || isNaN(Number(form.distanceToBeach)) || Number(form.distanceToBeach) < 0) {
+      errs.distanceToBeach = "Required — enter approx. walking distance to beach";
+    }
+    if (form.sqft && (isNaN(Number(form.sqft)) || Number(form.sqft) <= 0)) {
+      errs.sqft = "Enter a valid square footage";
+    }
+    if (form.ratingOverall && (isNaN(Number(form.ratingOverall)) || Number(form.ratingOverall) < 1 || Number(form.ratingOverall) > 5)) {
+      errs.ratingOverall = "Rating must be between 1.0 and 5.0";
+    }
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  const handleValidate = useCallback(async () => {
+    if (!validate()) return;
+    setPhase("prepare_loading");
+    setErrorMsg(null);
+    try {
+      const body = {
+        neighborhood_normalized: form.neighborhood,
+        bedrooms: form.bedrooms,
+        bathrooms: form.bathrooms,
+        ...(form.sqft ? { sqft: Number(form.sqft) } : {}),
+        distance_to_beach_m: Number(form.distanceToBeach),
+        amenities_normalized: selectedAmenities,
+        ...(form.ratingOverall ? { rating_overall: Number(form.ratingOverall) } : {}),
+        ...(form.buildingName.trim() ? { building_name: form.buildingName.trim() } : {}),
+      };
+      const result = await apiFetch<PrepareResult>("/api/rental/comps/prepare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      setPrepareResult(result);
+      setPhase("prepared");
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      setPhase("error");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, selectedAmenities]);
+
+  const handleGetPricing = useCallback(async () => {
+    if (!prepareResult) return;
+    setPhase("comps_loading");
+    setErrorMsg(null);
+    try {
+      const body = {
+        neighborhood_normalized: form.neighborhood,
+        bedrooms: form.bedrooms,
+        bathrooms: form.bathrooms,
+        ...(form.sqft ? { sqft: Number(form.sqft) } : {}),
+        distance_to_beach_m: Number(form.distanceToBeach),
+        amenities_normalized: prepareResult.cleaned_input.amenities_normalized,
+        ...(form.ratingOverall ? { rating_overall: Number(form.ratingOverall) } : {}),
+        ...(prepareResult.cleaned_input.building_name
+          ? { building_name: prepareResult.cleaned_input.building_name }
+          : {}),
+      };
+      const result = await apiFetch<CompsResult>("/api/rental/comps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      setCompsResult(result);
+      setPhase("results");
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      setPhase("error");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, prepareResult]);
+
+  function handleReset() {
+    setForm(DEFAULT_FORM);
+    setSelectedAmenities([]);
+    setFormErrors({});
+    setPrepareResult(null);
+    setCompsResult(null);
+    setPhase("form");
+    setErrorMsg(null);
+    setShowLimitations(false);
+  }
+
+  const isLoading = phase === "prepare_loading" || phase === "comps_loading";
+  const showResults = phase === "results" && compsResult;
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  return (
+    <PageWrapper>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <DollarSign className="w-5 h-5" style={{ color: "#00C2A8" }} />
+            <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
+              {t("Rental Pricing Tool", "Herramienta de Precios")}
+            </h1>
+          </div>
+          <p className="text-muted-foreground">
+            {t(
+              "Comp-based nightly rate guidance for Puerto Vallarta condos — powered by PVRPV listing data.",
+              "Guía de precios por noche basada en comparables para condos en Puerto Vallarta."
+            )}
+          </p>
+        </div>
+        {phase !== "form" && (
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground transition-colors border border-white/8 hover:border-white/16"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            {t("Start over", "Comenzar de nuevo")}
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-6">
+
+        {/* ── Form card ── */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Building2 className="w-4 h-4" style={{ color: "#00C2A8" }} />
+              {t("Property Details", "Detalles de la Propiedad")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+
+            {/* Row 1: Neighborhood */}
+            <div>
+              <FieldLabel>{t("Neighborhood", "Colonia")}</FieldLabel>
+              <StyledSelect
+                value={form.neighborhood}
+                onChange={e => setField("neighborhood", e.target.value as Neighborhood)}
+                disabled={isLoading}
+              >
+                <option value="Zona Romantica">Zona Romántica</option>
+                <option value="Amapas">Amapas</option>
+              </StyledSelect>
+            </div>
+
+            {/* Row 2: Building */}
+            <div>
+              <FieldLabel optional>
+                {t("Building / Complex", "Edificio / Complejo")}
+              </FieldLabel>
+              {loadingMeta ? (
+                <Skeleton className="h-10 rounded-xl" />
+              ) : (
+                <BuildingCombobox
+                  buildings={buildings}
+                  value={form.buildingName}
+                  onChange={v => setField("buildingName", v)}
+                  disabled={isLoading}
+                />
+              )}
+              {buildings.length > 0 && (
+                <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.5)" }}>
+                  {t(
+                    `${buildings.length} known buildings in ${form.neighborhood}. Free text is also accepted — we'll fuzzy-match it.`,
+                    `${buildings.length} edificios conocidos. También puede escribir libremente — lo emparejamos automáticamente.`
+                  )}
+                </p>
+              )}
+            </div>
+
+            {/* Row 3: Bedrooms + Bathrooms */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <FieldLabel>{t("Bedrooms", "Recámaras")}</FieldLabel>
+                <StyledSelect
+                  value={form.bedrooms}
+                  onChange={e => setField("bedrooms", Number(e.target.value) as 1 | 2 | 3 | 4)}
+                  disabled={isLoading}
+                >
+                  {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} {t("BR", "Rec")}</option>)}
+                </StyledSelect>
+              </div>
+              <div>
+                <FieldLabel>{t("Bathrooms", "Baños")}</FieldLabel>
+                <StyledSelect
+                  value={form.bathrooms}
+                  onChange={e => setField("bathrooms", Number(e.target.value))}
+                  disabled={isLoading}
+                >
+                  {BATH_OPTIONS.map(n => (
+                    <option key={n} value={n}>{n} {t("BA", "Baño")}</option>
+                  ))}
+                </StyledSelect>
+              </div>
+            </div>
+
+            {/* Row 4: Sqft + Beach distance */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <FieldLabel optional>
+                  <Ruler className="inline w-3.5 h-3.5 mr-1" />
+                  {t("Size (sq ft)", "Tamaño (pies²)")}
+                </FieldLabel>
+                <StyledInput
+                  type="number"
+                  min={0}
+                  placeholder="e.g. 1200"
+                  value={form.sqft}
+                  onChange={e => setField("sqft", e.target.value)}
+                  disabled={isLoading}
+                />
+                {formErrors.sqft && <p className="text-xs mt-1 text-destructive">{formErrors.sqft}</p>}
+              </div>
+              <div>
+                <FieldLabel>
+                  <Waves className="inline w-3.5 h-3.5 mr-1" />
+                  {t("Distance to beach (m)", "Distancia a la playa (m)")}
+                </FieldLabel>
+                <StyledInput
+                  type="number"
+                  min={0}
+                  placeholder="e.g. 150"
+                  value={form.distanceToBeach}
+                  onChange={e => setField("distanceToBeach", e.target.value)}
+                  disabled={isLoading}
+                />
+                {formErrors.distanceToBeach && <p className="text-xs mt-1 text-destructive">{formErrors.distanceToBeach}</p>}
+                <p className="text-[11px] mt-1" style={{ color: "rgba(154,165,177,0.45)" }}>
+                  {t("Straight-line estimate is fine.", "Estimación en línea recta está bien.")}
+                </p>
+              </div>
+            </div>
+
+            {/* Row 5: Rating */}
+            <div className="max-w-xs">
+              <FieldLabel optional>
+                <Star className="inline w-3.5 h-3.5 mr-1" />
+                {t("Current guest rating", "Calificación de huéspedes")}
+              </FieldLabel>
+              <StyledSelect
+                value={form.ratingOverall}
+                onChange={e => setField("ratingOverall", e.target.value)}
+                disabled={isLoading}
+              >
+                <option value="">— No rating yet —</option>
+                {RATING_OPTIONS.map(r => (
+                  <option key={r} value={r}>{r.toFixed(1)} ★</option>
+                ))}
+              </StyledSelect>
+            </div>
+
+            {/* Row 6: Amenities */}
+            <div>
+              <FieldLabel optional>
+                <Tag className="inline w-3.5 h-3.5 mr-1" />
+                {t("Amenities", "Amenidades")}
+                {selectedAmenities.length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}>
+                    {selectedAmenities.length} selected
+                  </span>
+                )}
+              </FieldLabel>
+              {loadingMeta ? (
+                <div className="space-y-2">
+                  {[80, 60, 70].map((w, i) => <Skeleton key={i} className={`h-6 rounded-full w-[${w}px]`} />)}
+                </div>
+              ) : (
+                <AmenityPicker
+                  amenities={amenities}
+                  selected={selectedAmenities}
+                  onToggle={toggleAmenity}
+                />
+              )}
+            </div>
+
+            {/* Validate CTA */}
+            <div className="flex items-center gap-4 pt-2">
+              <PrimaryButton
+                onClick={handleValidate}
+                loading={phase === "prepare_loading"}
+                disabled={isLoading}
+              >
+                {phase === "prepare_loading"
+                  ? t("Validating…", "Validando…")
+                  : t("Validate Inputs", "Validar Datos")}
+                {phase !== "prepare_loading" && <ArrowRight className="w-4 h-4" />}
+              </PrimaryButton>
+              {phase === "prepared" && (
+                <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "#00C2A8" }}>
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {t("Inputs validated", "Datos validados")}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Prepare result panel ── */}
+        <AnimatePresence>
+          {(phase === "prepared" || phase === "comps_loading" || phase === "results") && prepareResult && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" style={{ color: "#00C2A8" }} />
+                    {t("Input Summary", "Resumen de Entrada")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+
+                  {/* Building resolution */}
+                  <div>
+                    <SectionLabel>{t("Building", "Edificio")}</SectionLabel>
+                    {prepareResult.building_resolution.canonical_building_name ? (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-foreground">
+                          {prepareResult.building_resolution.canonical_building_name}
+                        </span>
+                        <span
+                          className="text-[10px] px-2 py-0.5 rounded-full font-semibold border"
+                          style={{
+                            background: prepareResult.building_resolution.confidence_tier === "high"
+                              ? "rgba(0,194,168,0.12)" : "rgba(245,158,11,0.12)",
+                            borderColor: prepareResult.building_resolution.confidence_tier === "high"
+                              ? "rgba(0,194,168,0.3)" : "rgba(245,158,11,0.3)",
+                            color: prepareResult.building_resolution.confidence_tier === "high"
+                              ? "#00C2A8" : "#F59E0B",
+                          }}
+                        >
+                          {prepareResult.building_resolution.confidence_tier} match ·{" "}
+                          {prepareResult.building_resolution.match_confidence != null
+                            ? `${Math.round(prepareResult.building_resolution.match_confidence * 100)}%`
+                            : ""}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{t("No building — general market comps", "Sin edificio — comparables generales")}</span>
+                        {prepareResult.building_resolution.suggestions.length > 0 && (
+                          <span className="text-[11px]" style={{ color: "rgba(154,165,177,0.6)" }}>
+                            {t("Did you mean:", "¿Quisiste decir:")} <span className="text-foreground">{prepareResult.building_resolution.suggestions[0]?.canonical}</span>?
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Amenities summary */}
+                  <div>
+                    <SectionLabel>{t("Amenities", "Amenidades")}</SectionLabel>
+                    <div className="space-y-2">
+                      {prepareResult.amenity_validation.accepted_keys.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {prepareResult.amenity_validation.accepted_keys.map(k => (
+                            <span
+                              key={k}
+                              className="px-2 py-0.5 rounded-full text-[11px] font-medium"
+                              style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}
+                            >
+                              ✓ {k.replace(/_/g, " ")}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {prepareResult.amenity_validation.rejected_keys.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {prepareResult.amenity_validation.rejected_keys.map(k => (
+                            <span
+                              key={k}
+                              className="px-2 py-0.5 rounded-full text-[11px] font-medium"
+                              style={{ background: "rgba(239,68,68,0.08)", color: "#EF4444" }}
+                            >
+                              ✗ {k}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {prepareResult.amenity_validation.accepted_keys.length === 0 && prepareResult.amenity_validation.rejected_keys.length === 0 && (
+                        <p className="text-xs text-muted-foreground">{t("No amenities selected", "Sin amenidades seleccionadas")}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Warnings */}
+                  {prepareResult.warnings.length > 0 && (
+                    <div className="space-y-2">
+                      {prepareResult.warnings.map((w, i) => (
+                        <WarningRow key={i} text={w} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Get Pricing CTA */}
+                  <div className="flex items-center gap-4 pt-1">
+                    <PrimaryButton
+                      onClick={handleGetPricing}
+                      loading={phase === "comps_loading"}
+                      disabled={isLoading}
+                    >
+                      {phase === "comps_loading"
+                        ? t("Running pricing engine…", "Ejecutando motor de precios…")
+                        : t("Get Pricing Recommendation", "Obtener Recomendación de Precio")}
+                      {phase !== "comps_loading" && <BarChart3 className="w-4 h-4" />}
+                    </PrimaryButton>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Error ── */}
+        <AnimatePresence>
+          {phase === "error" && errorMsg && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex items-start gap-3 p-4 rounded-xl"
+              style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)" }}
+            >
+              <XCircle className="w-5 h-5 mt-0.5 shrink-0" style={{ color: "#EF4444" }} />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {t("Something went wrong", "Algo salió mal")}
+                </p>
+                <p className="text-xs mt-1 text-muted-foreground">{errorMsg}</p>
+                <button
+                  onClick={handleValidate}
+                  className="mt-2 text-xs font-medium flex items-center gap-1"
+                  style={{ color: "#00C2A8" }}
+                >
+                  <RefreshCw className="w-3 h-3" /> {t("Try again", "Intentar de nuevo")}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Results panel ── */}
+        <AnimatePresence>
+          {showResults && compsResult && (
+            <motion.div
+              ref={resultsRef}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="space-y-6"
+            >
+
+              {/* ── Price hero ── */}
+              <div
+                className="rounded-2xl p-6"
+                style={{
+                  background: "linear-gradient(135deg, #0F2A36 0%, #163C4A 100%)",
+                  border: "1px solid rgba(0,194,168,0.2)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.4), inset 0 0 60px rgba(0,194,168,0.03)",
+                }}
+              >
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "rgba(0,194,168,0.7)" }}>
+                      {t("Recommended Nightly Rate", "Tarifa Nocturna Recomendada")}
+                    </p>
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-6xl font-extrabold tracking-tight" style={{ color: "#00C2A8" }}>
+                        {formatCurrency(compsResult.recommended_price)}
+                      </span>
+                      <span className="text-lg font-medium text-muted-foreground">/night</span>
+                    </div>
+                    <div className="flex items-center gap-4 mt-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{t("Conservative", "Conservador")}</p>
+                        <p className="text-xl font-bold text-foreground">{formatCurrency(compsResult.conservative_price)}</p>
+                      </div>
+                      <div className="text-muted-foreground">—</div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{t("Stretch", "Máximo")}</p>
+                        <p className="text-xl font-bold text-foreground">{formatCurrency(compsResult.stretch_price)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 items-start md:items-end">
+                    <ConfidenceBadge label={compsResult.confidence_label} />
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <BarChart3 className="w-3.5 h-3.5" />
+                      {compsResult.pool_size} {t("comparable listings", "listados comparables")}
+                    </div>
+                    {compsResult.thin_pool_warning && (
+                      <div
+                        className="text-[11px] px-2 py-1 rounded-lg"
+                        style={{ background: "rgba(249,115,22,0.12)", color: "#F97316", border: "1px solid rgba(249,115,22,0.2)" }}
+                      >
+                        ⚠ {t("Thin comp pool — use the range, not the point estimate", "Pocos comparables — use el rango, no el valor exacto")}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-right max-w-[200px]" style={{ color: "rgba(154,165,177,0.4)" }}>
+                      PVRPV platform data only
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Two-col row: adjustments + top drivers ── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {/* Adjustments applied */}
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4" style={{ color: "#00C2A8" }} />
+                      {t("Pricing Adjustments", "Ajustes de Precio")}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between py-1.5">
+                      <span className="text-sm text-muted-foreground">{t("Segment baseline (P50)", "Mediana del segmento (P50)")}</span>
+                      <span className="text-sm font-semibold">{formatCurrency(compsResult.target_summary.segment_median)}</span>
+                    </div>
+                    {compsResult.building_adjustment_pct != null && (
+                      <div
+                        className="flex items-center justify-between py-1.5 px-2 rounded-lg"
+                        style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.15)" }}
+                      >
+                        <div>
+                          <p className="text-sm text-foreground">
+                            {compsResult.target_summary.building_normalized
+                              ? `${compsResult.target_summary.building_normalized}`
+                              : t("Building premium", "Prima de edificio")}
+                          </p>
+                          <p className="text-[11px]" style={{ color: "rgba(154,165,177,0.5)" }}>
+                            {compsResult.building_adjustment_pct > 40
+                              ? t("Anchor mode — building median used directly", "Modo ancla — mediana del edificio usada directamente")
+                              : t("Applied as comp-set inflation", "Aplicada como inflación de comparables")}
+                          </p>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: "#6366F1" }}>
+                          {compsResult.building_adjustment_pct > 0 ? "+" : ""}{compsResult.building_adjustment_pct.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                    {compsResult.beach_tier_adjustment_pct != null && (
+                      <div
+                        className="flex items-center justify-between py-1.5 px-2 rounded-lg"
+                        style={{ background: "rgba(0,209,255,0.08)", border: "1px solid rgba(0,209,255,0.12)" }}
+                      >
+                        <div>
+                          <p className="text-sm text-foreground">
+                            {t("Beach tier", "Categoría de playa")} ({compsResult.target_summary.beach_tier})
+                          </p>
+                          <p className="text-[11px]" style={{ color: "rgba(154,165,177,0.5)" }}>
+                            {t("Cross-tier adjustment", "Ajuste entre categorías de playa")}
+                          </p>
+                        </div>
+                        <span className="text-sm font-bold" style={{ color: "#00D1FF" }}>
+                          {compsResult.beach_tier_adjustment_pct > 0 ? "+" : ""}{compsResult.beach_tier_adjustment_pct.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                    {compsResult.building_adjustment_pct == null && compsResult.beach_tier_adjustment_pct == null && (
+                      <p className="text-sm text-muted-foreground">
+                        {t("No specific adjustments applied — direct comp-set median.", "Sin ajustes específicos — mediana directa de comparables.")}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Top match drivers */}
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                      <MapPin className="w-4 h-4" style={{ color: "#00C2A8" }} />
+                      {t("Top Pricing Drivers", "Principales Factores de Precio")}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {compsResult.top_drivers.slice(0, 5).map((d, i) => {
+                        const lbl = DRIVER_LABELS[d];
+                        return (
+                          <div key={d} className="flex items-center gap-3">
+                            <span
+                              className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                              style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}
+                            >
+                              {i + 1}
+                            </span>
+                            <span className="text-sm text-foreground">
+                              {lbl ? (lang === "es" ? lbl.es : lbl.en) : d.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* ── Explanation ── */}
+              <Card className="glass-card">
+                <CardContent className="pt-5">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#00D1FF" }} />
+                    <p className="text-sm text-muted-foreground leading-relaxed">{compsResult.explanation}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ── Engine warnings ── */}
+              {compsResult.warnings.length > 0 && (
+                <div className="space-y-2">
+                  {compsResult.warnings.map((w, i) => <WarningRow key={i} text={w} />)}
+                </div>
+              )}
+
+              {/* ── Comps table ── */}
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" style={{ color: "#00C2A8" }} />
+                    {t("Comparable Listings", "Listados Comparables")}
+                    <span
+                      className="text-[11px] font-normal px-2 py-0.5 rounded-full"
+                      style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}
+                    >
+                      {compsResult.selected_comps.length} {t("comps", "comparables")}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {compsResult.selected_comps.map(comp => (
+                      <div
+                        key={comp.external_id}
+                        className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-xl"
+                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                      >
+                        {/* Rank + price */}
+                        <div className="flex items-center gap-3 sm:flex-col sm:items-center sm:min-w-[56px]">
+                          <span
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                            style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}
+                          >
+                            #{comp.rank}
+                          </span>
+                          <span className="text-base font-bold text-foreground sm:text-center">
+                            {formatCurrency(comp.nightly_price_usd)}
+                          </span>
+                        </div>
+
+                        {/* Main info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <p className="text-sm font-semibold text-foreground truncate">
+                              {comp.building_name ?? comp.external_id}
+                            </p>
+                            <a
+                              href={comp.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] underline shrink-0"
+                              style={{ color: "rgba(0,209,255,0.7)" }}
+                            >
+                              PVRPV ↗
+                            </a>
+                          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground mb-2">
+                            <span><BedDouble className="inline w-3 h-3 mr-1" />{comp.bedrooms}BR / {comp.bathrooms}BA</span>
+                            {comp.sqft && <span><Ruler className="inline w-3 h-3 mr-1" />{comp.sqft.toLocaleString()} sqft</span>}
+                            <span><Waves className="inline w-3 h-3 mr-1" />{comp.distance_to_beach_m}m · Tier {comp.beach_tier}</span>
+                            {comp.rating_overall && <span><Star className="inline w-3 h-3 mr-1" />{comp.rating_overall}</span>}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {comp.match_reasons.slice(0, 4).map((r, i) => (
+                              <span
+                                key={i}
+                                className="px-2 py-0.5 rounded-full text-[10px]"
+                                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(245,247,250,0.5)" }}
+                              >
+                                {r}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Score */}
+                        <div className="sm:text-right shrink-0">
+                          <p className="text-[10px] text-muted-foreground">{t("Match score", "Puntaje")}</p>
+                          <p className="text-lg font-bold" style={{ color: "#00C2A8" }}>{comp.score.toFixed(1)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ── Model limitations ── */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowLimitations(v => !v)}
+                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showLimitations ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  {t("Model limitations & data scope", "Limitaciones del modelo y alcance de datos")}
+                </button>
+                <AnimatePresence>
+                  {showLimitations && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 space-y-2">
+                        {compsResult.model_limitations.map((lim, i) => (
+                          <WarningRow key={i} text={lim} level="info" />
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Empty state hint ── */}
+        {phase === "form" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="flex flex-col items-center py-12 text-center"
+            style={{ color: "rgba(154,165,177,0.35)" }}
+          >
+            <BarChart3 className="w-10 h-10 mb-3" />
+            <p className="text-sm">
+              {t(
+                "Fill in your property details above, then click Validate Inputs to get started.",
+                "Ingresa los detalles de tu propiedad arriba y haz clic en Validar Datos para comenzar."
+              )}
+            </p>
+          </motion.div>
+        )}
+
+      </div>
+    </PageWrapper>
+  );
+}

@@ -10,6 +10,7 @@ import Economic from "@/pages/economic";
 import Safety from "@/pages/safety";
 import Weather from "@/pages/weather";
 import Sources from "@/pages/sources";
+import PricingTool from "@/pages/pricing-tool";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/tourism" component={Tourism} />
       <Route path="/rental-market" component={RentalMarket} />
+      <Route path="/pricing-tool" component={PricingTool} />
       <Route path="/economic" component={Economic} />
       <Route path="/safety" component={Safety} />
       <Route path="/weather" component={Weather} />
