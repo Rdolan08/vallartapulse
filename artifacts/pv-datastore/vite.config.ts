@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import path from "path";
+import path, { resolve } from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 const rawPort = process.env.PORT;
@@ -57,6 +57,18 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: resolve(import.meta.dirname, "index.html"),
+        tourism: resolve(import.meta.dirname, "tourism/index.html"),
+        "rental-market": resolve(import.meta.dirname, "rental-market/index.html"),
+        "pricing-tool": resolve(import.meta.dirname, "pricing-tool/index.html"),
+        economic: resolve(import.meta.dirname, "economic/index.html"),
+        safety: resolve(import.meta.dirname, "safety/index.html"),
+        weather: resolve(import.meta.dirname, "weather/index.html"),
+        sources: resolve(import.meta.dirname, "sources/index.html"),
+      },
+    },
   },
   server: {
     port,
