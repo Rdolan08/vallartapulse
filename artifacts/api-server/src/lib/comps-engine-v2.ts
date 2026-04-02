@@ -126,7 +126,7 @@ export interface CompsListingV2 {
   id: number;
   externalId: string;
   sourceUrl: string;
-  neighborhoodNormalized: "Zona Romantica" | "Amapas";
+  neighborhoodNormalized: string;
   bedrooms: number;
   bathrooms: number;
   sqft: number | null;
@@ -140,7 +140,7 @@ export interface CompsListingV2 {
 }
 
 export interface TargetPropertyV2 {
-  neighborhoodNormalized: "Zona Romantica" | "Amapas";
+  neighborhoodNormalized: string;
   bedrooms: number;
   bathrooms: number;
   sqft: number | null;
@@ -285,10 +285,17 @@ const MAX_COMPS            = 10;
 // Amapas: Tier C (hillside) commands ~25-30% premium over Tier B (observed:
 //     2BR $228 vs $175 = +30%; 3BR $350 vs $270 = +30%; 4BR $795 vs $695 = +14%).
 //     No Tier A data in Amapas eligible pool.
+// Other neighborhoods: use generic neutral adjustments (thin data, no calibrated premiums yet).
 const BEACH_ADJ: Record<string, Record<BeachTier, number>> = {
   "Zona Romantica": { A: +0.90, B: 0, C: 0 },
   "Amapas":         { A: 0, B: 0, C: +0.25 },
+  // Generic fallback for all other neighborhoods — no calibrated beach adjustment yet
+  __default__:      { A: 0, B: 0, C: 0 },
 };
+
+function getBeachAdj(neighborhood: string, tier: BeachTier): number {
+  return (BEACH_ADJ[neighborhood] ?? BEACH_ADJ.__default__)[tier] ?? 0;
+}
 
 // ── Building name normalization ───────────────────────────────────────────────
 
@@ -336,13 +343,15 @@ export function normalizeBuildingName(raw: string | null): string | null {
 // ── Eligibility ───────────────────────────────────────────────────────────────
 
 export function isEligibleV2(listing: CompsListingV2): boolean {
-  if (!["Zona Romantica", "Amapas"].includes(listing.neighborhoodNormalized)) return false;
-  if (listing.bedrooms < 1 || listing.bedrooms > 4) return false;
+  if (listing.bedrooms < 1 || listing.bedrooms > 6) return false;
   if (listing.nightlyPriceUsd == null || listing.nightlyPriceUsd <= 0) return false;
-  if (listing.nightlyPriceUsd > 1000) return false;
+  if (listing.nightlyPriceUsd > 5000) return false;
   if (listing.distanceToBeachM == null) return false;
   if (listing.sqft != null && listing.sqft < 200) return false;
-  if (listing.dataConfidenceScore < 0.85) return false;
+  // ZR/Amapas (primary calibrated neighborhoods) keep the 0.85 bar;
+  // other neighborhoods use 0.70 since some sources (Vacation Vallarta) yield fewer fields.
+  const confThreshold = (listing.neighborhoodNormalized === "Zona Romantica" || listing.neighborhoodNormalized === "Amapas") ? 0.85 : 0.70;
+  if (listing.dataConfidenceScore < confThreshold) return false;
   return true;
 }
 
@@ -470,14 +479,29 @@ function computeBuildingSummaries(
 
 // ── Effective weights ─────────────────────────────────────────────────────────
 
+// Generic balanced weights for neighborhoods without calibrated data yet
+// (Hotel Zone, Centro, 5 de Diciembre, Old Town, Versalles, Marina Vallarta)
+const BASE_WEIGHTS_GENERIC: NeighborhoodWeights = {
+  beachDistance:  15,
+  amenities:      20,
+  sqft:           20,
+  bathrooms:      12,
+  rating:         11,
+  beachTierMatch: 10,
+  priceTierMatch:  7,
+  buildingMatch:   5,
+};
+
 function getEffectiveWeights(
-  neighborhood: "Zona Romantica" | "Amapas",
+  neighborhood: string,
   hasSqft: boolean,
   hasRating: boolean
 ): NeighborhoodWeights {
-  const base = neighborhood === "Zona Romantica"
-    ? { ...BASE_WEIGHTS_ZR }
-    : { ...BASE_WEIGHTS_AMAPAS };
+  let baseWeights: NeighborhoodWeights;
+  if (neighborhood === "Zona Romantica") baseWeights = BASE_WEIGHTS_ZR;
+  else if (neighborhood === "Amapas") baseWeights = BASE_WEIGHTS_AMAPAS;
+  else baseWeights = BASE_WEIGHTS_GENERIC;
+  const base = { ...baseWeights };
 
   if (!hasSqft) {
     const w = base.sqft;
@@ -510,8 +534,10 @@ function scoreCompV2(
 ): ScoreBreakdownV2 {
   const nn = target.neighborhoodNormalized;
   const w = getEffectiveWeights(nn, hasSqft, hasRating);
-  const beachScale = nn === "Zona Romantica" ? BEACH_SCALE_ZR_M : BEACH_SCALE_AMAPAS_M;
-  const sqftScale  = nn === "Zona Romantica" ? SQFT_SCALE_ZR : SQFT_SCALE_AMAPAS;
+  const beachScale = nn === "Zona Romantica" ? BEACH_SCALE_ZR_M
+    : (nn === "Amapas" ? BEACH_SCALE_AMAPAS_M : BEACH_SCALE_ZR_M);
+  const sqftScale  = nn === "Zona Romantica" ? SQFT_SCALE_ZR
+    : (nn === "Amapas" ? SQFT_SCALE_AMAPAS : SQFT_SCALE_ZR);
 
   // Beach distance (continuous)
   const beachDelta = Math.abs(comp.distanceToBeachM - target.distanceToBeachM);
@@ -706,7 +732,7 @@ function buildRecommendationV2(
   const isCompSetMixedTiers = sameTierCount < comps.length * 0.6;
 
   if (isCompSetMixedTiers) {
-    const beachAdj = BEACH_ADJ[target.neighborhoodNormalized]?.[targetBeachTier] ?? 0;
+    const beachAdj = getBeachAdj(target.neighborhoodNormalized, targetBeachTier);
     if (Math.abs(beachAdj) >= 0.05) {
       const adjAmt = Math.round(adjustedPrice * beachAdj);
       adjustedPrice += adjAmt;

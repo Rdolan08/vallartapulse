@@ -167,19 +167,8 @@ router.get("/rental/amenities", async (req, res) => {
 // GET /api/rental/buildings
 // ────────────────────────────────────────────────────────────────────────────
 
-const SUPPORTED_NEIGHBORHOODS = ["Zona Romantica", "Amapas"] as const;
-type SupportedNeighborhood = typeof SUPPORTED_NEIGHBORHOODS[number];
-
 router.get("/rental/buildings", async (req, res) => {
   const neighborhood = req.query.neighborhood as string | undefined;
-
-  if (neighborhood && !SUPPORTED_NEIGHBORHOODS.includes(neighborhood as SupportedNeighborhood)) {
-    res.status(400).json({
-      error: "Invalid neighborhood",
-      message: `neighborhood must be one of: ${SUPPORTED_NEIGHBORHOODS.join(", ")}`,
-    });
-    return;
-  }
 
   try {
     const rows = await db
@@ -242,13 +231,20 @@ router.get("/rental/buildings", async (req, res) => {
 // POST /api/rental/comps/prepare
 // ────────────────────────────────────────────────────────────────────────────
 
+const ALL_NEIGHBORHOODS = [
+  "Zona Romantica", "Amapas", "Centro", "Hotel Zone",
+  "5 de Diciembre", "Old Town", "Versalles", "Marina Vallarta",
+  "Nuevo Vallarta", "Bucerias", "La Cruz de Huanacaxtle",
+  "Punta Mita", "El Anclote", "Sayulita", "San Pancho", "Mismaloya",
+] as const;
+
 const PrepareRequestSchema = z.object({
-  neighborhood_normalized: z.enum(SUPPORTED_NEIGHBORHOODS, {
+  neighborhood_normalized: z.enum(ALL_NEIGHBORHOODS, {
     errorMap: () => ({
-      message: `neighborhood_normalized must be one of: ${SUPPORTED_NEIGHBORHOODS.join(", ")}`,
+      message: `neighborhood_normalized must be one of: ${ALL_NEIGHBORHOODS.join(", ")}`,
     }),
   }),
-  bedrooms: z.number().int().min(1).max(4),
+  bedrooms: z.number().int().min(1).max(6),
   bathrooms: z.number().min(0.5).max(8),
   sqft: z.number().min(100).max(10000).optional().nullable(),
   distance_to_beach_m: z.number().min(0).max(5000),

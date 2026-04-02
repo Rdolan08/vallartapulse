@@ -83,7 +83,24 @@ async function getEngine(): Promise<{ engine: CompsEngineV2; listingCount: numbe
 
 // ── Request schema ────────────────────────────────────────────────────────────
 
-const SUPPORTED_NEIGHBORHOODS = ["Zona Romantica", "Amapas"] as const;
+const SUPPORTED_NEIGHBORHOODS = [
+  "Zona Romantica",
+  "Amapas",
+  "Centro",
+  "Hotel Zone",
+  "5 de Diciembre",
+  "Old Town",
+  "Versalles",
+  "Marina Vallarta",
+  "Nuevo Vallarta",
+  "Bucerias",
+  "La Cruz de Huanacaxtle",
+  "Punta Mita",
+  "El Anclote",
+  "Sayulita",
+  "San Pancho",
+  "Mismaloya",
+] as const;
 
 const CompsRequestSchema = z.object({
   neighborhood_normalized: z.enum(SUPPORTED_NEIGHBORHOODS, {
@@ -91,8 +108,8 @@ const CompsRequestSchema = z.object({
       message: `neighborhood_normalized must be one of: ${SUPPORTED_NEIGHBORHOODS.join(", ")}`,
     }),
   }),
-  bedrooms: z.number().int().min(1).max(4, {
-    message: "bedrooms must be 1–4 (engine supports 1–4BR only)",
+  bedrooms: z.number().int().min(1).max(6, {
+    message: "bedrooms must be 1–6 (engine supports 1–6BR)",
   }),
   bathrooms: z.number().min(0.5).max(8),
   sqft: z.number().min(100).max(10000).optional().nullable(),
@@ -236,7 +253,7 @@ router.post("/rental/comps", async (req, res) => {
     if (input.building_name) {
       const bLookup = lookupBuilding(
         input.building_name,
-        input.neighborhood_normalized as "Zona Romantica" | "Amapas"
+        input.neighborhood_normalized
       );
       if (bLookup.match && bLookup.match.confidence_tier !== "low") {
         resolvedBuildingName = bLookup.match.canonical_building_name;
@@ -349,9 +366,9 @@ router.post("/rental/comps", async (req, res) => {
       : [];
 
     const explanationParts: string[] = [
-      `Recommendation based on ${poolSize} comparable PVRPV listings in ${input.neighborhood_normalized}.`,
+      `Recommendation based on ${poolSize} comparable listings in ${input.neighborhood_normalized}.`,
       recommendation.adjustmentExplanation,
-      "Data scope: PVRPV platform only. Not a full-market estimate.",
+      "Data scope: multi-source (PVRPV, Vacation Vallarta, Airbnb, VRBO). Not a full-market estimate.",
     ];
 
     if (recommendation.trimmedOutlierCount > 0) {
@@ -362,14 +379,15 @@ router.post("/rental/comps", async (req, res) => {
 
     const modelLimitations = [
       "Single-rate scraping: rates reflect the listed baseline, not seasonal peaks or minimums.",
-      "PVRPV scope only: full market may include properties not in this dataset.",
+      "Multi-source dataset: PVRPV, Vacation Vallarta, Airbnb, VRBO. Coverage varies by neighborhood.",
       "Building prestige signals (design quality, concierge) are partially captured via building premium factor.",
       "Promotional/loyalty rates at the low end create irreducible overestimation errors.",
+      "Calibrated weights for Hotel Zone, Centro, 5 de Dic, Versalles, Marina are in development — thin pool warnings expected.",
     ];
 
     const response = {
-      model_version: "v2",
-      source_scope: "PVRPV listings only (Zona Romantica + Amapas, ~118 eligible units)",
+      model_version: "v2.1",
+      source_scope: `Multi-source (PVRPV + Vacation Vallarta + Airbnb + VRBO) — ${input.neighborhood_normalized}`,
       eligible_listing_count: engine.eligibleCount,
       db_listing_count: listingCount,
 

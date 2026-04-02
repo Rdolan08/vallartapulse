@@ -7,47 +7,110 @@
 
 // ── Neighborhood normalization ─────────────────────────────────────────────
 
-/** The 7 canonical neighborhood names used everywhere in the system. */
+/**
+ * Canonical neighborhood names covering all of greater Bahía de Banderas —
+ * Puerto Vallarta (Jalisco) and the Riviera Nayarit (Nayarit state) side.
+ *
+ * IMPORTANT: "Old Town" is intentionally kept as its own canonical because it
+ * can refer to either Zona Romantica (south of Río Cuale) or 5 de Diciembre
+ * (north of Río Cuale near the Malecón). Without lat/lng, we cannot determine
+ * which side. Use lat/lng disambiguation when available: listings south of
+ * ~20.607 °N → Zona Romantica; north of that line and near the Malecón → Centro
+ * or 5 de Diciembre.
+ */
 export const CANONICAL_NEIGHBORHOODS = [
-  "Zona Romantica",
-  "Amapas",
-  "Centro",
-  "5 de Diciembre",
-  "Marina Vallarta",
-  "Hotel Zone",
-  "Versalles",
+  // ── Puerto Vallarta (Jalisco) ──────────────────────────────────────────────
+  "Zona Romantica",        // Colonia Emiliano Zapata, Los Muertos Beach, Olas Altas — south of Río Cuale
+  "Amapas",               // Hillside south of ZR; includes Conchas Chinas, Las Gemelas, El Nogalito
+  "Mismaloya",            // Further south; La Jolla de Mismaloya, Las Ánimas
+  "Old Town",             // Ambiguous historic center — could be ZR or 5-de-Dic; keep when lat/lng absent
+  "Centro",               // El Centro, historic downtown, Gringo Gulch, Malecón area, near Cathedral
+  "5 de Diciembre",       // North of Río Cuale, south of Hotel Zone; includes Lázaro Cárdenas
+  "Hotel Zone",           // Zona Hotelera Norte; Las Glorias, Los Tules
+  "Versalles",            // Col. Versalles, residential between Hotel Zone and Fluvial
+  "Fluvial Vallarta",     // Near airport; Col. Fluvial Vallarta
+  "Marina Vallarta",      // Marina, golf course, high-rise condos, near airport
+  "Pitillal",             // Inland col. north; Col. Pitillal, El Iztatal
+  // ── Greater Bay / Riviera Nayarit (Nayarit state) ─────────────────────────
+  "Nuevo Vallarta",       // Nayarit state; Vidanta, Hard Rock, Marival zone
+  "Bucerias",             // Nayarit; local town north of NV
+  "La Cruz de Huanacaxtle", // Nayarit; La Cruz marina village
+  "Punta Mita",           // Nayarit; Four Seasons, St. Regis, gated estates
+  "El Anclote",           // Nayarit; between La Cruz and Punta Mita
+  "Sayulita",             // Nayarit; surf town ~40 min north
+  "San Pancho",           // Nayarit; San Francisco, artsy village north of Sayulita
 ] as const;
 
 export type CanonicalNeighborhood = (typeof CANONICAL_NEIGHBORHOODS)[number];
 
 /**
- * Maps raw strings (scraped from Airbnb/VRBO/PVRPV) → canonical neighborhood.
+ * Maps raw strings (scraped from Airbnb/VRBO/PVRPV/agencies) → canonical neighborhood.
  * Keys are lowercased and trimmed before lookup.
+ *
+ * NOTE: "old town" alone maps to "Old Town" (ambiguous). Only map to Zona Romantica
+ * when the raw string explicitly includes "romantic zone" or is south of the river.
  */
 const NEIGHBORHOOD_MAP: Record<string, CanonicalNeighborhood> = {
-  // Zona Romantica aliases
+  // ── Zona Romantica ────────────────────────────────────────────────────────
   "zona romantica": "Zona Romantica",
   "zona romántica": "Zona Romantica",
   "romantic zone": "Zona Romantica",
   "romantic zone / old town": "Zona Romantica",
-  "old town": "Zona Romantica",
+  "old town romantic zone": "Zona Romantica",
+  "old town / romantic zone": "Zona Romantica",
   "col. emiliano zapata": "Zona Romantica",
   "emiliano zapata": "Zona Romantica",
   "los muertos": "Zona Romantica",
+  "los muertos beach": "Zona Romantica",
   "olas altas": "Zona Romantica",
   "zona romantica / emiliano zapata": "Zona Romantica",
+  "emiliano zapata / zona romantica": "Zona Romantica",
+  "south of the river": "Zona Romantica",
   "south side": "Zona Romantica",
+  "zr": "Zona Romantica",
+  // PVRPV URL slugs
+  "los-muertos-beach": "Zona Romantica",
+  "zona-romantica": "Zona Romantica",
 
-  // Amapas / Conchas Chinas aliases
+  // ── Old Town (ambiguous — do NOT assume ZR) ──────────────────────────────
+  "old town": "Old Town",
+  "old-town": "Old Town",
+  "historic center": "Old Town",
+  "historic district": "Old Town",
+  "downtown old town": "Old Town",
+  "old town pv": "Old Town",
+  "old town puerto vallarta": "Old Town",
+
+  // ── Amapas / Conchas Chinas ───────────────────────────────────────────────
   "amapas": "Amapas",
   "conchas chinas": "Amapas",
   "conchas chinas / amapas": "Amapas",
   "amapas / conchas chinas": "Amapas",
   "conchas chinas/amapas": "Amapas",
-  "puerto vallarta south": "Amapas",
+  "conchas-chinas": "Amapas",
+  "conchas-chinas / amapas": "Amapas",
+  "las gemelas": "Amapas",
   "el nogalito": "Amapas",
+  "south of pv": "Amapas",
+  "puerto vallarta south": "Amapas",
+  "garza blanca": "Amapas",   // Garza Blanca resort is in the Amapas/Conchas Chinas corridor
+  "garza-blanca": "Amapas",
+  "punta negra": "Amapas",    // South of Conchas Chinas, same south bay corridor
+  "punta-negra": "Amapas",
 
-  // Centro aliases
+  // ── Mismaloya ─────────────────────────────────────────────────────────────
+  "mismaloya": "Mismaloya",
+  "la jolla de mismaloya": "Mismaloya",
+  "jolla de mismaloya": "Mismaloya",
+  "las animas": "Mismaloya",
+  "las ánimas": "Mismaloya",
+  "boca de tomatlan": "Mismaloya",
+  "boca de tomatlán": "Mismaloya",
+  "boca": "Mismaloya",
+  "quimixto": "Mismaloya",
+  "yelapa": "Mismaloya",
+
+  // ── Centro ────────────────────────────────────────────────────────────────
   "centro": "Centro",
   "el centro": "Centro",
   "downtown": "Centro",
@@ -56,53 +119,115 @@ const NEIGHBORHOOD_MAP: Record<string, CanonicalNeighborhood> = {
   "centro historico": "Centro",
   "gringo gulch": "Centro",
   "col. centro": "Centro",
+  "malecon": "Centro",
+  "malecón": "Centro",
+  "near cathedral": "Centro",
+  "cathedral": "Centro",
+  "alta vista": "Centro",
+  "alta-vista": "Centro",
+  "el caloso": "Centro",
+  "el-caloso": "Centro",
 
-  // 5 de Diciembre aliases
+  // ── 5 de Diciembre ────────────────────────────────────────────────────────
   "5 de diciembre": "5 de Diciembre",
   "cinco de diciembre": "5 de Diciembre",
   "col. 5 de diciembre": "5 de Diciembre",
   "5 diciembre": "5 de Diciembre",
+  "5th of december": "5 de Diciembre",
+  "five of december": "5 de Diciembre",
+  "5-de-diciembre": "5 de Diciembre",
+  "colonia 5 de diciembre": "5 de Diciembre",
+  "lázaro cárdenas": "5 de Diciembre",
+  "lazaro cardenas": "5 de Diciembre",
+  "lazaro-cardenas": "5 de Diciembre",
+  "lázaro-cárdenas": "5 de Diciembre",
+  "north of the river": "5 de Diciembre",
   "north side": "5 de Diciembre",
 
-  // Marina Vallarta aliases
-  "marina vallarta": "Marina Vallarta",
-  "marina": "Marina Vallarta",
-  "the marina": "Marina Vallarta",
-  "puerto vallarta marina": "Marina Vallarta",
-  "marina golf": "Marina Vallarta",
-
-  // Hotel Zone aliases
+  // ── Hotel Zone ────────────────────────────────────────────────────────────
   "hotel zone": "Hotel Zone",
   "zona hotelera": "Hotel Zone",
   "hotel corridor": "Hotel Zone",
   "hotel strip": "Hotel Zone",
   "las glorias": "Hotel Zone",
   "playa las glorias": "Hotel Zone",
+  "los tules": "Hotel Zone",
   "zona hotelera norte": "Hotel Zone",
+  "north hotel zone": "Hotel Zone",
+  "north-hotel-zone": "Hotel Zone",
+  "hotel-zone": "Hotel Zone",
 
-  // Versalles aliases
+  // ── Versalles ─────────────────────────────────────────────────────────────
   "versalles": "Versalles",
   "versailles": "Versalles",
   "col. versalles": "Versalles",
   "versalles / pitillal": "Versalles",
+  "colonia versalles": "Versalles",
 
-  // ── PVRPV URL-segment aliases (kebab-case from URL path) ─────────────────
-  "old-town": "Zona Romantica",
-  "los-muertos-beach": "Zona Romantica",
-  "los muertos beach": "Zona Romantica",
-  "conchas-chinas": "Amapas",
+  // ── Fluvial Vallarta ──────────────────────────────────────────────────────
+  "fluvial vallarta": "Fluvial Vallarta",
+  "fluvial": "Fluvial Vallarta",
+  "col. fluvial": "Fluvial Vallarta",
+  "fluvial-vallarta": "Fluvial Vallarta",
+
+  // ── Marina Vallarta ───────────────────────────────────────────────────────
+  "marina vallarta": "Marina Vallarta",
+  "marina": "Marina Vallarta",
+  "the marina": "Marina Vallarta",
+  "puerto vallarta marina": "Marina Vallarta",
+  "marina golf": "Marina Vallarta",
   "marina-vallarta": "Marina Vallarta",
-  "north-hotel-zone": "Hotel Zone",
-  "north hotel zone": "Hotel Zone",
-  "hotel-zone": "Hotel Zone",
-  "5-de-diciembre": "5 de Diciembre",
-  // fringe PVRPV neighborhoods → best-fit canonical
-  "alta-vista": "Centro",
-  "alta vista": "Centro",
-  "el-caloso": "Centro",
-  "el caloso": "Centro",
-  "fluvial": "Centro",
-  "pitillal": "Versalles",
+  "marina golf course": "Marina Vallarta",
+  "peninsula marina": "Marina Vallarta",
+
+  // ── Pitillal ──────────────────────────────────────────────────────────────
+  "pitillal": "Pitillal",
+  "col. pitillal": "Pitillal",
+  "colonia pitillal": "Pitillal",
+  "el iztatal": "Pitillal",
+  "iztatal": "Pitillal",
+
+  // ── Nuevo Vallarta ────────────────────────────────────────────────────────
+  "nuevo vallarta": "Nuevo Vallarta",
+  "nuevo-vallarta": "Nuevo Vallarta",
+  "nv": "Nuevo Vallarta",
+  "vidanta": "Nuevo Vallarta",
+  "grand mayan": "Nuevo Vallarta",
+  "hard rock hotel vallarta": "Nuevo Vallarta",
+  "marival": "Nuevo Vallarta",
+  "paradise village": "Nuevo Vallarta",
+  "playa escondida": "Nuevo Vallarta",
+
+  // ── Bucerias ──────────────────────────────────────────────────────────────
+  "bucerias": "Bucerias",
+  "bucerías": "Bucerias",
+  "bucerias, nayarit": "Bucerias",
+
+  // ── La Cruz de Huanacaxtle ────────────────────────────────────────────────
+  "la cruz de huanacaxtle": "La Cruz de Huanacaxtle",
+  "la cruz": "La Cruz de Huanacaxtle",
+  "huanacaxtle": "La Cruz de Huanacaxtle",
+
+  // ── Punta Mita ────────────────────────────────────────────────────────────
+  "punta mita": "Punta Mita",
+  "punta de mita": "Punta Mita",
+  "four seasons punta mita": "Punta Mita",
+  "el anclote / punta mita": "El Anclote",
+  "punta mita / sayulita": "Punta Mita",
+  "punta mita estates": "Punta Mita",
+
+  // ── El Anclote ────────────────────────────────────────────────────────────
+  "el anclote": "El Anclote",
+  "anclote": "El Anclote",
+
+  // ── Sayulita ──────────────────────────────────────────────────────────────
+  "sayulita": "Sayulita",
+  "sayulita, nayarit": "Sayulita",
+
+  // ── San Pancho ────────────────────────────────────────────────────────────
+  "san pancho": "San Pancho",
+  "san francisco": "San Pancho",
+  "san francisco, nayarit": "San Pancho",
 };
 
 /**

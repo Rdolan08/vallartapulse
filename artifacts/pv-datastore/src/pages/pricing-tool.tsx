@@ -42,7 +42,11 @@ const BEACH_PRESETS_METRIC = [
 ];
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type Neighborhood = "Zona Romantica" | "Amapas";
+type Neighborhood =
+  | "Zona Romantica" | "Amapas" | "Centro" | "Hotel Zone"
+  | "5 de Diciembre" | "Old Town" | "Versalles" | "Marina Vallarta"
+  | "Nuevo Vallarta" | "Bucerias" | "La Cruz de Huanacaxtle"
+  | "Punta Mita" | "El Anclote" | "Sayulita" | "San Pancho" | "Mismaloya";
 
 interface FormValues {
   neighborhood: Neighborhood;
@@ -67,6 +71,7 @@ interface AmenityDef {
 
 interface BuildingEntry {
   canonical_building_name: string;
+  neighborhood_normalized: string;
   listing_count: number;
   median_price: number | null;
   thin_sample: boolean;
@@ -613,16 +618,19 @@ export default function PricingTool() {
   useEffect(() => {
     async function loadMeta() {
       try {
-        const [amenitiesRes, zrRes, ampRes] = await Promise.all([
+        const [amenitiesRes, allBuildingsRes] = await Promise.all([
           apiFetch<{ amenities: AmenityDef[] }>("/api/rental/amenities"),
-          apiFetch<{ buildings: BuildingEntry[] }>("/api/rental/buildings?neighborhood=Zona%20Romantica"),
-          apiFetch<{ buildings: BuildingEntry[] }>("/api/rental/buildings?neighborhood=Amapas"),
+          apiFetch<{ buildings: BuildingEntry[] }>("/api/rental/buildings"),
         ]);
         setAmenities(amenitiesRes.amenities);
-        setBuildingsByNeighborhood({
-          "Zona Romantica": zrRes.buildings,
-          "Amapas": ampRes.buildings,
-        });
+        // Group all buildings by neighborhood for efficient lookup
+        const grouped: Record<string, BuildingEntry[]> = {};
+        for (const b of allBuildingsRes.buildings) {
+          const nn = (b as BuildingEntry & { neighborhood_normalized?: string }).neighborhood_normalized ?? "Zona Romantica";
+          if (!grouped[nn]) grouped[nn] = [];
+          grouped[nn].push(b);
+        }
+        setBuildingsByNeighborhood(grouped);
       } catch (e) {
         setMetaError(e instanceof Error ? e.message : "Failed to load form data. Check your connection.");
       } finally {
@@ -770,7 +778,7 @@ export default function PricingTool() {
             </h1>
           </div>
           <p className="text-muted-foreground text-sm">
-            {t("Comp-based nightly rate guidance for Puerto Vallarta condos — powered by PVRPV listing data.", "Guía de precios por noche basada en comparables para condos en Puerto Vallarta.")}
+            {t("Comp-based nightly rate guidance for Puerto Vallarta & Riviera Nayarit — powered by 192+ multi-source listings.", "Guía de precios basada en comparables para Puerto Vallarta y Riviera Nayarit — más de 192 propiedades de múltiples fuentes.")}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -810,8 +818,26 @@ export default function PricingTool() {
               <FieldLabel>{t("Neighborhood", "Colonia")}</FieldLabel>
               <StyledSelect value={form.neighborhood}
                 onChange={e => setField("neighborhood", e.target.value as Neighborhood)} disabled={isLoading}>
-                <option value="Zona Romantica">Zona Romántica</option>
-                <option value="Amapas">Amapas</option>
+                <optgroup label="Puerto Vallarta">
+                  <option value="Zona Romantica">Zona Romántica</option>
+                  <option value="Amapas">Amapas / Conchas Chinas</option>
+                  <option value="Centro">Centro / Alta Vista</option>
+                  <option value="Hotel Zone">Hotel Zone / Malecón</option>
+                  <option value="5 de Diciembre">5 de Diciembre</option>
+                  <option value="Old Town">Old Town (ambiguous side of river)</option>
+                  <option value="Versalles">Versalles</option>
+                  <option value="Marina Vallarta">Marina Vallarta</option>
+                  <option value="Mismaloya">Mismaloya</option>
+                </optgroup>
+                <optgroup label="Riviera Nayarit">
+                  <option value="Nuevo Vallarta">Nuevo Vallarta</option>
+                  <option value="Bucerias">Bucerías</option>
+                  <option value="La Cruz de Huanacaxtle">La Cruz de Huanacaxtle</option>
+                  <option value="Punta Mita">Punta Mita</option>
+                  <option value="El Anclote">El Anclote</option>
+                  <option value="Sayulita">Sayulita</option>
+                  <option value="San Pancho">San Pancho</option>
+                </optgroup>
               </StyledSelect>
             </div>
 
@@ -1181,7 +1207,7 @@ export default function PricingTool() {
                         ⚠ {t("Thin pool — use the range", "Pocos comparables — use el rango")}
                       </div>
                     )}
-                    <p className="text-[10px]" style={{ color: "rgba(154,165,177,0.35)" }}>PVRPV platform data only</p>
+                    <p className="text-[10px]" style={{ color: "rgba(154,165,177,0.35)" }}>Multi-source: PVRPV + Vacation Vallarta + Airbnb + VRBO</p>
                   </div>
                 </div>
               </div>

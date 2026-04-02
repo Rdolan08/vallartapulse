@@ -28,7 +28,7 @@ Real-time insights for Puerto Vallarta's rental and tourism market. Bilingual (E
 - Safety/crime data (SESNSP): incident counts by category — 2021–2024 monthly
 - Weather/climate (NOAA): temperature, rainfall, sea temp, humidity — 2020–2024 monthly
 - Data sources registry: 10 sources with status, sync timestamps, record counts
-- **Listing-level rental data** (PVRPV): 50 real scraped listings — Amapas (29) + Zona Romantica (21); tables: `rental_listings`, `rental_prices_by_date`, `rental_amenities_lookup`
+- **Listing-level rental data** (multi-source): 192 real scraped listings across 8 neighborhoods — PVRPV (161), Vacation Vallarta (24), Airbnb (4), VRBO (3); tables: `rental_listings`, `rental_prices_by_date`, `rental_amenities_lookup`
 
 ## Pages
 
@@ -51,28 +51,39 @@ Normalization logic: `artifacts/api-server/src/lib/rental-normalize.ts`
 Ingestion pipeline: `artifacts/api-server/src/lib/rental-ingest.ts`
 Scraper: `scripts/src/pvrpv-scrape.ts` (run with `pnpm --filter @workspace/scripts run scrape:pvrpv`)
 
-**Current data**: 50 PVRPV listings (real, scraped), avg confidence 0.982, 100% field coverage on bedrooms/bathrooms/price/amenities/lat-lon.
+**Current data**: 192 listings — PVRPV (161), Vacation Vallarta (24), Airbnb (4), VRBO (3) — across 8 PV neighborhoods. Beach distances back-filled for Hotel Zone (300m), Centro (500m), 5 de Dic (250m), Old Town (300m), Versalles (1200m) using neighborhood centroids.
 
 ## Comps Engine V2 — Rental Pricing Tool
 
-Internal comparable-property pricing engine for Zona Romantica + Amapas listings. Used to recommend nightly rates for rental properties based on similar PVRPV listings.
+Internal comparable-property pricing engine covering **8 neighborhoods** across PV + Riviera Nayarit. 163 eligible listings indexed; recommends nightly rates from comps within ±1 bedroom and scored by beach distance, amenities, size, and rating.
 
-**Engine file**: `artifacts/api-server/src/lib/comps-engine-v2.ts` (also mirrored at `scripts/src/comps-engine-v2.ts` for validation runs)
+**Engine file**: `artifacts/api-server/src/lib/comps-engine-v2.ts`
 
-**Validation results** (leave-one-out, 10 cases): **MAE = 22.9%** (Tier 2 — good enough for internal MVP)
+**Neighborhood coverage** (after beach-distance backfill April 2026):
+- **Zona Romantica** (high confidence): 89 eligible, beach distances 42–1042m from DB
+- **Amapas** (low–medium confidence): 34 eligible, beach distances 180–999m from DB
+- **Hotel Zone** (low confidence): 13 eligible, estimated 300m beach distance
+- **Centro** (medium confidence): 13 eligible, estimated 500m beach distance
+- **5 de Diciembre** (medium confidence): 7 eligible, estimated 250m beach distance
+- **Versalles** (low confidence): 5 eligible, estimated 1200m beach distance
+- **Marina Vallarta** (low confidence): 5 eligible, measured 1051–1548m from DB
+- **Old Town** (guidance_only): 6 listings, thin pool (1–2 comps per bedroom tier)
+
+**Eligibility thresholds**:
+- ZR/Amapas: `dataConfidenceScore >= 0.85`, beach distance required, price $1–$5000, bedrooms 1–6
+- All other neighborhoods: `dataConfidenceScore >= 0.70` (VV adapter yields fewer fields → lower base score)
 
 **Key design decisions**:
 - Beach tier bucketing: Tier A ≤100m, B 101–500m, C >500m
-- ZR Tier A commands ~90% premium vs Tier B (beachfront sub-market)
-- Amapas Tier C (hillside) commands ~25% premium vs Tier B
-- Building median anchor: when raw building premium >40%, use building median directly (not inflated comp median) — critical for Molino de Agua ($499 vs $175 segment)
-- IQR trimming skipped for mixed-tier comp sets to avoid eliminating the most relevant same-tier comp
+- Building median anchor: when raw building premium >40%, use building median directly
+- `BASE_WEIGHTS_GENERIC` for non-ZR/Amapas; neighborhood-aware beach adjustment via `getBeachAdj()`
+- IQR trimming skipped for mixed-tier comp sets
 
 **API endpoint**: `POST /api/rental/comps`
-- Required: `neighborhood_normalized` (Zona Romantica | Amapas), `bedrooms` (1–4), `bathrooms`, `distance_to_beach_m`, `amenities_normalized`
+- Required: `neighborhood_normalized` (any of 16 supported), `bedrooms` (1–6), `bathrooms`, `distance_to_beach_m`, `amenities_normalized`
 - Optional: `sqft`, `rating_overall`, `building_name`
-- Response: `conservative_price`, `recommended_price`, `stretch_price`, `confidence_label` (high/medium/low/guidance_only), `selected_comps`, `top_drivers`, `warnings`, `explanation`
-- Engine is cached in memory (5-min TTL) — loads all eligible DB rows at startup
+- Response: `conservative_price`, `recommended_price`, `stretch_price`, `confidence_label`, `selected_comps`, `top_drivers`, `warnings`, `explanation`
+- Engine cached in memory (5-min TTL) — reloads all eligible DB rows at startup
 
 **Scripts**:
 - `pnpm --filter @workspace/scripts run validate:comps-v2` — leave-one-out validation against 10 cases
