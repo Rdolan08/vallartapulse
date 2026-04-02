@@ -9,6 +9,7 @@ import weatherRouter from "./weather";
 import sourcesRouter from "./sources";
 import compsRouter from "./comps";
 import rentalHelpersRouter from "./rental-helpers";
+import ingestRouter from "./ingest";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(weatherRouter);
 router.use(sourcesRouter);
 router.use(rentalHelpersRouter); // must be before compsRouter (comps/prepare vs comps)
 router.use(compsRouter);
+router.use(ingestRouter);
 
 export default router;
