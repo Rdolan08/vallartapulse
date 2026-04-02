@@ -5,10 +5,13 @@
  *
  * GET  /ingest/stats            — record counts by source_platform
  * GET  /ingest/sample           — sample normalized records from the DB
+ * GET  /ingest/sync-status      — scheduler status for all automated sources
  * POST /ingest/run              — run adapter on a single URL (live fetch)
  * POST /ingest/ical             — parse an iCal feed URL or raw string
  * POST /ingest/inject           — accept a pre-scraped NormalizedRentalListing
- * POST /ingest/scrape-all       — bulk-scrape a supported source (vacation_vallarta | vrbo_batch)
+ * POST /ingest/scrape-all       — bulk-scrape a source (vacation_vallarta | vrbo_batch | booking_com)
+ * POST /ingest/sync-all         — trigger immediate refresh of all automated sources
+ * POST /ingest/sync/:source     — trigger immediate refresh of one source
  */
 
 import { Router } from "express";
@@ -23,8 +26,14 @@ import {
   fetchAllVacationVallartaListings,
   fetchVacationVallartaListing,
 } from "../lib/ingest/vacation-vallarta-adapter.js";
+import {
+  fetchAllBookingListings,
+  fetchBookingProperty,
+  getBookingCredentials,
+} from "../lib/ingest/booking-adapter.js";
 import { persistNormalized } from "../lib/ingest/persist.js";
 import { fetchAndParseICal, parseICalText } from "../lib/ingest/ical-parser.js";
+import { syncAll, syncSource, getSyncStatus } from "../lib/ingest/sync-scheduler.js";
 import type { SourceKey } from "../lib/ingest/types.js";
 
 const router = Router();
@@ -121,6 +130,7 @@ function detectSource(url: string): SourceKey | null {
   if (url.includes("airbnb.com")) return "airbnb";
   if (url.includes("vrbo.com") || url.includes("homeaway.com")) return "vrbo";
   if (url.includes("vacationvallarta.com")) return "vacation_vallarta";
+  if (url.includes("booking.com")) return "booking_com";
   return null;
 }
 
@@ -136,8 +146,37 @@ router.post("/ingest/run", async (req, res) => {
   if (!source) {
     return res.status(400).json({
       error: "Unsupported source",
-      message: "Supported: pvrpv.com, airbnb.com, vrbo.com, homeaway.com",
+      message: "Supported: pvrpv.com, airbnb.com, vrbo.com, homeaway.com, booking.com",
     });
+  }
+
+  // booking.com URLs are property pages — extract hotel_id from path
+  if (source === "booking_com") {
+    const hotelIdMatch = url.match(/\/hotel\/[a-z]{2}\/([^./?]+)/);
+    if (!hotelIdMatch) {
+      return res.status(400).json({ error: "Could not extract Booking.com hotel ID from URL" });
+    }
+    const hotelId = hotelIdMatch[1];
+    if (!getBookingCredentials()) {
+      return res.status(503).json({
+        error: "Booking.com credentials not configured",
+        note: "Set BOOKING_AFFILIATE_ID and BOOKING_API_KEY environment secrets. Sign up at https://www.booking.com/affiliate-partner-program.html",
+      });
+    }
+    try {
+      const normalized = await fetchBookingProperty(hotelId);
+      let result: { listing_id?: number; warnings: string[]; persisted: boolean; error?: string } = {
+        persisted: false, warnings: [],
+      };
+      if (persist) {
+        const r = await persistNormalized(normalized);
+        result = { listing_id: r.listing_id, warnings: r.warnings, persisted: r.ok, error: r.error };
+      }
+      return res.json({ source, url, normalized, ...result });
+    } catch (err) {
+      req.log.error({ err, url, source }, "ingest/run booking_com failed");
+      return res.status(500).json({ error: "Adapter failed", message: err instanceof Error ? err.message : String(err) });
+    }
   }
 
   try {
@@ -210,7 +249,7 @@ router.post("/ingest/ical", async (req, res) => {
 // scraper, residential-proxy agent, or CSV import) and persists it.
 // This is the production path for sources that require JS rendering.
 
-const VALID_SOURCES = ["airbnb", "vrbo", "pvrpv", "vacation_vallarta", "local_agency", "owner_direct", "manual", "csv"] as const;
+const VALID_SOURCES = ["airbnb", "vrbo", "pvrpv", "vacation_vallarta", "booking_com", "local_agency", "owner_direct", "manual", "csv"] as const;
 
 const InjectSchema = z.object({
   source: z.enum(VALID_SOURCES),
@@ -272,7 +311,7 @@ router.post("/ingest/inject", async (req, res) => {
 //            vrbo_batch         (tries a list of VRBO listing IDs with retry)
 
 const ScrapeAllSchema = z.object({
-  source: z.enum(["vacation_vallarta", "vrbo_batch"]),
+  source: z.enum(["vacation_vallarta", "vrbo_batch", "booking_com"]),
   // For vrbo_batch: provide listing IDs (numeric strings or ints)
   vrbo_ids: z.array(z.union([z.string(), z.number()])).optional(),
   delay_ms: z.number().int().min(500).max(60_000).optional().default(1_000),
@@ -372,6 +411,125 @@ router.post("/ingest/scrape-all", async (req, res) => {
 
     const succeeded = results.filter(r => r.ok).length;
     return res.json({ source, total: results.length, succeeded, results });
+  }
+
+  // ── Booking.com (API-based, requires credentials) ─────────────────────────
+  if (source === "booking_com") {
+    if (!getBookingCredentials()) {
+      return res.status(503).json({
+        error: "Booking.com credentials not configured",
+        note: "Set BOOKING_AFFILIATE_ID and BOOKING_API_KEY environment secrets. Sign up at https://www.booking.com/affiliate-partner-program.html",
+        setup_url: "https://www.booking.com/affiliate-partner-program.html",
+      });
+    }
+
+    try {
+      const fetchResult = await fetchAllBookingListings();
+      if (!fetchResult.ok) {
+        return res.status(500).json({ error: "Booking.com fetch failed", details: fetchResult.error, note: fetchResult.note });
+      }
+
+      const results = [];
+      for (const listing of fetchResult.listings) {
+        if (dry_run) {
+          results.push({ ok: true, source_listing_id: listing.source_listing_id, title: listing.title, dry_run: true });
+          continue;
+        }
+        if (persist) {
+          const r = await persistNormalized(listing);
+          results.push({
+            ok: r.ok,
+            source_listing_id: listing.source_listing_id,
+            title: listing.title,
+            listing_id: r.listing_id,
+            warnings: r.warnings,
+            error: r.error,
+          });
+        } else {
+          results.push({ ok: true, source_listing_id: listing.source_listing_id, title: listing.title, normalized: listing });
+        }
+      }
+
+      const succeeded = results.filter(r => r.ok).length;
+      req.log.info({ succeeded, total: results.length, skipped: fetchResult.skipped }, "ingest/scrape-all: booking_com done");
+      return res.json({ source, total: results.length, succeeded, skipped: fetchResult.skipped, results });
+
+    } catch (err) {
+      req.log.error({ err }, "ingest/scrape-all booking_com failed");
+      return res.status(500).json({ error: "Booking.com scrape failed", message: String(err) });
+    }
+  }
+});
+
+// ── GET /ingest/sync-status ───────────────────────────────────────────────
+// Returns scheduler state for all registered automated sources.
+
+router.get("/ingest/sync-status", (_req, res) => {
+  const status = getSyncStatus();
+  res.json({
+    sources: status.map(s => ({
+      source: s.source,
+      display_name: s.displayName,
+      interval_hours: Math.round(s.intervalMs / 3_600_000),
+      last_sync_at: s.lastSyncAt?.toISOString() ?? null,
+      last_sync_status: s.lastSyncStatus,
+      last_sync_count: s.lastSyncCount,
+      last_sync_error: s.lastSyncError,
+      next_sync_at: s.nextSyncAt?.toISOString() ?? null,
+      is_running: s.isRunning,
+      credentials_missing: s.credentialsMissing,
+      credential_vars: s.credentialVars,
+    })),
+  });
+});
+
+// ── POST /ingest/sync-all ─────────────────────────────────────────────────
+// Triggers an immediate refresh of all automated sources in parallel.
+
+router.post("/ingest/sync-all", async (req, res) => {
+  req.log.info("ingest/sync-all: starting full sync");
+  try {
+    const results = await syncAll();
+    const succeeded = results.filter(r => r.ok).length;
+    res.json({
+      total_sources: results.length,
+      succeeded,
+      results: results.map(r => ({
+        source: r.source,
+        ok: r.ok,
+        count: r.count,
+        duration_ms: r.durationMs,
+        error: r.error ?? null,
+        note: r.note ?? null,
+        skipped: r.skipped ?? false,
+      })),
+    });
+  } catch (err) {
+    req.log.error({ err }, "ingest/sync-all failed");
+    res.status(500).json({ error: "Sync-all failed", message: String(err) });
+  }
+});
+
+// ── POST /ingest/sync/:source ─────────────────────────────────────────────
+// Triggers an immediate refresh of a single source.
+
+router.post("/ingest/sync/:source", async (req, res) => {
+  const source = req.params["source"] as SourceKey;
+  req.log.info({ source }, "ingest/sync/:source: triggered");
+  try {
+    const result = await syncSource(source);
+    res.json({
+      source: result.source,
+      ok: result.ok,
+      count: result.count,
+      duration_ms: result.durationMs,
+      error: result.error ?? null,
+      note: result.note ?? null,
+      skipped: result.skipped ?? false,
+    });
+  } catch (err) {
+    req.log.error({ err, source }, "ingest/sync/:source failed");
+    res.status(500).json({ error: "Sync failed", message: String(err) });
   }
 });
 
