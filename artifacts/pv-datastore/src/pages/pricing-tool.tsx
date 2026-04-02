@@ -47,8 +47,9 @@ type Neighborhood = "Zona Romantica" | "Amapas";
 interface FormValues {
   neighborhood: Neighborhood;
   buildingName: string;
-  crossStreets: string;      // e.g. "Francisca Rodríguez & Olas Altas"
-  buildingYear: string;      // approximate year built, e.g. "2010"
+  crossStreet1: string;      // first cross street
+  crossStreet2: string;      // second cross street
+  buildingYear: string;      // approximate year built range
   listingUrl: string;        // Airbnb / VRBO / PVRPV link — future AI evaluation
   bedrooms: 1 | 2 | 3 | 4;
   bathrooms: number;
@@ -419,7 +420,8 @@ type Phase = "form" | "prepare_loading" | "prepared" | "comps_loading" | "result
 const DEFAULT_FORM: FormValues = {
   neighborhood: "Zona Romantica",
   buildingName: "",
-  crossStreets: "",
+  crossStreet1: "",
+  crossStreet2: "",
   buildingYear: "",
   listingUrl: "",
   bedrooms: 1,
@@ -674,44 +676,56 @@ export default function PricingTool() {
               </p>
             </div>
 
-            {/* Cross streets + Building year */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <FieldLabel optional>
-                  <Crosshair className="inline w-3.5 h-3.5 mr-1" />
-                  {t("Nearest cross streets", "Calles cercanas")}
-                </FieldLabel>
+            {/* Cross streets */}
+            <div>
+              <FieldLabel optional>
+                <Crosshair className="inline w-3.5 h-3.5 mr-1" />
+                {t("Nearest cross streets", "Calles cercanas")}
+              </FieldLabel>
+              <div className="flex items-center gap-2">
                 <StyledInput
                   type="text"
-                  placeholder={t("e.g. Francisca Rodríguez & Olas Altas", "e.g. F. Rodríguez & Olas Altas")}
-                  value={form.crossStreets}
-                  onChange={e => setField("crossStreets", e.target.value)}
+                  placeholder={t("Street 1", "Calle 1")}
+                  value={form.crossStreet1}
+                  onChange={e => setField("crossStreet1", e.target.value)}
                   disabled={isLoading}
+                  className="flex-1"
                 />
-                <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.45)" }}>
-                  {t("Helps locate the property if no building name is known.", "Ayuda a ubicar la propiedad si no se conoce el edificio.")}
-                </p>
-              </div>
-              <div>
-                <FieldLabel optional>
-                  <CalendarClock className="inline w-3.5 h-3.5 mr-1" />
-                  {t("Approx. year built", "Año de construcción aprox.")}
-                </FieldLabel>
-                <StyledSelect
-                  value={form.buildingYear}
-                  onChange={e => setField("buildingYear", e.target.value)}
+                <span className="text-muted-foreground font-medium text-sm shrink-0">×</span>
+                <StyledInput
+                  type="text"
+                  placeholder={t("Street 2", "Calle 2")}
+                  value={form.crossStreet2}
+                  onChange={e => setField("crossStreet2", e.target.value)}
                   disabled={isLoading}
-                  style={{ background: "#163C4A", border: "1px solid rgba(255,255,255,0.08)", color: form.buildingYear ? "rgb(245,247,250)" : "rgba(154,165,177,0.4)" }}
-                >
-                  <option value="">— Unknown —</option>
-                  <option value="2020+">New — 2020 or later</option>
-                  <option value="2015-2019">Recent — 2015–2019</option>
-                  <option value="2010-2014">2010–2014</option>
-                  <option value="2000-2009">2000–2009</option>
-                  <option value="1990-1999">1990–1999</option>
-                  <option value="pre-1990">Older — pre-1990</option>
-                </StyledSelect>
+                  className="flex-1"
+                />
               </div>
+              <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.45)" }}>
+                {t("Helps locate the property when no building name is known.", "Ayuda a ubicar la propiedad si no se conoce el edificio.")}
+              </p>
+            </div>
+
+            {/* Building year */}
+            <div className="max-w-xs">
+              <FieldLabel optional>
+                <CalendarClock className="inline w-3.5 h-3.5 mr-1" />
+                {t("Approx. year built", "Año de construcción aprox.")}
+              </FieldLabel>
+              <StyledSelect
+                value={form.buildingYear}
+                onChange={e => setField("buildingYear", e.target.value)}
+                disabled={isLoading}
+                style={{ background: "#163C4A", border: "1px solid rgba(255,255,255,0.08)", color: form.buildingYear ? "rgb(245,247,250)" : "rgba(154,165,177,0.4)" }}
+              >
+                <option value="">— Unknown —</option>
+                <option value="2020+">2020 or later</option>
+                <option value="2015-2019">2015–2019</option>
+                <option value="2010-2014">2010–2014</option>
+                <option value="2000-2009">2000–2009</option>
+                <option value="1990-1999">1990–1999</option>
+                <option value="pre-1990">pre-1990</option>
+              </StyledSelect>
             </div>
 
             {/* Listing URL — AI evaluation (future) */}
