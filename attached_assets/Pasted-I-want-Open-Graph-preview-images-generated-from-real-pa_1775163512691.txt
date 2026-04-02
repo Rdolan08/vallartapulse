@@ -1,0 +1,86 @@
+I want Open Graph preview images generated from real page screenshots, not designed mockups.
+
+Please build an automated weekly OG image refresh system for all of these routes, including the homepage:
+- /
+- /tourism
+- /rental-market
+- /pricing-tool
+- /economic
+- /safety
+- /weather
+- /sources
+- /about
+- /contact
+
+Requirements:
+
+1. Use Puppeteer or Playwright
+- Load each live page
+- Wait for full render, including charts, fonts, and data
+- Capture a clean above-the-fold screenshot
+- Resize/crop to standard OG dimensions: 1200x630
+- Save output to:
+  /public/og/{slug}.png
+
+Naming:
+- / -> /public/og/home.png
+- /tourism -> /public/og/tourism.png
+- /rental-market -> /public/og/rental-market.png
+- /pricing-tool -> /public/og/pricing-tool.png
+- /economic -> /public/og/economic.png
+- /safety -> /public/og/safety.png
+- /weather -> /public/og/weather.png
+- /sources -> /public/og/sources.png
+- /about -> /public/og/about.png
+- /contact -> /public/og/contact.png
+
+2. Weekly automation
+Set this up to refresh automatically once per week.
+Preferred options:
+- GitHub Actions weekly cron
+- or Replit scheduled job if that is more reliable in this environment
+
+3. Page-specific OG tags
+Update each route/page so the og:image and twitter:image use the correct file for that page.
+
+Examples:
+- homepage -> /og/home.png
+- /tourism -> /og/tourism.png
+- /safety -> /og/safety.png
+- /about -> /og/about.png
+
+4. Screenshot quality rules
+- Use desktop viewport
+- No scrollbars
+- No loading skeletons
+- Wait for charts/data to render
+- Make sure fonts are loaded before capture
+- Capture the best hero/top section of each page, not the full page
+- Keep the crop visually balanced and readable in link previews
+
+5. Page-specific crop guidance
+- Homepage: capture the hero plus the strongest visual or KPI area
+- Tourism: page title plus strongest tourism chart/visual
+- Rental Market: title plus strongest pricing/supply visual
+- Pricing Tool: title plus the pricing form in a clean state or a generated result
+- Economic: title plus strongest economic chart
+- Safety: title plus strongest safety chart/visual
+- Weather: title plus strongest weather chart/summary visual
+- Sources: title plus clean source block 
+- About: title plus founder/photo
+- Contact: title plus the branded contact hero/form area
+
+6. Stability / fallback behavior
+- If a page fails to render, do not overwrite the existing OG image with a broken or blank one
+- Keep the prior image as fallback
+- Log failures clearly by page
+- Output a simple success/failure report for every route
+
+7. Deliverables
+- screenshot generation script
+- weekly automation config
+- updated OG tag wiring for all listed routes
+- notes on where to tweak crop/viewport per page if needed
+
+Important:
+These should be real screenshots of the live pages so the previews actually look like Vallarta Pulse, not generic generated cards.
