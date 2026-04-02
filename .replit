@@ -35,3 +35,4 @@ packages = ["gitFull", "glibcLocales", "playwright-driver", "xcodebuild", "zlib"
 [userenv.shared]
 CONTACT_TO_EMAIL = "ryansdolan@gmail.com"
 CONTACT_FROM_EMAIL = "ryansdolan@gmail.com"
+CONTACT_FROM_PASSWORD = "xtok sqnv kbqz yowc"
