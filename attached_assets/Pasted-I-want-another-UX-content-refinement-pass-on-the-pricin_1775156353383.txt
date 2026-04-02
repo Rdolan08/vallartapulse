@@ -1,0 +1,105 @@
+I want another UX/content refinement pass on the pricing form. The current arrangement still feels off.
+
+Please make the following changes:
+
+1. MONTH SELECTOR
+I do not like the current month pills.
+- Replace the row of month pills with a cleaner, more compact control
+- Preferred options:
+  - a standard dropdown/select for month
+  - or a segmented control that is visually tighter and less bulky
+- It should take up less horizontal and visual space
+- Keep the seasonal guidance visible, but make it more subtle and less dominant
+
+Goal:
+The month selector should feel cleaner and more premium, not like oversized filter chips.
+
+2. BEDROOMS + BATHROOMS LAYOUT
+Do not split Bedrooms and Bathrooms awkwardly across the form.
+- Place them together as a logical pair in the same row
+- Keep related property-structure fields grouped together:
+  - Neighborhood
+  - Bedrooms
+  - Bathrooms
+  - Size
+- Rework the arrangement so the form reads more naturally top to bottom
+
+Goal:
+The form should feel intentionally grouped, not like fields were dropped wherever there was room.
+
+3. BATHROOM OPTIONS
+Simplify bathroom choices.
+Change from:
+- 1, 1.5, 2, 2.5, 3, 3.5, 4, etc.
+
+To:
+- 1
+- 2
+- 3
+- 3+
+
+I want this simplified for pricing purposes. We do not need half-bath precision in the primary UI.
+
+4. BEDROOM OPTIONS
+Simplify bedroom choices to:
+- 0
+- 1
+- 2
+- 3
+- 3+
+
+Use “0” for studios.
+
+5. GUEST RATING ORDER
+Sort rating choices in descending order.
+Highest rating should appear first, then go downward.
+Example:
+- 5.0
+- 4.9+
+- 4.8+
+- 4.7+
+- ...
+- Not rated yet
+
+Do not make users scroll upward mentally. Best-to-worst is the natural order here.
+
+6. OVERALL FIELD ORDER / HIERARCHY
+Please reorganize the form into cleaner groups.
+
+Suggested order:
+
+Group 1: Core pricing context
+- Pricing month
+- Neighborhood
+- Property / Building Name
+
+Group 2: Property basics
+- Bedrooms
+- Bathrooms
+- Size
+
+Group 3: Location / positioning
+- Distance to beach
+- View type
+- Rooftop pool
+
+Group 4: Market/quality signals
+- Guest rating
+- Amenities
+
+Group 5: Advanced options
+- location hint / cross streets / landmark
+- year built
+- listing URL
+
+Important:
+The current arrangement feels visually unbalanced. Rework spacing and alignment so paired fields actually feel paired.
+
+7. GENERAL CLEANUP
+- Tighten spacing between sections
+- Reduce the number of pill-like controls overall
+- Make the form feel less busy and more deliberate
+- Keep the CTA obvious, but the rest of the form calmer
+
+Goal:
+I want this to feel like a polished valuation tool, not a stack of unrelated controls.
