@@ -12,6 +12,8 @@ import {
   DollarSign,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
+import { useState } from "react";
+import founderPhoto from "@assets/60F21D23-B299-493B-AB91-0FC4E4DD5DA1_1775158046764.png";
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -118,6 +120,79 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function AboutSection() {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div
+      className="px-4 py-4"
+      style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+    >
+      <p
+        className="text-[9px] font-semibold uppercase tracking-[0.14em] mb-3"
+        style={{ color: "rgba(154,165,177,0.4)" }}
+      >
+        About Us
+      </p>
+
+      {/* Collapsed: photo + name + toggle */}
+      <div className="flex items-center gap-3">
+        <img
+          src={founderPhoto}
+          alt="Ryan Dolan"
+          className="rounded-full object-cover flex-shrink-0"
+          style={{ width: "38px", height: "38px", objectPosition: "center top" }}
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold leading-tight" style={{ color: "rgba(245,247,250,0.85)" }}>
+            Ryan Dolan
+          </p>
+          <p className="text-[10px] leading-tight mt-0.5" style={{ color: "rgba(154,165,177,0.5)" }}>
+            Founder
+          </p>
+        </div>
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="text-[10px] px-2 py-1 rounded transition-colors flex-shrink-0"
+          style={{
+            color: "#00C2A8",
+            background: "rgba(0,194,168,0.08)",
+            border: "1px solid rgba(0,194,168,0.15)",
+          }}
+        >
+          {expanded ? "Less" : "More"}
+        </button>
+      </div>
+
+      {/* Expanded bio */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-3 space-y-2">
+              <p className="text-[10px] leading-relaxed" style={{ color: "rgba(154,165,177,0.65)" }}>
+                Ryan is an owner at{" "}
+                <span style={{ color: "rgba(245,247,250,0.8)" }}>Ciye</span>, an upcoming development on Lázaro Cárdenas Park in Puerto Vallarta's Zona Romántica.
+              </p>
+              <p className="text-[10px] leading-relaxed" style={{ color: "rgba(154,165,177,0.65)" }}>
+                After 20+ years in AI, data, and technology — including leadership roles in the U.S. federal government — he built Vallarta Pulse to bring smarter, data-driven insight to Puerto Vallarta's rapidly growing rental market.
+              </p>
+              <p className="text-[10px] leading-relaxed" style={{ color: "rgba(154,165,177,0.65)" }}>
+                He lives in Minneapolis with his husband Chris and daughter Olivia, and splits his time between the U.S. and Puerto Vallarta.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 const sidebarStyle = {
   background: "#0A1E27",
   borderRight: "1px solid rgba(255,255,255,0.05)",
@@ -135,16 +210,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         <div className="flex-1 px-3 pt-8 space-y-0.5 overflow-y-auto pb-6">
           <NavItems />
         </div>
-        <div
-          className="px-6 py-4"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
-        >
-          <p className="text-[10px] leading-relaxed" style={{ color: "rgba(154,165,177,0.35)" }}>
-            Real-time insights for Puerto Vallarta's
-            <br />
-            rental &amp; tourism market
-          </p>
-        </div>
+        <AboutSection />
       </div>
 
       {/* Mobile drawer — slides in from the left */}
@@ -194,16 +260,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                 <NavItems onNavigate={onClose} />
               </div>
 
-              <div
-                className="px-6 py-4"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
-              >
-                <p className="text-[10px] leading-relaxed" style={{ color: "rgba(154,165,177,0.35)" }}>
-                  Real-time insights for Puerto Vallarta's
-                  <br />
-                  rental &amp; tourism market
-                </p>
-              </div>
+              <AboutSection />
             </motion.div>
           </>
         )}
