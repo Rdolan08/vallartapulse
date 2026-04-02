@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { seedIfEmpty } from "./lib/seed";
 import { seedAmenitiesLookup, seedRentalListings } from "./lib/rental-ingest";
+import { startScheduler } from "./lib/ingest/sync-scheduler.js";
 
 const rawPort = process.env["PORT"];
 
@@ -27,6 +28,10 @@ seedAmenitiesLookup().catch((err) => {
 
 seedRentalListings().catch((err) => {
   logger.error({ err }, "Rental listings seed failed — continuing anyway");
+});
+
+startScheduler().catch((err) => {
+  logger.error({ err }, "Sync scheduler start failed — continuing anyway");
 });
 
 app.listen(port, (err) => {
