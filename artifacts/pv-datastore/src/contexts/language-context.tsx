@@ -8,13 +8,27 @@ interface LanguageContextType {
   t: (en: string, es: string) => string;
 }
 
+const STORAGE_KEY = 'vp_lang';
+
+function getInitialLang(): Language {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === 'es') return 'es';
+  } catch {}
+  return 'en';
+}
+
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState<Language>('en');
+  const [lang, setLang] = useState<Language>(getInitialLang);
 
   const toggleLanguage = () => {
-    setLang((prev) => (prev === 'en' ? 'es' : 'en'));
+    setLang((prev) => {
+      const next = prev === 'en' ? 'es' : 'en';
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      return next;
+    });
   };
 
   const t = (en: string, es: string) => {
