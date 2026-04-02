@@ -5,7 +5,8 @@ import {
   CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronUp,
   Info, TrendingUp, ArrowRight, Loader2, RefreshCw, RotateCcw,
   Tag, DollarSign, BarChart3, Building, ArrowLeftRight,
-  CalendarClock, Crosshair, Link2, Sparkles,
+  CalendarClock, Crosshair, Link2, Sparkles, Eye, Flame,
+  Calendar, Droplets, Layers,
 } from "lucide-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
@@ -48,18 +49,24 @@ type Neighborhood =
   | "Nuevo Vallarta" | "Bucerias" | "La Cruz de Huanacaxtle"
   | "Punta Mita" | "El Anclote" | "Sayulita" | "San Pancho" | "Mismaloya";
 
+type ViewType = "ocean" | "partial" | "city" | "garden" | "none";
+
 interface FormValues {
   neighborhood: Neighborhood;
   buildingName: string;
-  crossStreet1: string;      // first cross street
-  crossStreet2: string;      // second cross street
-  buildingYear: string;      // approximate year built range
-  listingUrl: string;        // Airbnb / VRBO / PVRPV link — future AI evaluation
+  crossStreet1: string;
+  crossStreet2: string;
+  buildingYear: string;
+  listingUrl: string;
   bedrooms: 1 | 2 | 3 | 4;
   bathrooms: number;
-  size: string;       // sqft (imperial) or m² (metric) — display unit
-  distance: string;   // ft (imperial) or m (metric) — display unit
+  size: string;
+  distance: string;
   ratingOverall: string;
+  // V3
+  month: number;           // 1–12
+  viewType: ViewType;
+  rooftopPool: boolean;
 }
 
 interface AmenityDef {
@@ -116,6 +123,28 @@ interface CompEntry {
   match_reasons: string[];
 }
 
+interface PricingLayer {
+  layer: string;
+  label: string;
+  factor: number | null;
+  adjustment_pct: number | null;
+  cumulative_price: number;
+  applied: boolean;
+  note: string;
+}
+
+interface SeasonalInfo {
+  month: number;
+  month_name: string;
+  season: "peak" | "high" | "shoulder" | "low";
+  monthly_multiplier: number;
+  monthly_note: string;
+  event_name: string | null;
+  event_premium_pct: number | null;
+  total_multiplier: number;
+  display_label: string;
+}
+
 interface CompsResult {
   target_summary: {
     neighborhood: string;
@@ -125,6 +154,9 @@ interface CompsResult {
     building_normalized: string | null;
     building_premium_pct: number | null;
     segment_median: number;
+    month: number;
+    view_type: ViewType;
+    rooftop_pool: boolean;
   };
   pool_size: number;
   thin_pool_warning: boolean;
@@ -132,8 +164,12 @@ interface CompsResult {
   conservative_price: number;
   recommended_price: number;
   stretch_price: number;
+  base_comp_median: number;
   building_adjustment_pct: number | null;
   beach_tier_adjustment_pct: number | null;
+  pricing_breakdown: PricingLayer[];
+  total_adjustment_multiplier: number;
+  seasonal: SeasonalInfo;
   selected_comps: CompEntry[];
   top_drivers: string[];
   explanation: string;
@@ -146,6 +182,36 @@ const BATH_OPTIONS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
 const RATING_OPTIONS = Array.from({ length: 41 }, (_, i) =>
   parseFloat((1 + i * 0.1).toFixed(1))
 );
+
+const MONTHS = [
+  { n: 1,  abbr: "Jan", season: "high"     },
+  { n: 2,  abbr: "Feb", season: "peak"     },
+  { n: 3,  abbr: "Mar", season: "peak"     },
+  { n: 4,  abbr: "Apr", season: "high"     },
+  { n: 5,  abbr: "May", season: "shoulder" },
+  { n: 6,  abbr: "Jun", season: "low"      },
+  { n: 7,  abbr: "Jul", season: "low"      },
+  { n: 8,  abbr: "Aug", season: "low"      },
+  { n: 9,  abbr: "Sep", season: "low"      },
+  { n: 10, abbr: "Oct", season: "shoulder" },
+  { n: 11, abbr: "Nov", season: "high"     },
+  { n: 12, abbr: "Dec", season: "peak"     },
+] as const;
+
+const SEASON_COLOR: Record<string, { text: string; bg: string; border: string }> = {
+  peak:     { text: "#3B82F6", bg: "rgba(59,130,246,0.15)",  border: "rgba(59,130,246,0.4)"  },
+  high:     { text: "#00C2A8", bg: "rgba(0,194,168,0.15)",   border: "rgba(0,194,168,0.4)"   },
+  shoulder: { text: "#F59E0B", bg: "rgba(245,158,11,0.15)",  border: "rgba(245,158,11,0.4)"  },
+  low:      { text: "#F97316", bg: "rgba(249,115,22,0.15)",  border: "rgba(249,115,22,0.4)"  },
+};
+
+const VIEW_OPTIONS: { value: ViewType; label: string; labelEs: string; icon: string; pct: string }[] = [
+  { value: "ocean",   label: "Ocean",   labelEs: "Océano",   icon: "🌊", pct: "+20%" },
+  { value: "partial", label: "Partial", labelEs: "Parcial",  icon: "🌤",  pct: "+10%" },
+  { value: "city",    label: "City",    labelEs: "Ciudad",   icon: "🏙️", pct: "+2%"  },
+  { value: "garden",  label: "Garden",  labelEs: "Jardín",   icon: "🌿", pct: "0%"   },
+  { value: "none",    label: "None",    labelEs: "Ninguna",  icon: "◻",  pct: "−2%"  },
+];
 
 const CONFIDENCE_CONFIG: Record<string, { label: string; labelEs: string; color: string; bg: string; border: string }> = {
   high:          { label: "High Confidence",   labelEs: "Alta Confianza",    color: "#00C2A8", bg: "rgba(0,194,168,0.12)",  border: "rgba(0,194,168,0.3)" },
@@ -583,6 +649,10 @@ const DEFAULT_FORM: FormValues = {
   size: "",
   distance: "",
   ratingOverall: "",
+  // V3
+  month: new Date().getMonth() + 1,
+  viewType: "none",
+  rooftopPool: false,
 };
 
 export default function PricingTool() {
@@ -730,6 +800,11 @@ export default function PricingTool() {
         amenities_normalized: prepareResult.cleaned_input.amenities_normalized,
         ...(form.ratingOverall ? { rating_overall: Number(form.ratingOverall) } : {}),
         ...(prepareResult.cleaned_input.building_name ? { building_name: prepareResult.cleaned_input.building_name } : {}),
+        // V3
+        month: form.month,
+        view_type: form.viewType,
+        rooftop_pool: form.rooftopPool,
+        year_built: form.buildingYear,
       };
       const result = await apiFetch<CompsResult>("/api/rental/comps", {
         method: "POST",
@@ -812,6 +887,41 @@ export default function PricingTool() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
+
+            {/* ── Month selector ── */}
+            <div>
+              <FieldLabel>
+                <Calendar className="inline w-3.5 h-3.5 mr-1" />
+                {t("Pricing month", "Mes de referencia")}
+              </FieldLabel>
+              <div className="grid grid-cols-6 sm:grid-cols-12 gap-1">
+                {MONTHS.map(m => {
+                  const sc = SEASON_COLOR[m.season];
+                  const isSelected = form.month === m.n;
+                  return (
+                    <button
+                      key={m.n}
+                      type="button"
+                      onClick={() => setField("month", m.n)}
+                      disabled={isLoading}
+                      className="flex flex-col items-center py-2 px-1 rounded-xl text-[11px] font-semibold transition-all border"
+                      style={{
+                        background: isSelected ? sc.bg : "rgba(255,255,255,0.03)",
+                        borderColor: isSelected ? sc.border : "rgba(255,255,255,0.07)",
+                        color: isSelected ? sc.text : "rgba(154,165,177,0.5)",
+                        boxShadow: isSelected ? `0 0 0 1px ${sc.border}` : "none",
+                      }}
+                    >
+                      {m.abbr}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.4)" }}>
+                {t("Seasonality multipliers: Peak (blue), High (teal), Shoulder (amber), Low (orange). Events stack on top.",
+                   "Multiplicadores de temporada: Pico (azul), Alta (teal), Hombro (ámbar), Baja (naranja).")}
+              </p>
+            </div>
 
             {/* Neighborhood */}
             <div>
@@ -1022,6 +1132,64 @@ export default function PricingTool() {
               </StyledSelect>
             </div>
 
+            {/* ── View type ── */}
+            <div>
+              <FieldLabel>
+                <Eye className="inline w-3.5 h-3.5 mr-1" />
+                {t("View type", "Tipo de vista")}
+              </FieldLabel>
+              <div className="flex flex-wrap gap-2">
+                {VIEW_OPTIONS.map(v => {
+                  const isSelected = form.viewType === v.value;
+                  return (
+                    <button
+                      key={v.value}
+                      type="button"
+                      onClick={() => setField("viewType", v.value)}
+                      disabled={isLoading}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all border"
+                      style={{
+                        background: isSelected ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
+                        borderColor: isSelected ? "rgba(0,194,168,0.5)" : "rgba(255,255,255,0.08)",
+                        color: isSelected ? "#00C2A8" : "rgba(154,165,177,0.7)",
+                        boxShadow: isSelected ? "0 0 0 1px rgba(0,194,168,0.3)" : "none",
+                      }}
+                    >
+                      <span>{v.icon}</span>
+                      <span>{t(v.label, v.labelEs)}</span>
+                      <span className="text-[10px] font-normal opacity-70 ml-0.5">{v.pct}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── Rooftop pool toggle ── */}
+            <div className="flex items-center justify-between p-3 rounded-xl border"
+              style={{ background: form.rooftopPool ? "rgba(0,194,168,0.08)" : "rgba(255,255,255,0.03)", borderColor: form.rooftopPool ? "rgba(0,194,168,0.3)" : "rgba(255,255,255,0.07)" }}>
+              <div className="flex items-center gap-2">
+                <Droplets className="w-4 h-4" style={{ color: form.rooftopPool ? "#00C2A8" : "rgba(154,165,177,0.5)" }} />
+                <div>
+                  <p className="text-sm font-medium">{t("Rooftop Pool", "Alberca en Azotea")}</p>
+                  <p className="text-[11px]" style={{ color: "rgba(154,165,177,0.5)" }}>
+                    {t("+12–15% premium over standard pool comps", "+12–15% sobre comps con alberca estándar")}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setField("rooftopPool", !form.rooftopPool)}
+                disabled={isLoading}
+                className="relative w-10 h-6 rounded-full transition-all duration-200 shrink-0"
+                style={{ background: form.rooftopPool ? "#00C2A8" : "rgba(255,255,255,0.12)" }}
+              >
+                <span
+                  className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200"
+                  style={{ left: form.rooftopPool ? "calc(100% - 20px)" : "4px" }}
+                />
+              </button>
+            </div>
+
             {/* Amenities */}
             <div>
               <FieldLabel optional>
@@ -1212,77 +1380,126 @@ export default function PricingTool() {
                 </div>
               </div>
 
-              {/* Adjustments + Drivers */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="glass-card">
-                  <CardHeader>
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4" style={{ color: "#00C2A8" }} />
-                      {t("Pricing Adjustments", "Ajustes de Precio")}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between py-1 border-b border-white/5">
-                      <span className="text-sm text-muted-foreground">{t("Segment P50", "Mediana del segmento")}</span>
-                      <span className="text-sm font-semibold">{formatCurrency(compsResult.target_summary.segment_median)}</span>
+              {/* Seasonal callout */}
+              {compsResult.seasonal && (() => {
+                const s = compsResult.seasonal;
+                const sc = SEASON_COLOR[s.season];
+                return (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border"
+                    style={{ background: sc.bg, borderColor: sc.border }}>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Calendar className="w-4 h-4" style={{ color: sc.text }} />
+                      <span className="text-sm font-semibold" style={{ color: sc.text }}>{s.display_label}</span>
                     </div>
-                    {compsResult.building_adjustment_pct != null && (
-                      <div className="flex justify-between py-1 px-2 rounded-lg"
-                        style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.15)" }}>
-                        <div>
-                          <p className="text-sm">{compsResult.target_summary.building_normalized ?? t("Building", "Edificio")}</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {compsResult.building_adjustment_pct > 40
-                              ? t("Anchor mode", "Modo ancla")
-                              : t("Premium applied", "Prima aplicada")}
-                          </p>
-                        </div>
-                        <span className="text-sm font-bold" style={{ color: "#6366F1" }}>
-                          {compsResult.building_adjustment_pct > 0 ? "+" : ""}{compsResult.building_adjustment_pct.toFixed(1)}%
+                    <div className="flex flex-wrap items-center gap-3 text-[11px]" style={{ color: "rgba(245,247,250,0.7)" }}>
+                      <span>×{s.total_multiplier.toFixed(2)} total seasonal factor</span>
+                      {s.event_name && s.event_premium_pct != null && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold"
+                          style={{ background: "rgba(249,115,22,0.15)", color: "#F97316", border: "1px solid rgba(249,115,22,0.3)" }}>
+                          <Flame className="w-2.5 h-2.5" />
+                          {s.event_name}: +{s.event_premium_pct}% event premium
                         </span>
-                      </div>
-                    )}
-                    {compsResult.beach_tier_adjustment_pct != null && (
-                      <div className="flex justify-between py-1 px-2 rounded-lg"
-                        style={{ background: "rgba(0,209,255,0.08)", border: "1px solid rgba(0,209,255,0.12)" }}>
-                        <div>
-                          <p className="text-sm">{t("Beach tier", "Categoría playa")} ({compsResult.target_summary.beach_tier})</p>
-                          <p className="text-[10px] text-muted-foreground">{t("Cross-tier adjustment", "Ajuste entre categorías")}</p>
-                        </div>
-                        <span className="text-sm font-bold" style={{ color: "#00D1FF" }}>
-                          {compsResult.beach_tier_adjustment_pct > 0 ? "+" : ""}{compsResult.beach_tier_adjustment_pct.toFixed(1)}%
-                        </span>
-                      </div>
-                    )}
-                    {compsResult.building_adjustment_pct == null && compsResult.beach_tier_adjustment_pct == null && (
-                      <p className="text-sm text-muted-foreground">{t("Direct comp-set median — no specific adjustments.", "Mediana directa de comparables.")}</p>
-                    )}
-                  </CardContent>
-                </Card>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
-                <Card className="glass-card">
-                  <CardHeader>
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                      <MapPin className="w-4 h-4" style={{ color: "#00C2A8" }} />
-                      {t("Top Pricing Drivers", "Factores Clave")}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {compsResult.top_drivers.slice(0, 5).map((d, i) => {
-                        const lbl = DRIVER_LABELS[d];
-                        return (
-                          <div key={d} className="flex items-center gap-3">
-                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                              style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}>{i + 1}</span>
-                            <span className="text-sm">{lbl ? (lang === "es" ? lbl.es : lbl.en) : d.replace(/_/g, " ")}</span>
+              {/* 7-Layer Pricing Breakdown */}
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Layers className="w-4 h-4" style={{ color: "#00C2A8" }} />
+                    {t("Pricing Breakdown", "Desglose de Precio")}
+                    <span className="text-[10px] font-normal px-2 py-0.5 rounded-full ml-1"
+                      style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}>7-layer stack</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1.5">
+                    {(compsResult.pricing_breakdown ?? []).map((layer, idx) => {
+                      const isBase = layer.layer === "base_comp_median";
+                      const isFinal = layer.layer === "guardrails";
+                      const pct = layer.adjustment_pct;
+                      const pctStr = pct != null
+                        ? `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`
+                        : null;
+                      const layerColors: Record<string, string> = {
+                        building_anchor: "#6366F1",
+                        beach_tier:      "#00D1FF",
+                        seasonal:        "#3B82F6",
+                        view_premium:    "#00C2A8",
+                        rooftop_pool:    "#00C2A8",
+                        quality:         "#F59E0B",
+                        guardrails:      "rgba(154,165,177,0.4)",
+                      };
+                      const color = layerColors[layer.layer] ?? "rgba(245,247,250,0.6)";
+                      return (
+                        <div key={layer.layer}
+                          className={cn("flex items-center gap-3 px-3 py-2 rounded-xl transition-colors", isFinal && "border-t border-white/10 mt-2 pt-3")}
+                          style={isBase ? { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" } : {}}>
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+                            style={{ background: layer.applied ? `${color}22` : "rgba(255,255,255,0.05)", color: layer.applied ? color : "rgba(154,165,177,0.3)" }}>
+                            {idx}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium truncate"
+                                style={{ color: layer.applied ? "rgb(245,247,250)" : "rgba(154,165,177,0.4)" }}>
+                                {layer.label}
+                              </span>
+                              {pctStr && layer.applied && (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0"
+                                  style={{
+                                    background: `${color}18`,
+                                    color,
+                                  }}>
+                                  {pctStr}
+                                </span>
+                              )}
+                              {!layer.applied && !isBase && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-md"
+                                  style={{ background: "rgba(255,255,255,0.04)", color: "rgba(154,165,177,0.35)" }}>
+                                  not applied
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] truncate" style={{ color: "rgba(154,165,177,0.45)" }}>{layer.note}</p>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                          <span className={cn("text-sm font-bold shrink-0", isFinal && "text-base")}
+                            style={{ color: isFinal ? "#00C2A8" : layer.applied ? "rgb(245,247,250)" : "rgba(154,165,177,0.3)" }}>
+                            {formatCurrency(layer.cumulative_price)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Drivers */}
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <MapPin className="w-4 h-4" style={{ color: "#00C2A8" }} />
+                    {t("Top Comp-Matching Drivers", "Factores Clave de Comparables")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {compsResult.top_drivers.slice(0, 5).map((d, i) => {
+                      const lbl = DRIVER_LABELS[d];
+                      return (
+                        <div key={d} className="flex items-center gap-3">
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                            style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}>{i + 1}</span>
+                          <span className="text-sm">{lbl ? (lang === "es" ? lbl.es : lbl.en) : d.replace(/_/g, " ")}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Explanation */}
               <Card className="glass-card">

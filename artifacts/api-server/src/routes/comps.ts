@@ -1,11 +1,10 @@
 /**
  * POST /api/rental/comps
  * ─────────────────────────────────────────────────────────────────────────────
- * Internal MVP comps endpoint — V2 engine, PVRPV dataset only.
+ * Internal MVP comps endpoint — V3 engine (seasonal + view + rooftop pool).
  *
  * Returns a comparable-property price recommendation for a submitted property
- * spec. This is NOT a market-wide estimate; it is calibrated against the ~118
- * eligible PVRPV listings in Zona Romantica and Amapas only.
+ * spec with 7-layer pricing breakdown.
  *
  * Confidence labels:
  *   high   → pool_size ≥ 8 (full comp set, IQR trimming active)
@@ -14,8 +13,6 @@
  *   guidance_only → pool_size < 3 (no recommendation issued)
  *
  * Caching: engine is built once per cold-start and refreshed every 5 minutes.
- * The engine ingests all eligible DB rows at construction time, so the
- * marginal cost of each comps request is scoring only (~2ms).
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -24,12 +21,12 @@ import { z } from "zod";
 import { db } from "@workspace/db";
 import { rentalListingsTable } from "@workspace/db/schema";
 import {
-  CompsEngineV2,
-  type CompsListingV2,
-  type TargetPropertyV2,
-  type CompResultV2,
-  type BeachTier,
-} from "../lib/comps-engine-v2";
+  CompsEngineV3,
+  type TargetPropertyV3,
+  type ViewType,
+  type YearBuiltRange,
+} from "../lib/comps-engine-v3";
+import { type CompsListingV2, type CompResultV2, type BeachTier } from "../lib/comps-engine-v2";
 import { lookupBuilding } from "../lib/building-lookup";
 
 const router: IRouter = Router();
@@ -39,44 +36,50 @@ const router: IRouter = Router();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 let engineCache: {
-  engine: CompsEngineV2;
+  engine: CompsEngineV3;
   builtAt: number;
   listingCount: number;
 } | null = null;
 
-async function getEngine(): Promise<{ engine: CompsEngineV2; listingCount: number }> {
+async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: number }> {
   const now = Date.now();
   if (engineCache && now - engineCache.builtAt < CACHE_TTL_MS) {
     return { engine: engineCache.engine, listingCount: engineCache.listingCount };
   }
 
-  const rows = await db
-    .select()
-    .from(rentalListingsTable);
+  const rows = await db.select().from(rentalListingsTable);
 
   const listings: CompsListingV2[] = rows
-    .filter((r) =>
-      r.nightlyPriceUsd != null &&
-      r.distanceToBeachM != null &&
-      r.neighborhoodNormalized != null
+    .filter(
+      (r) =>
+        r.nightlyPriceUsd != null &&
+        r.distanceToBeachM != null &&
+        r.neighborhoodNormalized != null
     )
     .map((r) => ({
       id: r.id,
       externalId: r.externalId ?? String(r.id),
       sourceUrl: r.sourceUrl,
-      neighborhoodNormalized: r.neighborhoodNormalized as "Zona Romantica" | "Amapas",
+      neighborhoodNormalized: r.neighborhoodNormalized as
+        | "Zona Romantica"
+        | "Amapas",
       bedrooms: r.bedrooms,
       bathrooms: parseFloat(String(r.bathrooms)),
       sqft: r.sqft != null ? parseFloat(String(r.sqft)) : null,
       distanceToBeachM: parseFloat(String(r.distanceToBeachM!)),
-      amenitiesNormalized: Array.isArray(r.amenitiesNormalized) ? r.amenitiesNormalized : [],
-      ratingOverall: r.ratingOverall != null ? parseFloat(String(r.ratingOverall)) : null,
+      amenitiesNormalized: Array.isArray(r.amenitiesNormalized)
+        ? r.amenitiesNormalized
+        : [],
+      ratingOverall:
+        r.ratingOverall != null
+          ? parseFloat(String(r.ratingOverall))
+          : null,
       nightlyPriceUsd: parseFloat(String(r.nightlyPriceUsd!)),
       buildingName: r.buildingName ?? null,
       dataConfidenceScore: parseFloat(String(r.dataConfidenceScore)),
     }));
 
-  const engine = new CompsEngineV2(listings);
+  const engine = new CompsEngineV3(listings);
   engineCache = { engine, builtAt: now, listingCount: listings.length };
   return { engine, listingCount: listings.length };
 }
@@ -102,21 +105,42 @@ const SUPPORTED_NEIGHBORHOODS = [
   "Mismaloya",
 ] as const;
 
+const VIEW_TYPES = ["ocean", "partial", "city", "garden", "none"] as const;
+
+const YEAR_BUILT_RANGES = [
+  "2020+",
+  "2015-2019",
+  "2010-2014",
+  "2000-2009",
+  "1990-1999",
+  "pre-1990",
+  "",
+] as const;
+
 const CompsRequestSchema = z.object({
   neighborhood_normalized: z.enum(SUPPORTED_NEIGHBORHOODS, {
     errorMap: () => ({
       message: `neighborhood_normalized must be one of: ${SUPPORTED_NEIGHBORHOODS.join(", ")}`,
     }),
   }),
-  bedrooms: z.number().int().min(1).max(6, {
-    message: "bedrooms must be 1–6 (engine supports 1–6BR)",
-  }),
+  bedrooms: z.number().int().min(1).max(6),
   bathrooms: z.number().min(0.5).max(8),
   sqft: z.number().min(100).max(10000).optional().nullable(),
   distance_to_beach_m: z.number().min(0).max(5000),
   amenities_normalized: z.array(z.string()).default([]),
   rating_overall: z.number().min(1).max(5).optional().nullable(),
   building_name: z.string().optional().nullable(),
+
+  // V3 additions
+  month: z
+    .number()
+    .int()
+    .min(1)
+    .max(12)
+    .default(() => new Date().getMonth() + 1),
+  view_type: z.enum(VIEW_TYPES).default("none"),
+  rooftop_pool: z.boolean().default(false),
+  year_built: z.enum(YEAR_BUILT_RANGES).default(""),
 });
 
 type CompsRequest = z.infer<typeof CompsRequestSchema>;
@@ -134,7 +158,7 @@ function confidenceLabel(poolSize: number): ConfidenceLabel {
 
 // ── Top-driver extraction ─────────────────────────────────────────────────────
 
-function extractTopDrivers(comp: CompResultV2, neighborhood: string): string[] {
+function extractTopDrivers(comp: CompResultV2): string[] {
   const bd = comp.scoreBreakdown;
   const drivers: { label: string; score: number }[] = [
     { label: "beach_distance",    score: bd.beachDistance },
@@ -160,14 +184,14 @@ function buildWarnings(
   poolSize: number,
   expandedPool: boolean,
   confidence: ConfidenceLabel,
-  beachTier: BeachTier,
+  beachTier: BeachTier
 ): string[] {
   const warnings: string[] = [];
 
   if (confidence === "guidance_only") {
     warnings.push(
       `Pool too thin (${poolSize} comps) for a reliable recommendation. ` +
-      "Result is directional guidance only. Expand eligibility or use segment median."
+        "Result is directional guidance only."
     );
   } else if (confidence === "low") {
     warnings.push(
@@ -178,36 +202,35 @@ function buildWarnings(
   if (expandedPool) {
     warnings.push(
       "Comp pool expanded to ±1 bedroom because the same-bedroom segment is too small. " +
-      "Prices may not reflect your exact bedroom count."
+        "Prices may not reflect your exact bedroom count."
     );
   }
 
   if (input.neighborhood_normalized === "Amapas" && input.bedrooms >= 3) {
     warnings.push(
       `Amapas ${input.bedrooms}BR segment has fewer than 8 listings. ` +
-      "Statistical noise is high — treat the range as more reliable than the point estimate."
+        "Statistical noise is high — treat the range as more reliable."
     );
   }
 
-  if (input.neighborhood_normalized === "Zona Romantica" && beachTier === "A") {
+  if (
+    input.neighborhood_normalized === "Zona Romantica" &&
+    beachTier === "A"
+  ) {
     warnings.push(
-      "ZR Tier A (≤100m beachfront) is a structurally separate sub-market from Tier B. " +
-      "The model applies a +90% beach adjustment when comps are cross-tier — " +
-      "verify this reflects the current Molino de Agua / beachfront market."
+      "ZR Tier A (≤100m beachfront) is a structurally separate sub-market. " +
+        "Verify this reflects the current beachfront market."
     );
   }
 
   if (!input.sqft) {
     warnings.push(
-      "sqft not provided. Size similarity scoring is skipped and weight redistributed to " +
-      "beach distance and bathrooms. Results may be less precise."
+      "sqft not provided — size similarity scoring skipped and weight redistributed."
     );
   }
 
   if (!input.rating_overall) {
-    warnings.push(
-      "rating_overall not provided. Rating similarity scoring is skipped."
-    );
+    warnings.push("rating_overall not provided — rating similarity skipped.");
   }
 
   return warnings;
@@ -232,11 +255,11 @@ router.post("/rental/comps", async (req, res) => {
       neighborhood: input.neighborhood_normalized,
       bedrooms: input.bedrooms,
       bathrooms: input.bathrooms,
-      sqft: input.sqft ?? null,
-      distance_to_beach_m: input.distance_to_beach_m,
+      month: input.month,
+      view_type: input.view_type,
+      rooftop_pool: input.rooftop_pool,
+      year_built: input.year_built,
       amenity_count: input.amenities_normalized.length,
-      has_rating: input.rating_overall != null,
-      has_building: input.building_name != null,
     },
     "comps request received"
   );
@@ -244,9 +267,7 @@ router.post("/rental/comps", async (req, res) => {
   try {
     const { engine, listingCount } = await getEngine();
 
-    // Building name resolution: fuzzy-match raw input to canonical building name.
-    // High/medium confidence matches are used automatically (with a warning for medium).
-    // Low-confidence matches are dropped to avoid building-premium contamination.
+    // Building name resolution
     let resolvedBuildingName: string | null = input.building_name ?? null;
     const buildingResolutionWarnings: string[] = [];
 
@@ -259,34 +280,37 @@ router.post("/rental/comps", async (req, res) => {
         resolvedBuildingName = bLookup.match.canonical_building_name;
         if (bLookup.match.confidence_tier === "medium") {
           buildingResolutionWarnings.push(
-            `Building name "${input.building_name}" partially matched to "${resolvedBuildingName}" ` +
-            `(${Math.round(bLookup.match.match_confidence * 100)}% confidence). ` +
-            "Use POST /api/rental/comps/prepare to confirm."
+            `Building "${input.building_name}" partially matched to "${resolvedBuildingName}" ` +
+              `(${Math.round(bLookup.match.match_confidence * 100)}% confidence). ` +
+              "Use POST /api/rental/comps/prepare to confirm."
           );
         }
-        if (bLookup.match.neighborhood_normalized !== input.neighborhood_normalized) {
+        if (
+          bLookup.match.neighborhood_normalized !==
+          input.neighborhood_normalized
+        ) {
           resolvedBuildingName = null;
           buildingResolutionWarnings.push(
             `Building "${bLookup.match.canonical_building_name}" is in ${bLookup.match.neighborhood_normalized}, ` +
-            `not ${input.neighborhood_normalized}. Building premium will not be applied.`
+              `not ${input.neighborhood_normalized}. Building premium not applied.`
           );
         }
-      } else if (bLookup.match && bLookup.match.confidence_tier === "low") {
+      } else if (bLookup.match?.confidence_tier === "low") {
         resolvedBuildingName = null;
         buildingResolutionWarnings.push(
-          `Building name "${input.building_name}" could not be confidently matched. ` +
-          "Building premium not applied. Use POST /api/rental/comps/prepare for resolution."
+          `Building "${input.building_name}" could not be confidently matched. ` +
+            "Building premium not applied."
         );
       } else {
         resolvedBuildingName = null;
         buildingResolutionWarnings.push(
           bLookup.warning ??
-          `Building name "${input.building_name}" not recognized. Building premium not applied.`
+            `Building "${input.building_name}" not recognized.`
         );
       }
     }
 
-    const target: TargetPropertyV2 = {
+    const target: TargetPropertyV3 = {
       neighborhoodNormalized: input.neighborhood_normalized,
       bedrooms: input.bedrooms,
       bathrooms: input.bathrooms,
@@ -295,10 +319,15 @@ router.post("/rental/comps", async (req, res) => {
       amenitiesNormalized: input.amenities_normalized,
       ratingOverall: input.rating_overall ?? null,
       buildingName: resolvedBuildingName,
+      // V3
+      month: input.month,
+      viewType: input.view_type as ViewType,
+      rooftopPool: input.rooftop_pool,
+      yearBuilt: input.year_built as YearBuiltRange,
     };
 
     const result = engine.run(target);
-    const { recommendation, comps, expandedPool } = result;
+    const { comps, expandedPool } = result;
     const poolSize = comps.length;
     const confidence = confidenceLabel(poolSize);
 
@@ -306,21 +335,27 @@ router.post("/rental/comps", async (req, res) => {
       {
         pool_size: poolSize,
         confidence,
-        conservative: recommendation.conservative,
-        recommended: recommendation.recommended,
-        stretch: recommendation.stretch,
-        building_adj_pct: recommendation.buildingAdjustmentPct,
-        beach_adj_pct: recommendation.beachTierAdjustmentPct,
+        conservative: result.conservative,
+        recommended: result.recommended,
+        stretch: result.stretch,
+        total_adj_multiplier: result.totalAdjustmentMultiplier,
       },
-      "comps recommendation generated"
+      "v3 comps recommendation generated"
     );
 
     const warnings = [
       ...buildingResolutionWarnings,
-      ...buildWarnings(input, poolSize, expandedPool, confidence, result.targetBeachTier),
+      ...buildWarnings(
+        input,
+        poolSize,
+        expandedPool,
+        confidence,
+        result.targetBeachTier
+      ),
     ];
 
-    const thinPoolWarning = confidence === "guidance_only" || confidence === "low";
+    const thinPoolWarning =
+      confidence === "guidance_only" || confidence === "low";
 
     const selectedComps = comps.slice(0, 10).map((c, i) => ({
       rank: i + 1,
@@ -338,7 +373,7 @@ router.post("/rental/comps", async (req, res) => {
       building_name: c.listing.buildingNameNormalized,
       score: parseFloat(c.score.toFixed(1)),
       match_reasons: c.matchReasons,
-      top_drivers: extractTopDrivers(c, input.neighborhood_normalized),
+      top_drivers: extractTopDrivers(c),
       score_breakdown: {
         beach_distance:   parseFloat(c.scoreBreakdown.beachDistance.toFixed(1)),
         sqft:             parseFloat(c.scoreBreakdown.sqft.toFixed(1)),
@@ -353,45 +388,54 @@ router.post("/rental/comps", async (req, res) => {
       },
     }));
 
-    const topDriversOverall = selectedComps.length > 0
-      ? Object.entries(
-          selectedComps.flatMap((c) => c.top_drivers).reduce<Record<string, number>>((acc, d) => {
-            acc[d] = (acc[d] ?? 0) + 1;
-            return acc;
-          }, {})
-        )
-          .sort(([, a], [, b]) => b - a)
-          .slice(0, 4)
-          .map(([label]) => label)
-      : [];
+    const topDriversOverall =
+      selectedComps.length > 0
+        ? Object.entries(
+            selectedComps
+              .flatMap((c) => c.top_drivers)
+              .reduce<Record<string, number>>((acc, d) => {
+                acc[d] = (acc[d] ?? 0) + 1;
+                return acc;
+              }, {})
+          )
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 4)
+            .map(([label]) => label)
+        : [];
 
     const explanationParts: string[] = [
       `Recommendation based on ${poolSize} comparable listings in ${input.neighborhood_normalized}.`,
-      recommendation.adjustmentExplanation,
-      "Data scope: multi-source (PVRPV, Vacation Vallarta, Airbnb, VRBO). Not a full-market estimate.",
     ];
-
-    if (recommendation.trimmedOutlierCount > 0) {
+    if (result.adjustmentExplanation) {
+      explanationParts.push(result.adjustmentExplanation);
+    }
+    if (result.seasonalContext.activeEvent) {
       explanationParts.push(
-        `${recommendation.trimmedOutlierCount} statistical outlier(s) trimmed before pricing.`
+        `Event premium: ${result.seasonalContext.activeEvent.name} adds +${Math.round(
+          result.seasonalContext.activeEvent.additionalPct * 100
+        )}% on top of ${result.seasonalContext.monthName} base.`
       );
     }
+    explanationParts.push(
+      "Data scope: multi-source (PVRPV, Vacation Vallarta, Airbnb, VRBO). Not a full-market estimate."
+    );
 
     const modelLimitations = [
       "Single-rate scraping: rates reflect the listed baseline, not seasonal peaks or minimums.",
-      "Multi-source dataset: PVRPV, Vacation Vallarta, Airbnb, VRBO. Coverage varies by neighborhood.",
-      "Building prestige signals (design quality, concierge) are partially captured via building premium factor.",
-      "Promotional/loyalty rates at the low end create irreducible overestimation errors.",
-      "Calibrated weights for Hotel Zone, Centro, 5 de Dic, Versalles, Marina are in development — thin pool warnings expected.",
+      "Seasonality is applied using PV market knowledge, not live booking data.",
+      "View type premium is self-reported — not verified against listing photos.",
+      "Building prestige signals are partially captured via building premium factor.",
+      "Calibrated weights for Hotel Zone, Centro, 5 de Dic, Versalles, Marina are in development.",
     ];
 
     const response = {
-      model_version: "v2.1",
+      model_version: "v3.0",
       source_scope: `Multi-source (PVRPV + Vacation Vallarta + Airbnb + VRBO) — ${input.neighborhood_normalized}`,
       eligible_listing_count: engine.eligibleCount,
       db_listing_count: listingCount,
 
-      eligibility_status: confidence === "guidance_only" ? "guidance_only" : "eligible",
+      eligibility_status:
+        confidence === "guidance_only" ? "guidance_only" : "eligible",
 
       target_summary: {
         neighborhood: result.target.neighborhoodNormalized,
@@ -407,6 +451,11 @@ router.post("/rental/comps", async (req, res) => {
             ? parseFloat((result.targetBuildingPremiumFactor * 100).toFixed(1))
             : null,
         segment_median: result.segmentMedian,
+        // V3
+        month: input.month,
+        view_type: input.view_type,
+        rooftop_pool: input.rooftop_pool,
+        year_built: input.year_built,
       },
 
       pool_size: poolSize,
@@ -414,15 +463,43 @@ router.post("/rental/comps", async (req, res) => {
       expanded_pool: expandedPool,
       confidence_label: confidence,
 
-      conservative_price: confidence === "guidance_only" ? null : recommendation.conservative,
-      recommended_price:  confidence === "guidance_only" ? null : recommendation.recommended,
-      stretch_price:      confidence === "guidance_only" ? null : recommendation.stretch,
+      conservative_price:
+        confidence === "guidance_only" ? null : result.conservative,
+      recommended_price:
+        confidence === "guidance_only" ? null : result.recommended,
+      stretch_price:
+        confidence === "guidance_only" ? null : result.stretch,
 
-      comp_prices: recommendation.compPrices,
-      base_comp_median: recommendation.baseCompMedian,
-      building_adjustment_pct: recommendation.buildingAdjustmentPct,
-      beach_tier_adjustment_pct: recommendation.beachTierAdjustmentPct,
-      trimmed_outlier_count: recommendation.trimmedOutlierCount,
+      // V2 base (before v3 layers)
+      base_comp_median: result.baseCompMedian,
+      building_adjustment_pct: result.buildingAdjustmentPct,
+      beach_tier_adjustment_pct: result.beachTierAdjustmentPct,
+
+      // V3 pricing breakdown
+      pricing_breakdown: result.pricingBreakdown,
+      total_adjustment_multiplier: parseFloat(
+        result.totalAdjustmentMultiplier.toFixed(4)
+      ),
+
+      // Seasonal context
+      seasonal: {
+        month: result.seasonalContext.month,
+        month_name: result.seasonalContext.monthName,
+        season: result.seasonalContext.season,
+        monthly_multiplier: result.seasonalContext.monthlyMultiplier,
+        monthly_note: result.seasonalContext.monthlyNote,
+        event_name: result.seasonalContext.activeEvent?.name ?? null,
+        event_premium_pct:
+          result.seasonalContext.eventPremiumPct != null
+            ? parseFloat(
+                (result.seasonalContext.eventPremiumPct * 100).toFixed(1)
+              )
+            : null,
+        total_multiplier: parseFloat(
+          result.seasonalContext.totalMultiplier.toFixed(4)
+        ),
+        display_label: result.seasonalContext.displayLabel,
+      },
 
       selected_comps: selectedComps,
       top_drivers: topDriversOverall,
