@@ -67,6 +67,8 @@ export default defineConfig({
         safety: resolve(import.meta.dirname, "safety/index.html"),
         weather: resolve(import.meta.dirname, "weather/index.html"),
         sources: resolve(import.meta.dirname, "sources/index.html"),
+        about: resolve(import.meta.dirname, "about/index.html"),
+        contact: resolve(import.meta.dirname, "contact/index.html"),
       },
     },
   },
