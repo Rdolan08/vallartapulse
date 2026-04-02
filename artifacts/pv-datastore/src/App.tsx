@@ -11,6 +11,8 @@ import Safety from "@/pages/safety";
 import Weather from "@/pages/weather";
 import Sources from "@/pages/sources";
 import PricingTool from "@/pages/pricing-tool";
+import About from "@/pages/about";
+import Contact from "@/pages/contact";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -34,6 +36,8 @@ function Router() {
       <Route path="/safety" component={Safety} />
       <Route path="/weather" component={Weather} />
       <Route path="/sources" component={Sources} />
+      <Route path="/about" component={About} />
+      <Route path="/contact" component={Contact} />
       <Route component={NotFound} />
     </Switch>
   );

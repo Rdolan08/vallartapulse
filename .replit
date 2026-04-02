@@ -29,3 +29,9 @@ timeoutMs = 20000
 [nix]
 channel = "stable-25_05"
 packages = ["gitFull", "glibcLocales", "playwright-driver", "xcodebuild", "zlib"]
+
+[userenv]
+
+[userenv.shared]
+CONTACT_TO_EMAIL = "ryansdolan@gmail.com"
+CONTACT_FROM_EMAIL = "ryansdolan@gmail.com"
