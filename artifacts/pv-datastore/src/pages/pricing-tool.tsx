@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, MapPin, BedDouble, Bath, Ruler, Waves, Star,
@@ -372,6 +372,155 @@ function AmenityPicker({ amenities, selected, onToggle }: {
   );
 }
 
+// ── Street autocomplete (Photon / OpenStreetMap) ───────────────────────────────
+const PV_LAT = 20.6534;
+const PV_LON = -105.2253;
+// OSM values that indicate a road/street (not POIs, parks, etc.)
+const ROAD_TYPES = new Set([
+  "primary", "secondary", "tertiary", "residential", "service",
+  "unclassified", "pedestrian", "living_street", "footway", "path",
+  "street", "road",
+]);
+
+interface StreetSuggestion {
+  name: string;
+  osmValue: string;
+  coords: [number, number]; // [lon, lat]
+}
+
+function StreetAutocomplete({ placeholder, value, onChange, onSelectCoords, disabled }: {
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+  onSelectCoords: (coords: [number, number] | null) => void;
+  disabled?: boolean;
+}) {
+  const [query, setQuery] = useState(value);
+  const [suggestions, setSuggestions] = useState<StreetSuggestion[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [resolved, setResolved] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep local query in sync when parent resets value
+  useEffect(() => {
+    if (!value) { setQuery(""); setResolved(false); onSelectCoords(null); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  function handleChange(raw: string) {
+    setQuery(raw);
+    onChange(raw);
+    setResolved(false);
+    onSelectCoords(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (raw.trim().length < 2) { setSuggestions([]); setOpen(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(raw + " Puerto Vallarta")}&lat=${PV_LAT}&lon=${PV_LON}&limit=10&lang=en`;
+        const res = await fetch(url);
+        const data = await res.json() as { features: { properties: { name: string; osm_value: string; city?: string; type?: string }; geometry: { coordinates: [number, number] } }[] };
+        const filtered: StreetSuggestion[] = [];
+        const seen = new Set<string>();
+        for (const f of data.features) {
+          const p = f.properties;
+          const name = p.name?.trim();
+          if (!name) continue;
+          // Only include road types OR any result whose city is Puerto Vallarta
+          const isRoad = ROAD_TYPES.has(p.osm_value);
+          const inPV = p.city === "Puerto Vallarta";
+          if (!isRoad && !inPV) continue;
+          if (seen.has(name)) continue;
+          seen.add(name);
+          filtered.push({ name, osmValue: p.osm_value, coords: f.geometry.coordinates });
+          if (filtered.length >= 6) break;
+        }
+        setSuggestions(filtered);
+        setOpen(filtered.length > 0);
+      } catch {
+        // Silently degrade — user can still type freely
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  }
+
+  function handleSelect(s: StreetSuggestion) {
+    setQuery(s.name);
+    onChange(s.name);
+    onSelectCoords(s.coords);
+    setResolved(true);
+    setSuggestions([]);
+    setOpen(false);
+  }
+
+  const roadTypeColor = useMemo(() => ({
+    primary: "#F59E0B", secondary: "#F59E0B",
+    tertiary: "#00C2A8", residential: "#6366F1",
+  } as Record<string, string>), []);
+
+  return (
+    <div ref={containerRef} className="relative flex-1">
+      <div className="relative">
+        <input
+          value={query}
+          onChange={e => handleChange(e.target.value)}
+          onFocus={() => { if (suggestions.length > 0) setOpen(true); }}
+          placeholder={placeholder}
+          disabled={disabled}
+          className={cn(
+            "w-full px-3 py-2.5 pr-8 rounded-xl text-sm bg-[#163C4A] border text-foreground",
+            "placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors",
+            resolved ? "border-primary/40" : "border-white/8",
+            disabled && "opacity-50 cursor-not-allowed",
+          )}
+        />
+        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {loading && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+          {resolved && !loading && <MapPin className="w-3 h-3" style={{ color: "#00C2A8" }} />}
+        </div>
+      </div>
+      <AnimatePresence>
+        {open && suggestions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.1 }}
+            className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden"
+            style={{ background: "#0F2A36", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 8px 24px rgba(0,0,0,0.4)", minWidth: "220px" }}
+          >
+            {suggestions.map((s, i) => (
+              <div key={i} onMouseDown={() => handleSelect(s)}
+                className="flex items-center justify-between gap-3 px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors">
+                <span className="text-sm text-foreground">{s.name}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    color: roadTypeColor[s.osmValue] ?? "rgba(154,165,177,0.6)",
+                  }}>
+                  {s.osmValue}
+                </span>
+              </div>
+            ))}
+            <div className="px-3 py-1.5 flex items-center gap-1.5 border-t border-white/5">
+              <span className="text-[10px]" style={{ color: "rgba(154,165,177,0.35)" }}>© OpenStreetMap</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function ConfidenceBadge({ label }: { label: string }) {
   const cfg = CONFIDENCE_CONFIG[label] ?? CONFIDENCE_CONFIG.guidance_only;
   return (
@@ -449,6 +598,10 @@ export default function PricingTool() {
   const [compsResult, setCompsResult] = useState<CompsResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showLimitations, setShowLimitations] = useState(false);
+
+  // Resolved GPS coordinates from OSM street autocomplete (for future geolocation use)
+  const [street1Coords, setStreet1Coords] = useState<[number, number] | null>(null);
+  const [street2Coords, setStreet2Coords] = useState<[number, number] | null>(null);
 
   const resultsRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
@@ -595,6 +748,8 @@ export default function PricingTool() {
     setPhase("form");
     setErrorMsg(null);
     setShowLimitations(false);
+    setStreet1Coords(null);
+    setStreet2Coords(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -676,34 +831,48 @@ export default function PricingTool() {
               </p>
             </div>
 
-            {/* Cross streets */}
+            {/* Cross streets — OSM autocomplete */}
             <div>
               <FieldLabel optional>
                 <Crosshair className="inline w-3.5 h-3.5 mr-1" />
                 {t("Nearest cross streets", "Calles cercanas")}
               </FieldLabel>
               <div className="flex items-center gap-2">
-                <StyledInput
-                  type="text"
+                <StreetAutocomplete
                   placeholder={t("Street 1", "Calle 1")}
                   value={form.crossStreet1}
-                  onChange={e => setField("crossStreet1", e.target.value)}
+                  onChange={v => setField("crossStreet1", v)}
+                  onSelectCoords={c => setStreet1Coords(c)}
                   disabled={isLoading}
-                  className="flex-1"
                 />
                 <span className="text-muted-foreground font-medium text-sm shrink-0">×</span>
-                <StyledInput
-                  type="text"
+                <StreetAutocomplete
                   placeholder={t("Street 2", "Calle 2")}
                   value={form.crossStreet2}
-                  onChange={e => setField("crossStreet2", e.target.value)}
+                  onChange={v => setField("crossStreet2", v)}
+                  onSelectCoords={c => setStreet2Coords(c)}
                   disabled={isLoading}
-                  className="flex-1"
                 />
               </div>
-              <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.45)" }}>
-                {t("Helps locate the property when no building name is known.", "Ayuda a ubicar la propiedad si no se conoce el edificio.")}
-              </p>
+              <div className="flex items-center gap-3 mt-1.5">
+                <p className="text-[11px]" style={{ color: "rgba(154,165,177,0.45)" }}>
+                  {t("Helps locate the property when no building name is known.", "Ayuda a ubicar la propiedad si no se conoce el edificio.")}
+                </p>
+                {street1Coords && street2Coords && (
+                  <span className="flex items-center gap-1 text-[10px] font-medium shrink-0"
+                    style={{ color: "#00C2A8" }}>
+                    <MapPin className="w-2.5 h-2.5" />
+                    {t("Both streets located", "Ambas calles ubicadas")}
+                  </span>
+                )}
+                {(street1Coords || street2Coords) && !(street1Coords && street2Coords) && (
+                  <span className="flex items-center gap-1 text-[10px] shrink-0"
+                    style={{ color: "rgba(245,158,11,0.8)" }}>
+                    <MapPin className="w-2.5 h-2.5" />
+                    {t("1 of 2 streets located", "1 de 2 calles ubicadas")}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Building year */}
