@@ -1,0 +1,66 @@
+I want a UX refinement pass on the pricing tool. The current version is too tall, too button-heavy, and the amenities section takes up too much screen real estate.
+
+Please make the following changes:
+
+1. AMENITIES UI
+- Replace the long visible amenities list with a compact dropdown / multi-select control
+- It should support selecting multiple amenities without showing a giant vertical checklist
+- Show selected amenities as small chips/tags below the dropdown, with the ability to remove them individually
+- Keep the control compact and searchable if possible
+- Group amenities logically inside the dropdown (pool, view, kitchen, building, etc.) if that is easy to support
+
+Goal:
+Reduce vertical space and make the form feel much tighter.
+
+2. CROSS STREETS / LOCATION LANGUAGE
+The current auto-populate behavior appears to accept landmarks as well as cross streets.
+
+Please confirm how the geocoding/autocomplete currently works.
+- If it supports landmarks, update the label/help text so it is accurate
+- Suggested revised language:
+  "Enter the nearest cross streets or a nearby landmark"
+- If only one landmark is sufficient for geocoding, make that clear in the help text
+- If the current field is really a general location helper rather than strict cross streets, rename it accordingly
+
+Possible label options:
+- "Nearest cross streets or landmark"
+- "Location hint (cross streets or landmark)"
+- "Closest cross streets or nearby landmark"
+
+I do not want language that implies only cross streets if landmarks are also accepted.
+
+3. REDUCE BUTTON HEAVINESS
+This interface currently feels too button-heavy.
+
+Please simplify the action flow:
+- Reduce the total number of visible buttons where possible
+- Merge or demote secondary actions into links, icon buttons, or less prominent controls
+- Keep one clear primary CTA
+- Make secondary actions visually quieter
+- Avoid stacking multiple full-width buttons unless absolutely necessary
+
+Goal:
+The page should feel cleaner, calmer, and more premium. Right now it feels like every section is yelling at me.
+
+4. FORM DENSITY / LAYOUT
+Tighten the layout overall:
+- Reduce unnecessary vertical spacing between fields
+- Use multi-column layout where appropriate on desktop
+- Keep key inputs above the fold as much as possible
+- Collapse optional or advanced controls behind an expandable section if needed
+
+5. GENERAL UI DIRECTION
+The form should feel:
+- compact
+- modern
+- high-signal
+- less cluttered
+- easier to scan
+
+Please prioritize removing visual bulk over adding more controls.
+
+Deliverables:
+1. updated amenities control
+2. revised location field label/help text
+3. simplified action/button hierarchy
+4. tighter overall form layout
