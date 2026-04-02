@@ -48,14 +48,14 @@ jobs:
         run: |
           git diff --quiet artifacts/pv-datastore/public/og/ || echo "changed=true" >> $GITHUB_OUTPUT
 
-      - name: Commit updated OG images
+      - name: Commit and push OG images
         if: steps.diff.outputs.changed == 'true'
         env:
-          TOKEN: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN_NEW }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin "https://Rdolan08:${TOKEN}@github.com/Rdolan08/vallartapulse.git"
+          gh auth setup-git
           git add artifacts/pv-datastore/public/og/
           git commit -m "chore: refresh OG preview images [skip ci]"
           git push origin HEAD:main
