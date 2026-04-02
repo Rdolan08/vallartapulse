@@ -5,6 +5,7 @@ import {
   CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronUp,
   Info, TrendingUp, ArrowRight, Loader2, RefreshCw, RotateCcw,
   Tag, DollarSign, BarChart3, Building, ArrowLeftRight,
+  CalendarClock, Crosshair, Link2, Sparkles,
 } from "lucide-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
@@ -46,6 +47,9 @@ type Neighborhood = "Zona Romantica" | "Amapas";
 interface FormValues {
   neighborhood: Neighborhood;
   buildingName: string;
+  crossStreets: string;      // e.g. "Francisca Rodríguez & Olas Altas"
+  buildingYear: string;      // approximate year built, e.g. "2010"
+  listingUrl: string;        // Airbnb / VRBO / PVRPV link — future AI evaluation
   bedrooms: 1 | 2 | 3 | 4;
   bathrooms: number;
   size: string;       // sqft (imperial) or m² (metric) — display unit
@@ -415,6 +419,9 @@ type Phase = "form" | "prepare_loading" | "prepared" | "comps_loading" | "result
 const DEFAULT_FORM: FormValues = {
   neighborhood: "Zona Romantica",
   buildingName: "",
+  crossStreets: "",
+  buildingYear: "",
+  listingUrl: "",
   bedrooms: 1,
   bathrooms: 1,
   size: "",
@@ -664,6 +671,70 @@ export default function PricingTool() {
               <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.45)" }}>
                 {t("If your condo is part of a known complex, selecting it improves pricing accuracy. If not listed, type it or skip.",
                    "Si el condo pertenece a un complejo conocido, seleccionarlo mejora la precisión. Si no está, escríbelo u omítelo.")}
+              </p>
+            </div>
+
+            {/* Cross streets + Building year */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <FieldLabel optional>
+                  <Crosshair className="inline w-3.5 h-3.5 mr-1" />
+                  {t("Nearest cross streets", "Calles cercanas")}
+                </FieldLabel>
+                <StyledInput
+                  type="text"
+                  placeholder={t("e.g. Francisca Rodríguez & Olas Altas", "e.g. F. Rodríguez & Olas Altas")}
+                  value={form.crossStreets}
+                  onChange={e => setField("crossStreets", e.target.value)}
+                  disabled={isLoading}
+                />
+                <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.45)" }}>
+                  {t("Helps locate the property if no building name is known.", "Ayuda a ubicar la propiedad si no se conoce el edificio.")}
+                </p>
+              </div>
+              <div>
+                <FieldLabel optional>
+                  <CalendarClock className="inline w-3.5 h-3.5 mr-1" />
+                  {t("Approx. year built", "Año de construcción aprox.")}
+                </FieldLabel>
+                <StyledSelect
+                  value={form.buildingYear}
+                  onChange={e => setField("buildingYear", e.target.value)}
+                  disabled={isLoading}
+                  style={{ background: "#163C4A", border: "1px solid rgba(255,255,255,0.08)", color: form.buildingYear ? "rgb(245,247,250)" : "rgba(154,165,177,0.4)" }}
+                >
+                  <option value="">— Unknown —</option>
+                  <option value="2020+">New — 2020 or later</option>
+                  <option value="2015-2019">Recent — 2015–2019</option>
+                  <option value="2010-2014">2010–2014</option>
+                  <option value="2000-2009">2000–2009</option>
+                  <option value="1990-1999">1990–1999</option>
+                  <option value="pre-1990">Older — pre-1990</option>
+                </StyledSelect>
+              </div>
+            </div>
+
+            {/* Listing URL — AI evaluation (future) */}
+            <div>
+              <FieldLabel optional>
+                <Link2 className="inline w-3.5 h-3.5 mr-1" />
+                {t("Listing URL", "URL del Listado")}
+                <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                  style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.25)", color: "#818CF8" }}>
+                  <Sparkles className="w-2.5 h-2.5" />
+                  {t("AI Evaluation — Coming Soon", "Evaluación IA — Próximamente")}
+                </span>
+              </FieldLabel>
+              <StyledInput
+                type="url"
+                placeholder={t("e.g. https://www.airbnb.com/rooms/12345678 or PVRPV link", "e.g. enlace de Airbnb, VRBO o PVRPV")}
+                value={form.listingUrl}
+                onChange={e => setField("listingUrl", e.target.value)}
+                disabled={isLoading}
+              />
+              <p className="text-[11px] mt-1.5" style={{ color: "rgba(154,165,177,0.45)" }}>
+                {t("Paste your Airbnb, VRBO, or PVRPV listing link. A future AI feature will analyze your listing photos and description to refine the estimate.",
+                   "Pega tu enlace de Airbnb, VRBO o PVRPV. Una futura función de IA analizará tus fotos y descripción para refinar la estimación.")}
               </p>
             </div>
 
