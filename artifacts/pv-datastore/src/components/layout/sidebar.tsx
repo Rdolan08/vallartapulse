@@ -118,7 +118,7 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
           className="text-[10px] font-semibold uppercase tracking-[0.14em]"
           style={{ color: "rgba(154, 165, 177, 0.5)" }}
         >
-          {t("Analytics Platform", "Plataforma Analítica")}
+          Puerto Vallarta
         </p>
       </div>
 

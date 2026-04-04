@@ -284,8 +284,10 @@ export default function Dashboard() {
             <StatCard
               titleEn="Crime Index"
               titleEs="Índice de Criminalidad"
-              value={data.crimeIndex.toFixed(1)}
+              value={`${data.crimeIndex.toFixed(1)} / 100`}
               change={data.crimeIndexChange}
+              changeLabelEn="vs last year · lower is safer"
+              changeLabelEs="vs año anterior · menor es más seguro"
               icon={<ShieldAlert className="text-rose-500" />}
               trend="down_good"
               href="/safety"
