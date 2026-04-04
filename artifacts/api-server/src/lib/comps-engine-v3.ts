@@ -3,23 +3,28 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * VallartaPulse Pricing Engine — Version 3
  *
- * Version:   3.1 — April 2026
- * Changes from V3.0:
- *   1. Added finish_quality layer (standard=0, upgraded=+8%, premium=+16%)
- *   2. Added private_plunge_pool layer (+8%)
- *   3. Added large_terrace layer (+5%)
+ * Version:   3.2 — April 2026
+ * Changes from V3.1 — PV market calibration:
+ *   • Rooftop pool:      +12/15% → +15/18%  (scarcest premium feature in ZR/Amapas)
+ *   • Premium finish:    +16%    → +22%      (design-forward units command real premium)
+ *   • Upgraded finish:   +8%     → +10%      (above-average finish meaningfully valued)
+ *   • Private plunge:    +8%     → +12%      (rare in ZR/Amapas buildings)
+ *   • Large terrace:     +5%     → +8%       (indoor-outdoor lifestyle = primary PV driver)
+ *   • Year built factor: halved — renovation & finish quality > raw build year in PV
+ *   • Beach tier cross-adj: capped ±8% — comp selection already controls for proximity;
+ *     generic beach distance must not be over-weighted in ZR/Amapas pricing
  *
  * LAYER ORDER (applied to baseCompMedian sequentially):
  *   1. Base comp median           (from v2 IQR-trimmed comp set)
  *   2. Building anchor            (from v2 building premium factor)
- *   3. Beach tier                 (from v2 neighborhood-aware beach bucket)
+ *   3. Beach tier                 (from v2, capped ±8% — proximity de-emphasized)
  *   4. Seasonal                   (monthly multiplier × event premium)
  *   5. View premium               (ocean / partial / city / garden / none)
  *   6. Rooftop pool               (if rooftop_pool = true)
  *   7. Finish quality             (standard / upgraded / premium)
  *   8. Private plunge pool        (if private_plunge_pool = true)
  *   9. Large terrace              (if large_terrace = true)
- *  10. Quality                    (rating + year built)
+ *  10. Quality                    (rating + year built — year capped, finish takes precedence)
  *  11. Guardrails                 (clamp 0.5×–2.5× base)
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -51,14 +56,14 @@ export type FinishQuality = "standard" | "upgraded" | "premium";
 
 const FINISH_QUALITY_FACTOR: Record<FinishQuality, number> = {
   standard: 0.00,
-  upgraded: 0.08,
-  premium:  0.16,
+  upgraded: 0.10,
+  premium:  0.22,
 };
 
 const FINISH_QUALITY_NOTE: Record<FinishQuality, string> = {
   standard: "Standard interiors — neutral (baseline)",
-  upgraded: "Upgraded interiors: +8% — above-average finish and furnishings",
-  premium:  "Premium/luxury interiors: +16% — design-forward, high-end quality",
+  upgraded: "Upgraded interiors: +10% — above-average finish and furnishings command a real PV premium",
+  premium:  "Premium/luxury interiors: +22% — design-forward, high-end quality; vacationers pay significantly for this in ZR/Amapas",
 };
 
 // ── Year built ranges → quality factor ───────────────────────────────────────
@@ -72,13 +77,16 @@ export type YearBuiltRange =
   | "pre-1990"
   | "";
 
+// In PV, finish quality and renovation matter far more than raw build year.
+// A renovated 2005 building beats an unrenovated 2022 build. These factors
+// are intentionally modest — finish_quality layer already captures interior condition.
 const YEAR_BUILT_FACTOR: Record<string, number> = {
-  "2020+":     0.04,
-  "2015-2019": 0.015,
+  "2020+":     0.02,
+  "2015-2019": 0.008,
   "2010-2014": 0.00,
-  "2000-2009": -0.01,
-  "1990-1999": -0.025,
-  "pre-1990":  -0.05,
+  "2000-2009": -0.005,
+  "1990-1999": -0.012,
+  "pre-1990":  -0.025,
   "":           0.00,
 };
 
@@ -173,9 +181,9 @@ function computeRooftopPoolFactor(
   );
 
   if (hasStandardPool) {
-    return { factor: 0.12, note: "Rooftop pool: +12% premium over standard pool comps" };
+    return { factor: 0.15, note: "Rooftop pool: +15% — scarcest lifestyle premium in PV; comps include standard pool" };
   }
-  return { factor: 0.15, note: "Rooftop pool (no standard pool): +15% premium" };
+  return { factor: 0.18, note: "Rooftop pool: +18% — scarcest lifestyle premium in PV; no standard pool in comp set" };
 }
 
 // ── Main V3 Engine ────────────────────────────────────────────────────────────
@@ -212,9 +220,14 @@ export class CompsEngineV3 {
     const buildingFactor =
       recommendation.buildingAdjustmentPct != null
         ? recommendation.buildingAdjustmentPct / 100 : 0;
-    const beachFactor =
+    // Beach proximity is already controlled for in comp-set selection (V2 beach tier matching).
+    // Applying a large additional cross-tier adjustment over-weights generic beach distance
+    // in ZR/Amapas, where view, finish quality, and lifestyle amenities are the true
+    // demand drivers. Cap at ±8% to prevent double-counting.
+    const rawBeachFactor =
       recommendation.beachTierAdjustmentPct != null
         ? recommendation.beachTierAdjustmentPct / 100 : 0;
+    const beachFactor = Math.max(-0.08, Math.min(0.08, rawBeachFactor));
 
     // ── 3. Apply layers sequentially ─────────────────────────────────────────
     const layers: PricingLayer[] = [];
@@ -321,7 +334,8 @@ export class CompsEngineV3 {
     });
 
     // Layer 7: Private plunge pool
-    const plungeFactor = target.privatePlungePool ? 0.08 : 0;
+    // Rare in ZR/Amapas buildings — scarcity justifies +12% in the PV market.
+    const plungeFactor = target.privatePlungePool ? 0.12 : 0;
     price = price * (1 + plungeFactor);
     const plungePct = parseFloat((plungeFactor * 100).toFixed(1));
     layers.push({
@@ -332,12 +346,13 @@ export class CompsEngineV3 {
       cumulative_price: Math.round(price),
       applied: plungeFactor !== 0,
       note: target.privatePlungePool
-        ? "Private plunge pool: +8% premium — a strong differentiator in the PV market"
+        ? "Private plunge pool: +12% — rare in ZR/Amapas; scarcity drives a strong unit-level premium"
         : "No private pool",
     });
 
     // Layer 8: Large terrace
-    const terraceFactor = target.largeTerrace ? 0.05 : 0;
+    // Indoor-outdoor living is a primary PV lifestyle driver — not a minor convenience.
+    const terraceFactor = target.largeTerrace ? 0.08 : 0;
     price = price * (1 + terraceFactor);
     const terracePct = parseFloat((terraceFactor * 100).toFixed(1));
     layers.push({
@@ -348,7 +363,7 @@ export class CompsEngineV3 {
       cumulative_price: Math.round(price),
       applied: terraceFactor !== 0,
       note: target.largeTerrace
-        ? "Premium terrace / outdoor living: +5% — indoor-outdoor lifestyle is a core PV value driver"
+        ? "Large terrace/outdoor living: +8% — indoor-outdoor lifestyle is a primary value driver in PV"
         : "No premium terrace",
     });
 

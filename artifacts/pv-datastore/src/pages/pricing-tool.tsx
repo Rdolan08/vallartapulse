@@ -205,8 +205,8 @@ const VIEW_OPTIONS: { value: ViewType; label: string; labelEs: string; icon: str
 
 const FINISH_OPTIONS: { value: FinishQuality; label: string; labelEs: string; desc: string; pct: string }[] = [
   { value: "standard", label: "Standard",  labelEs: "Estándar", desc: "Older / basic interiors",         pct: "baseline" },
-  { value: "upgraded", label: "Upgraded",  labelEs: "Mejorado", desc: "Updated, above-average finish",   pct: "+8%"      },
-  { value: "premium",  label: "Premium",   labelEs: "Premium",  desc: "Luxury-level design & furnishings", pct: "+16%"   },
+  { value: "upgraded", label: "Upgraded",  labelEs: "Mejorado", desc: "Updated, above-average finish",   pct: "+10%"     },
+  { value: "premium",  label: "Premium",   labelEs: "Premium",  desc: "Luxury-level design & furnishings", pct: "+22%"   },
 ];
 
 // Secondary amenities — compact checkbox grid
@@ -824,19 +824,19 @@ export default function PricingToolPage() {
                   {
                     key: "rooftopPool" as keyof FormValues,
                     label: t("Rooftop Pool", "Alberca en Azotea"),
-                    desc: "+12–15% — strongest lifestyle premium in PV",
+                    desc: "+15–18% — scarcest lifestyle premium in PV",
                     value: form.rooftopPool,
                   },
                   {
                     key: "privatePlungePool" as keyof FormValues,
                     label: t("Private Pool / Plunge Pool", "Alberca / Jacuzzi Privado"),
-                    desc: "+8% — strong unit-level differentiator",
+                    desc: "+12% — rare in ZR/Amapas; strong unit-level premium",
                     value: form.privatePlungePool,
                   },
                   {
                     key: "largeTerrace" as keyof FormValues,
                     label: t("Large Terrace / Outdoor Living", "Terraza Grande / Sala Exterior"),
-                    desc: "+5% — indoor-outdoor lifestyle is a core PV demand driver",
+                    desc: "+8% — indoor-outdoor lifestyle is the primary PV demand driver",
                     value: form.largeTerrace,
                   },
                   {
