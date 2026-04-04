@@ -4,6 +4,7 @@ import { dataSourcesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { GetDataSourcesResponse, SyncDataSourceParams, SyncDataSourceResponse } from "@workspace/api-zod";
 import { syncSourceById, syncAllSources } from "../lib/source-sync.js";
+import { syncGAPData } from "../lib/gap-scraper.js";
 
 const router: IRouter = Router();
 
@@ -65,6 +66,20 @@ router.post("/sources/:id/sync", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to sync data source");
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /api/sources/sync-gap ────────────────────────────────────────────────
+// Manually trigger the GAP GlobeNewswire scraper to refresh airport_metrics.
+
+router.post("/sources/sync-gap", async (req, res) => {
+  try {
+    req.log.info("Manual GAP sync triggered");
+    const result = await syncGAPData();
+    res.json({ success: true, ...result });
+  } catch (err) {
+    req.log.error({ err }, "GAP sync failed");
+    res.status(500).json({ error: "GAP sync failed", detail: String(err) });
   }
 });
 
