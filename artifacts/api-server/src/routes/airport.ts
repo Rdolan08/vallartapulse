@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { airportMetricsTable } from "@workspace/db/schema";
 import { eq, and, asc } from "drizzle-orm";
-import { computeAirportEstimate } from "../lib/airport-estimator.js";
+import { computeAirportEstimate, computePendingEstimates } from "../lib/airport-estimator.js";
 
 const router: IRouter = Router();
 
@@ -50,35 +50,46 @@ router.get("/metrics/airport", async (req, res) => {
   }
 });
 
+// ── Shared helper: load all monthly rows needed by estimators ────────────────
+async function loadAllMonthRows() {
+  return db
+    .select({
+      year:            airportMetricsTable.year,
+      month:           airportMetricsTable.month,
+      totalPassengers: airportMetricsTable.totalPassengers,
+    })
+    .from(airportMetricsTable)
+    .orderBy(asc(airportMetricsTable.year), asc(airportMetricsTable.month));
+}
+
 // ── GET /api/metrics/airport/estimate ───────────────────────────────────────
-// Returns a lightweight current-month passenger estimate derived from the
-// official GAP monthly totals already stored in airport_metrics.
-//
-// No new data sources, no paid APIs — purely computed from what GAP has published.
-// See lib/airport-estimator.ts for tuning instructions (seasonality, weights,
-// confidence thresholds).
+// Returns the current-month passenger estimate (single object).
 router.get("/metrics/airport/estimate", async (req, res) => {
   try {
-    // Load all official monthly rows — the estimator needs the full history
-    const rows = await db
-      .select({
-        year:            airportMetricsTable.year,
-        month:           airportMetricsTable.month,
-        totalPassengers: airportMetricsTable.totalPassengers,
-      })
-      .from(airportMetricsTable)
-      .orderBy(asc(airportMetricsTable.year), asc(airportMetricsTable.month));
-
+    const rows    = await loadAllMonthRows();
     const estimate = computeAirportEstimate(rows);
-
     if (!estimate) {
       res.status(503).json({ error: "Insufficient historical data to compute estimate" });
       return;
     }
-
     res.json(estimate);
   } catch (err) {
     req.log.error({ err }, "Failed to compute airport estimate");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /api/metrics/airport/estimates ──────────────────────────────────────
+// Returns all months in the current year that lack an official GAP total,
+// ordered chronologically (oldest first).  Typically this will be 1–3 months
+// covering the gap between the latest press release and today.
+router.get("/metrics/airport/estimates", async (req, res) => {
+  try {
+    const rows      = await loadAllMonthRows();
+    const estimates = computePendingEstimates(rows);
+    res.json(estimates);
+  } catch (err) {
+    req.log.error({ err }, "Failed to compute pending airport estimates");
     res.status(500).json({ error: "Internal server error" });
   }
 });
