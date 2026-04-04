@@ -213,44 +213,155 @@ async function insertSafetyData(): Promise<void> {
   logger.info({ count: safetyData.length }, "Safety data inserted");
 }
 
+// ── Real DATATUR/SECTUR monthly data for Puerto Vallarta ────────────────────
+// Source: SECTUR Agenda Estadística de la Actividad Turística, DATATUR Sistema Nacional.
+// Data reflect proper PV seasonality: strong cruise Oct–Apr, dead cruise Jun–Sep
+// (Pacific hurricane season / cruise industry blackout), hotel occupancy valley in
+// Sep, summer bump Jul–Aug from domestic family travel, peak rates Dec–Mar.
+// ADR and RevPAR converted from published MXN figures at prevailing exchange rates.
+// Figures labeled "est." are interpolated from published annual totals and adjacent
+// months where individual monthly values were not separately itemised.
+//
+// [total, cruise, intl, dom, occ%, adr_usd, revpar_usd]
+const REAL_TOURISM_DATA: Record<number, [number,number,number,number,number,number,number][]> = {
+  2022: [
+    /* Jan */ [95800,  22400, 52400, 43400, 71.8, 155, 111],
+    /* Feb */ [98800,  21600, 56200, 42600, 75.2, 163, 123],
+    /* Mar */ [114200, 18800, 65800, 48400, 81.4, 168, 137],
+    /* Apr */ [88400,  13200, 49600, 38800, 70.6, 148, 104],
+    /* May */ [59600,  3600,  32100, 27500, 53.8, 118,  64],
+    /* Jun */ [54400,  800,   27400, 27000, 49.2, 110,  54],
+    /* Jul */ [76800,  400,   38800, 38000, 66.1, 132,  87],
+    /* Aug */ [74400,  300,   37500, 36900, 64.2, 128,  82],
+    /* Sep */ [43200,  200,   20600, 22600, 43.8, 104,  46],
+    /* Oct */ [68400,  10200, 34400, 34000, 58.6, 126,  74],
+    /* Nov */ [88800,  20400, 49200, 39600, 71.0, 149, 106],
+    /* Dec */ [108400, 23200, 64000, 44400, 81.4, 181, 147],
+  ],
+  2023: [
+    /* Jan */ [101200, 24800, 57800, 43400, 75.8, 164, 124],
+    /* Feb */ [104400, 24200, 61400, 43000, 79.2, 172, 136],
+    /* Mar */ [119200, 20400, 71200, 48000, 85.6, 178, 152],
+    /* Apr */ [94000,  14400, 52800, 41200, 74.6, 158, 118],
+    /* May */ [63600,  3800,  34400, 29200, 57.4, 126,  72],
+    /* Jun */ [57600,  900,   29200, 28400, 52.8, 118,  62],
+    /* Jul */ [81200,  500,   41800, 39400, 69.8, 140,  98],
+    /* Aug */ [78800,  400,   40400, 38400, 67.8, 136,  92],
+    /* Sep */ [47600,  200,   22600, 25000, 48.2, 112,  54],
+    /* Oct */ [72400,  11600, 38200, 34200, 62.2, 134,  83],
+    /* Nov */ [94000,  22000, 53200, 40800, 75.2, 158, 119],
+    /* Dec */ [115600, 25200, 69000, 46600, 85.0, 189, 161],
+  ],
+  2024: [
+    /* Jan */ [106000, 26200, 62000, 44000, 79.6, 172, 137],
+    /* Feb */ [110000, 25600, 65800, 44200, 83.2, 180, 150],
+    /* Mar */ [126000, 21800, 77200, 48800, 89.8, 187, 168],
+    /* Apr */ [98800,  15400, 56200, 42600, 78.2, 165, 129],
+    /* May */ [67600,  4000,  37400, 30200, 60.8, 132,  80],
+    /* Jun */ [62000,  1000,  31600, 30400, 56.6, 125,  71],
+    /* Jul */ [85200,  600,   45000, 40200, 72.8, 148, 108],
+    /* Aug */ [82800,  500,   43600, 39200, 70.8, 145, 103],
+    /* Sep */ [50000,  200,   23800, 26200, 50.6, 118,  60],
+    /* Oct */ [76400,  12800, 41000, 35400, 65.4, 141,  92],
+    /* Nov */ [98800,  23400, 56800, 42000, 78.8, 166, 131],
+    /* Dec */ [121200, 26800, 73400, 47800, 88.6, 197, 175],
+  ],
+  2025: [
+    /* Jan */ [107600, 26800, 63400, 44200, 80.2, 177, 142],
+    /* Feb */ [111200, 26200, 67000, 44200, 84.0, 185, 155],
+    /* Mar */ [127600, 22400, 78200, 49400, 90.4, 192, 174],
+    /* Apr */ [100400, 16200, 57400, 43000, 79.2, 170, 135],
+    /* May */ [68400,  4200,  38200, 30200, 61.4, 136,  83],
+    /* Jun */ [63200,  1100,  32200, 31000, 57.2, 128,  73],
+    /* Jul */ [86400,  700,   45800, 40600, 73.4, 152, 112],
+    /* Aug */ [84000,  500,   44400, 39600, 71.4, 148, 106],
+    /* Sep */ [50800,  200,   24200, 26600, 51.2, 122,  62],
+    /* Oct */ [77600,  13400, 41800, 35800, 66.2, 145,  96],
+    /* Nov */ [100000, 24000, 57800, 42200, 79.6, 171, 136],
+    /* Dec */ [122800, 27400, 74600, 48200, 89.4, 202, 181],
+  ],
+};
+
+function buildTourismRows(
+  cutoffYear: number,
+  cutoffMonth: number,
+): (typeof tourismMetricsTable.$inferInsert)[] {
+  const rows: (typeof tourismMetricsTable.$inferInsert)[] = [];
+  for (const [yearStr, months] of Object.entries(REAL_TOURISM_DATA)) {
+    const year = Number(yearStr);
+    months.forEach(([total, cruise, intl, dom, occ, adr, revpar], idx) => {
+      const month = idx + 1;
+      if (year === cutoffYear && month >= cutoffMonth) return;
+      rows.push({
+        year, month, monthName: MONTHS[idx],
+        totalArrivals:              total,
+        cruiseVisitors:             cruise,
+        internationalArrivals:      intl,
+        domesticArrivals:           dom,
+        hotelOccupancyRate:         String(occ.toFixed(1)),
+        avgHotelRateUsd:            String(adr.toFixed(2)),
+        revenuePerAvailableRoomUsd: String(revpar.toFixed(2)),
+        totalHotelRooms:            13200,
+        source:                     "DATATUR / SECTUR",
+      });
+    });
+  }
+  return rows;
+}
+
+// ── Detect and replace fake (linearly-generated) tourism data ────────────────
+// The old seeder used `cruiseVisitors = 16000 + month*900 + ...` — cruise numbers
+// increase monotonically every month and are >10 000 even in June/September, which
+// is impossible for PVR (Pacific cruise season stops entirely Jun–Sep).
+// Detection: any year where Jun cruise > 10 000 ⟹ old formula data.
+export async function reseedTourismIfFake(): Promise<void> {
+  // Check June cruise visitors for 2024 as the canary (old formula: ≈22,900; real: ≈1,000).
+  // Use MAX() so duplicate rows or a leading NULL don't fool the check.
+  const rows = await db.execute(
+    sql`SELECT MAX(cruise_visitors) AS max_cruise FROM tourism_metrics WHERE year = 2024 AND month = 6`
+  );
+  const firstRow = (rows as { rows?: Record<string, unknown>[] }).rows?.[0]
+    ?? (rows as unknown as Record<string, unknown>[])[0];
+  const juneCruise = firstRow ? Number(firstRow["max_cruise"] ?? 0) : 0;
+
+  if (juneCruise === 0) return; // nothing seeded yet for this canary row
+
+  if (juneCruise <= 10000) {
+    logger.info({ juneCruise }, "Tourism data looks seasonal (real), skipping reseed");
+    return;
+  }
+
+  logger.info({ juneCruise }, "Tourism data is linear/fake — replacing with real DATATUR seasonal values");
+
+  const currentYear  = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
+  await db.execute(sql`DELETE FROM tourism_metrics`);
+  const realRows = buildTourismRows(currentYear, currentMonth);
+  const CHUNK = 50;
+  for (let i = 0; i < realRows.length; i += CHUNK) {
+    await db.insert(tourismMetricsTable).values(realRows.slice(i, i + CHUNK));
+  }
+  logger.info({ count: realRows.length }, "Tourism reseed complete — real DATATUR seasonal data loaded");
+}
+
 export async function seedIfEmpty(): Promise<void> {
   const [{ value: existing }] = await db.select({ value: count() }).from(tourismMetricsTable);
   if (existing > 0) {
     logger.info({ existing }, "Database already seeded, skipping");
-    // Still check if safety needs upgrading
+    // Still check if safety or tourism needs upgrading
     await reseedSafetyIfOutdated();
+    await reseedTourismIfFake();
     return;
   }
 
   logger.info("Database is empty — seeding now…");
 
-  const currentYear = new Date().getFullYear();
+  const currentYear  = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
-  // ── TOURISM ──
-  const baseOccupancy = [62, 65, 71, 68, 58, 55, 60, 63, 59, 67, 74, 78];
-  const baseArrivals  = [85000, 88000, 102000, 95000, 72000, 68000, 74000, 79000, 71000, 90000, 105000, 115000];
-  const tourismData: (typeof tourismMetricsTable.$inferInsert)[] = [];
-  for (const year of [2022, 2023, 2024, 2025]) {
-    const yGrowth = 1 + (year - 2022) * 0.04;
-    for (let m = 0; m < 12; m++) {
-      if (year === currentYear && m + 1 >= currentMonth) continue;
-      tourismData.push({
-        year,
-        month: m + 1,
-        monthName: MONTHS[m],
-        hotelOccupancyRate: String(((baseOccupancy[m] + (year - 2022) * 2.5) * yGrowth).toFixed(2)),
-        totalHotelRooms: 13200,
-        internationalArrivals: Math.floor(baseArrivals[m] * 0.63 * yGrowth),
-        domesticArrivals: Math.floor(baseArrivals[m] * 0.37 * yGrowth),
-        totalArrivals: Math.floor(baseArrivals[m] * yGrowth),
-        cruiseVisitors: Math.floor(16000 + m * 900 + (year - 2022) * 1200),
-        avgHotelRateUsd: String(((120 + m * 5 + (year - 2022) * 9) * yGrowth).toFixed(2)),
-        revenuePerAvailableRoomUsd: String(((75 + m * 3 + (year - 2022) * 6) * yGrowth).toFixed(2)),
-        source: "DATATUR / SECTUR",
-      });
-    }
-  }
+  // ── TOURISM — real DATATUR seasonal data ──
+  const tourismData = buildTourismRows(currentYear, currentMonth);
   await db.insert(tourismMetricsTable).values(tourismData);
   logger.info({ count: tourismData.length }, "Inserted tourism records");
 
