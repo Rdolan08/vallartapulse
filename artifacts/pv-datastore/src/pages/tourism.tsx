@@ -11,6 +11,8 @@ import {
   Bar,
   LineChart,
   Line,
+  ComposedChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -18,9 +20,24 @@ import {
   Legend,
 } from "recharts";
 import { formatNumber, formatPercent } from "@/lib/utils";
-import { Building2, ExternalLink, Plane, Ship, Users } from "lucide-react";
+import { Building2, DollarSign, ExternalLink, Plane, Ship, TrendingUp, Users } from "lucide-react";
 
 const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const TOOLTIP_STYLE = {
+  contentStyle: {
+    borderRadius: "12px",
+    border: "none",
+    background: "#163C4A",
+    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.4)",
+  },
+  itemStyle: { color: "#F5F7FA" },
+  labelStyle: { color: "#9AA5B1", fontWeight: 600, marginBottom: 4 },
+};
+
+const GRID = <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />;
+const TICK = { fill: "hsl(var(--muted-foreground))", fontSize: 12 };
+const AXIS_PROPS = { axisLine: false as const, tickLine: false as const };
 
 // Tourism SECTUR/DATATUR data only goes through 2025 — 2026 official figures not yet published
 const YEARS = [...MONTHLY_DATA_YEARS].filter((y) => y <= 2025).reverse();
@@ -32,7 +49,7 @@ export default function Tourism() {
   const { data, isLoading, error } = useGetTourismMetrics({ year });
   const { data: airportRaw } = useGetAirportMetrics();
 
-  // Build year-over-year airport chart data (all years, months as x-axis)
+  // ── Airport chart data (all years, YoY comparison) ───────────────────────
   const airportYears = airportRaw
     ? [...new Set(airportRaw.map((r) => r.year))].sort()
     : [];
@@ -46,24 +63,30 @@ export default function Tourism() {
     return point;
   });
   const airportColors: Record<number, string> = { 2024: "#6366F1", 2025: "#00C2A8", 2026: "#F59E0B" };
+  const latestAirportYear = airportYears.length ? Math.max(...airportYears) : 0;
 
-  // Aggregate totals for KPI row
+  // ── SECTUR KPI aggregates ────────────────────────────────────────────────
   const totals = data?.reduce(
     (acc, row) => ({
       arrivals: acc.arrivals + (row.totalArrivals ?? 0),
-      cruise: acc.cruise + (row.cruiseVisitors ?? 0),
-      intl: acc.intl + (row.internationalArrivals ?? 0),
+      cruise:   acc.cruise   + (row.cruiseVisitors ?? 0),
+      intl:     acc.intl     + (row.internationalArrivals ?? 0),
     }),
     { arrivals: 0, cruise: 0, intl: 0 }
   );
-
-  const avgOccupancy =
-    data && data.length > 0
-      ? data.reduce((sum, r) => sum + r.hotelOccupancyRate, 0) / data.length
-      : null;
+  const avgOccupancy = data && data.length > 0
+    ? data.reduce((s, r) => s + r.hotelOccupancyRate, 0) / data.length
+    : null;
+  const avgAdr = data && data.length > 0
+    ? data.reduce((s, r) => s + (r.avgHotelRateUsd ?? 0), 0) / data.length
+    : null;
+  const avgRevpar = data && data.length > 0
+    ? data.reduce((s, r) => s + (r.revenuePerAvailableRoomUsd ?? 0), 0) / data.length
+    : null;
 
   return (
     <PageWrapper>
+      {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
@@ -71,16 +94,18 @@ export default function Tourism() {
           </h1>
           <p className="text-muted-foreground mt-1">
             {lang === "es"
-              ? "Llegadas, visitantes de cruceros y ocupación de "
-              : "Arrivals, cruise visitors, and occupancy data from "}
-            <a
-              href="https://www.datatur.sectur.gob.mx/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline inline-flex items-center gap-0.5"
-            >
+              ? "Llegadas, cruceros, ocupación hotelera y tarifas · fuentes: "
+              : "Arrivals, cruise traffic, hotel occupancy & rates · sources: "}
+            <a href="https://www.datatur.sectur.gob.mx/" target="_blank" rel="noopener noreferrer"
+               className="text-primary hover:underline inline-flex items-center gap-0.5">
               DATATUR <ExternalLink className="w-3 h-3" />
-            </a>.
+            </a>
+            {" · "}
+            <a href="https://www.globenewswire.com/search/organization/Grupo%20Aeroportuario%20del%20Pac%C3%ADfico"
+               target="_blank" rel="noopener noreferrer"
+               className="text-primary hover:underline inline-flex items-center gap-0.5">
+              GAP <ExternalLink className="w-3 h-3" />
+            </a>
           </p>
         </div>
         <select
@@ -89,22 +114,18 @@ export default function Tourism() {
           className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
         >
           {YEARS.map((y) => (
-            <option key={y} value={y}>
-              {yearLabel(y)}
-            </option>
+            <option key={y} value={y}>{yearLabel(y)}</option>
           ))}
         </select>
       </div>
 
-      {/* Airport passenger traffic — real GAP/GlobeNewswire scraped data, multi-year */}
+      {/* ── Airport traffic (always visible — GAP real data incl. 2026) ──── */}
       {airportRaw && airportRaw.length > 0 && (
         <Card className="glass-card mb-6">
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <CardTitle>
-                  {t("PVR Airport Passenger Traffic", "Tráfico de Pasajeros Aeropuerto PVR")}
-                </CardTitle>
+                <CardTitle>{t("PVR Airport Passenger Traffic", "Tráfico de Pasajeros Aeropuerto PVR")}</CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
                   {t(
                     "Year-over-year monthly comparison · 2026 data through February (official GAP press releases)",
@@ -112,53 +133,38 @@ export default function Tourism() {
                   )}
                 </p>
               </div>
-              <a
-                href="https://www.globenewswire.com/search/organization/Grupo%20Aeroportuario%20del%20Pac%C3%ADfico"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-              >
+              <a href="https://www.globenewswire.com/search/organization/Grupo%20Aeroportuario%20del%20Pac%C3%ADfico"
+                 target="_blank" rel="noopener noreferrer"
+                 className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
                 GAP / GlobeNewswire <ExternalLink className="w-3 h-3" />
               </a>
             </div>
           </CardHeader>
           <CardContent className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={airportChartData}
-                margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis
-                  dataKey="month"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                  dy={8}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+              <LineChart data={airportChartData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+                {GRID}
+                <XAxis dataKey="month" {...AXIS_PROPS} tick={TICK} dy={8} />
+                <YAxis {...AXIS_PROPS} tick={TICK}
                   tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                   domain={[(min: number) => Math.floor(min * 0.92), (max: number) => Math.ceil(max * 1.04)]}
                   width={48}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }}
-                  formatter={(val: number, name: string) => [formatNumber(val), `${name} ${t("passengers", "pasajeros")}`]}
+                  {...TOOLTIP_STYLE}
+                  labelFormatter={(label) => `${label}`}
+                  formatter={(val: number, name: string) => [
+                    formatNumber(val),
+                    `${name} ${t("passengers", "pasajeros")}`,
+                  ]}
                 />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: "16px" }} />
                 {airportYears.map((yr) => (
-                  <Line
-                    key={yr}
-                    type="monotone"
-                    dataKey={String(yr)}
-                    name={String(yr)}
+                  <Line key={yr} type="monotone" dataKey={String(yr)} name={String(yr)}
                     stroke={airportColors[yr] ?? "#9AA5B1"}
-                    strokeWidth={yr === Math.max(...airportYears) ? 2.5 : 1.5}
+                    strokeWidth={yr === latestAirportYear ? 2.5 : 1.5}
                     dot={false}
-                    strokeDasharray={yr === Math.max(...airportYears) ? "5 3" : undefined}
+                    strokeDasharray={yr === latestAirportYear ? "5 3" : undefined}
                     connectNulls={false}
                   />
                 ))}
@@ -168,12 +174,14 @@ export default function Tourism() {
         </Card>
       )}
 
+      {/* ── SECTUR / DATATUR section (year-filtered) ─────────────────────── */}
       {isLoading ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
           </div>
           <Skeleton className="h-96 w-full rounded-2xl" />
+          <Skeleton className="h-72 w-full rounded-2xl" />
           <Skeleton className="h-72 w-full rounded-2xl" />
           <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
@@ -187,191 +195,212 @@ export default function Tourism() {
       ) : data && data.length > 0 ? (
         <div className="space-y-6">
 
-          {/* KPI summary row */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* ── KPI pills ──────────────────────────────────────────────── */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {[
               {
-                label: t("Total Arrivals", "Total de Llegadas"),
+                label: t("Total Arrivals", "Total Llegadas"),
                 value: totals ? formatNumber(totals.arrivals) : "—",
-                icon: <Plane className="w-5 h-5" style={{ color: "#3B82F6" }} />,
-                color: "#3B82F6",
+                sub: t("visitors incl. domestic", "visitantes incl. nacionales"),
+                icon: <Plane className="w-5 h-5" />, color: "#3B82F6",
               },
               {
-                label: t("Cruise Visitors", "Visitantes de Cruceros"),
+                label: t("Cruise Visitors", "Cruceristas"),
                 value: totals ? formatNumber(totals.cruise) : "—",
-                icon: <Ship className="w-5 h-5" style={{ color: "#6366F1" }} />,
-                color: "#6366F1",
+                sub: t("day visitors by sea", "visitantes en crucero"),
+                icon: <Ship className="w-5 h-5" />, color: "#6366F1",
               },
               {
-                label: t("International Arrivals", "Llegadas Internacionales"),
+                label: t("Intl Arrivals", "Llegadas Internacionales"),
                 value: totals ? formatNumber(totals.intl) : "—",
-                icon: <Users className="w-5 h-5" style={{ color: "#00C2A8" }} />,
-                color: "#00C2A8",
+                sub: t("foreign visitors", "visitantes extranjeros"),
+                icon: <Users className="w-5 h-5" />, color: "#00C2A8",
               },
               {
                 label: t("Avg Hotel Occupancy", "Ocupación Hotelera Prom."),
                 value: avgOccupancy != null ? formatPercent(avgOccupancy) : "—",
-                icon: <Building2 className="w-5 h-5" style={{ color: "#F59E0B" }} />,
-                color: "#F59E0B",
+                sub: t("annual avg · DATATUR", "promedio anual · DATATUR"),
+                icon: <Building2 className="w-5 h-5" />, color: "#F59E0B",
               },
-            ].map(({ label, value, icon, color }) => (
-              <div
-                key={label}
-                className="glass-card flex flex-col gap-3"
-                style={{ padding: "1.25rem" }}
-              >
+              {
+                label: t("Avg Daily Rate", "Tarifa Diaria Promedio"),
+                value: avgAdr != null ? `$${avgAdr.toFixed(0)}` : "—",
+                sub: avgRevpar != null
+                  ? `RevPAR $${avgRevpar.toFixed(0)} / ${t("night", "noche")}`
+                  : "USD / night",
+                icon: <DollarSign className="w-5 h-5" />, color: "#00D1FF",
+              },
+            ].map(({ label, value, sub, icon, color }) => (
+              <div key={label} className="glass-card flex flex-col gap-2" style={{ padding: "1.25rem" }}>
                 <div className="flex items-center gap-2">
-                  {icon}
-                  <span
-                    className="text-xs font-semibold uppercase tracking-[0.08em]"
-                    style={{ color: "#9AA5B1" }}
-                  >
+                  <span style={{ color }}>{icon}</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "#9AA5B1" }}>
                     {label}
                   </span>
                 </div>
-                <div
-                  className="text-2xl font-bold"
-                  style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}
-                >
+                <div className="text-2xl font-bold" style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}>
                   {value}
                 </div>
+                <div className="text-xs" style={{ color: "#9AA5B1" }}>{sub}</div>
               </div>
             ))}
           </div>
 
-          {/* Arrivals chart */}
+          {/* ── Tourist Arrivals by Origin ────────────────────────────── */}
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>
-                {t("Tourist Arrivals by Origin", "Llegada de Turistas por Origen")}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>{t("Tourist Arrivals by Origin", "Llegadas de Turistas por Origen")}</CardTitle>
+                <a href="https://www.datatur.sectur.gob.mx/" target="_blank" rel="noopener noreferrer"
+                   className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+                  DATATUR / SECTUR <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </CardHeader>
-            <CardContent className="h-[380px]">
+            <CardContent className="h-[360px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="hsl(var(--border))"
-                  />
-                  <XAxis
-                    dataKey="monthName"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "hsl(var(--muted-foreground))" }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "hsl(var(--muted-foreground))" }}
-                    tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
-                  />
+                <BarChart data={data} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+                  {GRID}
+                  <XAxis dataKey="monthName" {...AXIS_PROPS} tick={TICK} dy={8} />
+                  <YAxis {...AXIS_PROPS} tick={TICK} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={44} />
                   <Tooltip
-                    contentStyle={{
-                      borderRadius: "12px",
-                      border: "none",
-                      boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
-                    }}
-                    cursor={{ fill: "hsl(var(--muted)/0.5)" }}
+                    {...TOOLTIP_STYLE}
+                    cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                    labelFormatter={(label) => `${label} ${year}`}
                     formatter={(val: number, name: string) => [formatNumber(val), name]}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ paddingTop: "20px" }} />
-                  <Bar
-                    dataKey="internationalArrivals"
-                    name={t("International", "Internacional")}
-                    fill="#00C2A8"
-                    radius={[4, 4, 0, 0]}
-                    stackId="a"
-                  />
-                  <Bar
-                    dataKey="domesticArrivals"
-                    name={t("Domestic", "Nacional")}
-                    fill="#F59E0B"
-                    radius={[4, 4, 0, 0]}
-                    stackId="a"
-                  />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: "16px" }} />
+                  <Bar dataKey="internationalArrivals" name={t("International", "Internacional")}
+                    fill="#00C2A8" radius={[3, 3, 0, 0]} stackId="a" />
+                  <Bar dataKey="domesticArrivals" name={t("Domestic", "Nacional")}
+                    fill="#F59E0B" radius={[3, 3, 0, 0]} stackId="a" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Cruise visitors chart */}
+          {/* ── Hotel Performance: Occupancy + ADR ───────────────────── */}
+          <Card className="glass-card">
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <CardTitle>{t("Hotel Performance", "Desempeño Hotelero")}</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t(
+                      "Monthly occupancy rate vs. average daily rate (ADR) in USD",
+                      "Ocupación mensual vs. tarifa diaria promedio (ADR) en USD"
+                    )}
+                  </p>
+                </div>
+                <a href="https://www.datatur.sectur.gob.mx/" target="_blank" rel="noopener noreferrer"
+                   className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+                  DATATUR / SECTUR <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </CardHeader>
+            <CardContent className="h-[320px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={data} margin={{ top: 10, right: 50, left: 10, bottom: 5 }}>
+                  {GRID}
+                  <XAxis dataKey="monthName" {...AXIS_PROPS} tick={TICK} dy={8} />
+                  <YAxis yAxisId="occ" {...AXIS_PROPS} tick={TICK}
+                    tickFormatter={(v) => `${v.toFixed(0)}%`}
+                    domain={[(min: number) => Math.max(0, Math.floor(min - 8)), 100]}
+                    width={44}
+                  />
+                  <YAxis yAxisId="adr" orientation="right" {...AXIS_PROPS} tick={TICK}
+                    tickFormatter={(v) => `$${v.toFixed(0)}`}
+                    domain={[(min: number) => Math.floor(min * 0.88), (max: number) => Math.ceil(max * 1.06)]}
+                    width={52}
+                  />
+                  <Tooltip
+                    {...TOOLTIP_STYLE}
+                    cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                    labelFormatter={(label) => `${label} ${year}`}
+                    formatter={(val: number, name: string) => {
+                      if (name === t("Occupancy Rate", "Tasa de Ocupación")) return [`${val.toFixed(1)}%`, name];
+                      if (name === t("Avg Daily Rate (ADR)", "Tarifa Diaria Prom. (ADR)")) return [`$${val.toFixed(0)}`, name];
+                      if (name === t("RevPAR", "RevPAR")) return [`$${val.toFixed(0)}`, name];
+                      return [val, name];
+                    }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: "16px" }} />
+                  <Area
+                    yAxisId="occ"
+                    type="monotone"
+                    dataKey="hotelOccupancyRate"
+                    name={t("Occupancy Rate", "Tasa de Ocupación")}
+                    stroke="#F59E0B"
+                    fill="#F59E0B"
+                    fillOpacity={0.15}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line
+                    yAxisId="adr"
+                    type="monotone"
+                    dataKey="avgHotelRateUsd"
+                    name={t("Avg Daily Rate (ADR)", "Tarifa Diaria Prom. (ADR)")}
+                    stroke="#00D1FF"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line
+                    yAxisId="adr"
+                    type="monotone"
+                    dataKey="revenuePerAvailableRoomUsd"
+                    name={t("RevPAR", "RevPAR")}
+                    stroke="#6366F1"
+                    strokeWidth={1.5}
+                    dot={false}
+                    strokeDasharray="4 2"
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* ── Cruise Visitors ──────────────────────────────────────── */}
           <Card className="glass-card">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>
-                  {t("Cruise Visitors by Month", "Visitantes de Cruceros por Mes")}
-                </CardTitle>
-                <a
-                  href="https://www.datatur.sectur.gob.mx/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-                >
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" style={{ color: "#6366F1" }} />
+                  <CardTitle>{t("Cruise Visitors by Month", "Visitantes de Crucero por Mes")}</CardTitle>
+                </div>
+                <a href="https://www.datatur.sectur.gob.mx/" target="_blank" rel="noopener noreferrer"
+                   className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
                   DATATUR / SECTUR <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
             </CardHeader>
             <CardContent className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data}
-                  margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="hsl(var(--border))"
-                  />
-                  <XAxis
-                    dataKey="monthName"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "hsl(var(--muted-foreground))" }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "hsl(var(--muted-foreground))" }}
-                    tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
-                  />
+                <BarChart data={data} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+                  {GRID}
+                  <XAxis dataKey="monthName" {...AXIS_PROPS} tick={TICK} dy={8} />
+                  <YAxis {...AXIS_PROPS} tick={TICK} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={44} />
                   <Tooltip
-                    contentStyle={{
-                      borderRadius: "12px",
-                      border: "none",
-                      boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
-                    }}
-                    cursor={{ fill: "hsl(var(--muted)/0.5)" }}
-                    formatter={(val: number) => [formatNumber(val), t("Cruise Visitors", "Visitantes de Crucero")]}
+                    {...TOOLTIP_STYLE}
+                    cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                    labelFormatter={(label) => `${label} ${year}`}
+                    formatter={(val: number, name: string) => [formatNumber(val), name]}
                   />
-                  <Bar
-                    dataKey="cruiseVisitors"
-                    name={t("Cruise Visitors", "Visitantes de Crucero")}
-                    fill="#6366F1"
-                    radius={[4, 4, 0, 0]}
-                  />
+                  <Bar dataKey="cruiseVisitors" name={t("Cruise Visitors", "Visitantes de Crucero")}
+                    fill="#6366F1" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Data table */}
+          {/* ── Monthly data table ───────────────────────────────────── */}
           <Card className="glass-card overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-5 pb-2">
               <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
-                {t("Monthly Data", "Datos Mensuales")}
+                {t("Monthly Data", "Datos Mensuales")} · {year}
               </h3>
-              <a
-                href="https://www.datatur.sectur.gob.mx/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-              >
+              <a href="https://www.datatur.sectur.gob.mx/" target="_blank" rel="noopener noreferrer"
+                 className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
                 {t("Source: DATATUR / SECTUR", "Fuente: DATATUR / SECTUR")} <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -379,43 +408,38 @@ export default function Tourism() {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs uppercase bg-secondary/50 text-muted-foreground border-b">
                   <tr>
-                    <th className="px-6 py-4">{t("Month", "Mes")}</th>
-                    <th className="px-6 py-4">{t("Occupancy", "Ocupación")}</th>
-                    <th className="px-6 py-4">{t("Intl Arrivals", "Llegadas Int.")}</th>
-                    <th className="px-6 py-4">{t("Dom Arrivals", "Llegadas Nac.")}</th>
-                    <th className="px-6 py-4">{t("Total Arrivals", "Total Llegadas")}</th>
-                    <th className="px-6 py-4">{t("Cruise Visitors", "Cruceristas")}</th>
+                    <th className="px-4 py-3">{t("Month", "Mes")}</th>
+                    <th className="px-4 py-3">{t("Occupancy", "Ocupación")}</th>
+                    <th className="px-4 py-3">{t("ADR (USD)", "TAD (USD)")}</th>
+                    <th className="px-4 py-3">{t("RevPAR", "RevPAR")}</th>
+                    <th className="px-4 py-3">{t("Intl Arrivals", "Llegadas Int.")}</th>
+                    <th className="px-4 py-3">{t("Dom Arrivals", "Llegadas Nac.")}</th>
+                    <th className="px-4 py-3">{t("Total", "Total")}</th>
+                    <th className="px-4 py-3">{t("Cruise", "Crucero")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b last:border-0 hover:bg-muted/20 transition-colors"
-                    >
-                      <td className="px-6 py-4 font-medium text-foreground">
-                        {row.monthName}
+                    <tr key={row.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-3 font-medium text-foreground">{row.monthName}</td>
+                      <td className="px-4 py-3">{formatPercent(row.hotelOccupancyRate)}</td>
+                      <td className="px-4 py-3">
+                        {row.avgHotelRateUsd != null ? `$${Number(row.avgHotelRateUsd).toFixed(0)}` : "—"}
                       </td>
-                      <td className="px-6 py-4">
-                        {formatPercent(row.hotelOccupancyRate)}
-                      </td>
-                      <td className="px-6 py-4">
-                        {row.internationalArrivals
-                          ? formatNumber(row.internationalArrivals)
+                      <td className="px-4 py-3">
+                        {row.revenuePerAvailableRoomUsd != null
+                          ? `$${Number(row.revenuePerAvailableRoomUsd).toFixed(0)}`
                           : "—"}
                       </td>
-                      <td className="px-6 py-4">
-                        {row.domesticArrivals
-                          ? formatNumber(row.domesticArrivals)
-                          : "—"}
+                      <td className="px-4 py-3">
+                        {row.internationalArrivals ? formatNumber(row.internationalArrivals) : "—"}
                       </td>
-                      <td className="px-6 py-4 font-semibold">
-                        {formatNumber(row.totalArrivals)}
+                      <td className="px-4 py-3">
+                        {row.domesticArrivals ? formatNumber(row.domesticArrivals) : "—"}
                       </td>
-                      <td className="px-6 py-4">
-                        {row.cruiseVisitors != null
-                          ? formatNumber(row.cruiseVisitors)
-                          : "—"}
+                      <td className="px-4 py-3 font-semibold">{formatNumber(row.totalArrivals)}</td>
+                      <td className="px-4 py-3">
+                        {row.cruiseVisitors != null ? formatNumber(row.cruiseVisitors) : "—"}
                       </td>
                     </tr>
                   ))}
@@ -423,6 +447,7 @@ export default function Tourism() {
               </table>
             </div>
           </Card>
+
         </div>
       ) : (
         <div className="p-12 text-center text-muted-foreground">
