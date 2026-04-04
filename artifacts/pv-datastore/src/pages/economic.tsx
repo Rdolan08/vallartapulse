@@ -99,9 +99,9 @@ export default function Economic() {
   const tourism     = latest(rows, "tourism_gdp_share_pct");
   const informality = latest(rows, "informality_rate_pct");
 
-  // pop growth 2000→2020
+  // pop growth 2000→2025 (matches the displayed 2025 estimate headline figure)
   const pop2000 = rows.find((r) => r.indicator === "population" && r.year === 2000)?.value ?? null;
-  const popGrowthTotal = pop2020 && pop2000 ? (((pop2020 - pop2000) / pop2000) * 100).toFixed(0) : null;
+  const popGrowthTotal = population && pop2000 ? (((population - pop2000) / pop2000) * 100).toFixed(0) : null;
 
   return (
     <PageWrapper>
@@ -459,7 +459,7 @@ export default function Economic() {
             <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider mb-2">
               {t("Data Notes", "Notas de Datos")}
             </p>
-            <p>• {t("Population figures from INEGI census/conteo years (1970, 1980, 1990, 1995, 2000, 2005, 2010, 2015, 2020) are exact as published. 2025 is CONAPO projection. PVR grew 12× in 55 years — from a fishing village of 24K to a metro area of 292K+.", "Las cifras de población de censos/conteos INEGI (1970–2020) son exactas. 2025 es proyección CONAPO. PVR creció 12× en 55 años.")}</p>
+            <p>• {t("Population figures from INEGI census/conteo years (1970, 1980, 1990, 1995, 2000, 2005, 2010, 2015, 2020) are exact as published. 2025 is CONAPO projection. PVR grew 12× in 55 years — from a fishing village of 24K to a metro area of 320K+ (2025 est.).", "Las cifras de población de censos/conteos INEGI (1970–2020) son exactas. 2025 es proyección CONAPO. PVR creció 12× en 55 años.")}</p>
             <p>• {t("Formal employment figures are estimates derived from IMSS published municipal reports; 2020–2024 values carry ±3% margin.", "El empleo formal son estimaciones de informes municipales del IMSS; 2020–2024 tienen margen de ±3%.")}</p>
             <p>• {t("Sector employment shares are from INEGI Censo Económico 2019 (78,447 workers across 17,786 units).", "Las participaciones sectoriales provienen del Censo Económico 2019 del INEGI.")}</p>
             <p>• {t("National minimum wage figures (CONASAMI) are exact. Average formal wage is estimated at ~2.1–2.3× minimum for PVR's tourism workforce.", "El salario mínimo (CONASAMI) es exacto. El salario formal promedio es estimado en ~2.1–2.3× el mínimo.")}</p>
