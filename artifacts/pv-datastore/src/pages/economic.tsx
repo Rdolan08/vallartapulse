@@ -206,10 +206,13 @@ export default function Economic() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-base font-semibold">
-                      {t("Population Growth 2000–2025", "Crecimiento Poblacional 2000–2025")}
+                      {t("Population Growth 1970–2025", "Crecimiento Poblacional 1970–2025")}
                     </CardTitle>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {t("Census counts (exact) + CONAPO 2025 projection", "Censos exactos + proyección CONAPO 2025")}
+                      {t(
+                        "INEGI decennial censuses + intercensal counts (exact) · CONAPO 2025 projection · 12× growth in 55 years",
+                        "Censos decenales INEGI + conteos intercensales (exactos) · proyección CONAPO 2025 · crecimiento 12× en 55 años"
+                      )}
                     </p>
                   </div>
                   <a href="https://www.inegi.org.mx/programas/ccpv/2020/" target="_blank" rel="noopener noreferrer"
@@ -219,7 +222,7 @@ export default function Economic() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={240}>
+                <ResponsiveContainer width="100%" height={260}>
                   <AreaChart data={popData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
                     <defs>
                       <linearGradient id="popGrad" x1="0" y1="0" x2="0" y2="1">
@@ -234,12 +237,30 @@ export default function Economic() {
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                       tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                     <Tooltip contentStyle={TOOLTIP_STYLE}
-                      formatter={(v: number) => [formatNumber(v), t("Population", "Población")]} />
+                      formatter={(v: number, _: string, entry: { payload?: { label?: string } }) => [
+                        formatNumber(v),
+                        entry?.payload?.label?.endsWith("E")
+                          ? t("Population (est.)", "Población (est.)")
+                          : t("Population (exact)", "Población (exacto)")
+                      ]} />
                     <Area type="monotone" dataKey="population" stroke="#00C2A8" strokeWidth={2.5}
                       fill="url(#popGrad)" dot={{ r: 4, fill: "#00C2A8", strokeWidth: 0 }}
                       activeDot={{ r: 6 }} />
                   </AreaChart>
                 </ResponsiveContainer>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+                  {[
+                    { year: "1970", val: "24,155", note: t("Fishing town", "Villa pesquera") },
+                    { year: "1990", val: "111,457", note: t("Tourism boom", "Boom turístico") },
+                    { year: "2020", val: "292,192", note: t("INEGI Census", "Censo INEGI") },
+                  ].map(({ year, val, note }) => (
+                    <div key={year} className="rounded-lg bg-muted/20 px-2 py-1.5">
+                      <div className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">{year}</div>
+                      <div className="text-sm font-bold text-foreground">{val}</div>
+                      <div className="text-[10px] text-muted-foreground/70">{note}</div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
@@ -438,7 +459,7 @@ export default function Economic() {
             <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider mb-2">
               {t("Data Notes", "Notas de Datos")}
             </p>
-            <p>• {t("Population figures from INEGI census years (2000, 2005, 2010, 2015, 2020) are exact as published. 2025 is CONAPO projection.", "Las cifras de población de años censales del INEGI son exactas. 2025 es proyección CONAPO.")}</p>
+            <p>• {t("Population figures from INEGI census/conteo years (1970, 1980, 1990, 1995, 2000, 2005, 2010, 2015, 2020) are exact as published. 2025 is CONAPO projection. PVR grew 12× in 55 years — from a fishing village of 24K to a metro area of 292K+.", "Las cifras de población de censos/conteos INEGI (1970–2020) son exactas. 2025 es proyección CONAPO. PVR creció 12× en 55 años.")}</p>
             <p>• {t("Formal employment figures are estimates derived from IMSS published municipal reports; 2020–2024 values carry ±3% margin.", "El empleo formal son estimaciones de informes municipales del IMSS; 2020–2024 tienen margen de ±3%.")}</p>
             <p>• {t("Sector employment shares are from INEGI Censo Económico 2019 (78,447 workers across 17,786 units).", "Las participaciones sectoriales provienen del Censo Económico 2019 del INEGI.")}</p>
             <p>• {t("National minimum wage figures (CONASAMI) are exact. Average formal wage is estimated at ~2.1–2.3× minimum for PVR's tourism workforce.", "El salario mínimo (CONASAMI) es exacto. El salario formal promedio es estimado en ~2.1–2.3× el mínimo.")}</p>
