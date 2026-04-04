@@ -57,12 +57,31 @@ export default function Tourism() {
   const airportYears = airportRaw
     ? [...new Set(airportRaw.map((r) => r.year))].sort()
     : [];
+  // Last official month for 2026 — used as the overlap / join point between solid and dotted lines
+  const official2026Rows = airportRaw?.filter((r) => r.year === 2026) ?? [];
+  const lastOfficial2026Month = official2026Rows.length
+    ? Math.max(...official2026Rows.map((r) => r.month))
+    : 0;
+  // Pending estimates for 2026 (from the existing hook data)
+  const estimated2026 = pendingEstimates?.filter((e) => e.year === 2026) ?? [];
+
   const airportChartData = MONTH_ABBR.map((abbr, idx) => {
     const month = idx + 1;
     const point: Record<string, number | string> = { month: abbr };
     for (const yr of airportYears) {
       const row = airportRaw?.find((r) => r.year === yr && r.month === month);
       if (row) point[String(yr)] = row.totalPassengers;
+    }
+    // ── 2026 estimate overlay (dotted) ─────────────────────────────────────
+    // Include the last official month as the starting overlap so the dotted
+    // line visually connects to the end of the solid line.
+    if (estimated2026.length > 0) {
+      if (month === lastOfficial2026Month) {
+        const overlapRow = official2026Rows.find((r) => r.month === month);
+        if (overlapRow) point["2026est"] = overlapRow.totalPassengers;
+      }
+      const estRow = estimated2026.find((e) => e.month === month);
+      if (estRow) point["2026est"] = estRow.projectedFullMonthPassengers;
     }
     return point;
   });
@@ -258,8 +277,8 @@ export default function Tourism() {
                 <CardTitle>{t("PVR Airport Passenger Traffic", "Tráfico de Pasajeros Aeropuerto PVR")}</CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">
                   {t(
-                    "Year-over-year monthly comparison · 2026 data through February (official GAP press releases)",
-                    "Comparativo mensual interanual · datos 2026 hasta febrero (comunicados oficiales GAP)"
+                    "Year-over-year monthly comparison · solid = official GAP data · dotted = passenger estimate",
+                    "Comparativo mensual interanual · sólido = datos oficiales GAP · punteado = estimación de pasajeros"
                   )}
                 </p>
               </div>
@@ -283,10 +302,12 @@ export default function Tourism() {
                 <Tooltip
                   {...TOOLTIP_STYLE}
                   labelFormatter={(label) => `${label}`}
-                  formatter={(val: number, name: string) => [
-                    formatNumber(val),
-                    `${name} ${t("passengers", "pasajeros")}`,
-                  ]}
+                  formatter={(val: number, name: string) => {
+                    const label = name === "2026est"
+                      ? `2026 (${t("est.", "est.")}) ${t("passengers", "pasajeros")}`
+                      : `${name} ${t("passengers", "pasajeros")}`;
+                    return [formatNumber(val), label];
+                  }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: "16px" }} />
                 {airportYears.map((yr) => (
@@ -294,10 +315,22 @@ export default function Tourism() {
                     stroke={airportColors[yr] ?? "#9AA5B1"}
                     strokeWidth={yr === latestAirportYear ? 2.5 : 1.5}
                     dot={false}
-                    strokeDasharray={yr === latestAirportYear ? "5 3" : undefined}
                     connectNulls={false}
                   />
                 ))}
+                {/* Dotted overlay for estimated 2026 months — same amber color as the solid 2026 line */}
+                {estimated2026.length > 0 && (
+                  <Line
+                    type="monotone"
+                    dataKey="2026est"
+                    name={t("2026 (est.)", "2026 (est.)")}
+                    stroke={airportColors[2026] ?? "#F59E0B"}
+                    strokeWidth={2.5}
+                    strokeDasharray="5 4"
+                    dot={false}
+                    connectNulls={false}
+                  />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
