@@ -4,7 +4,7 @@ import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ThermometerSun, Droplets, Sun, Waves, Wind } from "lucide-react";
+import { ThermometerSun, Droplets, ExternalLink, Sun, Waves, Wind } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar,
 } from "recharts";
@@ -17,7 +17,7 @@ function toF(c: number) { return Math.round((c * 9/5 + 32) * 10) / 10; }
 function toIn(mm: number) { return Math.round((mm / 25.4) * 100) / 100; }
 
 export default function Weather() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
   const [unit, setUnit] = useState<"metric" | "imperial">("imperial");
 
@@ -56,7 +56,24 @@ export default function Weather() {
             {t("Weather & Climate", "Clima y Tiempo")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {t("Historical and seasonal climate data from NOAA / CONAGUA.", "Datos climáticos históricos y estacionales de NOAA / CONAGUA.")}
+            {lang === "es" ? "Datos climáticos históricos y estacionales de " : "Historical and seasonal climate data from "}
+            <a
+              href="https://www.ncei.noaa.gov/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline inline-flex items-center gap-0.5"
+            >
+              NOAA <ExternalLink className="w-3 h-3" />
+            </a>
+            {" / "}
+            <a
+              href="https://smn.conagua.gob.mx/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline inline-flex items-center gap-0.5"
+            >
+              CONAGUA <ExternalLink className="w-3 h-3" />
+            </a>.
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">

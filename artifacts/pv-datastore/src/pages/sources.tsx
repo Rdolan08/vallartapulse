@@ -128,8 +128,8 @@ export default function Sources() {
         <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
         <span>
           {t(
-            "Sources backed by live database tables (Airbnb/VRBO, Tourism, Weather, Economic) recount records automatically on sync. Government and satellite sources (Transparencia PV, NASA, INEGI, OSM) refresh their timestamp — records update when new data is manually uploaded or a scraper pipeline runs.",
-            "Las fuentes vinculadas a tablas en vivo (Airbnb/VRBO, Turismo, Clima, Económico) recontan registros automáticamente. Las fuentes gubernamentales y satelitales actualizan su marca de tiempo — los registros se actualizan con carga manual o pipeline de scraper."
+            "Sources backed by live database tables (DATATUR, SESNSP, GAP Airport, Airbnb/VRBO, Weather, Economic) recount records automatically on sync. Government and satellite sources (Transparencia PV, NASA, INEGI, OSM) refresh their timestamp — records update when new data is manually uploaded or a scraper pipeline runs.",
+            "Las fuentes vinculadas a tablas en vivo (DATATUR, SESNSP, GAP Aeropuerto, Airbnb/VRBO, Clima, Económico) recontan registros automáticamente. Las fuentes gubernamentales y satelitales actualizan su marca de tiempo — los registros se actualizan con carga manual o pipeline de scraper."
           )}
         </span>
       </div>

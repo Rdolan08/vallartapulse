@@ -5,6 +5,7 @@ import { useLanguage } from "@/contexts/language-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatNumber } from "@/lib/utils";
+import { ExternalLink } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, LineChart, Line,
@@ -104,10 +105,16 @@ export default function Safety() {
             {t("Safety & Crime", "Seguridad y Crimen")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {t(
-              "Municipal incident data from SESNSP — Puerto Vallarta, Jalisco.",
-              "Datos de incidencia delictiva municipal de SESNSP — Puerto Vallarta, Jalisco."
-            )}
+            {lang === "es" ? "Datos de incidencia delictiva municipal de " : "Municipal incident data from "}
+            <a
+              href="https://www.gob.mx/sesnsp/acciones-y-programas/datos-abiertos-de-incidencia-delictiva"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline inline-flex items-center gap-0.5"
+            >
+              SESNSP <ExternalLink className="w-3 h-3" />
+            </a>
+            {" "}— Puerto Vallarta, Jalisco.
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -337,10 +344,20 @@ export default function Safety() {
 
           {/* Source note */}
           <p className="text-xs text-muted-foreground text-center pb-2">
-            {t(
-              "Source: SESNSP — Incidencia Delictiva del Fuero Común, Puerto Vallarta municipality. Population: 297,383 (INEGI 2020).",
-              "Fuente: SESNSP — Incidencia Delictiva del Fuero Común, municipio de Puerto Vallarta. Población: 297,383 (INEGI 2020)."
-            )}
+            {lang === "es"
+              ? "Fuente: "
+              : "Source: "}
+            <a
+              href="https://www.gob.mx/sesnsp/acciones-y-programas/datos-abiertos-de-incidencia-delictiva"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline inline-flex items-center gap-0.5"
+            >
+              SESNSP <ExternalLink className="w-3 h-3" />
+            </a>
+            {lang === "es"
+              ? " — Incidencia Delictiva del Fuero Común, municipio de Puerto Vallarta. Población: 297,383 (INEGI 2020)."
+              : " — Incidencia Delictiva del Fuero Común, Puerto Vallarta municipality. Population: 297,383 (INEGI 2020)."}
           </p>
         </div>
       ) : (
