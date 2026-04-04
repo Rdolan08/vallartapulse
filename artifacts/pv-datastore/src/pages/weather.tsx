@@ -10,6 +10,7 @@ import {
 } from "recharts";
 
 import { MONTHLY_DATA_YEARS, LAST_COMPLETED_YEAR, yearLabel } from "@/lib/data-availability";
+import { CHART_TOOLTIP, TOOLTIP_CURSOR } from "@/lib/chart-theme";
 
 const WEATHER_YEARS = [2020, 2021, ...MONTHLY_DATA_YEARS].filter((v, i, a) => a.indexOf(v) === i).reverse();
 
@@ -136,7 +137,7 @@ export default function Weather() {
                       (max: number) => Math.ceil(max  + (unit === "metric" ? 2 : 4)),
                     ]}
                   />
-                  <Tooltip formatter={(v: number, name: string) => [`${v}${tempLabel}`, name]} />
+                  <Tooltip {...CHART_TOOLTIP} formatter={(v: number, name: string) => [`${v}${tempLabel}`, name]} />
                   <Legend />
                   <Line type="monotone" dataKey={t("Avg Temp", "Temp. Prom")} stroke="#00C2A8" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey={t("Sea Temp", "Temp. Mar")} stroke="#00D1FF" strokeWidth={2} dot={false} strokeDasharray="4 2" />
@@ -156,7 +157,7 @@ export default function Weather() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis unit={precipLabel} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v: number, name: string) => [`${v}${precipLabel}`, name]} />
+                  <Tooltip {...CHART_TOOLTIP} cursor={TOOLTIP_CURSOR} formatter={(v: number, name: string) => [`${v}${precipLabel}`, name]} />
                   <Bar dataKey={t("Rainfall", "Lluvia")} fill="#3B82F6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

@@ -20,22 +20,12 @@ import {
   Legend,
 } from "recharts";
 import { formatNumber, formatPercent } from "@/lib/utils";
+import { CHART_TOOLTIP, TOOLTIP_CURSOR } from "@/lib/chart-theme";
 import { Building2, DollarSign, ExternalLink, Plane, Ship, TrendingUp, Users } from "lucide-react";
 
 const MONTH_NAMES_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
-const TOOLTIP_STYLE = {
-  contentStyle: {
-    borderRadius: "12px",
-    border: "none",
-    background: "#163C4A",
-    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.4)",
-  },
-  itemStyle: { color: "#F5F7FA" },
-  labelStyle: { color: "#9AA5B1", fontWeight: 600, marginBottom: 4 },
-};
 
 const GRID = <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />;
 const TICK = { fill: "hsl(var(--muted-foreground))", fontSize: 12 };
@@ -300,7 +290,8 @@ export default function Tourism() {
                   width={48}
                 />
                 <Tooltip
-                  {...TOOLTIP_STYLE}
+                  {...CHART_TOOLTIP}
+                  cursor={TOOLTIP_CURSOR}
                   labelFormatter={(label) => `${label}`}
                   formatter={(val: number, name: string) => {
                     const label = name === "2026est"
@@ -428,7 +419,8 @@ export default function Tourism() {
                       <XAxis dataKey="label" {...AXIS_PROPS} tick={{ ...TICK, fontSize: 11 }} dy={6} />
                       <YAxis {...AXIS_PROPS} tick={{ ...TICK, fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={36} />
                       <Tooltip
-                        {...TOOLTIP_STYLE}
+                        {...CHART_TOOLTIP}
+                        cursor={TOOLTIP_CURSOR}
                         formatter={(val: number, name: string) => [formatNumber(val), name]}
                         labelFormatter={(label) => `${t("Week of", "Semana del")} ${label}`}
                       />
@@ -588,8 +580,8 @@ export default function Tourism() {
                   <XAxis dataKey="monthName" {...AXIS_PROPS} tick={TICK} dy={8} />
                   <YAxis {...AXIS_PROPS} tick={TICK} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={44} />
                   <Tooltip
-                    {...TOOLTIP_STYLE}
-                    cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                    {...CHART_TOOLTIP}
+                    cursor={TOOLTIP_CURSOR}
                     labelFormatter={(label) => `${label} ${year}`}
                     formatter={(val: number, name: string) => [formatNumber(val), name]}
                   />
@@ -638,8 +630,8 @@ export default function Tourism() {
                     width={52}
                   />
                   <Tooltip
-                    {...TOOLTIP_STYLE}
-                    cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                    {...CHART_TOOLTIP}
+                    cursor={TOOLTIP_CURSOR}
                     labelFormatter={(label) => `${label} ${year}`}
                     formatter={(val: number, name: string) => {
                       if (name === t("Occupancy Rate", "Tasa de Ocupación")) return [`${val.toFixed(1)}%`, name];
@@ -694,8 +686,8 @@ export default function Tourism() {
                   <XAxis dataKey="monthName" {...AXIS_PROPS} tick={TICK} dy={8} />
                   <YAxis {...AXIS_PROPS} tick={TICK} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={44} />
                   <Tooltip
-                    {...TOOLTIP_STYLE}
-                    cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                    {...CHART_TOOLTIP}
+                    cursor={TOOLTIP_CURSOR}
                     labelFormatter={(label) => `${label} ${year}`}
                     formatter={(val: number, name: string) => [formatNumber(val), name]}
                   />

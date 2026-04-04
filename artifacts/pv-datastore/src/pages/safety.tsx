@@ -12,6 +12,7 @@ import {
 } from "recharts";
 
 import { MONTHLY_DATA_YEARS, LAST_COMPLETED_YEAR, yearLabel } from "@/lib/data-availability";
+import { CHART_TOOLTIP, TOOLTIP_CURSOR } from "@/lib/chart-theme";
 
 const YEARS = [...MONTHLY_DATA_YEARS].reverse();
 
@@ -236,8 +237,7 @@ export default function Safety() {
                   <XAxis dataKey="name" tick={{ fontSize: 12, fill: "rgba(245,247,250,0.5)" }} />
                   <YAxis tick={{ fontSize: 12, fill: "rgba(245,247,250,0.5)" }} />
                   <Tooltip
-                    contentStyle={{ background: "#163C4A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }}
-                    labelStyle={{ color: "#F5F7FA" }}
+                    {...CHART_TOOLTIP}
                     formatter={(v: number) => [formatNumber(v), t("Total Incidents", "Total Incidentes")]}
                   />
                   <Line type="monotone" dataKey="total" stroke="#ef4444" strokeWidth={2} dot={false}
@@ -268,8 +268,8 @@ export default function Safety() {
                   <XAxis type="number" tick={{ fontSize: 11, fill: "rgba(245,247,250,0.5)" }} />
                   <YAxis type="category" dataKey="label" width={160} tick={{ fontSize: 11, fill: "rgba(245,247,250,0.65)" }} />
                   <Tooltip
-                    contentStyle={{ background: "#163C4A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }}
-                    labelStyle={{ color: "#F5F7FA" }}
+                    {...CHART_TOOLTIP}
+                    cursor={TOOLTIP_CURSOR}
                     formatter={(v) => [formatNumber(v as number), t("Incidents", "Incidentes")]}
                   />
                   <Bar dataKey="total" radius={[0, 4, 4, 0]}
