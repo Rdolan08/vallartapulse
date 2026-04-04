@@ -11,6 +11,7 @@ import {
 } from "recharts";
 
 import { MONTHLY_DATA_YEARS, LAST_COMPLETED_YEAR, yearLabel } from "@/lib/data-availability";
+import { CHART_TOOLTIP, TOOLTIP_CURSOR } from "@/lib/chart-theme";
 
 const YEARS = [...MONTHLY_DATA_YEARS].reverse();
 
@@ -143,7 +144,7 @@ export default function RentalMarket() {
                       (max: number) => Math.ceil(max * 1.06),
                     ]}
                   />
-                  <Tooltip formatter={(v: number, name: string) => [`$${Number(v).toLocaleString()}`, name]} />
+                  <Tooltip {...CHART_TOOLTIP} formatter={(v: number, name: string) => [`$${Number(v).toLocaleString()}`, name]} />
                   <Legend />
                   <Line type="monotone" dataKey={t("Avg Rate", "Tarifa Prom.")} stroke="#00C2A8" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey={t("Median Rate", "Tarifa Mediana")} stroke="#00D1FF" strokeWidth={2} dot={false} strokeDasharray="4 2" />
@@ -171,7 +172,7 @@ export default function RentalMarket() {
                         100,
                       ]}
                     />
-                    <Tooltip formatter={(v: number, name: string) => [`${v}%`, name]} />
+                    <Tooltip {...CHART_TOOLTIP} cursor={TOOLTIP_CURSOR} formatter={(v: number, name: string) => [`${v}%`, name]} />
                     <Bar dataKey={t("Occupancy %", "Ocupación %")} fill="#F59E0B" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -188,7 +189,7 @@ export default function RentalMarket() {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip formatter={(v: number, name: string) => [formatNumber(v), name]} />
+                    <Tooltip {...CHART_TOOLTIP} cursor={TOOLTIP_CURSOR} formatter={(v: number, name: string) => [formatNumber(v), name]} />
                     <Bar dataKey={t("Listings", "Anuncios")} fill="#6366F1" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>

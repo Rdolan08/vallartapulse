@@ -31,6 +31,7 @@ import {
   Tooltip as RechartsTooltip,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CHART_TOOLTIP, TOOLTIP_CURSOR } from "@/lib/chart-theme";
 
 import {
   CURRENT_YEAR,
@@ -344,11 +345,8 @@ export default function Dashboard() {
                       domain={[40, 100]}
                     />
                     <RechartsTooltip
-                      contentStyle={{
-                        borderRadius: "12px",
-                        border: "none",
-                        boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
-                      }}
+                      {...CHART_TOOLTIP}
+                      cursor={TOOLTIP_CURSOR}
                       formatter={(val: number, name: string) => [
                         `${val.toFixed(1)}%`,
                         t("Occupancy", "Ocupación"),
@@ -425,11 +423,8 @@ export default function Dashboard() {
                       ]}
                     />
                     <RechartsTooltip
-                      contentStyle={{
-                        borderRadius: "12px",
-                        border: "none",
-                        boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
-                      }}
+                      {...CHART_TOOLTIP}
+                      cursor={TOOLTIP_CURSOR}
                       formatter={(val: number) => [
                         `$${val.toLocaleString()}`,
                         t("Avg Nightly Rate", "Tarifa Promedio por Noche"),
