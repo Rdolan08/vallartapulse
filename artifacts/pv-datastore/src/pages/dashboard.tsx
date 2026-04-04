@@ -417,6 +417,10 @@ export default function Dashboard() {
                       tickLine={false}
                       tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                       tickFormatter={(v) => `$${v.toLocaleString()}`}
+                      domain={[
+                        (min: number) => Math.floor(min * 0.88),
+                        (max: number) => Math.ceil(max * 1.06),
+                      ]}
                     />
                     <RechartsTooltip
                       contentStyle={{

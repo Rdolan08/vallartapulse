@@ -135,7 +135,14 @@ export default function RentalMarket() {
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(v) => `$${v}`}
+                    domain={[
+                      (min: number) => Math.floor(min * 0.88),
+                      (max: number) => Math.ceil(max * 1.06),
+                    ]}
+                  />
                   <Tooltip formatter={(v: number, name: string) => [`$${Number(v).toLocaleString()}`, name]} />
                   <Legend />
                   <Line type="monotone" dataKey={t("Avg Rate", "Tarifa Prom.")} stroke="#00C2A8" strokeWidth={2} dot={false} />
@@ -156,7 +163,14 @@ export default function RentalMarket() {
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis unit="%" tick={{ fontSize: 12 }} />
+                    <YAxis
+                      unit="%"
+                      tick={{ fontSize: 12 }}
+                      domain={[
+                        (min: number) => Math.max(0, Math.floor(min - 10)),
+                        100,
+                      ]}
+                    />
                     <Tooltip formatter={(v: number, name: string) => [`${v}%`, name]} />
                     <Bar dataKey={t("Occupancy %", "Ocupación %")} fill="#F59E0B" radius={[4, 4, 0, 0]} />
                   </BarChart>
