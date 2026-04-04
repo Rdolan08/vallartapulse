@@ -11,6 +11,7 @@ import compsRouter from "./comps";
 import rentalHelpersRouter from "./rental-helpers";
 import ingestRouter from "./ingest";
 import contactRouter from "./contact";
+import airportRouter from "./airport";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,7 @@ router.use(sourcesRouter);
 router.use(rentalHelpersRouter); // must be before compsRouter (comps/prepare vs comps)
 router.use(compsRouter);
 router.use(ingestRouter);
+router.use(airportRouter);
 router.use("/contact", contactRouter);
 
 export default router;
