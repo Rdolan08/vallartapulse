@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import {
   useGetDashboardSummary,
-  useGetTourismMetrics,
+  useGetAirportMetrics,
   useGetRentalMarketMetrics,
 } from "@workspace/api-client-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
@@ -25,6 +25,9 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
+  BarChart,
+  Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -65,16 +68,16 @@ export default function Dashboard() {
   const { data, isLoading, error } = useGetDashboardSummary({ year, month });
 
   // Real chart data for the selected year
-  const { data: tourismYear } = useGetTourismMetrics({ year });
+  const { data: airportYear } = useGetAirportMetrics({ year });
   const { data: rentalYear } = useGetRentalMarketMetrics({ year });
 
-  // Build occupancy trend for selected year
-  const occupancyTrend = (tourismYear ?? [])
+  // Build airport passengers trend — official GAP bars (teal) + estimate bars (amber)
+  const airportTrend = (airportYear ?? [])
     .sort((a, b) => a.month - b.month)
     .map((row) => ({
       month: MONTH_SHORT[row.month - 1],
-      occupancy: Number(row.hotelOccupancyRate.toFixed(1)),
-      arrivals: row.totalArrivals,
+      passengers: row.totalPassengers,
+      isEstimate: row.source.toLowerCase().includes("est"),
     }));
 
   // Build avg nightly rate trend: average across neighborhoods per month
@@ -297,12 +300,12 @@ export default function Dashboard() {
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Occupancy trend for selected year */}
+            {/* PVR Airport Passengers — current year */}
             <Card className="glass-card">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="font-display">
-                    {t(`Hotel Occupancy — ${year} (%)`, `Ocupación Hotelera — ${year} (%)`)}
+                    {t(`PVR Airport Passengers — ${year}`, `Pasajeros Aeropuerto PVR — ${year}`)}
                   </CardTitle>
                   <Link
                     href="/tourism"
@@ -311,60 +314,59 @@ export default function Dashboard() {
                     {t("View all", "Ver todo")} <ChevronRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
-                <p className="text-xs text-muted-foreground">DATATUR / SECTUR</p>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "GAP official · amber bars = model estimate",
+                    "GAP oficial · barras ámbar = estimación"
+                  )}
+                </p>
               </CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={occupancyTrend}
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  <BarChart
+                    data={airportTrend}
+                    margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
                   >
-                    <defs>
-                      <linearGradient id="colorOcc" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(199 89% 48%)" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(199 89% 48%)" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
-                      stroke="hsl(var(--border))"
+                      stroke="rgba(255,255,255,0.06)"
                     />
                     <XAxis
                       dataKey="month"
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                      dy={10}
+                      dy={8}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                      tickFormatter={(v) => `${v}%`}
-                      domain={[40, 100]}
+                      tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                      width={52}
                     />
                     <RechartsTooltip
                       {...CHART_TOOLTIP}
                       cursor={TOOLTIP_CURSOR}
-                      formatter={(val: number, name: string) => [
-                        `${val.toFixed(1)}%`,
-                        t("Occupancy", "Ocupación"),
+                      formatter={(val: number, _name: string, entry: { payload?: { isEstimate?: boolean } }) => [
+                        formatNumber(val),
+                        entry?.payload?.isEstimate
+                          ? t("Passengers (est.)", "Pasajeros (est.)")
+                          : t("Passengers", "Pasajeros"),
                       ]}
-                      labelFormatter={(label) => label}
+                      labelFormatter={(label) => `${label} ${year}`}
                     />
-                    <Area
-                      type="monotone"
-                      dataKey="occupancy"
-                      name={t("Occupancy %", "Ocupación %")}
-                      stroke="hsl(199 89% 48%)"
-                      strokeWidth={3}
-                      fillOpacity={1}
-                      fill="url(#colorOcc)"
-                      dot={{ r: 3 }}
-                      activeDot={{ r: 5 }}
-                    />
-                  </AreaChart>
+                    <Bar dataKey="passengers" radius={[3, 3, 0, 0]} maxBarSize={48}>
+                      {airportTrend.map((entry, i) => (
+                        <Cell
+                          key={i}
+                          fill={entry.isEstimate ? "#F59E0B" : "#00C2A8"}
+                          fillOpacity={entry.isEstimate ? 0.75 : 1}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
