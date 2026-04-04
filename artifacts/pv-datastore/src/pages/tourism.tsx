@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetTourismMetrics, useGetAirportMetrics, useGetCruiseSchedule } from "@workspace/api-client-react";
+import { useGetTourismMetrics, useGetAirportMetrics, useGetCruiseSchedule, useGetAirportEstimate } from "@workspace/api-client-react";
 import { MONTHLY_DATA_YEARS, LAST_COMPLETED_YEAR, yearLabel } from "@/lib/data-availability";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
@@ -51,6 +51,7 @@ export default function Tourism() {
   const { data, isLoading, error } = useGetTourismMetrics({ year });
   const { data: airportRaw } = useGetAirportMetrics();
   const { data: cruiseSchedule } = useGetCruiseSchedule();
+  const { data: airportEstimate } = useGetAirportEstimate();
 
   // ── Airport chart data (all years, YoY comparison) ───────────────────────
   const airportYears = airportRaw
@@ -121,6 +122,135 @@ export default function Tourism() {
           ))}
         </select>
       </div>
+
+      {/* ── Current-month passenger estimate (derived from official GAP data) ── */}
+      {airportEstimate && (() => {
+        const est = airportEstimate;
+        const isOfficial = est.status === "official";
+        const monthName = MONTH_NAMES_LONG[est.month - 1];
+        const yoyPct    = est.estimatedVsSameMonthLastYearPct;
+        const yoyPos    = yoyPct !== null && yoyPct >= 0;
+
+        const CONF_COLOR: Record<string, string> = {
+          low: "#F59E0B", medium: "#00D1FF", high: "#00C2A8",
+        };
+        const confColor = CONF_COLOR[est.confidence] ?? "#9AA5B1";
+
+        return (
+          <Card className="glass-card mb-6">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Plane className="w-4 h-4" style={{ color: "#3B82F6" }} />
+                    <CardTitle>
+                      {t("PVR Airport", "Aeropuerto PVR")} · {monthName} {est.year}
+                    </CardTitle>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                      style={isOfficial
+                        ? { background: "rgba(0,194,168,0.15)", color: "#00C2A8", border: "1px solid #00C2A8" }
+                        : { background: "rgba(245,158,11,0.15)", color: "#F59E0B", border: "1px solid #F59E0B" }}>
+                      {isOfficial ? t("OFFICIAL", "OFICIAL") : t("ESTIMATED", "ESTIMADO")}
+                    </span>
+                    {!isOfficial && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                        style={{ background: "rgba(255,255,255,0.05)", color: confColor, border: `1px solid ${confColor}` }}>
+                        {t("Confidence", "Confianza")}: {t(est.confidence, est.confidence === "low" ? "baja" : est.confidence === "medium" ? "media" : "alta")}
+                      </span>
+                    )}
+                  </div>
+                  {!isOfficial && (
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      {t(
+                        `${est.daysElapsed} of ${est.daysInMonth} days elapsed — projecting full month from official GAP trends`,
+                        `${est.daysElapsed} de ${est.daysInMonth} días transcurridos — proyectando mes completo con datos GAP`,
+                      )}
+                    </p>
+                  )}
+                </div>
+                <a href="https://www.aeropuertosgap.com.mx/en/material-events.html"
+                   target="_blank" rel="noopener noreferrer"
+                   className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors whitespace-nowrap">
+                  GAP <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                {/* Projected full month */}
+                <div className="rounded-xl p-4" style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)" }}>
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
+                    {isOfficial
+                      ? t("Official Total", "Total Oficial")
+                      : t("Projected Full Month", "Proyección Mes Completo")}
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}>
+                    {formatNumber(est.projectedFullMonthPassengers)}
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
+                    {t("passengers", "pasajeros")}
+                  </div>
+                </div>
+
+                {/* Passengers to date */}
+                {!isOfficial && (
+                  <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
+                      {t("To Date", "Hasta la Fecha")} ({est.daysElapsed}d)
+                    </div>
+                    <div className="text-2xl font-bold" style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}>
+                      {formatNumber(est.estimatedPassengersToDate)}
+                    </div>
+                    <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
+                      {t("estimated", "estimado")}
+                    </div>
+                  </div>
+                )}
+
+                {/* Avg daily */}
+                <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
+                    {t("Avg Daily", "Promedio Diario")}
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}>
+                    {formatNumber(est.averageDailyPassengersToDate)}
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
+                    {t("passengers/day", "pasajeros/día")}
+                  </div>
+                </div>
+
+                {/* YoY change */}
+                <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
+                    {t(`vs ${monthName} ${est.year - 1}`, `vs ${monthName} ${est.year - 1}`)}
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color: yoyPct !== null ? (yoyPos ? "#00C2A8" : "#F87171") : "#9AA5B1", letterSpacing: "-0.02em" }}>
+                    {yoyPct !== null
+                      ? `${yoyPos ? "+" : ""}${yoyPct.toFixed(1)}%`
+                      : "—"}
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
+                    {est.sameMonthLastYearPassengers !== null
+                      ? formatNumber(est.sameMonthLastYearPassengers) + " " + t("last year", "año pasado")
+                      : t("no prior data", "sin datos previos")}
+                  </div>
+                </div>
+              </div>
+
+              {/* Disclaimer */}
+              {!isOfficial && (
+                <p className="text-xs rounded-lg px-3 py-2" style={{ background: "rgba(245,158,11,0.07)", color: "#9AA5B1", border: "1px solid rgba(245,158,11,0.15)" }}>
+                  ⚠️ {t(
+                    "Estimate based on recent official GAP passenger trends and seasonal pacing. Final monthly total will be updated when official airport data is released (typically the first week of the following month).",
+                    "Estimación basada en tendencias oficiales de pasajeros GAP y pacing estacional. El total mensual definitivo se actualizará cuando se publiquen datos oficiales del aeropuerto (generalmente la primera semana del mes siguiente).",
+                  )}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* ── Airport traffic (always visible — GAP real data incl. 2026) ──── */}
       {airportRaw && airportRaw.length > 0 && (
