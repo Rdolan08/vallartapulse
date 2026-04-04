@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { useGetEconomicMetrics } from "@workspace/api-client-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
@@ -21,34 +21,7 @@ import {
 } from "recharts";
 import { ExternalLink } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
-
-// ── Shared tooltip style constants ───────────────────────────────────────────
-// All charts on this page (and ideally site-wide) use these for consistency.
-const TOOLTIP_CONTENT_STYLE: React.CSSProperties = {
-  borderRadius: "10px",
-  border: "1px solid rgba(255,255,255,0.08)",
-  boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
-  background: "#0F2A36",
-  padding: "10px 14px",
-  fontSize: 13,
-  color: "#F5F7FA",
-  fontFamily: "inherit",
-};
-const TOOLTIP_LABEL_STYLE: React.CSSProperties = {
-  color: "#9AA5B1",
-  fontSize: 11,
-  fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: "0.06em",
-  marginBottom: 4,
-};
-const TOOLTIP_ITEM_STYLE: React.CSSProperties = {
-  color: "#F5F7FA",
-  fontSize: 13,
-  padding: "1px 0",
-};
-// Transparent hover rectangle — replaces the default white pill on bar/area charts
-const TOOLTIP_CURSOR = { fill: "rgba(255,255,255,0.04)" };
+import { CHART_TOOLTIP, TOOLTIP_CURSOR } from "@/lib/chart-theme";
 
 // ── Sector bar-chart palette (on-brand; no pink) ──────────────────────────────
 const SECTOR_COLORS = ["#00C2A8", "#00D1FF", "#3B82F6", "#6366F1", "#F59E0B", "#9AA5B1"];
@@ -258,9 +231,7 @@ export default function Economic() {
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                       tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                     <Tooltip
-                      contentStyle={TOOLTIP_CONTENT_STYLE}
-                      labelStyle={TOOLTIP_LABEL_STYLE}
-                      itemStyle={TOOLTIP_ITEM_STYLE}
+                      {...CHART_TOOLTIP}
                       cursor={TOOLTIP_CURSOR}
                       labelFormatter={(label) => `${label}`}
                       formatter={(v: number, _: string, entry: { payload?: { label?: string } }) => [
@@ -325,9 +296,7 @@ export default function Economic() {
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                       tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                     <Tooltip
-                      contentStyle={TOOLTIP_CONTENT_STYLE}
-                      labelStyle={TOOLTIP_LABEL_STYLE}
-                      itemStyle={TOOLTIP_ITEM_STYLE}
+                      {...CHART_TOOLTIP}
                       cursor={TOOLTIP_CURSOR}
                       labelFormatter={(year) => `${year}`}
                       formatter={(v: number) => [
@@ -376,9 +345,7 @@ export default function Economic() {
                     <YAxis type="category" dataKey="sector" axisLine={false} tickLine={false} width={130}
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
                     <Tooltip
-                      contentStyle={TOOLTIP_CONTENT_STYLE}
-                      labelStyle={TOOLTIP_LABEL_STYLE}
-                      itemStyle={TOOLTIP_ITEM_STYLE}
+                      {...CHART_TOOLTIP}
                       cursor={TOOLTIP_CURSOR}
                       formatter={(v: number) => [
                         `${v}%`,
@@ -423,9 +390,7 @@ export default function Economic() {
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                       tickFormatter={(v) => `$${v}`} />
                     <Tooltip
-                      contentStyle={TOOLTIP_CONTENT_STYLE}
-                      labelStyle={TOOLTIP_LABEL_STYLE}
-                      itemStyle={TOOLTIP_ITEM_STYLE}
+                      {...CHART_TOOLTIP}
                       cursor={TOOLTIP_CURSOR}
                       labelFormatter={(year) => `${year}`}
                       formatter={(v: number, name: string) => [
