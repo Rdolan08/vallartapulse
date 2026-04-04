@@ -11,11 +11,14 @@ import { useLanguage } from "@/contexts/language-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
 import {
+  ArrowRight,
   Building2,
   ChevronRight,
+  DollarSign,
   Home,
   Plane,
   ShieldAlert,
+  Sparkles,
   ThermometerSun,
   Thermometer,
   TrendingUp,
@@ -297,6 +300,131 @@ export default function Dashboard() {
               href="/safety"
             />
           </div>
+
+          {/* ── Pricing Tool CTA ────────────────────────────────────────── */}
+          <Link href="/pricing-tool">
+            <div
+              className="relative overflow-hidden rounded-2xl cursor-pointer group"
+              style={{
+                background: "linear-gradient(135deg, rgba(0,194,168,0.14) 0%, rgba(99,102,241,0.14) 55%, rgba(0,209,255,0.10) 100%)",
+                border: "1px solid rgba(0,194,168,0.28)",
+              }}
+            >
+              {/* Glow orb */}
+              <div
+                className="absolute -top-16 -right-16 w-64 h-64 rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)" }}
+              />
+
+              <div className="relative flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 p-7">
+
+                {/* Left — copy */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-widest"
+                      style={{ background: "rgba(99,102,241,0.18)", border: "1px solid rgba(99,102,241,0.35)", color: "#818CF8" }}
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      {t("New Tool", "Nueva Herramienta")}
+                    </span>
+                  </div>
+
+                  <h2
+                    className="font-bold tracking-tight mb-2"
+                    style={{ fontSize: "clamp(1.25rem, 2.5vw, 1.65rem)", color: "#F5F7FA", lineHeight: 1.2 }}
+                  >
+                    {t(
+                      "Stop guessing. Price your rental with real market data.",
+                      "Deja de adivinar. Ponle precio a tu renta con datos reales."
+                    )}
+                  </h2>
+                  <p style={{ color: "#9AA5B1", fontSize: "14px", maxWidth: "52ch", lineHeight: 1.6 }}>
+                    {t(
+                      "Enter your property details and get a data-backed nightly rate — conservative, recommended, and stretch — calibrated to your neighborhood, building, amenities, and the month.",
+                      "Ingresa los detalles de tu propiedad y obtén una tarifa nocturna respaldada por datos — conservadora, recomendada y de estiramiento — calibrada a tu colonia, edificio, amenidades y mes."
+                    )}
+                  </p>
+
+                  <div className="flex flex-wrap gap-4 mt-4">
+                    {[
+                      { icon: <Building2 className="w-3.5 h-3.5" />, en: "16 PV neighborhoods", es: "16 colonias de PV" },
+                      { icon: <TrendingUp className="w-3.5 h-3.5" />, en: "Live Airbnb & VRBO comps", es: "Comparables en vivo" },
+                      { icon: <DollarSign className="w-3.5 h-3.5" />, en: "Seasonal multipliers", es: "Multiplicadores estacionales" },
+                    ].map(({ icon, en, es }) => (
+                      <span
+                        key={en}
+                        className="flex items-center gap-1.5 text-xs font-semibold"
+                        style={{ color: "#00C2A8" }}
+                      >
+                        {icon}
+                        {t(en, es)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right — mini price output mockup */}
+                <div className="flex-shrink-0 w-full lg:w-auto">
+                  <div
+                    className="rounded-xl p-5 min-w-[220px]"
+                    style={{ background: "rgba(10,30,39,0.7)", border: "1px solid rgba(255,255,255,0.07)" }}
+                  >
+                    <div className="flex items-center gap-2 mb-4">
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center"
+                        style={{ background: "rgba(0,194,168,0.15)" }}
+                      >
+                        <DollarSign className="w-4 h-4" style={{ color: "#00C2A8" }} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold uppercase tracking-widest" style={{ color: "#9AA5B1" }}>
+                          {t("Sample Output", "Muestra")}
+                        </div>
+                        <div className="text-xs" style={{ color: "#9AA5B1" }}>
+                          {t("2BR · Ocean View · March", "2 rec. · Vista al mar · Marzo")}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {[
+                        { label: t("Conservative", "Conservadora"), price: "$165", highlight: false },
+                        { label: t("Recommended", "Recomendada"),  price: "$212", highlight: true  },
+                        { label: t("Stretch",      "Estiramiento"), price: "$268", highlight: false },
+                      ].map(({ label, price, highlight }) => (
+                        <div
+                          key={label}
+                          className="flex items-center justify-between rounded-lg px-3 py-2"
+                          style={highlight
+                            ? { background: "rgba(0,194,168,0.15)", border: "1px solid rgba(0,194,168,0.3)" }
+                            : { background: "rgba(255,255,255,0.04)" }
+                          }
+                        >
+                          <span className="text-xs font-semibold" style={{ color: highlight ? "#00C2A8" : "#9AA5B1" }}>
+                            {label}
+                          </span>
+                          <span className="font-bold tabular-nums" style={{ color: highlight ? "#F5F7FA" : "#9AA5B1", fontSize: "15px" }}>
+                            {price}
+                            <span className="text-xs font-normal ml-1" style={{ color: "#9AA5B1" }}>/nt</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* CTA arrow */}
+                <div
+                  className="hidden lg:flex flex-shrink-0 items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all group-hover:gap-3"
+                  style={{ background: "#00C2A8", color: "#0A1E27" }}
+                >
+                  {t("Try It Free", "Pruébalo Gratis")}
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                </div>
+              </div>
+            </div>
+          </Link>
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
