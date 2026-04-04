@@ -284,17 +284,46 @@ export interface GAPSyncResult {
 export async function syncGAPData(): Promise<GAPSyncResult> {
   logger.info("gap-scraper: starting sync");
 
+  // ── Append-only: load months already stored in DB ─────────────────────────
+  const storedRows = await db
+    .select({ year: airportMetricsTable.year, month: airportMetricsTable.month })
+    .from(airportMetricsTable);
+  const storedKeys = new Set(storedRows.map((r) => `${r.year}-${r.month}`));
+
+  // Always re-fetch the most recent press release (may be freshly published /
+  // corrected by GAP). All older validated months are skipped entirely.
+  const mostRecent = PRESS_RELEASES.reduce((a, b) =>
+    a.dataYear > b.dataYear || (a.dataYear === b.dataYear && a.dataMonth > b.dataMonth) ? a : b
+  );
+
+  const toFetch = PRESS_RELEASES.filter((pr) => {
+    const key = `${pr.dataYear}-${pr.dataMonth}`;
+    const isMostRecent = pr === mostRecent;
+    return isMostRecent || !storedKeys.has(key);
+  });
+
+  logger.info(
+    { total: PRESS_RELEASES.length, toFetch: toFetch.length, storedMonths: storedKeys.size },
+    "gap-scraper: skipping already-stored months"
+  );
+
   const allMonths = new Map<string, PVRMonthData>();
   let errors = 0;
 
-  for (const pr of PRESS_RELEASES) {
+  for (const pr of toFetch) {
     try {
       const monthData = await parsePressRelease(pr);
       for (const m of monthData) {
         const key = `${m.year}-${m.month}`;
-        const existing = allMonths.get(key);
-        if (!existing || isBetter(existing, m)) {
-          allMonths.set(key, m);
+        // Only store months that are either new or the current press release's primary month
+        const prKey = `${pr.dataYear}-${pr.dataMonth}`;
+        const isNew = !storedKeys.has(key);
+        const isPrimaryMonth = key === prKey;
+        if (isNew || isPrimaryMonth) {
+          const existing = allMonths.get(key);
+          if (!existing || isBetter(existing, m)) {
+            allMonths.set(key, m);
+          }
         }
       }
       await new Promise((r) => setTimeout(r, 600));
