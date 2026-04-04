@@ -17,6 +17,7 @@ import {
   Legend,
 } from "recharts";
 import { formatNumber } from "@/lib/utils";
+import { ExternalLink } from "lucide-react";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 2019 }, (_, i) => CURRENT_YEAR - i);
@@ -91,10 +92,24 @@ export default function Economic() {
             {t("Economic Indicators", "Indicadores Económicos")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {t(
-              "Macroeconomic health data from Data México and INEGI.",
-              "Datos macroeconómicos de Data México e INEGI."
-            )}
+            {lang === "es" ? "Datos macroeconómicos de " : "Macroeconomic health data from "}
+            <a
+              href="https://www.economia.gob.mx/datamexico/es/profile/geo/puerto-vallarta"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline inline-flex items-center gap-0.5"
+            >
+              Data México <ExternalLink className="w-3 h-3" />
+            </a>
+            {" "}{lang === "es" ? "e" : "and"}{" "}
+            <a
+              href="https://www.inegi.org.mx/app/areasgeograficas?ag=14067"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline inline-flex items-center gap-0.5"
+            >
+              INEGI <ExternalLink className="w-3 h-3" />
+            </a>.
           </p>
         </div>
         <select
