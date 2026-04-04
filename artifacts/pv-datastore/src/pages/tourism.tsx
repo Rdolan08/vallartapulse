@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetTourismMetrics } from "@workspace/api-client-react";
+import { useGetTourismMetrics, useGetAirportMetrics } from "@workspace/api-client-react";
 import { MONTHLY_DATA_YEARS, LAST_COMPLETED_YEAR, yearLabel } from "@/lib/data-availability";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
@@ -9,6 +9,8 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -18,13 +20,32 @@ import {
 import { formatNumber, formatPercent } from "@/lib/utils";
 import { Building2, ExternalLink, Plane, Ship, Users } from "lucide-react";
 
-const YEARS = [...MONTHLY_DATA_YEARS].reverse();
+const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// Tourism SECTUR/DATATUR data only goes through 2025 — 2026 official figures not yet published
+const YEARS = [...MONTHLY_DATA_YEARS].filter((y) => y <= 2025).reverse();
 
 export default function Tourism() {
   const { t, lang } = useLanguage();
-  const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
+  const [year, setYear] = useState<number>(Math.min(LAST_COMPLETED_YEAR, 2025));
 
   const { data, isLoading, error } = useGetTourismMetrics({ year });
+  const { data: airportRaw } = useGetAirportMetrics();
+
+  // Build year-over-year airport chart data (all years, months as x-axis)
+  const airportYears = airportRaw
+    ? [...new Set(airportRaw.map((r) => r.year))].sort()
+    : [];
+  const airportChartData = MONTH_ABBR.map((abbr, idx) => {
+    const month = idx + 1;
+    const point: Record<string, number | string> = { month: abbr };
+    for (const yr of airportYears) {
+      const row = airportRaw?.find((r) => r.year === yr && r.month === month);
+      if (row) point[String(yr)] = row.totalPassengers;
+    }
+    return point;
+  });
+  const airportColors: Record<number, string> = { 2024: "#6366F1", 2025: "#00C2A8", 2026: "#F59E0B" };
 
   // Aggregate totals for KPI row
   const totals = data?.reduce(
@@ -74,6 +95,78 @@ export default function Tourism() {
           ))}
         </select>
       </div>
+
+      {/* Airport passenger traffic — real GAP/GlobeNewswire scraped data, multi-year */}
+      {airportRaw && airportRaw.length > 0 && (
+        <Card className="glass-card mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <CardTitle>
+                  {t("PVR Airport Passenger Traffic", "Tráfico de Pasajeros Aeropuerto PVR")}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t(
+                    "Year-over-year monthly comparison · 2026 data through February (official GAP press releases)",
+                    "Comparativo mensual interanual · datos 2026 hasta febrero (comunicados oficiales GAP)"
+                  )}
+                </p>
+              </div>
+              <a
+                href="https://www.globenewswire.com/search/organization/Grupo%20Aeroportuario%20del%20Pac%C3%ADfico"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+              >
+                GAP / GlobeNewswire <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          </CardHeader>
+          <CardContent className="h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={airportChartData}
+                margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="month"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                  dy={8}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+                  domain={[(min: number) => Math.floor(min * 0.92), (max: number) => Math.ceil(max * 1.04)]}
+                  width={48}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)" }}
+                  formatter={(val: number, name: string) => [formatNumber(val), `${name} ${t("passengers", "pasajeros")}`]}
+                />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: "16px" }} />
+                {airportYears.map((yr) => (
+                  <Line
+                    key={yr}
+                    type="monotone"
+                    dataKey={String(yr)}
+                    name={String(yr)}
+                    stroke={airportColors[yr] ?? "#9AA5B1"}
+                    strokeWidth={yr === Math.max(...airportYears) ? 2.5 : 1.5}
+                    dot={false}
+                    strokeDasharray={yr === Math.max(...airportYears) ? "5 3" : undefined}
+                    connectNulls={false}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {isLoading ? (
         <div className="space-y-6">
