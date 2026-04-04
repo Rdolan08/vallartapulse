@@ -128,7 +128,14 @@ export default function Weather() {
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis unit={tempLabel} tick={{ fontSize: 12 }} />
+                  <YAxis
+                    unit={tempLabel}
+                    tick={{ fontSize: 12 }}
+                    domain={[
+                      (min: number) => Math.floor(min - (unit === "metric" ? 3 : 6)),
+                      (max: number) => Math.ceil(max  + (unit === "metric" ? 2 : 4)),
+                    ]}
+                  />
                   <Tooltip formatter={(v: number, name: string) => [`${v}${tempLabel}`, name]} />
                   <Legend />
                   <Line type="monotone" dataKey={t("Avg Temp", "Temp. Prom")} stroke="#00C2A8" strokeWidth={2} dot={false} />
