@@ -130,11 +130,10 @@ def main():
     conn = psycopg2.connect(DATABASE_URL)
     cur  = conn.cursor()
 
-    # Delete existing safety_metrics records from 2019 onwards (keep older synthetic if any)
-    cur.execute("DELETE FROM safety_metrics WHERE year >= 2019")
-    print(f"Cleared existing safety_metrics rows (2019+).")
-
+    # Append-only: only insert rows that don't already exist (year + month + category).
+    # Historical validated data is never deleted or overwritten on re-run.
     inserted = 0
+    skipped  = 0
     for (year, month_num, cat_en), count in sorted(counts.items()):
         cat_es, cat_group = cat_meta.get(cat_en, (cat_en, "other"))
         month_name = MONTHS_EN[month_num - 1]
@@ -152,16 +151,24 @@ def main():
                 (year, month, month_name, category, category_es, category_group,
                  incident_count, incidents_per_100k, change_vs_prior_year,
                  source, category_raw)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,
-                    'SESNSP – Incidencia Delictiva Municipal (real)', %s)
+            SELECT %s,%s,%s,%s,%s,%s,%s,%s,%s,
+                   'SESNSP – Incidencia Delictiva Municipal (real)', %s
+            WHERE NOT EXISTS (
+                SELECT 1 FROM safety_metrics
+                WHERE year = %s AND month = %s AND category = %s
+            )
         """, (year, month_num, month_name, cat_en, cat_es, cat_group,
-              count, per_100k, change_pct, cat_es))
-        inserted += 1
+              count, per_100k, change_pct, cat_es,
+              year, month_num, cat_en))
+        if cur.rowcount > 0:
+            inserted += 1
+        else:
+            skipped += 1
 
     conn.commit()
     cur.close()
     conn.close()
-    print(f"\nDone — {inserted} safety_metrics rows inserted from real SESNSP data.")
+    print(f"\nDone — {inserted} new rows inserted, {skipped} already-existing rows skipped.")
 
     # Print a quick summary
     print("\nSummary by year:")
