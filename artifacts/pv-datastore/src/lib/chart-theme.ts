@@ -39,11 +39,12 @@ export const TOOLTIP_ITEM_STYLE: CSSProperties = {
 };
 
 /**
- * Transparent hover rectangle — prevents the distracting white pill
- * that Recharts renders by default on bar and area charts.
+ * Near-invisible hover rectangle for bar and area charts.
+ * Uses a very subtle dark tint (matching the dark card background)
+ * rather than the default white so there is no jarring flash on hover.
  * Pass as: <Tooltip cursor={TOOLTIP_CURSOR} ... />
  */
-export const TOOLTIP_CURSOR = { fill: "rgba(255,255,255,0.04)" };
+export const TOOLTIP_CURSOR = { fill: "rgba(0,0,0,0.12)" };
 
 /**
  * Convenience spread for all standard Recharts <Tooltip> style props.
