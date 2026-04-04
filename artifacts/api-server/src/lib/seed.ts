@@ -293,11 +293,19 @@ export async function seedIfEmpty(): Promise<void> {
     { name: "Transparencia PV – Local Reports", nameEs: "Transparencia PV – Reportes Locales", category: "Government",
       description: "Local government transparency portal: infrastructure, services, and municipal statistics.",
       descriptionEs: "Portal de transparencia municipal: infraestructura, servicios y estadísticas municipales.",
-      url: "https://transparencia.puertovallarta.gob.mx/", status: "pending", lastSyncedAt: null, recordCount: 0, frequency: "monthly", isPublic: true },
+      url: "https://transparencia.puertovallarta.gob.mx/", status: "active", lastSyncedAt: now, recordCount: 28, frequency: "monthly", isPublic: true },
     { name: "OpenStreetMap – Geospatial Data", nameEs: "OpenStreetMap – Datos Geoespaciales", category: "Satellite",
       description: "Open geospatial data: neighborhoods, streets, and points of interest in Puerto Vallarta.",
       descriptionEs: "Datos geoespaciales abiertos: colonias, calles y puntos de interés en Puerto Vallarta.",
       url: "https://www.openstreetmap.org/", status: "active", lastSyncedAt: now, recordCount: 45000, frequency: "monthly", isPublic: true },
+    { name: "NASA EarthData – Satellite Imagery", nameEs: "NASA EarthData – Imágenes Satelitales", category: "Satellite",
+      description: "Satellite imagery and land surface data for the Banderas Bay region and coastal zones.",
+      descriptionEs: "Imágenes satelitales y datos de superficie terrestre para la bahía de Banderas y zonas costeras.",
+      url: "https://earthdata.nasa.gov/", status: "active", lastSyncedAt: now, recordCount: 156, frequency: "weekly", isPublic: true },
+    { name: "Inmuebles24 – Real Estate Listings", nameEs: "Inmuebles24 – Listados Inmobiliarios", category: "Real Estate",
+      description: "Long-term rental and for-sale property listings across Puerto Vallarta and Riviera Nayarit.",
+      descriptionEs: "Listados de renta a largo plazo y propiedades en venta en Puerto Vallarta y Riviera Nayarit.",
+      url: "https://www.inmuebles24.com/", status: "active", lastSyncedAt: now, recordCount: 89, frequency: "weekly", isPublic: false },
   ]);
   logger.info("Inserted data sources");
 
