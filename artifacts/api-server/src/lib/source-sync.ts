@@ -16,9 +16,12 @@ import {
   economicMetricsTable,
   rentalListingsTable,
   weatherMetricsTable,
+  airportMetricsTable,
+  safetyMetricsTable,
 } from "@workspace/db/schema";
 import { eq, count } from "drizzle-orm";
 import { logger } from "./logger.js";
+import { syncGAPData } from "./gap-scraper.js";
 
 export interface SourceSyncResult {
   id: number;
@@ -56,7 +59,15 @@ export async function recountFromDB(sourceName: string): Promise<number | null> 
     const [row] = await db.select({ c: count() }).from(weatherMetricsTable);
     return row?.c ?? null;
   }
-  // External sources (SESNSP, INEGI, Transparencia, OSM, NASA, Inmuebles24):
+  if (n.includes("gap") || n.includes("airport") || n.includes("aeropuerto")) {
+    const [row] = await db.select({ c: count() }).from(airportMetricsTable);
+    return row?.c ?? null;
+  }
+  if (n.includes("sesnsp") || n.includes("crime") || n.includes("safety")) {
+    const [row] = await db.select({ c: count() }).from(safetyMetricsTable);
+    return row?.c ?? null;
+  }
+  // External sources (INEGI, Transparencia, OSM, NASA, Inmuebles24):
   // no dedicated table — timestamp refresh only.
   return null;
 }
@@ -102,6 +113,20 @@ export async function syncAllSources(): Promise<SyncAllResult> {
   const now = new Date();
   const results: SourceSyncResult[] = [];
 
+  // ── Live data pulls ───────────────────────────────────────────────────────
+  // Only run GAP scraper if today is the 1st–8th (press release published ~1st week)
+  const dayOfMonth = now.getUTCDate();
+  if (dayOfMonth <= 8) {
+    logger.info("sync-all: running GAP GlobeNewswire scraper (early month)");
+    try {
+      const gapResult = await syncGAPData();
+      logger.info({ gapResult }, "sync-all: GAP scraper complete");
+    } catch (err) {
+      logger.error({ err }, "sync-all: GAP scraper failed");
+    }
+  }
+
+  // ── Update data_sources timestamps + record counts ────────────────────────
   for (const source of sources) {
     const liveCount = await recountFromDB(source.name);
     const newCount = liveCount !== null ? liveCount : (source.recordCount ?? 0);
