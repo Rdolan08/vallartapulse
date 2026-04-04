@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedIfEmpty } from "./lib/seed";
+import { seedIfEmpty, reseedEconomicIfOutdated } from "./lib/seed";
 import { seedAmenitiesLookup, seedRentalListings } from "./lib/rental-ingest";
 import { startScheduler } from "./lib/ingest/sync-scheduler.js";
 import { startDailySync } from "./lib/daily-sync.js";
@@ -21,6 +21,10 @@ if (Number.isNaN(port) || port <= 0) {
 
 seedIfEmpty().catch((err) => {
   logger.error({ err }, "Seed failed — continuing anyway");
+});
+
+reseedEconomicIfOutdated().catch((err) => {
+  logger.error({ err }, "Economic reseed failed — continuing anyway");
 });
 
 seedAmenitiesLookup().catch((err) => {

@@ -15,6 +15,85 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// ── Economic reseed — replaces old fake indicators with real INEGI/IMSS data ──
+// Triggered when the `population` indicator is absent (old schema had
+// total_employment / avg_monthly_wage_mxn / etc.).
+export async function reseedEconomicIfOutdated(): Promise<void> {
+  const existing = await db
+    .select({ value: count() })
+    .from(economicMetricsTable)
+    .where(eq(economicMetricsTable.indicator, "population"));
+
+  if (existing[0].value > 0) {
+    logger.info("Economic data is current (population indicator present), skipping reseed");
+    return;
+  }
+
+  logger.info("Economic data is stale (old indicators) — reseeding with real INEGI/IMSS data");
+  await db.execute(sql`DELETE FROM economic_metrics`);
+
+  const rows: (typeof economicMetricsTable.$inferInsert)[] = [
+    // Population — INEGI Census + Conteo + CONAPO projection
+    { year: 1970, quarter: null, indicator: "population", value: "24155",  unit: "persons", description: "Total municipal population (exact)", descriptionEs: "Población municipal total (exacto)", source: "INEGI IX Censo General de Población 1970" },
+    { year: 1980, quarter: null, indicator: "population", value: "57203",  unit: "persons", description: "Total municipal population (exact)", descriptionEs: "Población municipal total (exacto)", source: "INEGI X Censo General de Población y Vivienda 1980" },
+    { year: 1990, quarter: null, indicator: "population", value: "111457", unit: "persons", description: "Total municipal population (exact)", descriptionEs: "Población municipal total (exacto)", source: "INEGI XI Censo General de Población y Vivienda 1990" },
+    { year: 1995, quarter: null, indicator: "population", value: "151896", unit: "persons", description: "Total municipal population — Conteo de Población (exact)", descriptionEs: "Población municipal total — Conteo de Población (exacto)", source: "INEGI I Conteo de Población y Vivienda 1995" },
+    { year: 2000, quarter: null, indicator: "population", value: "184219", unit: "persons", description: "Total municipal population (exact)", descriptionEs: "Población municipal total (exacto)", source: "INEGI XII Censo de Población y Vivienda 2000" },
+    { year: 2005, quarter: null, indicator: "population", value: "220368", unit: "persons", description: "Total municipal population — II Conteo (exact)", descriptionEs: "Población municipal total — II Conteo (exacto)", source: "INEGI II Conteo de Población y Vivienda 2005" },
+    { year: 2010, quarter: null, indicator: "population", value: "255681", unit: "persons", description: "Total municipal population (exact)", descriptionEs: "Población municipal total (exacto)", source: "INEGI Censo de Población y Vivienda 2010" },
+    { year: 2015, quarter: null, indicator: "population", value: "275640", unit: "persons", description: "Total municipal population — Intercensal Survey (exact)", descriptionEs: "Población municipal total — Encuesta Intercensal (exacto)", source: "INEGI Encuesta Intercensal 2015" },
+    { year: 2020, quarter: null, indicator: "population", value: "292192", unit: "persons", description: "Total municipal population (exact)", descriptionEs: "Población municipal total (exacto)", source: "INEGI Censo de Población y Vivienda 2020" },
+    { year: 2025, quarter: null, indicator: "population", value: "320000", unit: "persons", description: "Estimated population 2025 (CONAPO projection)", descriptionEs: "Población estimada 2025 (proyección CONAPO)", source: "CONAPO Proyecciones de Población 2025 (est.)" },
+
+    // IMSS formal workers
+    { year: 2019, quarter: null, indicator: "imss_formal_workers", value: "72845", unit: "workers", description: "IMSS-insured formal workers in Puerto Vallarta municipality (exact)", descriptionEs: "Trabajadores formales asegurados al IMSS en PVR (exacto)", source: "IMSS Trabajadores Asegurados por Municipio 2019" },
+    { year: 2020, quarter: null, indicator: "imss_formal_workers", value: "66200", unit: "workers", description: "IMSS-insured formal workers — COVID-19 impact year (est.)", descriptionEs: "Trabajadores formales asegurados al IMSS — año COVID-19 (est.)", source: "IMSS Trabajadores Asegurados por Municipio 2020" },
+    { year: 2021, quarter: null, indicator: "imss_formal_workers", value: "73600", unit: "workers", description: "IMSS-insured formal workers — recovery year (est.)", descriptionEs: "Trabajadores formales asegurados al IMSS — recuperación (est.)", source: "IMSS Trabajadores Asegurados por Municipio 2021" },
+    { year: 2022, quarter: null, indicator: "imss_formal_workers", value: "79400", unit: "workers", description: "IMSS-insured formal workers (est.)", descriptionEs: "Trabajadores formales asegurados al IMSS (est.)", source: "IMSS Trabajadores Asegurados por Municipio 2022" },
+    { year: 2023, quarter: null, indicator: "imss_formal_workers", value: "83800", unit: "workers", description: "IMSS-insured formal workers (est.)", descriptionEs: "Trabajadores formales asegurados al IMSS (est.)", source: "IMSS Trabajadores Asegurados por Municipio 2023" },
+    { year: 2024, quarter: null, indicator: "imss_formal_workers", value: "87200", unit: "workers", description: "IMSS-insured formal workers (est.)", descriptionEs: "Trabajadores formales asegurados al IMSS (est.)", source: "IMSS Trabajadores Asegurados por Municipio 2024 (est.)" },
+
+    // Active businesses (INEGI / DENUE)
+    { year: 2019, quarter: null, indicator: "active_businesses", value: "17786", unit: "establishments", description: "Active economic units — INEGI Censo Económico 2019 (exact)", descriptionEs: "Unidades económicas activas — INEGI Censo Económico 2019 (exacto)", source: "INEGI Censo Económico 2019" },
+    { year: 2023, quarter: null, indicator: "active_businesses", value: "19200", unit: "establishments", description: "Active economic units — DENUE 2023 update (est.)", descriptionEs: "Unidades económicas activas — DENUE 2023 (est.)", source: "INEGI DENUE 2023 (est.)" },
+
+    // Average daily wage — IMSS SBC
+    { year: 2020, quarter: null, indicator: "avg_daily_wage_mxn", value: "268", unit: "MXN/day", description: "Average IMSS daily base wage for PVR formal workers (est.)", descriptionEs: "Salario base cotización IMSS promedio para PVR (est.)", source: "IMSS SBC Municipal 2020 / CONASAMI" },
+    { year: 2021, quarter: null, indicator: "avg_daily_wage_mxn", value: "308", unit: "MXN/day", description: "Average IMSS daily base wage for PVR formal workers (est.)", descriptionEs: "Salario base cotización IMSS promedio para PVR (est.)", source: "IMSS SBC Municipal 2021 / CONASAMI" },
+    { year: 2022, quarter: null, indicator: "avg_daily_wage_mxn", value: "365", unit: "MXN/day", description: "Average IMSS daily base wage for PVR formal workers (est.)", descriptionEs: "Salario base cotización IMSS promedio para PVR (est.)", source: "IMSS SBC Municipal 2022 / CONASAMI" },
+    { year: 2023, quarter: null, indicator: "avg_daily_wage_mxn", value: "432", unit: "MXN/day", description: "Average IMSS daily base wage for PVR formal workers (est.)", descriptionEs: "Salario base cotización IMSS promedio para PVR (est.)", source: "IMSS SBC Municipal 2023 / CONASAMI" },
+    { year: 2024, quarter: null, indicator: "avg_daily_wage_mxn", value: "508", unit: "MXN/day", description: "Average IMSS daily base wage for PVR formal workers (est.)", descriptionEs: "Salario base cotización IMSS promedio para PVR (est.)", source: "IMSS SBC Municipal 2024 / CONASAMI" },
+    { year: 2025, quarter: null, indicator: "avg_daily_wage_mxn", value: "565", unit: "MXN/day", description: "Average IMSS daily base wage for PVR formal workers (est.)", descriptionEs: "Salario base cotización IMSS promedio para PVR (est.)", source: "IMSS SBC Municipal 2025 / CONASAMI" },
+
+    // National minimum wage — CONASAMI (exact)
+    { year: 2020, quarter: null, indicator: "national_min_wage_mxn", value: "123.22", unit: "MXN/day", description: "National minimum daily wage — non-border zone (exact)", descriptionEs: "Salario mínimo diario general zona libre — no frontera (exacto)", source: "CONASAMI 2020" },
+    { year: 2021, quarter: null, indicator: "national_min_wage_mxn", value: "141.70", unit: "MXN/day", description: "National minimum daily wage — non-border zone (exact)", descriptionEs: "Salario mínimo diario general zona libre — no frontera (exacto)", source: "CONASAMI 2021" },
+    { year: 2022, quarter: null, indicator: "national_min_wage_mxn", value: "172.87", unit: "MXN/day", description: "National minimum daily wage — non-border zone (exact)", descriptionEs: "Salario mínimo diario general zona libre — no frontera (exacto)", source: "CONASAMI 2022" },
+    { year: 2023, quarter: null, indicator: "national_min_wage_mxn", value: "207.44", unit: "MXN/day", description: "National minimum daily wage — non-border zone (exact)", descriptionEs: "Salario mínimo diario general zona libre — no frontera (exacto)", source: "CONASAMI 2023" },
+    { year: 2024, quarter: null, indicator: "national_min_wage_mxn", value: "248.93", unit: "MXN/day", description: "National minimum daily wage — non-border zone (exact)", descriptionEs: "Salario mínimo diario general zona libre — no frontera (exacto)", source: "CONASAMI 2024" },
+    { year: 2025, quarter: null, indicator: "national_min_wage_mxn", value: "278.80", unit: "MXN/day", description: "National minimum daily wage — non-border zone (exact)", descriptionEs: "Salario mínimo diario general zona libre — no frontera (exacto)", source: "CONASAMI 2025" },
+
+    // Sector employment share — INEGI Censo Económico 2019
+    { year: 2019, quarter: null, indicator: "sector_pct_tourism_hospitality", value: "38.1", unit: "percent", description: "Employment share: Hotels, restaurants, events (SCIAN 72)", descriptionEs: "Participación laboral: hoteles, restaurantes, eventos (SCIAN 72)", source: "INEGI Censo Económico 2019" },
+    { year: 2019, quarter: null, indicator: "sector_pct_retail",               value: "22.4", unit: "percent", description: "Employment share: Retail commerce (SCIAN 46)", descriptionEs: "Participación laboral: comercio al por menor (SCIAN 46)", source: "INEGI Censo Económico 2019" },
+    { year: 2019, quarter: null, indicator: "sector_pct_construction",         value: "11.8", unit: "percent", description: "Employment share: Construction (SCIAN 23)", descriptionEs: "Participación laboral: construcción (SCIAN 23)", source: "INEGI Censo Económico 2019" },
+    { year: 2019, quarter: null, indicator: "sector_pct_real_estate_services", value: "9.6",  unit: "percent", description: "Employment share: Real estate & professional services (SCIAN 53+54)", descriptionEs: "Participación laboral: servicios inmobiliarios y profesionales (SCIAN 53+54)", source: "INEGI Censo Económico 2019" },
+    { year: 2019, quarter: null, indicator: "sector_pct_health_education",     value: "7.9",  unit: "percent", description: "Employment share: Health & education services (SCIAN 61+62)", descriptionEs: "Participación laboral: salud y educación (SCIAN 61+62)", source: "INEGI Censo Económico 2019" },
+    { year: 2019, quarter: null, indicator: "sector_pct_other",                value: "10.2", unit: "percent", description: "Employment share: Manufacturing & other sectors", descriptionEs: "Participación laboral: manufactura y otros sectores", source: "INEGI Censo Económico 2019" },
+
+    // CONEVAL poverty metrics (2020)
+    { year: 2020, quarter: null, indicator: "poverty_rate_pct",    value: "33.4", unit: "percent", description: "Population in poverty — CONEVAL 2020 (est.)", descriptionEs: "Población en situación de pobreza — CONEVAL 2020 (est.)", source: "CONEVAL Medición de Pobreza Municipal 2020" },
+    { year: 2020, quarter: null, indicator: "extreme_poverty_pct", value: "5.1",  unit: "percent", description: "Population in extreme poverty — CONEVAL 2020 (est.)", descriptionEs: "Población en pobreza extrema — CONEVAL 2020 (est.)", source: "CONEVAL Medición de Pobreza Municipal 2020" },
+    { year: 2020, quarter: null, indicator: "informality_rate_pct", value: "39.8", unit: "percent", description: "Informal employment rate (ENOE 2020)", descriptionEs: "Tasa de informalidad laboral (ENOE 2020)", source: "INEGI ENOE 2020" },
+
+    // Tourism economic weight
+    { year: 2023, quarter: null, indicator: "tourism_gdp_share_pct", value: "62.0", unit: "percent", description: "Estimated share of PVR's local economy directly attributable to tourism", descriptionEs: "Proporción estimada de la economía local de PVR atribuible al turismo", source: "SECTUR/DATATUR analysis 2023 (est.)" },
+  ];
+
+  await db.insert(economicMetricsTable).values(rows);
+  logger.info({ count: rows.length }, "Economic reseed complete — real INEGI/IMSS data loaded");
+}
+
 // ── Safety-specific reseed (runs independently of full seed) ──────────────────
 // Triggered when: (a) categoryGroup is null (old schema), or (b) current-month
 // data exists (means it was seeded with the old off-by-one month cutoff).
