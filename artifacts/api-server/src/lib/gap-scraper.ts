@@ -191,9 +191,10 @@ async function parsePressRelease(pr: PressRelease): Promise<PVRMonthData[]> {
   const lastR = pvrFromTable(pvrTables[pvrTables.length - 1]);
   if (lastR) {
     logger.debug({ year: pr.dataYear, month: pr.dataMonth, strategy: "C-total-only" }, "gap-scraper: parsed");
+    // lastR values are in thousands — multiply to get actual passenger count
     return [
-      { year: pr.dataYear,     month: pr.dataMonth, domestic: null, international: null, total: lastR[1] },
-      { year: pr.dataYear - 1, month: pr.dataMonth, domestic: null, international: null, total: lastR[0] },
+      { year: pr.dataYear,     month: pr.dataMonth, domestic: null, international: null, total: Math.round(lastR[1] * 1000) },
+      { year: pr.dataYear - 1, month: pr.dataMonth, domestic: null, international: null, total: Math.round(lastR[0] * 1000) },
     ];
   }
 
