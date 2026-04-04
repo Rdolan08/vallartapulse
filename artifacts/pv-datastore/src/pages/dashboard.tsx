@@ -104,7 +104,7 @@ export default function Dashboard() {
       {/* ── Pricing Tool CTA — always visible at top ─────────────────── */}
       <Link href="/pricing-tool">
         <div
-          className="relative overflow-hidden rounded-2xl cursor-pointer group mb-8"
+          className="relative overflow-hidden rounded-2xl cursor-pointer group"
           style={{
             background: "linear-gradient(135deg, rgba(0,194,168,0.14) 0%, rgba(99,102,241,0.14) 55%, rgba(0,209,255,0.10) 100%)",
             border: "1px solid rgba(0,194,168,0.28)",
@@ -227,7 +227,7 @@ export default function Dashboard() {
       </Link>
 
       {/* Header + Filters */}
-      <div className="flex flex-col gap-5 mb-8">
+      <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-4">
 
           {/* Hero signal pills */}
