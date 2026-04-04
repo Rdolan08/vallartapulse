@@ -102,7 +102,7 @@ export default function Dashboard() {
   return (
     <PageWrapper>
       {/* ── Pricing Tool CTA — always visible at top ─────────────────── */}
-      <Link href="/pricing-tool">
+      <Link href="/pricing-tool" className="block">
         <div
           className="relative overflow-hidden rounded-2xl cursor-pointer group"
           style={{
