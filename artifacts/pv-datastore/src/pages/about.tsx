@@ -14,8 +14,8 @@ export default function About() {
         </h1>
         <p className="text-sm mb-10" style={{ color: "rgba(154,165,177,0.6)" }}>
           {t(
-            "A smarter, data-driven view of Puerto Vallarta's rental market.",
-            "Una visión más inteligente y basada en datos del mercado de renta en Puerto Vallarta."
+            "Puerto Vallarta's market intelligence platform for property owners, managers, and investors.",
+            "La plataforma de inteligencia de mercado de Puerto Vallarta para propietarios, administradores e inversores."
           )}
         </p>
 
@@ -62,8 +62,8 @@ export default function About() {
           <div className="space-y-4 text-sm leading-relaxed" style={{ color: "rgba(154,165,177,0.75)" }}>
             <p>
               {t(
-                "After more than 20 years working in AI, data, and technology — including leadership roles within the U.S. federal government — Ryan set out to build something more practical and closer to home. Vallarta Pulse is that vision: a smarter, data-driven way to understand pricing, demand, and opportunity in Puerto Vallarta's rapidly growing rental market.",
-                "Tras más de 20 años trabajando en inteligencia artificial, datos y tecnología — incluyendo roles de liderazgo en el gobierno federal de Estados Unidos — Ryan decidió construir algo más práctico y cercano a casa. Vallarta Pulse es esa visión: una forma más inteligente y basada en datos de entender precios, demanda y oportunidades en el mercado de renta de Puerto Vallarta."
+                "After more than 20 years working in AI, data, and technology — including leadership roles within the U.S. federal government — Ryan set out to build something more practical and closer to home. VallartaPulse is that vision: a market intelligence platform that brings together rental pricing, tourism flows, economic indicators, safety data, and climate patterns for Puerto Vallarta's rapidly growing property market.",
+                "Tras más de 20 años trabajando en inteligencia artificial, datos y tecnología — incluyendo roles de liderazgo en el gobierno federal de Estados Unidos — Ryan decidió construir algo más práctico y cercano a casa. VallartaPulse es esa visión: una plataforma de inteligencia de mercado que integra precios de renta, flujos turísticos, indicadores económicos, datos de seguridad y clima para el mercado inmobiliario de Puerto Vallarta."
               )}
             </p>
             <p>
