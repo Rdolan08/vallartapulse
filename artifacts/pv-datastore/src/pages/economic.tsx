@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { useGetEconomicMetrics } from "@workspace/api-client-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
@@ -22,15 +22,36 @@ import {
 import { ExternalLink } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 
-const TOOLTIP_STYLE = {
-  borderRadius: "12px",
-  border: "none",
-  boxShadow: "0 10px 25px -5px rgba(0,0,0,0.18)",
+// ── Shared tooltip style constants ───────────────────────────────────────────
+// All charts on this page (and ideally site-wide) use these for consistency.
+const TOOLTIP_CONTENT_STYLE: React.CSSProperties = {
+  borderRadius: "10px",
+  border: "1px solid rgba(255,255,255,0.08)",
+  boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
   background: "#0F2A36",
+  padding: "10px 14px",
+  fontSize: 13,
   color: "#F5F7FA",
+  fontFamily: "inherit",
 };
+const TOOLTIP_LABEL_STYLE: React.CSSProperties = {
+  color: "#9AA5B1",
+  fontSize: 11,
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  marginBottom: 4,
+};
+const TOOLTIP_ITEM_STYLE: React.CSSProperties = {
+  color: "#F5F7FA",
+  fontSize: 13,
+  padding: "1px 0",
+};
+// Transparent hover rectangle — replaces the default white pill on bar/area charts
+const TOOLTIP_CURSOR = { fill: "rgba(255,255,255,0.04)" };
 
-const SECTOR_COLORS = ["#00C2A8", "#3B82F6", "#F59E0B", "#6366F1", "#EC4899", "#94A3B8"];
+// ── Sector bar-chart palette (on-brand; no pink) ──────────────────────────────
+const SECTOR_COLORS = ["#00C2A8", "#00D1FF", "#3B82F6", "#6366F1", "#F59E0B", "#9AA5B1"];
 
 function pick(rows: { indicator: string; year: number; value: number }[], indicator: string) {
   return rows.filter((r) => r.indicator === indicator).sort((a, b) => a.year - b.year);
@@ -236,7 +257,12 @@ export default function Economic() {
                     <YAxis axisLine={false} tickLine={false} width={52}
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                       tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE}
+                    <Tooltip
+                      contentStyle={TOOLTIP_CONTENT_STYLE}
+                      labelStyle={TOOLTIP_LABEL_STYLE}
+                      itemStyle={TOOLTIP_ITEM_STYLE}
+                      cursor={TOOLTIP_CURSOR}
+                      labelFormatter={(label) => `${label}`}
                       formatter={(v: number, _: string, entry: { payload?: { label?: string } }) => [
                         formatNumber(v),
                         entry?.payload?.label?.endsWith("E")
@@ -298,8 +324,16 @@ export default function Economic() {
                     <YAxis axisLine={false} tickLine={false} domain={["auto", "auto"]} width={52}
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                       tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE}
-                      formatter={(v: number) => [formatNumber(v), t("Formal workers", "Trabajadores formales")]} />
+                    <Tooltip
+                      contentStyle={TOOLTIP_CONTENT_STYLE}
+                      labelStyle={TOOLTIP_LABEL_STYLE}
+                      itemStyle={TOOLTIP_ITEM_STYLE}
+                      cursor={TOOLTIP_CURSOR}
+                      labelFormatter={(year) => `${year}`}
+                      formatter={(v: number) => [
+                        formatNumber(v),
+                        t("IMSS-registered workers", "Trabajadores registrados IMSS"),
+                      ]} />
                     <Area type="monotone" dataKey="workers" stroke="#3B82F6" strokeWidth={2.5}
                       fill="url(#empGrad)" dot={{ r: 4, fill: "#3B82F6", strokeWidth: 0 }}
                       activeDot={{ r: 6 }} />
@@ -341,8 +375,15 @@ export default function Economic() {
                       tickFormatter={(v) => `${v}%`} domain={[0, 45]} />
                     <YAxis type="category" dataKey="sector" axisLine={false} tickLine={false} width={130}
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE}
-                      formatter={(v: number) => [`${v}%`, t("Employment share", "Participación laboral")]} />
+                    <Tooltip
+                      contentStyle={TOOLTIP_CONTENT_STYLE}
+                      labelStyle={TOOLTIP_LABEL_STYLE}
+                      itemStyle={TOOLTIP_ITEM_STYLE}
+                      cursor={TOOLTIP_CURSOR}
+                      formatter={(v: number) => [
+                        `${v}%`,
+                        t("of formal employment · INEGI 2019", "del empleo formal · INEGI 2019"),
+                      ]} />
                     <Bar dataKey="pct" radius={[0, 4, 4, 0]}>
                       {sectorData.map((_, i) => (
                         <Cell key={i} fill={SECTOR_COLORS[i % SECTOR_COLORS.length]} />
@@ -381,11 +422,18 @@ export default function Economic() {
                     <YAxis axisLine={false} tickLine={false} width={44}
                       tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                       tickFormatter={(v) => `$${v}`} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE}
-                      formatter={(v: number, name: string) =>
-                        [`$${v} MXN/day`, name === "avgFormal"
+                    <Tooltip
+                      contentStyle={TOOLTIP_CONTENT_STYLE}
+                      labelStyle={TOOLTIP_LABEL_STYLE}
+                      itemStyle={TOOLTIP_ITEM_STYLE}
+                      cursor={TOOLTIP_CURSOR}
+                      labelFormatter={(year) => `${year}`}
+                      formatter={(v: number, name: string) => [
+                        `$${v} MXN/day`,
+                        name === "avgFormal"
                           ? t("Avg Formal Wage (est.)", "Salario Formal Prom. (est.)")
-                          : t("Min Wage (exact)", "Salario Mínimo (exacto)")]} />
+                          : t("National Min Wage (exact)", "Salario Mínimo Nacional (exacto)"),
+                      ]} />
                     <Legend wrapperStyle={{ paddingTop: 12, fontSize: 12 }}
                       formatter={(val) =>
                         val === "avgFormal"
@@ -455,9 +503,21 @@ export default function Economic() {
           </div>
 
           {/* ── Data notes ──────────────────────────────────────────────── */}
-          <div className="glass-card text-xs text-muted-foreground/70 space-y-1" style={{ padding: "1rem 1.25rem" }}>
+          <div className="glass-card text-xs text-muted-foreground/70 space-y-1.5" style={{ padding: "1rem 1.25rem" }}>
             <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wider mb-2">
-              {t("Data Notes", "Notas de Datos")}
+              {t("Data Notes & Definitions", "Notas de Datos y Definiciones")}
+            </p>
+            <p>• <span className="text-muted-foreground font-medium">{t("Formal workers", "Trabajadores formales")}:</span>{" "}
+              {t(
+                "Employees registered with IMSS (Mexico's social security institute), meaning they receive legally mandated benefits: healthcare, pension contributions, and housing fund (INFONAVIT). Workers in the informal economy — street vendors, unregistered domestic staff, day laborers — are not counted here.",
+                "Trabajadores registrados ante el IMSS, lo que implica prestaciones legales: seguro médico, pensión e INFONAVIT. Los trabajadores informales no están incluidos."
+              )}
+            </p>
+            <p>• <span className="text-muted-foreground font-medium">{t("Formal / avg wage", "Salario formal / promedio")}:</span>{" "}
+              {t(
+                "The average daily wage shown is an estimate for PVR's formal (IMSS-registered) workforce, derived at roughly 2.1–2.3× the national minimum wage — consistent with IMSS salary-band data for tourism-heavy municipalities. It is not an official municipal statistic.",
+                "El salario diario promedio es una estimación para trabajadores formales de PVR, calculada en ~2.1–2.3× el salario mínimo nacional, consistente con las bandas salariales del IMSS para municipios turísticos. No es una estadística municipal oficial."
+              )}
             </p>
             <p>• {t("Population figures from INEGI census/conteo years (1970, 1980, 1990, 1995, 2000, 2005, 2010, 2015, 2020) are exact as published. 2025 is CONAPO projection. PVR grew 12× in 55 years — from a fishing village of 24K to a metro area of 320K+ (2025 est.).", "Las cifras de población de censos/conteos INEGI (1970–2020) son exactas. 2025 es proyección CONAPO. PVR creció 12× en 55 años.")}</p>
             <p>• {t("Formal employment figures are estimates derived from IMSS published municipal reports; 2020–2024 values carry ±3% margin.", "El empleo formal son estimaciones de informes municipales del IMSS; 2020–2024 tienen margen de ±3%.")}</p>
