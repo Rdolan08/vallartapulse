@@ -19,14 +19,27 @@ export interface AirportEstimate {
   estimateGapVsLastOfficialMonthPct: number | null;
   confidence: EstimateConfidence;
   status: EstimateStatus;
+  /** True when the calendar month is fully elapsed but official data not yet published. */
+  monthComplete: boolean;
   lastUpdated: string;
 }
 
+/** Single estimate for the current calendar month. */
 export function useGetAirportEstimate() {
   return useQuery<AirportEstimate>({
     queryKey: ["airport-estimate"],
-    queryFn: () => customFetch<AirportEstimate>("/api/metrics/airport/estimate"),
-    staleTime: 60 * 60 * 1000, // re-fetch at most once per hour (estimate barely changes intra-day)
+    queryFn:  () => customFetch<AirportEstimate>("/api/metrics/airport/estimate"),
+    staleTime: 60 * 60 * 1000,
+    retry: 1,
+  });
+}
+
+/** All months in the current year without an official GAP total, oldest first. */
+export function useGetPendingAirportEstimates() {
+  return useQuery<AirportEstimate[]>({
+    queryKey: ["airport-estimates-pending"],
+    queryFn:  () => customFetch<AirportEstimate[]>("/api/metrics/airport/estimates"),
+    staleTime: 60 * 60 * 1000,
     retry: 1,
   });
 }

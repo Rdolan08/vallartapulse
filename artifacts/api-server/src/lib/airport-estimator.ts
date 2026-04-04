@@ -1,28 +1,23 @@
 /**
  * airport-estimator.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Produces a simple directional estimate of current-month PVR airport
- * passengers BEFORE the official GAP monthly press release is available.
+ * Produces directional estimates of PVR airport passengers for any month that
+ * lacks an official GAP press release.  Returns all pending months at once so
+ * the frontend can show one card per unconfirmed month.
  *
- * Philosophy: intentionally lightweight — this is a directional number, not a
- * forecast. Two simple methods are blended 50/50, then lightly adjusted for
- * seasonal patterns.
+ * Philosophy: intentionally lightweight — directional numbers, not forecasts.
+ * Two simple methods are blended 50/50, then lightly adjusted for seasonality.
  *
  * HOW TO TUNE LATER
  * ─────────────────
  * • SEASONALITY — edit the SEASONALITY constant below. Values > 1 = busier
  *   than a neutral month, < 1 = slower. Effect is capped at ±MAX_SEASON_SWING.
  * • BLEND WEIGHTS — change WEIGHT_PRIOR_MONTH / WEIGHT_YOY (must sum to 1).
- * • CONFIDENCE THRESHOLDS — edit CONF_LOW_MAX / CONF_MED_MAX.
- * • MONTH TIMING — to shift what "current month" means, adjust
- *   getNowPuertovallarta() to use a different offset or library.
+ * • CONFIDENCE THRESHOLDS — edit CONF_LOW_MAX / CONF_MED_MAX (days elapsed).
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 // ── Seasonality index (month number → relative traffic factor) ────────────────
-// A value of 1.00 is neutral; 1.10 means ~10% busier than a neutral month.
-// Effect is capped at ±MAX_SEASON_SWING relative to 1.0 so a bad index entry
-// can never swing the estimate by more than 15% in either direction.
 const SEASONALITY: Record<number, number> = {
   1:  1.08,  // January  – peak winter season
   2:  1.05,  // February – still high
@@ -38,15 +33,11 @@ const SEASONALITY: Record<number, number> = {
   12: 1.15,  // December – holiday peak
 };
 
-const MAX_SEASON_SWING = 0.15; // ±15% max effect
-
-// ── Blend weights (must sum to 1) ─────────────────────────────────────────────
+const MAX_SEASON_SWING  = 0.15; // ±15% max seasonality effect
 const WEIGHT_PRIOR_MONTH = 0.5;
 const WEIGHT_YOY         = 0.5;
-
-// ── Confidence thresholds (days elapsed in current month) ─────────────────────
-const CONF_LOW_MAX = 7;
-const CONF_MED_MAX = 20;
+const CONF_LOW_MAX       = 7;   // days ≤ 7  → low confidence
+const CONF_MED_MAX       = 20;  // days ≤ 20 → medium confidence
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -60,32 +51,22 @@ export interface AirportEstimate {
   daysElapsed: number;
   daysInMonth: number;
 
-  /** Null for the open (current) month — filled when GAP publishes official. */
+  /** Null while the month is open / unconfirmed. */
   officialPassengers: number | null;
 
-  /** Passengers estimated so far this calendar month. */
   estimatedPassengersToDate: number;
-
-  /** Full-month projection including seasonality adjustment. */
   projectedFullMonthPassengers: number;
-
-  /** Average daily rate implied by the to-date estimate. */
   averageDailyPassengersToDate: number;
-
-  /** Official GAP total for the same month in the previous year. */
   sameMonthLastYearPassengers: number | null;
-
-  /** Projected-full-month vs same month last year, as a percentage change. */
   estimatedVsSameMonthLastYearPct: number | null;
-
-  /**
-   * Internal / debug only — projected current month vs most recent official
-   * prior month. Useful for sanity-checking the estimate.
-   */
   estimateGapVsLastOfficialMonthPct: number | null;
 
   confidence: EstimateConfidence;
   status: EstimateStatus;
+
+  /** True when the calendar month is fully elapsed but official data not yet published. */
+  monthComplete: boolean;
+
   lastUpdated: string; // ISO timestamp
 }
 
@@ -99,57 +80,44 @@ export interface MonthRow {
 
 /** Puerto Vallarta is UTC-6 year-round (Mexico abolished DST for Jalisco in 2023). */
 function getNowPuertovallarta(): Date {
-  const utcMs = Date.now();
-  const PV_OFFSET_MS = -6 * 60 * 60 * 1000;
-  return new Date(utcMs + PV_OFFSET_MS);
+  return new Date(Date.now() + -6 * 60 * 60 * 1000);
 }
 
 function daysInMonthFn(year: number, month: number): number {
-  return new Date(year, month, 0).getDate(); // month 1-indexed; Date uses 0-indexed month
+  return new Date(year, month, 0).getDate();
 }
 
 function applySeasonality(base: number, month: number): number {
-  const raw   = SEASONALITY[month] ?? 1.0;
-  const low   = 1.0 - MAX_SEASON_SWING;
-  const high  = 1.0 + MAX_SEASON_SWING;
-  const factor = Math.min(high, Math.max(low, raw));
+  const raw    = SEASONALITY[month] ?? 1.0;
+  const factor = Math.min(1.0 + MAX_SEASON_SWING, Math.max(1.0 - MAX_SEASON_SWING, raw));
   return Math.round(base * factor);
 }
 
-function getConfidence(daysElapsed: number): EstimateConfidence {
-  if (daysElapsed <= CONF_LOW_MAX) return "low";
-  if (daysElapsed <= CONF_MED_MAX) return "medium";
+function getConfidence(daysElapsed: number, daysInMonth: number): EstimateConfidence {
+  // A completed month always gets "high" — the method A+B blend is fully baked.
+  if (daysElapsed >= daysInMonth) return "high";
+  if (daysElapsed <= CONF_LOW_MAX)  return "low";
+  if (daysElapsed <= CONF_MED_MAX)  return "medium";
   return "high";
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
+// ── Core estimator for a single target month ──────────────────────────────────
 
-/**
- * Compute a current-month airport passenger estimate from existing GAP monthly
- * totals. Returns null only if there is truly no usable prior data at all.
- *
- * @param allMonths  All rows from airport_metrics (year + month + totalPassengers).
- * @param now        Optional override — defaults to current time in PVR timezone.
- */
-export function computeAirportEstimate(
+function estimateMonth(
   allMonths: MonthRow[],
-  now?: Date,
+  targetYear: number,
+  targetMonth: number,
+  daysElapsed: number,    // how many days of the month have elapsed (use daysInMonth for complete months)
 ): AirportEstimate | null {
-  const pvNow       = now ?? getNowPuertovallarta();
-  const currentYear = pvNow.getFullYear();
-  const currentMonth = pvNow.getMonth() + 1; // 1-indexed
-  const daysElapsed  = pvNow.getDate();
-  const totalDays    = daysInMonthFn(currentYear, currentMonth);
+  const totalDays = daysInMonthFn(targetYear, targetMonth);
 
-  if (daysElapsed <= 0 || totalDays <= 0) return null;
-
-  // ── If GAP has already published official data for this month, use it ──────
+  // Official data already published?
   const officialRow = allMonths.find(
-    (r) => r.year === currentYear && r.month === currentMonth,
+    (r) => r.year === targetYear && r.month === targetMonth,
   );
 
   const sameLastYearRow = allMonths.find(
-    (r) => r.year === currentYear - 1 && r.month === currentMonth,
+    (r) => r.year === targetYear - 1 && r.month === targetMonth,
   );
 
   if (officialRow) {
@@ -157,95 +125,85 @@ export function computeAirportEstimate(
       ? ((officialRow.totalPassengers - sameLastYearRow.totalPassengers) /
           sameLastYearRow.totalPassengers) * 100
       : null;
-
     return {
       airportCode: "PVR",
-      month: currentMonth,
-      year: currentYear,
-      daysElapsed: totalDays, // month is complete
+      month: targetMonth,
+      year: targetYear,
+      daysElapsed: totalDays,
       daysInMonth: totalDays,
       officialPassengers: officialRow.totalPassengers,
       estimatedPassengersToDate: officialRow.totalPassengers,
       projectedFullMonthPassengers: officialRow.totalPassengers,
-      averageDailyPassengersToDate: Math.round(
-        officialRow.totalPassengers / totalDays,
-      ),
+      averageDailyPassengersToDate: Math.round(officialRow.totalPassengers / totalDays),
       sameMonthLastYearPassengers: sameLastYearRow?.totalPassengers ?? null,
       estimatedVsSameMonthLastYearPct: yoyPct,
       estimateGapVsLastOfficialMonthPct: null,
       confidence: "high",
       status: "official",
+      monthComplete: true,
       lastUpdated: new Date().toISOString(),
     };
   }
 
-  // ── Estimation path — month is still open ─────────────────────────────────
+  // ── Estimation path ────────────────────────────────────────────────────────
 
-  // Most recent official month strictly before the current month
+  // All months strictly before the target
   const sortedPrior = allMonths
-    .filter(
-      (r) => r.year < currentYear ||
-             (r.year === currentYear && r.month < currentMonth),
+    .filter((r) =>
+      r.year < targetYear ||
+      (r.year === targetYear && r.month < targetMonth),
     )
-    .sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month));
+    .sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
 
   const priorRow = sortedPrior[sortedPrior.length - 1] ?? null;
 
-  if (!priorRow && !sameLastYearRow) {
-    // No usable data at all
-    return null;
-  }
+  if (!priorRow && !sameLastYearRow) return null; // no usable data
 
-  // ── Method A: prior-month daily run-rate ──────────────────────────────────
+  // Method A: prior-month daily run-rate scaled to daysElapsed
   let runRateEstimate: number | null = null;
   if (priorRow) {
-    const priorDays    = daysInMonthFn(priorRow.year, priorRow.month);
-    const priorDailyAvg = priorRow.totalPassengers / priorDays;
-    runRateEstimate     = priorDailyAvg * daysElapsed;
+    const priorDays = daysInMonthFn(priorRow.year, priorRow.month);
+    runRateEstimate  = (priorRow.totalPassengers / priorDays) * daysElapsed;
   }
 
-  // ── Method B: same month last year pacing ─────────────────────────────────
+  // Method B: same month last year, scaled to daysElapsed
   let yoyPacedEstimate: number | null = null;
   if (sameLastYearRow) {
-    const lastYearDays  = daysInMonthFn(currentYear - 1, currentMonth);
-    const lastYearDaily = sameLastYearRow.totalPassengers / lastYearDays;
-    yoyPacedEstimate    = lastYearDaily * daysElapsed;
+    const lastYearDays = daysInMonthFn(targetYear - 1, targetMonth);
+    yoyPacedEstimate   = (sameLastYearRow.totalPassengers / lastYearDays) * daysElapsed;
   }
 
-  // ── Blend: 50/50 when both exist, 100% of whichever is available ──────────
+  // Blend
   let elapsedEstimate: number;
   if (runRateEstimate !== null && yoyPacedEstimate !== null) {
-    elapsedEstimate =
-      WEIGHT_PRIOR_MONTH * runRateEstimate +
-      WEIGHT_YOY         * yoyPacedEstimate;
+    elapsedEstimate = WEIGHT_PRIOR_MONTH * runRateEstimate + WEIGHT_YOY * yoyPacedEstimate;
   } else {
-    // Fallback to whichever is available (spec §9)
     elapsedEstimate = (runRateEstimate ?? yoyPacedEstimate)!;
   }
 
-  // ── Project to full-month and apply seasonality ───────────────────────────
+  // Project to full month and apply seasonality
   const paceRatio          = daysElapsed / totalDays;
   const rawProjected       = elapsedEstimate / paceRatio;
-  const projectedFullMonth = applySeasonality(rawProjected, currentMonth);
+  const projectedFullMonth = applySeasonality(rawProjected, targetMonth);
   const estimatedToDate    = Math.round(elapsedEstimate);
-  const avgDailyToDate     = Math.round(estimatedToDate / daysElapsed);
+  const avgDailyToDate     = Math.round(estimatedToDate / Math.max(1, daysElapsed));
 
-  // ── YoY comparison on projected total ─────────────────────────────────────
   const estimatedVsYoy = sameLastYearRow
     ? ((projectedFullMonth - sameLastYearRow.totalPassengers) /
         sameLastYearRow.totalPassengers) * 100
     : null;
 
-  // ── Internal debug gap vs prior official month ────────────────────────────
   const estimateGapVsPrior = priorRow
     ? ((projectedFullMonth - priorRow.totalPassengers) /
         priorRow.totalPassengers) * 100
     : null;
 
+  const monthComplete = daysElapsed >= totalDays;
+
   return {
     airportCode: "PVR",
-    month: currentMonth,
-    year: currentYear,
+    month: targetMonth,
+    year: targetYear,
     daysElapsed,
     daysInMonth: totalDays,
     officialPassengers: null,
@@ -255,8 +213,63 @@ export function computeAirportEstimate(
     sameMonthLastYearPassengers: sameLastYearRow?.totalPassengers ?? null,
     estimatedVsSameMonthLastYearPct: estimatedVsYoy,
     estimateGapVsLastOfficialMonthPct: estimateGapVsPrior,
-    confidence: getConfidence(daysElapsed),
+    confidence: getConfidence(daysElapsed, totalDays),
     status: "estimated",
+    monthComplete,
     lastUpdated: new Date().toISOString(),
   };
+}
+
+// ── Main export: current month ─────────────────────────────────────────────────
+
+/**
+ * Estimate for the current calendar month.
+ * Returns null only if there is no usable prior data at all.
+ */
+export function computeAirportEstimate(
+  allMonths: MonthRow[],
+  now?: Date,
+): AirportEstimate | null {
+  const pvNow        = now ?? getNowPuertovallarta();
+  const currentYear  = pvNow.getFullYear();
+  const currentMonth = pvNow.getMonth() + 1;
+  const daysElapsed  = pvNow.getDate();
+  return estimateMonth(allMonths, currentYear, currentMonth, daysElapsed);
+}
+
+// ── Secondary export: all unconfirmed months ───────────────────────────────────
+
+/**
+ * Returns estimates for every recent month that lacks an official GAP total,
+ * ordered chronologically (oldest first).
+ *
+ * "Recent" = from January of the current year through the current month.
+ * Already-official months are included with status:"official" so the caller
+ * can render them if desired, but the primary use-case is finding the gap
+ * between the latest official release and today.
+ */
+export function computePendingEstimates(
+  allMonths: MonthRow[],
+  now?: Date,
+): AirportEstimate[] {
+  const pvNow        = now ?? getNowPuertovallarta();
+  const currentYear  = pvNow.getFullYear();
+  const currentMonth = pvNow.getMonth() + 1;
+  const todayDay     = pvNow.getDate();
+
+  const results: AirportEstimate[] = [];
+
+  for (let m = 1; m <= currentMonth; m++) {
+    const isCurrentMonth = m === currentMonth;
+    const daysElapsed    = isCurrentMonth
+      ? todayDay
+      : daysInMonthFn(currentYear, m); // completed month = all days elapsed
+
+    const est = estimateMonth(allMonths, currentYear, m, daysElapsed);
+    if (est && est.status === "estimated") {
+      results.push(est);
+    }
+  }
+
+  return results;
 }
