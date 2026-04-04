@@ -242,65 +242,6 @@ export default function Dashboard() {
         </div>
       ) : data ? (
         <div className="space-y-8">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <StatCard
-              titleEn="Hotel Occupancy"
-              titleEs="Ocupación Hotelera"
-              value={formatPercent(data.hotelOccupancyRate)}
-              change={data.hotelOccupancyChange}
-              icon={<Building2 className="text-primary" />}
-              trend="up_good"
-              href="/tourism"
-            />
-            <StatCard
-              titleEn="Avg Nightly Rate"
-              titleEs="Tarifa Promedio por Noche"
-              value={formatCurrency(data.avgNightlyRate)}
-              change={data.avgNightlyRateChange}
-              icon={<Home className="text-accent" />}
-              trend="up_good"
-              href="/rental-market"
-            />
-            <StatCard
-              titleEn="Active Listings"
-              titleEs="Anuncios Activos"
-              value={formatNumber(data.activeListings)}
-              change={data.activeListingsChange}
-              icon={<Home className="text-emerald-500" />}
-              trend="up_good"
-              href="/rental-market"
-            />
-            <StatCard
-              titleEn="Tourist Arrivals"
-              titleEs="Llegada de Turistas"
-              value={formatNumber(data.touristArrivals)}
-              change={data.touristArrivalsChange}
-              icon={<Plane className="text-blue-500" />}
-              trend="up_good"
-              href="/tourism"
-            />
-            <StatCard
-              titleEn="Avg Temperature"
-              titleEs="Temperatura Promedio"
-              value={fmtTemp(data.avgTemperatureC, tempUnit)}
-              icon={<ThermometerSun className="text-amber-500" />}
-              trend="neutral"
-              href="/weather"
-            />
-            <StatCard
-              titleEn="Crime Index"
-              titleEs="Índice de Criminalidad"
-              value={`${data.crimeIndex.toFixed(1)} / 100`}
-              change={data.crimeIndexChange}
-              changeLabelEn="vs last year · lower is safer"
-              changeLabelEs="vs año anterior · menor es más seguro"
-              icon={<ShieldAlert className="text-rose-500" />}
-              trend="down_good"
-              href="/safety"
-            />
-          </div>
-
           {/* ── Pricing Tool CTA ────────────────────────────────────────── */}
           <Link href="/pricing-tool">
             <div
@@ -425,6 +366,65 @@ export default function Dashboard() {
               </div>
             </div>
           </Link>
+
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <StatCard
+              titleEn="Hotel Occupancy"
+              titleEs="Ocupación Hotelera"
+              value={formatPercent(data.hotelOccupancyRate)}
+              change={data.hotelOccupancyChange}
+              icon={<Building2 className="text-primary" />}
+              trend="up_good"
+              href="/tourism"
+            />
+            <StatCard
+              titleEn="Avg Nightly Rate"
+              titleEs="Tarifa Promedio por Noche"
+              value={formatCurrency(data.avgNightlyRate)}
+              change={data.avgNightlyRateChange}
+              icon={<Home className="text-accent" />}
+              trend="up_good"
+              href="/rental-market"
+            />
+            <StatCard
+              titleEn="Active Listings"
+              titleEs="Anuncios Activos"
+              value={formatNumber(data.activeListings)}
+              change={data.activeListingsChange}
+              icon={<Home className="text-emerald-500" />}
+              trend="up_good"
+              href="/rental-market"
+            />
+            <StatCard
+              titleEn="Tourist Arrivals"
+              titleEs="Llegada de Turistas"
+              value={formatNumber(data.touristArrivals)}
+              change={data.touristArrivalsChange}
+              icon={<Plane className="text-blue-500" />}
+              trend="up_good"
+              href="/tourism"
+            />
+            <StatCard
+              titleEn="Avg Temperature"
+              titleEs="Temperatura Promedio"
+              value={fmtTemp(data.avgTemperatureC, tempUnit)}
+              icon={<ThermometerSun className="text-amber-500" />}
+              trend="neutral"
+              href="/weather"
+            />
+            <StatCard
+              titleEn="Crime Index"
+              titleEs="Índice de Criminalidad"
+              value={`${data.crimeIndex.toFixed(1)} / 100`}
+              change={data.crimeIndexChange}
+              changeLabelEn="vs last year · lower is safer"
+              changeLabelEs="vs año anterior · menor es más seguro"
+              icon={<ShieldAlert className="text-rose-500" />}
+              trend="down_good"
+              href="/safety"
+            />
+          </div>
 
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
