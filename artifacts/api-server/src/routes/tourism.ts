@@ -30,8 +30,8 @@ router.get("/metrics/tourism", async (req, res) => {
       rows.map((r) => ({
         ...r,
         hotelOccupancyRate: Number(r.hotelOccupancyRate),
-        avgHotelRateUsd: r.avgHotelRateUsd ? Number(r.avgHotelRateUsd) : undefined,
-        revenuePerAvailableRoomUsd: r.revenuePerAvailableRoomUsd ? Number(r.revenuePerAvailableRoomUsd) : undefined,
+        avgHotelRateUsd: r.avgHotelRateUsd != null ? Number(r.avgHotelRateUsd) : null,
+        revenuePerAvailableRoomUsd: r.revenuePerAvailableRoomUsd != null ? Number(r.revenuePerAvailableRoomUsd) : null,
         createdAt: r.createdAt,
       }))
     );
