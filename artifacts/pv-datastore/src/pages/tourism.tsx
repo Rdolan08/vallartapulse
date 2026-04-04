@@ -184,6 +184,7 @@ export default function Tourism() {
                       boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
                     }}
                     cursor={{ fill: "hsl(var(--muted)/0.5)" }}
+                    formatter={(val: number, name: string) => [formatNumber(val), name]}
                   />
                   <Legend iconType="circle" wrapperStyle={{ paddingTop: "20px" }} />
                   <Bar
