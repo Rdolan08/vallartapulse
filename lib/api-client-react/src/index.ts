@@ -4,3 +4,5 @@ export { setBaseUrl, setAuthTokenGetter } from "./custom-fetch";
 export type { AuthTokenGetter } from "./custom-fetch";
 export { useGetAirportMetrics } from "./hooks/useGetAirportMetrics";
 export type { AirportMetricRow, GetAirportMetricsParams } from "./hooks/useGetAirportMetrics";
+export { useGetCruiseSchedule } from "./hooks/useGetCruiseSchedule";
+export type { CruiseArrival } from "./hooks/useGetCruiseSchedule";

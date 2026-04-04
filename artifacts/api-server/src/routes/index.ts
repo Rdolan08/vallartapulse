@@ -12,6 +12,7 @@ import rentalHelpersRouter from "./rental-helpers";
 import ingestRouter from "./ingest";
 import contactRouter from "./contact";
 import airportRouter from "./airport";
+import cruiseScheduleRouter from "./cruise-schedule";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,7 @@ router.use(rentalHelpersRouter); // must be before compsRouter (comps/prepare vs
 router.use(compsRouter);
 router.use(ingestRouter);
 router.use(airportRouter);
+router.use(cruiseScheduleRouter);
 router.use("/contact", contactRouter);
 
 export default router;

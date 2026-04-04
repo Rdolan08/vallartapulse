@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetTourismMetrics, useGetAirportMetrics } from "@workspace/api-client-react";
+import { useGetTourismMetrics, useGetAirportMetrics, useGetCruiseSchedule } from "@workspace/api-client-react";
 import { MONTHLY_DATA_YEARS, LAST_COMPLETED_YEAR, yearLabel } from "@/lib/data-availability";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
@@ -21,6 +21,8 @@ import {
 } from "recharts";
 import { formatNumber, formatPercent } from "@/lib/utils";
 import { Building2, DollarSign, ExternalLink, Plane, Ship, TrendingUp, Users } from "lucide-react";
+
+const MONTH_NAMES_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -48,6 +50,7 @@ export default function Tourism() {
 
   const { data, isLoading, error } = useGetTourismMetrics({ year });
   const { data: airportRaw } = useGetAirportMetrics();
+  const { data: cruiseSchedule } = useGetCruiseSchedule();
 
   // ── Airport chart data (all years, YoY comparison) ───────────────────────
   const airportYears = airportRaw
@@ -173,6 +176,169 @@ export default function Tourism() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Live cruise port schedule (CruiseDig, near real-time) ──────── */}
+      {cruiseSchedule && cruiseSchedule.length > 0 && (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const upcoming = cruiseSchedule
+          .filter((a) => new Date(a.date) >= today)
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .slice(0, 60);
+
+        // Build chart data: group by week bucket for the next 8 weeks
+        const weekBuckets: Record<string, { label: string; passengers: number; ships: number }> = {};
+        for (const a of upcoming) {
+          const d = new Date(a.date);
+          const weekStart = new Date(d);
+          weekStart.setDate(d.getDate() - d.getDay());
+          const key = weekStart.toISOString().split("T")[0];
+          const mon = d.getMonth();
+          const label = `${d.getDate()} ${MONTH_NAMES_LONG[mon].slice(0, 3)}`;
+          if (!weekBuckets[key]) weekBuckets[key] = { label, passengers: 0, ships: 0 };
+          weekBuckets[key].passengers += a.passengers;
+          weekBuckets[key].ships += 1;
+        }
+        const weekData = Object.entries(weekBuckets)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .slice(0, 10)
+          .map(([, v]) => v);
+
+        const nextShip = upcoming[0];
+        const totalNextMonth = upcoming
+          .filter((a) => {
+            const d = new Date(a.date);
+            return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+          })
+          .reduce((s, a) => s + a.passengers, 0);
+
+        return (
+          <Card className="glass-card mb-6">
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Ship className="w-4 h-4" style={{ color: "#6366F1" }} />
+                    <CardTitle>{t("Live Cruise Port Schedule", "Agenda en Vivo del Puerto de Cruceros")}</CardTitle>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "#163C4A", color: "#00C2A8", border: "1px solid #00C2A8" }}>
+                      {t("Live", "En Vivo")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t(
+                      "Upcoming cruise ship arrivals with passenger counts — updated daily",
+                      "Próximas llegadas de cruceros con número de pasajeros — actualizado diariamente"
+                    )}
+                    {nextShip && (
+                      <span className="ml-2 text-primary font-medium">
+                        · {t("Next arrival", "Próxima llegada")}: {nextShip.ship} {nextShip.date}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <a href="https://cruisedig.com/ports/puerto-vallarta-mexico/arrivals"
+                   target="_blank" rel="noopener noreferrer"
+                   className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+                  CruiseDig <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Mini KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                {[
+                  { label: t("Arrivals in next 60 days", "Escalas próx. 60 días"), value: String(upcoming.length) },
+                  { label: t("Est. cruise visitors (60 days)", "Viajeros est. (60 días)"), value: formatNumber(upcoming.reduce((s, a) => s + a.passengers, 0)) },
+                  { label: t("This month's cruise visitors", "Cruceristas este mes"), value: formatNumber(totalNextMonth) },
+                  { label: t("Cruise lines calling", "Líneas activas"), value: String(new Set(upcoming.map((a) => a.line)).size) },
+                ].map(({ label, value }) => (
+                  <div key={label} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="text-xs text-muted-foreground mb-1">{label}</div>
+                    <div className="text-lg font-bold text-foreground">{value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Weekly passenger chart */}
+              {weekData.length > 0 && (
+                <div className="h-[200px] mb-5">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={weekData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      {GRID}
+                      <XAxis dataKey="label" {...AXIS_PROPS} tick={{ ...TICK, fontSize: 11 }} dy={6} />
+                      <YAxis {...AXIS_PROPS} tick={{ ...TICK, fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={36} />
+                      <Tooltip
+                        {...TOOLTIP_STYLE}
+                        formatter={(val: number, name: string) => [formatNumber(val), name]}
+                        labelFormatter={(label) => `${t("Week of", "Semana del")} ${label}`}
+                      />
+                      <Bar dataKey="passengers" name={t("Cruise Passengers", "Pasajeros de Crucero")} fill="#6366F1" radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* Upcoming arrivals table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs uppercase bg-secondary/50 text-muted-foreground border-b">
+                    <tr>
+                      <th className="px-4 py-3">{t("Date", "Fecha")}</th>
+                      <th className="px-4 py-3">{t("Ship", "Barco")}</th>
+                      <th className="px-4 py-3">{t("Cruise Line", "Línea")}</th>
+                      <th className="px-4 py-3 text-right">{t("Passengers", "Pasajeros")}</th>
+                      <th className="px-4 py-3">{t("Time", "Hora")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {upcoming.slice(0, 20).map((a, i) => {
+                      const d = new Date(a.date);
+                      const isToday = d.toDateString() === today.toDateString();
+                      const isTomorrow = d.toDateString() === new Date(today.getTime() + 86400000).toDateString();
+                      return (
+                        <tr key={`${a.date}-${a.ship}-${i}`}
+                          className="border-b last:border-0 hover:bg-muted/20 transition-colors"
+                          style={isToday ? { background: "rgba(0,194,168,0.06)" } : undefined}>
+                          <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
+                            {isToday ? (
+                              <span className="text-primary font-bold">{t("Today", "Hoy")}</span>
+                            ) : isTomorrow ? (
+                              <span style={{ color: "#F59E0B" }}>{t("Tomorrow", "Mañana")}</span>
+                            ) : (
+                              <span>
+                                {d.getDate()} {MONTH_NAMES_LONG[d.getMonth()].slice(0, 3)} {d.getFullYear()}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <a href={a.shipUrl} target="_blank" rel="noopener noreferrer"
+                               className="hover:text-primary transition-colors flex items-center gap-1">
+                              {a.ship} <ExternalLink className="w-3 h-3 opacity-40" />
+                            </a>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">{a.line}</td>
+                          <td className="px-4 py-3 text-right font-semibold">{formatNumber(a.passengers)}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{a.time}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {upcoming.length > 20 && (
+                  <p className="text-xs text-muted-foreground text-center py-3">
+                    {t(`Showing 20 of ${upcoming.length} upcoming arrivals`, `Mostrando 20 de ${upcoming.length} llegadas próximas`)}
+                    {" · "}
+                    <a href="https://cruisedig.com/ports/puerto-vallarta-mexico/arrivals" target="_blank" rel="noopener noreferrer"
+                       className="text-primary hover:underline">
+                      {t("View all on CruiseDig", "Ver todos en CruiseDig")}
+                    </a>
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* ── SECTUR / DATATUR section (year-filtered) ─────────────────────── */}
       {isLoading ? (
