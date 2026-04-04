@@ -238,6 +238,7 @@ export default function Safety() {
                   <Tooltip
                     contentStyle={{ background: "#163C4A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8 }}
                     labelStyle={{ color: "#F5F7FA" }}
+                    formatter={(v: number) => [formatNumber(v), t("Total Incidents", "Total Incidentes")]}
                   />
                   <Line type="monotone" dataKey="total" stroke="#ef4444" strokeWidth={2} dot={false}
                     name={t("Total Incidents", "Total Incidentes")} />

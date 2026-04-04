@@ -129,7 +129,7 @@ export default function Weather() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis unit={tempLabel} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [`${v}${tempLabel}`]} />
+                  <Tooltip formatter={(v: number, name: string) => [`${v}${tempLabel}`, name]} />
                   <Legend />
                   <Line type="monotone" dataKey={t("Avg Temp", "Temp. Prom")} stroke="#00C2A8" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey={t("Sea Temp", "Temp. Mar")} stroke="#00D1FF" strokeWidth={2} dot={false} strokeDasharray="4 2" />
@@ -149,7 +149,7 @@ export default function Weather() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis unit={precipLabel} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [`${v}${precipLabel}`]} />
+                  <Tooltip formatter={(v: number, name: string) => [`${v}${precipLabel}`, name]} />
                   <Bar dataKey={t("Rainfall", "Lluvia")} fill="#3B82F6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
