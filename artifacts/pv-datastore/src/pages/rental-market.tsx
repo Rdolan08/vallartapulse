@@ -5,6 +5,7 @@ import { useLanguage } from "@/contexts/language-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
+import { ExternalLink } from "lucide-react";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
@@ -24,7 +25,7 @@ const NEIGHBORHOODS = [
 ];
 
 export default function RentalMarket() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
   const [neighborhood, setNeighborhood] = useState<string>("Zona Romántica");
 
@@ -48,7 +49,24 @@ export default function RentalMarket() {
             {t("Rental Market", "Mercado de Renta")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {t("Short-term rental analytics from Airbnb and VRBO.", "Análisis de rentas a corto plazo de Airbnb y VRBO.")}
+            {lang === "es" ? "Análisis de rentas a corto plazo de " : "Short-term rental analytics from "}
+            <a
+              href="https://www.airbnb.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline inline-flex items-center gap-0.5"
+            >
+              Airbnb <ExternalLink className="w-3 h-3" />
+            </a>
+            {" "}{lang === "es" ? "y" : "and"}{" "}
+            <a
+              href="https://www.vrbo.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline inline-flex items-center gap-0.5"
+            >
+              VRBO <ExternalLink className="w-3 h-3" />
+            </a>.
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">

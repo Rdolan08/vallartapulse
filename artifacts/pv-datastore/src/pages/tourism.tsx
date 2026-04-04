@@ -16,12 +16,12 @@ import {
   Legend,
 } from "recharts";
 import { formatNumber, formatPercent } from "@/lib/utils";
-import { Building2, Plane, Ship, Users } from "lucide-react";
+import { Building2, ExternalLink, Plane, Ship, Users } from "lucide-react";
 
 const YEARS = [...MONTHLY_DATA_YEARS].reverse();
 
 export default function Tourism() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
 
   const { data, isLoading, error } = useGetTourismMetrics({ year });
@@ -49,10 +49,17 @@ export default function Tourism() {
             {t("Tourism Metrics", "Métricas Turísticas")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {t(
-              "Arrivals, cruise visitors, and occupancy data from DATATUR.",
-              "Llegadas, visitantes de cruceros y ocupación de DATATUR."
-            )}
+            {lang === "es"
+              ? "Llegadas, visitantes de cruceros y ocupación de "
+              : "Arrivals, cruise visitors, and occupancy data from "}
+            <a
+              href="https://www.datatur.sectur.gob.mx/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline inline-flex items-center gap-0.5"
+            >
+              DATATUR <ExternalLink className="w-3 h-3" />
+            </a>.
           </p>
         </div>
         <select
@@ -201,10 +208,19 @@ export default function Tourism() {
           {/* Cruise visitors chart */}
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle>
-                {t("Cruise Visitors by Month", "Visitantes de Cruceros por Mes")}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">DATATUR / SECTUR</p>
+              <div className="flex items-center justify-between">
+                <CardTitle>
+                  {t("Cruise Visitors by Month", "Visitantes de Cruceros por Mes")}
+                </CardTitle>
+                <a
+                  href="https://www.datatur.sectur.gob.mx/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+                >
+                  DATATUR / SECTUR <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </CardHeader>
             <CardContent className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -252,6 +268,19 @@ export default function Tourism() {
 
           {/* Data table */}
           <Card className="glass-card overflow-hidden">
+            <div className="flex items-center justify-between px-6 pt-5 pb-2">
+              <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
+                {t("Monthly Data", "Datos Mensuales")}
+              </h3>
+              <a
+                href="https://www.datatur.sectur.gob.mx/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+              >
+                {t("Source: DATATUR / SECTUR", "Fuente: DATATUR / SECTUR")} <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="text-xs uppercase bg-secondary/50 text-muted-foreground border-b">
