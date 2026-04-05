@@ -191,7 +191,7 @@ export default function Dashboard() {
                   {[
                     { label: t("Conservative", "Conservadora"), price: "$165", highlight: false },
                     { label: t("Recommended", "Recomendada"),  price: "$212", highlight: true  },
-                    { label: t("Stretch",      "Estiramiento"), price: "$268", highlight: false },
+                    { label: t("Stretch",      "Máximo"),       price: "$268", highlight: false },
                   ].map(({ label, price, highlight }) => (
                     <div
                       key={label}

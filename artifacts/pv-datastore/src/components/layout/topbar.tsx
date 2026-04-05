@@ -63,7 +63,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
                 : { color: "rgba(154,165,177,0.8)" }
             }
           >
-            EN
+            🇺🇸
           </button>
           <button
             onClick={() => lang !== "es" && toggleLanguage()}
@@ -74,7 +74,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
                 : { color: "rgba(154,165,177,0.8)" }
             }
           >
-            ES
+            🇲🇽
           </button>
         </div>
       </div>
