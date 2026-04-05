@@ -2,32 +2,33 @@ import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
 import founderPhoto from "@assets/60F21D23-B299-493B-AB91-0FC4E4DD5DA1_1775158046764.png";
 
+const CARD_STYLE = { background: "#163C4A", border: "1px solid rgba(255,255,255,0.06)" };
+const LABEL_STYLE = { color: "rgba(154,165,177,0.45)" };
+const BODY_STYLE = { color: "rgba(154,165,177,0.75)" };
+const HEADING_STYLE = { color: "rgba(245,247,250,0.95)" };
+
 export default function About() {
   const { t } = useLanguage();
 
   return (
     <PageWrapper>
-      <div className="max-w-2xl mx-auto py-10 px-4">
+      <div className="max-w-2xl mx-auto py-10 px-4 space-y-6">
 
-        <h1 className="text-3xl font-bold mb-1" style={{ color: "rgba(245,247,250,0.95)" }}>
-          {t("About VallartaPulse", "Acerca de VallartaPulse")}
-        </h1>
-        <p className="text-sm mb-10" style={{ color: "rgba(154,165,177,0.6)" }}>
-          {t(
-            "Puerto Vallarta's market intelligence platform for property owners, managers, and investors.",
-            "La plataforma de inteligencia de mercado de Puerto Vallarta para propietarios, administradores e inversores."
-          )}
-        </p>
+        <div>
+          <h1 className="text-3xl font-bold mb-1" style={HEADING_STYLE}>
+            {t("About VallartaPulse", "Acerca de VallartaPulse")}
+          </h1>
+          <p className="text-sm" style={{ color: "rgba(154,165,177,0.6)" }}>
+            {t(
+              "Puerto Vallarta's market intelligence platform for property owners, managers, and investors.",
+              "La plataforma de inteligencia de mercado de Puerto Vallarta para propietarios, administradores e inversores."
+            )}
+          </p>
+        </div>
 
         {/* Founder card */}
-        <div
-          className="rounded-2xl p-8 mb-8"
-          style={{ background: "#163C4A", border: "1px solid rgba(255,255,255,0.06)" }}
-        >
-          <p
-            className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-5"
-            style={{ color: "rgba(154,165,177,0.45)" }}
-          >
+        <div className="rounded-2xl p-8" style={CARD_STYLE}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-5" style={LABEL_STYLE}>
             {t("Founder", "Fundador")}
           </p>
 
@@ -39,17 +40,12 @@ export default function About() {
               style={{ width: "88px", height: "88px", objectPosition: "center top" }}
             />
             <div>
-              <h2 className="text-xl font-semibold mb-0.5" style={{ color: "rgba(245,247,250,0.95)" }}>
-                Ryan Dolan
-              </h2>
+              <h2 className="text-xl font-semibold mb-0.5" style={HEADING_STYLE}>Ryan Dolan</h2>
               <p className="text-sm mb-3" style={{ color: "#00C2A8" }}>
                 {t("Founder, VallartaPulse", "Fundador, VallartaPulse")}
               </p>
               <p className="text-sm leading-relaxed" style={{ color: "rgba(154,165,177,0.7)" }}>
-                {t(
-                  "Owner at ",
-                  "Propietario en "
-                )}
+                {t("Owner at ", "Propietario en ")}
                 <span style={{ color: "rgba(245,247,250,0.85)", fontWeight: 500 }}>Ciye</span>
                 {t(
                   ", an upcoming development on Lázaro Cárdenas Park in Puerto Vallarta's Zona Romántica.",
@@ -59,7 +55,7 @@ export default function About() {
             </div>
           </div>
 
-          <div className="space-y-4 text-sm leading-relaxed" style={{ color: "rgba(154,165,177,0.75)" }}>
+          <div className="space-y-4 text-sm leading-relaxed" style={BODY_STYLE}>
             <p>
               {t(
                 "After more than 20 years working in AI, data, and technology — including leadership roles within the U.S. federal government — Ryan set out to build something more practical and closer to home. VallartaPulse is that vision: a market intelligence platform that brings together rental pricing, tourism flows, economic indicators, safety data, and climate patterns for Puerto Vallarta's rapidly growing property market.",
@@ -68,8 +64,8 @@ export default function About() {
             </p>
             <p>
               {t(
-                "As both a property owner and frequent resident, Ryan is building Vallarta Pulse from the perspective of someone actively investing in the area, not just analyzing it from the outside.",
-                "Como propietario y residente frecuente, Ryan construye Vallarta Pulse desde la perspectiva de alguien que invierte activamente en la zona, no solo la analiza desde afuera."
+                "As both a property owner and frequent resident, Ryan is building VallartaPulse from the perspective of someone actively investing in the area, not just analyzing it from the outside.",
+                "Como propietario y residente frecuente, Ryan construye VallartaPulse desde la perspectiva de alguien que invierte activamente en la zona, no solo la analiza desde afuera."
               )}
             </p>
             <p>
@@ -80,38 +76,109 @@ export default function About() {
             </p>
             <p>
               {t(
-                "He lives in Minneapolis with his husband, Chris, and their daughter, Olivia, and splits his time between the U.S. and Puerto Vallarta. When he's not working on Vallarta Pulse, he's likely following a game, exploring, or thinking about how to turn better data into better decisions.",
-                "Vive en Minneapolis con su esposo, Chris, y su hija, Olivia, y divide su tiempo entre Estados Unidos y Puerto Vallarta. Cuando no está trabajando en Vallarta Pulse, probablemente esté viendo un partido, explorando, o pensando en cómo convertir mejores datos en mejores decisiones."
+                "He lives in Minneapolis with his husband, Chris, and their daughter, Olivia, and splits his time between the U.S. and Puerto Vallarta. When he's not working on VallartaPulse, he's likely following a game, exploring, or thinking about how to turn better data into better decisions.",
+                "Vive en Minneapolis con su esposo, Chris, y su hija, Olivia, y divide su tiempo entre Estados Unidos y Puerto Vallarta. Cuando no está trabajando en VallartaPulse, probablemente esté viendo un partido, explorando, o pensando en cómo convertir mejores datos en mejores decisiones."
               )}
             </p>
           </div>
         </div>
 
-        {/* Platform blurb */}
-        <div
-          className="rounded-2xl p-8"
-          style={{ background: "#163C4A", border: "1px solid rgba(255,255,255,0.06)" }}
-        >
-          <p
-            className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-4"
-            style={{ color: "rgba(154,165,177,0.45)" }}
-          >
-            {t("The Platform", "La Plataforma")}
+        {/* Mission card */}
+        <div className="rounded-2xl p-8" style={CARD_STYLE}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-4" style={LABEL_STYLE}>
+            {t("The Mission", "La Misión")}
           </p>
-          <div className="space-y-4 text-sm leading-relaxed" style={{ color: "rgba(154,165,177,0.75)" }}>
+          <div className="space-y-4 text-sm leading-relaxed" style={BODY_STYLE}>
             <p>
               {t(
-                "VallartaPulse aggregates data from Airbnb, VRBO, Booking.com, DATATUR, SECTUR, Banxico, and local agencies to give property managers and rental owners a clear, unbiased picture of the market — pricing comps, seasonality layers, neighborhood benchmarks, tourism trends, economic indicators, and more.",
-                "VallartaPulse agrega datos de Airbnb, VRBO, Booking.com, DATATUR, SECTUR, Banxico y agencias locales para ofrecer a propietarios y administradores una visión clara e imparcial del mercado — comparaciones de precios, capas de temporalidad, referencias por colonia, tendencias turísticas, indicadores económicos y más."
+                "Puerto Vallarta property owners have been pricing blind. Generic national tools don't know that Amapas commands a view premium, that Versalles outperforms its price tier in shoulder season, or that cruise arrivals spike occupancy in the Romantic Zone on specific days. VallartaPulse exists to fix that.",
+                "Los propietarios en Puerto Vallarta han estado fijando precios a ciegas. Las herramientas genéricas nacionales no saben que Amapas tiene una prima por vista, que Versalles supera su rango de precios en temporada intermedia, o que las llegadas de cruceros disparan la ocupación en la Zona Romántica en días específicos. VallartaPulse existe para cambiar eso."
               )}
             </p>
             <p>
               {t(
-                "The platform is bilingual (English / Español) and built specifically for the greater Bahía de Banderas region, covering Puerto Vallarta, Nuevo Vallarta, Bucerias, Punta Mita, and surrounding areas.",
-                "La plataforma es bilingüe (English / Español) y está desarrollada específicamente para la región de la Bahía de Banderas, cubriendo Puerto Vallarta, Nuevo Vallarta, Bucerías, Punta Mita y zonas circundantes."
+                "The platform gives owners access to hyper-local economic data, neighborhood-level market signals, and truly comparable rental properties — so they can price dynamically with far more precision than any national tool allows.",
+                "La plataforma da a los propietarios acceso a datos económicos hiperlocales, señales de mercado por colonia y propiedades de renta verdaderamente comparables — para que puedan fijar precios de forma dinámica con mucha más precisión que cualquier herramienta nacional."
               )}
             </p>
           </div>
+        </div>
+
+        {/* Roadmap card */}
+        <div className="rounded-2xl p-8" style={CARD_STYLE}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-4" style={LABEL_STYLE}>
+            {t("What We're Building", "Lo Que Estamos Construyendo")}
+          </p>
+          <div className="space-y-5 text-sm" style={BODY_STYLE}>
+
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 mt-0.5">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "#00C2A8", color: "#0A1E27" }}>1</div>
+              </div>
+              <div>
+                <p className="font-semibold mb-1" style={HEADING_STYLE}>
+                  {t("Data & Pricing", "Datos y Precios")}
+                  <span className="ml-2 text-[10px] font-normal px-1.5 py-0.5 rounded" style={{ background: "rgba(0,194,168,0.15)", color: "#00C2A8" }}>
+                    {t("Live now", "Disponible ahora")}
+                  </span>
+                </p>
+                <p className="leading-relaxed">
+                  {t(
+                    "Neighborhood comps, tourism flows, seasonality layers, airport traffic, cruise schedules, economic indicators, safety data, and climate patterns — all aggregated into a single pricing tool built for PV.",
+                    "Comparables por colonia, flujos turísticos, capas de temporalidad, tráfico aeroportuario, itinerarios de cruceros, indicadores económicos, datos de seguridad y clima — todo integrado en una sola herramienta de precios diseñada para PV."
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 mt-0.5">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "rgba(99,102,241,0.25)", color: "#6366F1", border: "1px solid rgba(99,102,241,0.4)" }}>2</div>
+              </div>
+              <div>
+                <p className="font-semibold mb-1" style={HEADING_STYLE}>
+                  {t("Owner Toolkit", "Herramientas para Propietarios")}
+                </p>
+                <p className="leading-relaxed">
+                  {t(
+                    "Calendar integration, budgeting tools, and operational planning support — so owners can move from better data to better day-to-day decisions.",
+                    "Integración de calendario, herramientas de presupuesto y planificación operativa — para que los propietarios puedan pasar de mejores datos a mejores decisiones cotidianas."
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="flex-shrink-0 mt-0.5">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "rgba(99,102,241,0.25)", color: "#6366F1", border: "1px solid rgba(99,102,241,0.4)" }}>3</div>
+              </div>
+              <div>
+                <p className="font-semibold mb-1" style={HEADING_STYLE}>
+                  {t("Owner Community & Marketplace", "Comunidad y Directorio de Proveedores")}
+                </p>
+                <p className="leading-relaxed">
+                  {t(
+                    "A blog and community where owners share insights and experiences, followed by a vetted vendor marketplace — plumbers, electricians, cleaners, property managers, and more — with transparent ratings from owners who've actually hired them. For remote owners managing from thousands of miles away, trusted local referrals are a real need.",
+                    "Un blog y comunidad donde los propietarios comparten experiencias y consejos, seguido de un directorio de proveedores verificados — plomeros, electricistas, personal de limpieza, administradores y más — con calificaciones transparentes de propietarios que los han contratado. Para quienes gestionan desde lejos, las referencias locales confiables son una necesidad real."
+                  )}
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Vision footer */}
+        <div className="rounded-2xl p-8" style={CARD_STYLE}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] mb-4" style={LABEL_STYLE}>
+            {t("The Vision", "La Visión")}
+          </p>
+          <p className="text-sm leading-relaxed" style={BODY_STYLE}>
+            {t(
+              "VallartaPulse is being built to become the operating system for Puerto Vallarta property owners — first for data-driven pricing, then for smarter ownership, and ultimately for trusted local connection.",
+              "VallartaPulse está siendo construido para convertirse en el sistema operativo de los propietarios de Puerto Vallarta — primero para la fijación de precios basada en datos, luego para una gestión más inteligente, y finalmente para una conexión local de confianza."
+            )}
+          </p>
         </div>
 
       </div>
