@@ -47,12 +47,6 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
 
       {/* Language toggle */}
       <div className="flex items-center gap-2">
-        <span
-          className="text-xs font-medium hidden sm:block"
-          style={{ color: "rgba(154,165,177,0.55)" }}
-        >
-          Language:
-        </span>
         <div
           className="flex items-center gap-0.5 rounded-lg p-0.5"
           style={{
