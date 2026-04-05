@@ -58,4 +58,5 @@ jobs:
           gh auth setup-git
           git add artifacts/pv-datastore/public/og/
           git commit -m "chore: refresh OG preview images [skip ci]"
+          git pull --rebase origin main
           git push origin HEAD:main
