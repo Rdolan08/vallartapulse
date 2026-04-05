@@ -89,20 +89,27 @@ export async function syncSourceById(id: number): Promise<{
   if (!source) return null;
 
   const liveCount = await recountFromDB(source.name);
-  const newCount = liveCount !== null ? liveCount : (source.recordCount ?? 0);
+
+  // For external sources (no backing table), only refresh the timestamp —
+  // never overwrite a meaningful seeded recordCount with 0.
+  const updatePayload =
+    liveCount !== null
+      ? { lastSyncedAt: new Date(), status: "active" as const, recordCount: liveCount }
+      : { lastSyncedAt: new Date(), status: "active" as const };
 
   await db
     .update(dataSourcesTable)
-    .set({ lastSyncedAt: new Date(), status: "active", recordCount: newCount })
+    .set(updatePayload)
     .where(eq(dataSourcesTable.id, id));
 
+  const displayCount = liveCount ?? source.recordCount ?? 0;
   return {
     success: true,
     message: liveCount !== null
-      ? `${source.name} synced — ${newCount.toLocaleString()} records counted from live database`
+      ? `${source.name} synced — ${displayCount.toLocaleString()} records counted from live database`
       : `${source.name} synced — timestamp refreshed (external source; records unchanged)`,
     sourceId: id,
-    recordsProcessed: newCount,
+    recordsProcessed: displayCount,
   };
 }
 
@@ -129,14 +136,19 @@ export async function syncAllSources(): Promise<SyncAllResult> {
   // ── Update data_sources timestamps + record counts ────────────────────────
   for (const source of sources) {
     const liveCount = await recountFromDB(source.name);
-    const newCount = liveCount !== null ? liveCount : (source.recordCount ?? 0);
+
+    const updatePayload =
+      liveCount !== null
+        ? { lastSyncedAt: now, status: "active" as const, recordCount: liveCount }
+        : { lastSyncedAt: now, status: "active" as const };
 
     await db
       .update(dataSourcesTable)
-      .set({ lastSyncedAt: now, status: "active", recordCount: newCount })
+      .set(updatePayload)
       .where(eq(dataSourcesTable.id, source.id));
 
-    results.push({ id: source.id, name: source.name, records: newCount, recount: liveCount !== null });
+    const displayCount = liveCount ?? source.recordCount ?? 0;
+    results.push({ id: source.id, name: source.name, records: displayCount, recount: liveCount !== null });
   }
 
   logger.info({ count: sources.length, syncedAt: now.toISOString() }, "sync-all complete");
