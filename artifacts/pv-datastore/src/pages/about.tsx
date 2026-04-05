@@ -37,7 +37,7 @@ export default function About() {
               src={founderPhoto}
               alt="Ryan Dolan"
               className="rounded-xl object-cover flex-shrink-0"
-              style={{ width: "88px", height: "88px", objectPosition: "center top" }}
+              style={{ width: "120px", height: "120px", objectPosition: "center top" }}
             />
             <div>
               <h2 className="text-xl font-semibold mb-0.5" style={HEADING_STYLE}>Ryan Dolan</h2>
