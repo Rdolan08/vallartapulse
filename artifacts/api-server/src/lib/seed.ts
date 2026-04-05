@@ -521,3 +521,73 @@ export async function seedIfEmpty(): Promise<void> {
 
   logger.info("Seed complete");
 }
+
+// ── Repair external data-source record counts ─────────────────────────────────
+// External sources have no backing DB table, so their recordCount is a static
+// curated value set at seed time. If a sync accidentally zeroed them (or they
+// were never seeded), this function restores the correct values.
+// Also inserts any sources that are missing entirely (safe — onConflictDoNothing).
+
+export async function repairDataSourceCounts(): Promise<void> {
+  // Known static counts for sources without a backing DB table
+  const staticCounts: { match: string; count: number }[] = [
+    { match: "transparencia",    count: 28     },
+    { match: "inegi",            count: 1240   },
+    { match: "openstreetmap",    count: 45000  },
+    { match: "nasa",             count: 156    },
+    { match: "inmuebles24",      count: 89     },
+  ];
+
+  const sources = await db.select().from(dataSourcesTable);
+  let fixed = 0;
+
+  for (const source of sources) {
+    const n = source.name.toLowerCase();
+    const entry = staticCounts.find((e) => n.includes(e.match));
+    if (entry && (source.recordCount === null || source.recordCount === 0)) {
+      await db
+        .update(dataSourcesTable)
+        .set({ recordCount: entry.count })
+        .where(eq(dataSourcesTable.id, source.id));
+      logger.info({ source: source.name, count: entry.count }, "repairDataSourceCounts: restored static count");
+      fixed++;
+    }
+  }
+
+  // Insert any sources that are completely missing (won't overwrite existing rows)
+  const existingNames = new Set(sources.map((s) => s.name.toLowerCase()));
+  const now = new Date();
+
+  const missing: typeof dataSourcesTable.$inferInsert[] = [
+    ...(existingNames.has("gap – airport traffic (pvr)") ? [] : [{
+      name: "GAP – Airport Traffic (PVR)", nameEs: "GAP – Tráfico Aeroportuario (PVR)",
+      category: "Tourism",
+      description: "Monthly passenger traffic at Puerto Vallarta International Airport from official GAP press releases.",
+      descriptionEs: "Tráfico mensual de pasajeros en el aeropuerto de Puerto Vallarta según comunicados oficiales de GAP.",
+      url: "https://www.aeropuertosgap.com.mx/", status: "active", lastSyncedAt: now, recordCount: 0, frequency: "monthly", isPublic: true,
+    }]),
+    ...(existingNames.has("nasa earthdata – satellite imagery") ? [] : [{
+      name: "NASA EarthData – Satellite Imagery", nameEs: "NASA EarthData – Imágenes Satelitales",
+      category: "Satellite",
+      description: "Satellite imagery and land surface data for the Banderas Bay region and coastal zones.",
+      descriptionEs: "Imágenes satelitales y datos de superficie terrestre para la bahía de Banderas y zonas costeras.",
+      url: "https://earthdata.nasa.gov/", status: "active", lastSyncedAt: now, recordCount: 156, frequency: "weekly", isPublic: true,
+    }]),
+    ...(existingNames.has("inmuebles24 – real estate listings") ? [] : [{
+      name: "Inmuebles24 – Real Estate Listings", nameEs: "Inmuebles24 – Listados Inmobiliarios",
+      category: "Real Estate",
+      description: "Long-term rental and for-sale property listings across Puerto Vallarta and Riviera Nayarit.",
+      descriptionEs: "Listados de renta a largo plazo y propiedades en venta en Puerto Vallarta y Riviera Nayarit.",
+      url: "https://www.inmuebles24.com/", status: "active", lastSyncedAt: now, recordCount: 89, frequency: "weekly", isPublic: false,
+    }]),
+  ];
+
+  if (missing.length > 0) {
+    await db.insert(dataSourcesTable).values(missing).onConflictDoNothing();
+    logger.info({ count: missing.length }, "repairDataSourceCounts: inserted missing sources");
+  }
+
+  if (fixed === 0 && missing.length === 0) {
+    logger.info("repairDataSourceCounts: all source counts look correct — nothing to fix");
+  }
+}

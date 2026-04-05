@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedIfEmpty, reseedEconomicIfOutdated, removeFutureTourismEstimates, reseedTourismIfFake } from "./lib/seed";
+import { seedIfEmpty, reseedEconomicIfOutdated, removeFutureTourismEstimates, reseedTourismIfFake, repairDataSourceCounts } from "./lib/seed";
 import { seedAmenitiesLookup, seedRentalListings } from "./lib/rental-ingest";
 import { startScheduler } from "./lib/ingest/sync-scheduler.js";
 import { startDailySync } from "./lib/daily-sync.js";
@@ -33,6 +33,10 @@ removeFutureTourismEstimates().catch((err) => {
 
 reseedTourismIfFake().catch((err) => {
   logger.error({ err }, "Tourism seasonal reseed failed — continuing anyway");
+});
+
+repairDataSourceCounts().catch((err) => {
+  logger.error({ err }, "Data source count repair failed — continuing anyway");
 });
 
 seedAmenitiesLookup().catch((err) => {
