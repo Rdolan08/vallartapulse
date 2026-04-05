@@ -46,7 +46,13 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
       </div>
 
       {/* Language toggle */}
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
+        <span
+          className="text-xs font-medium hidden sm:block"
+          style={{ color: "rgba(154,165,177,0.55)" }}
+        >
+          Language:
+        </span>
         <div
           className="flex items-center gap-0.5 rounded-lg p-0.5"
           style={{
@@ -56,23 +62,27 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
         >
           <button
             onClick={() => lang !== "en" && toggleLanguage()}
-            className="px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200"
-            style={
-              lang === "en"
-                ? { background: "#00C2A8", color: "#0A1E27" }
-                : { color: "rgba(154,165,177,0.8)" }
-            }
+            className="px-3 py-1.5 rounded-md transition-all duration-200"
+            style={{
+              fontSize: "18px",
+              lineHeight: 1,
+              ...(lang === "en"
+                ? { background: "#00C2A8" }
+                : {}),
+            }}
           >
             🇬🇧
           </button>
           <button
             onClick={() => lang !== "es" && toggleLanguage()}
-            className="px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200"
-            style={
-              lang === "es"
-                ? { background: "#00C2A8", color: "#0A1E27" }
-                : { color: "rgba(154,165,177,0.8)" }
-            }
+            className="px-3 py-1.5 rounded-md transition-all duration-200"
+            style={{
+              fontSize: "18px",
+              lineHeight: 1,
+              ...(lang === "es"
+                ? { background: "#00C2A8" }
+                : {}),
+            }}
           >
             🇲🇽
           </button>
