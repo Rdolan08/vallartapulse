@@ -39,8 +39,8 @@ interface PressRelease {
   dataMonth: number;
   dataYear: number;
   url: string;
-  /** Optional direct PDF from aeropuertosgap.com.mx — tried first when present. */
-  pdfUrl?: string;
+  /** One or more direct PDF URLs from aeropuertosgap.com.mx — tried in order, first success wins. */
+  pdfUrls?: string[];
 }
 
 const PRESS_RELEASES: PressRelease[] = [
@@ -60,7 +60,12 @@ const PRESS_RELEASES: PressRelease[] = [
   // ── 2026 reports (covers 2025 prior-year comparisons + 2026 current) ────────
   { dataYear: 2026, dataMonth:  1, url: "https://www.globenewswire.com/news-release/2026/02/05/3233515/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-January-2026-of-2-2-Compared-to-2025.html" },
   { dataYear: 2026, dataMonth:  2, url: "https://www.globenewswire.com/news-release/2026/03/06/3251336/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-February-2026-of-5-5-Compared-to-2025.html" },
-  { dataYear: 2026, dataMonth:  3, url: "https://www.globenewswire.com/en/search/organization/Grupo-Aeroportuario-del-Pacifico", pdfUrl: "https://www.aeropuertosgap.com.mx/images/files/07_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF_.pdf" },
+  { dataYear: 2026, dataMonth:  3, url: "https://www.globenewswire.com/en/search/organization/Grupo-Aeroportuario-del-Pacifico", pdfUrls: [
+    "https://www.aeropuertosgap.com.mx/images/files/07_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF_.pdf",
+    "https://www.aeropuertosgap.com.mx/images/files/08_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF_.pdf",
+    "https://www.aeropuertosgap.com.mx/images/files/09_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF_.pdf",
+    "https://www.aeropuertosgap.com.mx/images/files/10_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF_.pdf",
+  ]},
 ];
 
 interface PVRMonthData {
@@ -141,22 +146,38 @@ function pvrFromTable(tableHtml: string): [number, number] | null {
  * Values are in thousands.  Returns null if unavailable or unparseable.
  */
 async function parsePdfRelease(pr: PressRelease): Promise<PVRMonthData[] | null> {
-  if (!pr.pdfUrl) return null;
+  if (!pr.pdfUrls || pr.pdfUrls.length === 0) return null;
+
+  // Try each candidate URL in order — first 200 response wins
+  let chosenUrl: string | null = null;
+  let pdfBuf: Buffer | null = null;
+  for (const pdfUrl of pr.pdfUrls) {
+    try {
+      const res = await fetch(pdfUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; VallartaPulse/1.0)" },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (res.ok) {
+        pdfBuf = Buffer.from(await res.arrayBuffer());
+        chosenUrl = pdfUrl;
+        logger.info({ pdfUrl }, "gap-scraper: PDF found");
+        break;
+      }
+      logger.debug({ pdfUrl, status: res.status }, "gap-scraper: PDF candidate not available");
+    } catch {
+      logger.debug({ pdfUrl }, "gap-scraper: PDF candidate fetch error");
+    }
+  }
+
+  if (!pdfBuf || !chosenUrl) {
+    logger.debug({ year: pr.dataYear, month: pr.dataMonth }, "gap-scraper: no PDF candidates available");
+    return null;
+  }
 
   let tmpFile: string | null = null;
   try {
-    const res = await fetch(pr.pdfUrl, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; VallartaPulse/1.0)" },
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!res.ok) {
-      logger.debug({ pdfUrl: pr.pdfUrl, status: res.status }, "gap-scraper: PDF not available yet");
-      return null;
-    }
-
-    const buf = Buffer.from(await res.arrayBuffer());
     tmpFile = path.join(os.tmpdir(), `gap-${pr.dataYear}-${pr.dataMonth}.pdf`);
-    await fs.writeFile(tmpFile, buf);
+    await fs.writeFile(tmpFile, pdfBuf);
 
     const { stdout } = await execFileAsync("pdftotext", ["-layout", tmpFile, "-"]);
     const lines = stdout.split("\n");
@@ -186,8 +207,8 @@ async function parsePdfRelease(pr: PressRelease): Promise<PVRMonthData[] | null>
           if (Math.abs((domCur + intlCur) - totCur) / Math.max(totCur, 0.001) < 0.05) {
             logger.info({ year: pr.dataYear, month: pr.dataMonth, strategy: "PDF-full" }, "gap-scraper: parsed");
             return [
-              { year: pr.dataYear,     month: pr.dataMonth, domestic: Math.round(domCur * 1000),   international: Math.round(intlCur * 1000),   total: Math.round(totCur * 1000),   sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: pr.pdfUrl },
-              { year: pr.dataYear - 1, month: pr.dataMonth, domestic: Math.round(domPrior * 1000), international: Math.round(intlPrior * 1000), total: Math.round(totPrior * 1000), sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: pr.pdfUrl },
+              { year: pr.dataYear,     month: pr.dataMonth, domestic: Math.round(domCur * 1000),   international: Math.round(intlCur * 1000),   total: Math.round(totCur * 1000),   sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: chosenUrl },
+              { year: pr.dataYear - 1, month: pr.dataMonth, domestic: Math.round(domPrior * 1000), international: Math.round(intlPrior * 1000), total: Math.round(totPrior * 1000), sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: chosenUrl },
             ];
           }
         }
@@ -195,16 +216,16 @@ async function parsePdfRelease(pr: PressRelease): Promise<PVRMonthData[] | null>
         const [cur, prior] = tokens;
         logger.info({ year: pr.dataYear, month: pr.dataMonth, strategy: "PDF-total-only" }, "gap-scraper: parsed");
         return [
-          { year: pr.dataYear,     month: pr.dataMonth, domestic: null, international: null, total: Math.round(cur * 1000),   sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: pr.pdfUrl },
-          { year: pr.dataYear - 1, month: pr.dataMonth, domestic: null, international: null, total: Math.round(prior * 1000), sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: pr.pdfUrl },
+          { year: pr.dataYear,     month: pr.dataMonth, domestic: null, international: null, total: Math.round(cur * 1000),   sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: chosenUrl },
+          { year: pr.dataYear - 1, month: pr.dataMonth, domestic: null, international: null, total: Math.round(prior * 1000), sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: chosenUrl },
         ];
       }
     }
 
-    logger.warn({ pdfUrl: pr.pdfUrl }, "gap-scraper: PDF PVR row found but no numeric data parsed");
+    logger.warn({ pdfUrl: chosenUrl }, "gap-scraper: PDF PVR row found but no numeric data parsed");
     return null;
   } catch (err) {
-    logger.warn({ pdfUrl: pr.pdfUrl, err }, "gap-scraper: PDF parse error");
+    logger.warn({ pdfUrl: chosenUrl, err }, "gap-scraper: PDF parse error");
     return null;
   } finally {
     if (tmpFile) await fs.unlink(tmpFile).catch(() => {});
@@ -223,7 +244,7 @@ const LABELS = {
 
 async function parsePressRelease(pr: PressRelease): Promise<PVRMonthData[]> {
   // Try PDF source first (more reliable, direct from GAP)
-  if (pr.pdfUrl) {
+  if (pr.pdfUrls && pr.pdfUrls.length > 0) {
     const pdfResult = await parsePdfRelease(pr);
     if (pdfResult && pdfResult.length > 0) return pdfResult;
     logger.debug({ year: pr.dataYear, month: pr.dataMonth }, "gap-scraper: PDF unavailable, falling back to HTML");
