@@ -293,8 +293,12 @@ export default function Tourism() {
                   {...CHART_TOOLTIP}
                   cursor={TOOLTIP_CURSOR}
                   labelFormatter={(label) => `${label}`}
-                  formatter={(val: number, name: string) => {
-                    const label = name === "2026est"
+                  formatter={(val: number, name: string, props: { payload?: Record<string, unknown> }) => {
+                    // The est. series includes an overlap anchor point on the last real data month
+                    // so the dotted line connects visually — suppress it from the tooltip on those months.
+                    const isEst = name === t("2026 (est.)", "2026 (est.)");
+                    if (isEst && props.payload?.["2026"] !== undefined) return null;
+                    const label = isEst
                       ? `2026 (${t("est.", "est.")}) ${t("passengers", "pasajeros")}`
                       : `${name} ${t("passengers", "pasajeros")}`;
                     return [formatNumber(val), label];
