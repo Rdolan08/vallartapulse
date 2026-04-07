@@ -20,7 +20,7 @@ import {
   Legend,
 } from "recharts";
 import { formatNumber, formatPercent } from "@/lib/utils";
-import { CHART_TOOLTIP, TOOLTIP_CURSOR } from "@/lib/chart-theme";
+import { TOOLTIP_CURSOR, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from "@/lib/chart-theme";
 import { Building2, DollarSign, ExternalLink, Plane, Ship, TrendingUp, Users } from "lucide-react";
 
 const MONTH_NAMES_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -63,14 +63,16 @@ export default function Tourism() {
       if (row) point[String(yr)] = row.totalPassengers;
     }
     // ── 2026 estimate overlay (dotted) ─────────────────────────────────────
-    // Only set the est. key for months that have no real official 2026 data.
-    // This keeps the tooltip clean — no duplicate 2026 entries.
+    // The overlap point at lastOfficial2026Month makes the dotted line connect
+    // visually to the solid line — it is filtered out of the tooltip via the
+    // custom content renderer below.
     if (estimated2026.length > 0) {
-      const hasReal2026 = official2026Rows.some((r) => r.month === month);
-      if (!hasReal2026) {
-        const estRow = estimated2026.find((e) => e.month === month);
-        if (estRow) point["2026est"] = estRow.projectedFullMonthPassengers;
+      if (month === lastOfficial2026Month) {
+        const overlapRow = official2026Rows.find((r) => r.month === month);
+        if (overlapRow) point["2026est"] = overlapRow.totalPassengers;
       }
+      const estRow = estimated2026.find((e) => e.month === month);
+      if (estRow) point["2026est"] = estRow.projectedFullMonthPassengers;
     }
     return point;
   });
@@ -289,14 +291,30 @@ export default function Tourism() {
                   width={48}
                 />
                 <Tooltip
-                  {...CHART_TOOLTIP}
                   cursor={TOOLTIP_CURSOR}
-                  labelFormatter={(label) => `${label}`}
-                  formatter={(val: number, name: string) => {
-                    const label = name === t("2026 (est.)", "2026 (est.)")
-                      ? `2026 (${t("est.", "est.")}) ${t("passengers", "pasajeros")}`
-                      : `${name} ${t("passengers", "pasajeros")}`;
-                    return [formatNumber(val), label];
+                  content={({ active, payload, label: tooltipLabel }) => {
+                    if (!active || !payload?.length) return null;
+                    const dataPoint = payload[0]?.payload as Record<string, unknown>;
+                    const hasReal2026 = dataPoint?.["2026"] !== undefined;
+                    const visible = payload.filter((e) =>
+                      !(e.dataKey === "2026est" && hasReal2026)
+                    );
+                    return (
+                      <div style={TOOLTIP_CONTENT_STYLE}>
+                        <p style={TOOLTIP_LABEL_STYLE}>{tooltipLabel}</p>
+                        {visible.map((e, i) => {
+                          const isEst = e.dataKey === "2026est";
+                          const entryLabel = isEst
+                            ? `2026 (${t("est.", "est.")}) ${t("passengers", "pasajeros")}`
+                            : `${e.name} ${t("passengers", "pasajeros")}`;
+                          return (
+                            <p key={i} style={TOOLTIP_ITEM_STYLE}>
+                              {entryLabel} : {formatNumber(e.value as number)}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
                   }}
                 />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: "16px" }} />
