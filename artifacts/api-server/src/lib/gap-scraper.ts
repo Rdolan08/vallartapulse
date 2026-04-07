@@ -59,12 +59,13 @@ const PRESS_RELEASES: PressRelease[] = [
   { dataYear: 2025, dataMonth: 12, url: "https://www.globenewswire.com/news-release/2026/01/06/3214165/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Increase-in-December-2025-of-0-1-Compared-to-2024.html" },
   // ── 2026 reports (covers 2025 prior-year comparisons + 2026 current) ────────
   { dataYear: 2026, dataMonth:  1, url: "https://www.globenewswire.com/news-release/2026/02/05/3233515/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-January-2026-of-2-2-Compared-to-2025.html" },
-  { dataYear: 2026, dataMonth:  2, url: "https://www.globenewswire.com/news-release/2026/03/06/3251336/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-February-2026-of-5-5-Compared-to-2025.html" },
+  { dataYear: 2026, dataMonth:  2, url: "https://www.globenewswire.com/news-release/2026/03/06/3251336/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-February-2026-of-5-5-Compared-to-2025.html",
+    pdfUrls: ["https://www.aeropuertosgap.com.mx/images/files/06_03_2026_PR_TRAFICO_FEBRERO_2026_ESP_VF.pdf"] },
   { dataYear: 2026, dataMonth:  3, url: "https://www.globenewswire.com/en/search/organization/Grupo-Aeroportuario-del-Pacifico", pdfUrls: [
-    "https://www.aeropuertosgap.com.mx/images/files/07_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF_.pdf",
-    "https://www.aeropuertosgap.com.mx/images/files/08_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF_.pdf",
-    "https://www.aeropuertosgap.com.mx/images/files/09_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF_.pdf",
-    "https://www.aeropuertosgap.com.mx/images/files/10_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF_.pdf",
+    "https://www.aeropuertosgap.com.mx/images/files/07_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
+    "https://www.aeropuertosgap.com.mx/images/files/08_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
+    "https://www.aeropuertosgap.com.mx/images/files/09_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
+    "https://www.aeropuertosgap.com.mx/images/files/10_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
   ]},
 ];
 
@@ -182,47 +183,71 @@ async function parsePdfRelease(pr: PressRelease): Promise<PVRMonthData[] | null>
     const { stdout } = await execFileAsync("pdftotext", ["-layout", tmpFile, "-"]);
     const lines = stdout.split("\n");
 
-    // Find the Puerto Vallarta row(s)
-    const pvrLines = lines.filter((l) => /puerto vallarta/i.test(l));
+    // The PDF has one PVR row per metric section:
+    //   Row 1 (Domestic):      Puerto Vallarta  <prior>  <current>  (pct%)  <prior_YTD>  <current_YTD>  (pct%)
+    //   Row 2 (International): Puerto Vallarta  <prior>  <current>  (pct%)  <prior_YTD>  <current_YTD>  (pct%)
+    //   Row 3 (Total):         Puerto Vallarta  <prior>  <current>  (pct%)  <prior_YTD>  <current_YTD>  (pct%)
+    // Column order is PRIOR YEAR first, CURRENT YEAR second.
+    // Filter to lines that contain a PVR airport name AND at least one number.
+    // Only keep lines with a 3+-digit decimal number (e.g. 192.6, 649.9) —
+    // this excludes prose lines with percentages (7.4%) or bare small numbers (52).
+    const pvrLines = lines.filter(
+      (l) => /puerto vallarta/i.test(l) && /\b\d{3,}\.\d/.test(l)
+    );
     if (pvrLines.length === 0) {
-      logger.warn({ pdfUrl: pr.pdfUrl }, "gap-scraper: PDF parsed but no PVR row found");
+      logger.warn({ pdfUrl: chosenUrl }, "gap-scraper: PDF parsed but no PVR data rows found");
       return null;
     }
 
-    // Try to extract numbers from the PVR line(s)
-    // The PDF may have one combined row or separate rows per metric
-    // We collect all numeric tokens after "Puerto Vallarta" on the same line
-    for (const line of pvrLines) {
-      const afterName = line.replace(/puerto vallarta/i, "");
-      // Extract all positive decimal/integer numbers (skip percentages that may be negative)
-      const tokens = [...afterName.matchAll(/\b(\d[\d,]*\.?\d*)\b/g)].map((m) =>
-        parseFloat(m[1].replace(/,/g, ""))
-      );
+    /** Extract the first two positive numeric values from a PVR row (prior, current). */
+    function extractPair(line: string): [number, number] | null {
+      const after = line.replace(/puerto vallarta/i, "");
+      const nums = [...after.matchAll(/\b(\d[\d,]*\.?\d*)\b/g)]
+        .map((m) => parseFloat(m[1].replace(/,/g, "")))
+        .filter((n) => n > 0);
+      return nums.length >= 2 ? [nums[0], nums[1]] : null;
+    }
 
-      if (tokens.length >= 2) {
-        // If we have 9+ tokens: Dom_cur, Dom_prior, Dom_%, Intl_cur, Intl_prior, Intl_%, Tot_cur, Tot_prior, Tot_%
-        if (tokens.length >= 8) {
-          const [domCur, domPrior, , intlCur, intlPrior, , totCur, totPrior] = tokens;
-          // Sanity check: dom + intl ≈ total (within 5%)
-          if (Math.abs((domCur + intlCur) - totCur) / Math.max(totCur, 0.001) < 0.05) {
-            logger.info({ year: pr.dataYear, month: pr.dataMonth, strategy: "PDF-full" }, "gap-scraper: parsed");
-            return [
-              { year: pr.dataYear,     month: pr.dataMonth, domestic: Math.round(domCur * 1000),   international: Math.round(intlCur * 1000),   total: Math.round(totCur * 1000),   sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: chosenUrl },
-              { year: pr.dataYear - 1, month: pr.dataMonth, domestic: Math.round(domPrior * 1000), international: Math.round(intlPrior * 1000), total: Math.round(totPrior * 1000), sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: chosenUrl },
-            ];
-          }
+    const src = { sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: chosenUrl };
+
+    // ── 3-row mode: Dom / Intl / Total ───────────────────────────────────────
+    if (pvrLines.length >= 3) {
+      const domPair  = extractPair(pvrLines[0]);
+      const intlPair = extractPair(pvrLines[1]);
+      const totPair  = extractPair(pvrLines[2]);
+      if (domPair && intlPair && totPair) {
+        const [domPrior, domCur]   = domPair;
+        const [intlPrior, intlCur] = intlPair;
+        const [totPrior,  totCur]  = totPair;
+        // Sanity: dom + intl ≈ total (within 5%)
+        if (Math.abs((domCur + intlCur) - totCur) / Math.max(totCur, 0.001) < 0.05) {
+          logger.info({ year: pr.dataYear, month: pr.dataMonth, strategy: "PDF-full" }, "gap-scraper: parsed");
+          return [
+            { year: pr.dataYear,     month: pr.dataMonth, domestic: Math.round(domCur * 1000),   international: Math.round(intlCur * 1000),   total: Math.round(totCur * 1000),   ...src },
+            { year: pr.dataYear - 1, month: pr.dataMonth, domestic: Math.round(domPrior * 1000), international: Math.round(intlPrior * 1000), total: Math.round(totPrior * 1000), ...src },
+          ];
         }
-        // Fallback: treat first two tokens as [current, prior] total
-        const [cur, prior] = tokens;
-        logger.info({ year: pr.dataYear, month: pr.dataMonth, strategy: "PDF-total-only" }, "gap-scraper: parsed");
-        return [
-          { year: pr.dataYear,     month: pr.dataMonth, domestic: null, international: null, total: Math.round(cur * 1000),   sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: chosenUrl },
-          { year: pr.dataYear - 1, month: pr.dataMonth, domestic: null, international: null, total: Math.round(prior * 1000), sourceLabel: "GAP – aeropuertosgap.com.mx PDF (real)", sourceUrl: chosenUrl },
-        ];
       }
     }
 
-    logger.warn({ pdfUrl: chosenUrl }, "gap-scraper: PDF PVR row found but no numeric data parsed");
+    // ── 1-row fallback: use whichever PVR line has the largest numbers (= Total) ─
+    let bestPair: [number, number] | null = null;
+    for (const line of pvrLines) {
+      const pair = extractPair(line);
+      if (pair && (!bestPair || pair[0] + pair[1] > bestPair[0] + bestPair[1])) {
+        bestPair = pair;
+      }
+    }
+    if (bestPair) {
+      const [prior, cur] = bestPair;
+      logger.info({ year: pr.dataYear, month: pr.dataMonth, strategy: "PDF-total-only" }, "gap-scraper: parsed");
+      return [
+        { year: pr.dataYear,     month: pr.dataMonth, domestic: null, international: null, total: Math.round(cur * 1000),   ...src },
+        { year: pr.dataYear - 1, month: pr.dataMonth, domestic: null, international: null, total: Math.round(prior * 1000), ...src },
+      ];
+    }
+
+    logger.warn({ pdfUrl: chosenUrl }, "gap-scraper: PDF PVR rows found but no numeric pairs extracted");
     return null;
   } catch (err) {
     logger.warn({ pdfUrl: chosenUrl, err }, "gap-scraper: PDF parse error");
