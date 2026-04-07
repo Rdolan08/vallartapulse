@@ -63,15 +63,14 @@ export default function Tourism() {
       if (row) point[String(yr)] = row.totalPassengers;
     }
     // ── 2026 estimate overlay (dotted) ─────────────────────────────────────
-    // Include the last official month as the starting overlap so the dotted
-    // line visually connects to the end of the solid line.
+    // Only set the est. key for months that have no real official 2026 data.
+    // This keeps the tooltip clean — no duplicate 2026 entries.
     if (estimated2026.length > 0) {
-      if (month === lastOfficial2026Month) {
-        const overlapRow = official2026Rows.find((r) => r.month === month);
-        if (overlapRow) point["2026est"] = overlapRow.totalPassengers;
+      const hasReal2026 = official2026Rows.some((r) => r.month === month);
+      if (!hasReal2026) {
+        const estRow = estimated2026.find((e) => e.month === month);
+        if (estRow) point["2026est"] = estRow.projectedFullMonthPassengers;
       }
-      const estRow = estimated2026.find((e) => e.month === month);
-      if (estRow) point["2026est"] = estRow.projectedFullMonthPassengers;
     }
     return point;
   });
@@ -293,12 +292,8 @@ export default function Tourism() {
                   {...CHART_TOOLTIP}
                   cursor={TOOLTIP_CURSOR}
                   labelFormatter={(label) => `${label}`}
-                  formatter={(val: number, name: string, props: { payload?: Record<string, unknown> }) => {
-                    // The est. series includes an overlap anchor point on the last real data month
-                    // so the dotted line connects visually — suppress it from the tooltip on those months.
-                    const isEst = name === t("2026 (est.)", "2026 (est.)");
-                    if (isEst && props.payload?.["2026"] !== undefined) return null;
-                    const label = isEst
+                  formatter={(val: number, name: string) => {
+                    const label = name === t("2026 (est.)", "2026 (est.)")
                       ? `2026 (${t("est.", "est.")}) ${t("passengers", "pasajeros")}`
                       : `${name} ${t("passengers", "pasajeros")}`;
                     return [formatNumber(val), label];
