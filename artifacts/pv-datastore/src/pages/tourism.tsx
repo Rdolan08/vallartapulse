@@ -20,7 +20,7 @@ import {
   Legend,
 } from "recharts";
 import { formatNumber, formatPercent } from "@/lib/utils";
-import { TOOLTIP_CURSOR, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from "@/lib/chart-theme";
+import { CHART_TOOLTIP, TOOLTIP_CURSOR, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from "@/lib/chart-theme";
 import { Building2, DollarSign, ExternalLink, Plane, Ship, TrendingUp, Users } from "lucide-react";
 
 const MONTH_NAMES_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
