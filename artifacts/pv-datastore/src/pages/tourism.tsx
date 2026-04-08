@@ -639,39 +639,6 @@ export default function Tourism() {
             </p>
           </div>
 
-          {/* ── Cruise Visitors ──────────────────────────────────────── */}
-          <Card className="glass-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" style={{ color: "#6366F1" }} />
-                  <CardTitle>{t("Cruise Visitors by Month", "Visitantes de Crucero por Mes")}</CardTitle>
-                </div>
-                <a href="https://www.datatur.sectur.gob.mx/" target="_blank" rel="noopener noreferrer"
-                   className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
-                  DATATUR / SECTUR <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            </CardHeader>
-            <CardContent className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
-                  {GRID}
-                  <XAxis dataKey="monthName" {...AXIS_PROPS} tick={TICK} dy={8} />
-                  <YAxis {...AXIS_PROPS} tick={TICK} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={44} />
-                  <Tooltip
-                    {...CHART_TOOLTIP}
-                    cursor={TOOLTIP_CURSOR}
-                    labelFormatter={(label) => `${label} ${year}`}
-                    formatter={(val: number, name: string) => [formatNumber(val), name]}
-                  />
-                  <Bar dataKey="cruiseVisitors" name={t("Cruise Visitors", "Visitantes de Crucero")}
-                    fill="#6366F1" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
           {/* ── Monthly data table ───────────────────────────────────── */}
           <Card className="glass-card overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-5 pb-2">
@@ -719,6 +686,39 @@ export default function Tourism() {
                 </tbody>
               </table>
             </div>
+          </Card>
+
+          {/* ── Cruise Visitors ──────────────────────────────────────── */}
+          <Card className="glass-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" style={{ color: "#6366F1" }} />
+                  <CardTitle>{t("Cruise Visitors by Month", "Visitantes de Crucero por Mes")}</CardTitle>
+                </div>
+                <a href="https://www.datatur.sectur.gob.mx/" target="_blank" rel="noopener noreferrer"
+                   className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+                  DATATUR / SECTUR <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </CardHeader>
+            <CardContent className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+                  {GRID}
+                  <XAxis dataKey="monthName" {...AXIS_PROPS} tick={TICK} dy={8} />
+                  <YAxis {...AXIS_PROPS} tick={TICK} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={44} />
+                  <Tooltip
+                    {...CHART_TOOLTIP}
+                    cursor={TOOLTIP_CURSOR}
+                    labelFormatter={(label) => `${label} ${year}`}
+                    formatter={(val: number, name: string) => [formatNumber(val), name]}
+                  />
+                  <Bar dataKey="cruiseVisitors" name={t("Cruise Visitors", "Visitantes de Crucero")}
+                    fill="#6366F1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
           </Card>
 
         </div>
