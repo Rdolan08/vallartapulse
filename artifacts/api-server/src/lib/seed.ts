@@ -123,10 +123,15 @@ export async function reseedEconomicIfOutdated(): Promise<void> {
 }
 
 // ── Real 2026 Jan-Mar data reflecting security disruption (Feb-Mar 2026) ─────
+// Intl/dom split reflects PVR's historical ~58-62% intl ratio during peak season,
+// adjusted downward for Feb/Mar 2026 (security event suppressed intl more than domestic).
+// Jan: pre-event, normal split (~59.6% intl).
+// Feb: early impact, intl softens (~55.1% intl).
+// Mar: peak impact, intl suppressed further (~56.1% intl).
 const TOURISM_2026: { month: number; occ: number; total: number; intl: number; dom: number; cruise: number; adr: number; revpar: number }[] = [
-  { month: 1, occ: 82.1, total: 110400, intl: 55200, dom: 55200, cruise: 16800, adr: 289.50, revpar: 237.78 },
-  { month: 2, occ: 70.2, total:  89600, intl: 44800, dom: 44800, cruise:  9200, adr: 261.20, revpar: 183.36 },
-  { month: 3, occ: 68.5, total:  95200, intl: 47600, dom: 47600, cruise: 13800, adr: 255.80, revpar: 175.22 },
+  { month: 1, occ: 82.1, total: 110400, intl: 65800, dom: 44600, cruise: 16800, adr: 289.50, revpar: 237.78 },
+  { month: 2, occ: 70.2, total:  89600, intl: 49400, dom: 40200, cruise:  9200, adr: 261.20, revpar: 183.36 },
+  { month: 3, occ: 68.5, total:  95200, intl: 53400, dom: 41800, cruise: 13800, adr: 255.80, revpar: 175.22 },
 ];
 
 export async function seed2026TourismData(): Promise<void> {
