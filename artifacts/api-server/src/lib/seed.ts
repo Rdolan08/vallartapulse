@@ -17,6 +17,19 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// Deterministic pseudo-random in [0,1) — FNV-1a hash on a seed string.
+// Replaces Math.random() in seeding so every environment produces identical data.
+function dv(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h / 4294967296;
+}
+
+const RENTAL_SOURCE_VERSION = "Airbnb / VRBO (estimated) v2";
+
 // ── Economic reseed — replaces old fake indicators with real INEGI/IMSS data ──
 // Triggered when the `population` indicator is absent (old schema had
 // total_employment / avg_monthly_wage_mxn / etc.).
@@ -439,8 +452,9 @@ export async function seedIfEmpty(): Promise<void> {
       if (year === currentYear && m + 1 >= currentMonth) continue;
       for (const hood of neighborhoods) {
         const seasonal = (m < 4 || m >= 10) ? 1.30 : (m >= 5 && m <= 8) ? 0.75 : 1.0;
-        const listings = Math.floor(hood.baseListings * (1 + (year - 2022) * 0.08) * (0.92 + Math.random() * 0.16));
-        const avgRate = hood.baseRate * seasonal * yGrowth * (0.95 + Math.random() * 0.10);
+        const k = `${hood.name}:${year}:${m}`;
+        const listings = Math.floor(hood.baseListings * (1 + (year - 2022) * 0.08) * (0.92 + dv(`L:${k}`) * 0.16));
+        const avgRate = hood.baseRate * seasonal * yGrowth * (0.95 + dv(`R:${k}`) * 0.10);
         rentalData.push({
           year,
           month: m + 1,
@@ -450,10 +464,10 @@ export async function seedIfEmpty(): Promise<void> {
           activeListings: listings,
           avgNightlyRateUsd: String(avgRate.toFixed(2)),
           medianNightlyRateUsd: String((avgRate * 0.87).toFixed(2)),
-          occupancyRate: String(Math.min(98, (52 + m * 1.5 + (year - 2022) * 2) * seasonal * (0.93 + Math.random() * 0.14)).toFixed(2)),
-          avgReviewScore: String((4.25 + Math.random() * 0.55).toFixed(2)),
-          totalReviews: Math.floor(listings * (2 + Math.random() * 3)),
-          source: "Airbnb / VRBO (estimated)",
+          occupancyRate: String(Math.min(98, (52 + m * 1.5 + (year - 2022) * 2) * seasonal * (0.93 + dv(`O:${k}`) * 0.14)).toFixed(2)),
+          avgReviewScore: String((4.25 + dv(`S:${k}`) * 0.55).toFixed(2)),
+          totalReviews: Math.floor(listings * (2 + dv(`T:${k}`) * 3)),
+          source: RENTAL_SOURCE_VERSION,
         });
       }
     }
@@ -579,7 +593,71 @@ export async function seedIfEmpty(): Promise<void> {
   logger.info("Seed complete");
 }
 
-// ── Repair external data-source record counts ─────────────────────────────────
+// ── Repair non-deterministic rental market data ───────────────────────────────
+// Old seeding used Math.random() — every environment gets different numbers.
+// Detect by checking if source column matches our versioned constant; if not,
+// truncate and rebuild with the deterministic dv() formula.
+export async function repairRentalMarketIfRandom(): Promise<void> {
+  const rows = await db.execute(
+    sql`SELECT COUNT(*) AS cnt FROM rental_market_metrics WHERE source != ${RENTAL_SOURCE_VERSION}`
+  );
+  const firstRow = (rows as { rows?: Record<string, unknown>[] }).rows?.[0]
+    ?? (rows as unknown as Record<string, unknown>[])[0];
+  const staleCount = firstRow ? Number(firstRow["cnt"] ?? 0) : 0;
+
+  if (staleCount === 0) {
+    logger.info("Rental market data is deterministic (v2), skipping repair");
+    return;
+  }
+
+  logger.info({ staleCount }, "Rental market data is non-deterministic — rebuilding with deterministic seed");
+
+  const currentYear  = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
+  const neighborhoods = [
+    { name: "Zona Romántica",         baseRate: 145, baseListings: 680 },
+    { name: "Centro",                  baseRate: 98,  baseListings: 420 },
+    { name: "Conchas Chinas / Amapas", baseRate: 235, baseListings: 280 },
+    { name: "Versalles",               baseRate: 88,  baseListings: 310 },
+    { name: "Hotel Zone",              baseRate: 175, baseListings: 520 },
+    { name: "Marina Vallarta",         baseRate: 165, baseListings: 590 },
+    { name: "5 de Diciembre",          baseRate: 105, baseListings: 265 },
+  ];
+
+  const rentalData: (typeof rentalMarketMetricsTable.$inferInsert)[] = [];
+  for (const year of [2022, 2023, 2024, 2025, 2026]) {
+    const yGrowth = 1 + (year - 2022) * 0.065;
+    for (let m = 0; m < 12; m++) {
+      if (year === currentYear && m + 1 >= currentMonth) continue;
+      for (const hood of neighborhoods) {
+        const seasonal = (m < 4 || m >= 10) ? 1.30 : (m >= 5 && m <= 8) ? 0.75 : 1.0;
+        const k = `${hood.name}:${year}:${m}`;
+        const listings = Math.floor(hood.baseListings * (1 + (year - 2022) * 0.08) * (0.92 + dv(`L:${k}`) * 0.16));
+        const avgRate = hood.baseRate * seasonal * yGrowth * (0.95 + dv(`R:${k}`) * 0.10);
+        rentalData.push({
+          year, month: m + 1, monthName: MONTHS[m],
+          neighborhood: hood.name, platform: "all",
+          activeListings: listings,
+          avgNightlyRateUsd:    String(avgRate.toFixed(2)),
+          medianNightlyRateUsd: String((avgRate * 0.87).toFixed(2)),
+          occupancyRate: String(Math.min(98, (52 + m * 1.5 + (year - 2022) * 2) * seasonal * (0.93 + dv(`O:${k}`) * 0.14)).toFixed(2)),
+          avgReviewScore: String((4.25 + dv(`S:${k}`) * 0.55).toFixed(2)),
+          totalReviews: Math.floor(listings * (2 + dv(`T:${k}`) * 3)),
+          source: RENTAL_SOURCE_VERSION,
+        });
+      }
+    }
+  }
+
+  await db.execute(sql`TRUNCATE TABLE rental_market_metrics RESTART IDENTITY`);
+  const CHUNK = 50;
+  for (let i = 0; i < rentalData.length; i += CHUNK) {
+    await db.insert(rentalMarketMetricsTable).values(rentalData.slice(i, i + CHUNK));
+  }
+  logger.info({ rebuilt: rentalData.length }, "Rental market data rebuilt with deterministic seed (v2)");
+}
+
 // External sources have no backing DB table, so their recordCount is a static
 // curated value set at seed time. If a sync accidentally zeroed them (or they
 // were never seeded), this function restores the correct values.
