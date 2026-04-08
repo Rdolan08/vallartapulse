@@ -518,13 +518,13 @@ export default function Economic() {
                 },
               ].map(({ label, value, sub, href, color }) => (
                 <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-                  className="glass-card flex flex-col gap-1.5 hover:border-primary/30 transition-colors no-underline"
+                  className="glass-card flex flex-col items-center justify-center text-center gap-2 hover:border-primary/30 transition-colors no-underline"
                   style={{ padding: "1.1rem" }}>
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "#9AA5B1" }}>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.1em] leading-tight" style={{ color: "#9AA5B1" }}>
                     {label}
                   </span>
-                  <div className="text-xl font-bold" style={{ color }}>{value}</div>
-                  <span className="text-xs text-muted-foreground/70 flex items-center gap-1">
+                  <div className="text-3xl font-bold leading-none" style={{ color }}>{value}</div>
+                  <span className="text-[11px] text-muted-foreground/60 flex items-center gap-1">
                     {sub} <ExternalLink className="w-2.5 h-2.5 shrink-0" />
                   </span>
                 </a>
