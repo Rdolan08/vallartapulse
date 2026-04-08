@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedIfEmpty, reseedEconomicIfOutdated, removeFutureTourismEstimates, reseedTourismIfFake, repairDataSourceCounts, seedMarketEvents } from "./lib/seed";
+import { seedIfEmpty, reseedEconomicIfOutdated, removeFutureTourismEstimates, reseedTourismIfFake, repairDataSourceCounts, seedMarketEvents, repairAirportData } from "./lib/seed";
 import { seedAmenitiesLookup, seedRentalListings } from "./lib/rental-ingest";
 import { startScheduler } from "./lib/ingest/sync-scheduler.js";
 import { startDailySync } from "./lib/daily-sync.js";
@@ -18,6 +18,10 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+repairAirportData().catch((err) => {
+  logger.error({ err }, "Airport data repair failed — continuing anyway");
+});
 
 seedIfEmpty().catch((err) => {
   logger.error({ err }, "Seed failed — continuing anyway");

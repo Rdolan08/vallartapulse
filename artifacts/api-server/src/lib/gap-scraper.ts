@@ -430,9 +430,33 @@ async function upsertAirportMonth(data: PVRMonthData): Promise<void> {
   };
 
   if (existing.length > 0) {
+    const ex = existing[0];
+
+    // ── Regression guard ──────────────────────────────────────────────────────
+    // If the existing confirmed total is significantly higher than the incoming
+    // value, the scraper likely parsed the wrong number from the press release
+    // (e.g. a single-terminal subtotal or a different airport's row).
+    // Threshold: refuse updates where the new total is >35% below the existing
+    // confirmed total — PVR traffic never halves without an airport closure.
+    const existingTotal  = ex.totalPassengers ?? 0;
+    const regressionPct  = existingTotal > 0
+      ? ((existingTotal - data.total) / existingTotal) * 100
+      : 0;
+
+    if (existingTotal > 50_000 && regressionPct > 35) {
+      logger.error(
+        {
+          year: data.year, month: data.month,
+          existingTotal, newTotal: data.total,
+          regressionPct: regressionPct.toFixed(1) + "%",
+        },
+        "gap-scraper: ABORTED update — regression guard triggered. New total is >35% below existing confirmed value. Likely a parse error."
+      );
+      return;
+    }
+
     // Only update if the new data is higher quality (full breakdown vs total-only)
     // or if the existing row has no breakdown.
-    const ex = existing[0];
     const existingHasBreakdown = ex.domesticPassengers !== null && ex.domesticPassengers !== undefined;
     const newHasBreakdown      = data.domestic !== null;
     if (existingHasBreakdown && !newHasBreakdown) {
