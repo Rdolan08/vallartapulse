@@ -21,7 +21,7 @@ import {
 } from "recharts";
 import { formatNumber, formatPercent } from "@/lib/utils";
 import { CHART_TOOLTIP, TOOLTIP_CURSOR, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from "@/lib/chart-theme";
-import { Building2, DollarSign, ExternalLink, Plane, Ship, TrendingUp, Users } from "lucide-react";
+import { Building2, DollarSign, ExternalLink, Info, Plane, Ship, TrendingUp, Users } from "lucide-react";
 
 const MONTH_NAMES_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
@@ -252,8 +252,9 @@ export default function Tourism() {
                 </div>
               </div>
 
-              <p className="text-xs rounded-lg px-3 py-2" style={{ background: "rgba(245,158,11,0.07)", color: "#9AA5B1", border: "1px solid rgba(245,158,11,0.15)" }}>
-                ⚠️ {isComplete
+              <div className="flex items-start gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "rgba(148,163,184,0.06)", color: "#9AA5B1", border: "1px solid rgba(148,163,184,0.12)" }}>
+                <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 opacity-60" />
+                <span>{isComplete
                   ? t(
                       "This month is complete but official GAP data has not yet been published. The estimate uses year-over-year pacing from official prior months. It will be replaced automatically when GAP releases the press release (typically the first week of the following month).",
                       "Este mes ha concluido pero los datos oficiales de GAP aún no han sido publicados. La estimación usa el ritmo interanual de meses oficiales anteriores. Se actualizará automáticamente cuando GAP publique el comunicado (generalmente la primera semana del mes siguiente).",
@@ -262,7 +263,8 @@ export default function Tourism() {
                       "Estimate based on recent official GAP passenger trends and seasonal pacing. Final monthly total will be updated when official airport data is released (typically the first week of the following month).",
                       "Estimación basada en tendencias oficiales de pasajeros GAP y pacing estacional. El total mensual definitivo se actualizará cuando se publiquen datos oficiales del aeropuerto (generalmente la primera semana del mes siguiente).",
                     )}
-              </p>
+                </span>
+              </div>
             </CardContent>
           </Card>
         );
