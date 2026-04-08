@@ -422,6 +422,11 @@ export default function Economic() {
               </CardContent>
             </Card>
 
+          </div>
+
+          {/* ── Wages + Context tiles ───────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
             {/* Chart 4: Wage growth */}
             <Card className="glass-card border-0">
               <CardHeader className="pb-2">
@@ -480,52 +485,52 @@ export default function Economic() {
               </CardContent>
             </Card>
 
-          </div>
+            {/* Context data tiles — 2×2 stacked */}
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                {
+                  label: t("Poverty Rate", "Tasa de Pobreza"),
+                  value: "33.4%",
+                  sub: "CONEVAL 2020 (est.)",
+                  href: "https://www.coneval.org.mx/Medicion/Paginas/Medici%C3%B3n.aspx",
+                  color: "#F59E0B",
+                },
+                {
+                  label: t("Extreme Poverty", "Pobreza Extrema"),
+                  value: "5.1%",
+                  sub: "CONEVAL 2020 (est.)",
+                  href: "https://www.coneval.org.mx/Medicion/Paginas/Medici%C3%B3n.aspx",
+                  color: "#EF4444",
+                },
+                {
+                  label: t("Economic Units (2019)", "Unidades Económicas (2019)"),
+                  value: "17,786",
+                  sub: t("INEGI Censo Económico 2019 (exact)", "INEGI Censo Económico 2019 (exacto)"),
+                  href: "https://www.inegi.org.mx/programas/ce/2019/",
+                  color: "#6366F1",
+                },
+                {
+                  label: t("Formal Workers (2019 Census)", "Trabajadores Formales (Censo 2019)"),
+                  value: "78,447",
+                  sub: t("dependent workers across all sectors", "trabajadores dependientes en todos los sectores"),
+                  href: "https://www.inegi.org.mx/programas/ce/2019/",
+                  color: "#3B82F6",
+                },
+              ].map(({ label, value, sub, href, color }) => (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer"
+                  className="glass-card flex flex-col gap-1.5 hover:border-primary/30 transition-colors no-underline"
+                  style={{ padding: "1.1rem" }}>
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "#9AA5B1" }}>
+                    {label}
+                  </span>
+                  <div className="text-xl font-bold" style={{ color }}>{value}</div>
+                  <span className="text-xs text-muted-foreground/70 flex items-center gap-1">
+                    {sub} <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                  </span>
+                </a>
+              ))}
+            </div>
 
-          {/* ── Context data cards ─────────────────────────────────────── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              {
-                label: t("Poverty Rate", "Tasa de Pobreza"),
-                value: "33.4%",
-                sub: "CONEVAL 2020 (est.)",
-                href: "https://www.coneval.org.mx/Medicion/Paginas/Medici%C3%B3n.aspx",
-                color: "#F59E0B",
-              },
-              {
-                label: t("Extreme Poverty", "Pobreza Extrema"),
-                value: "5.1%",
-                sub: "CONEVAL 2020 (est.)",
-                href: "https://www.coneval.org.mx/Medicion/Paginas/Medici%C3%B3n.aspx",
-                color: "#EF4444",
-              },
-              {
-                label: t("Economic Units (2019)", "Unidades Económicas (2019)"),
-                value: "17,786",
-                sub: t("INEGI Censo Económico 2019 (exact)", "INEGI Censo Económico 2019 (exacto)"),
-                href: "https://www.inegi.org.mx/programas/ce/2019/",
-                color: "#6366F1",
-              },
-              {
-                label: t("Formal Workers (2019 Census)", "Trabajadores Formales (Censo 2019)"),
-                value: "78,447",
-                sub: t("dependent workers across all sectors", "trabajadores dependientes en todos los sectores"),
-                href: "https://www.inegi.org.mx/programas/ce/2019/",
-                color: "#3B82F6",
-              },
-            ].map(({ label, value, sub, href, color }) => (
-              <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-                className="glass-card flex flex-col gap-1.5 hover:border-primary/30 transition-colors no-underline"
-                style={{ padding: "1.1rem" }}>
-                <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "#9AA5B1" }}>
-                  {label}
-                </span>
-                <div className="text-xl font-bold" style={{ color }}>{value}</div>
-                <span className="text-xs text-muted-foreground/70 flex items-center gap-1">
-                  {sub} <ExternalLink className="w-2.5 h-2.5 shrink-0" />
-                </span>
-              </a>
-            ))}
           </div>
 
           {/* ── Data notes ──────────────────────────────────────────────── */}
