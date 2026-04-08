@@ -485,8 +485,8 @@ export default function Economic() {
               </CardContent>
             </Card>
 
-            {/* Context data tiles — single column, each 1/4 height */}
-            <div className="grid grid-cols-1 grid-rows-4 gap-4 h-full">
+            {/* Context data tiles — 2×2, total area matches chart */}
+            <div className="grid grid-cols-2 grid-rows-2 gap-4 h-full">
               {[
                 {
                   label: t("Poverty Rate", "Tasa de Pobreza"),
