@@ -394,6 +394,21 @@ function isBetter(existing: PVRMonthData, candidate: PVRMonthData): boolean {
 }
 
 async function upsertAirportMonth(data: PVRMonthData): Promise<void> {
+  // ── Sanity check: dom + intl must ≈ total (within 10%) when breakdown is present ──
+  if (data.domestic !== null && data.international !== null) {
+    const computed   = data.domestic + data.international;
+    const tolerance  = Math.max(data.total, 1) * 0.10;
+    if (Math.abs(computed - data.total) > tolerance) {
+      logger.warn(
+        { year: data.year, month: data.month,
+          domestic: data.domestic, international: data.international,
+          total: data.total, computed },
+        "gap-scraper: dom+intl sum doesn't match total — skipping write to avoid corruption"
+      );
+      return;
+    }
+  }
+
   const days      = daysInMonth(data.year, data.month);
   const avgDaily  = parseFloat((data.total / days).toFixed(2));
   const monthName = MONTH_NAMES[data.month - 1];
@@ -415,6 +430,18 @@ async function upsertAirportMonth(data: PVRMonthData): Promise<void> {
   };
 
   if (existing.length > 0) {
+    // Only update if the new data is higher quality (full breakdown vs total-only)
+    // or if the existing row has no breakdown.
+    const ex = existing[0];
+    const existingHasBreakdown = ex.domesticPassengers !== null && ex.domesticPassengers !== undefined;
+    const newHasBreakdown      = data.domestic !== null;
+    if (existingHasBreakdown && !newHasBreakdown) {
+      logger.info(
+        { year: data.year, month: data.month },
+        "gap-scraper: skipping update — existing row has full breakdown, incoming is total-only"
+      );
+      return;
+    }
     await db.update(airportMetricsTable).set(row)
       .where(and(eq(airportMetricsTable.year, data.year), eq(airportMetricsTable.month, data.month)));
   } else {
