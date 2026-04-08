@@ -124,6 +124,9 @@ interface CompsResult {
   };
   pool_size: number;
   thin_pool_warning: boolean;
+  expanded_pool: boolean;
+  adjacent_neighborhood: boolean;
+  adjacent_neighborhoods_used: string[];
   confidence_label: "high" | "medium" | "low" | "guidance_only";
   conservative_price: number;
   recommended_price: number;
@@ -1138,6 +1141,25 @@ export default function PricingToolPage() {
                   </div>
                 </div>
               </div>
+
+              {/* ── Adjacent neighborhood banner ── */}
+              {compsResult.adjacent_neighborhood && compsResult.adjacent_neighborhoods_used?.length > 0 && (
+                <div className="rounded-xl px-4 py-3.5 flex gap-3"
+                  style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)" }}>
+                  <span className="mt-0.5 shrink-0 text-base">🔄</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold mb-0.5" style={{ color: "#6366F1" }}>
+                      {t("Expanded Coverage", "Cobertura ampliada")}
+                    </p>
+                    <p className="text-xs leading-relaxed" style={{ color: "rgba(99,102,241,0.8)" }}>
+                      {t(
+                        `${compsResult.target_summary?.neighborhood} has limited local data. Comps include nearby ${compsResult.adjacent_neighborhoods_used.join(", ")} — pricing is directional.`,
+                        `${compsResult.target_summary?.neighborhood} tiene datos locales limitados. Los comparables incluyen ${compsResult.adjacent_neighborhoods_used.join(", ")} — el precio es referencial.`
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* ── Market anomaly banner ── */}
               {compsResult.market_anomaly?.detected && compsResult.market_anomaly.events.length > 0 && (

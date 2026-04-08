@@ -204,6 +204,8 @@ export interface CompsResultV2 {
   eligiblePoolSize: number;
   segmentPoolSize: number;
   expandedPool: boolean;
+  adjacentNeighborhood: boolean;
+  adjacentNeighborhoodsUsed: string[];
   comps: CompResultV2[];
   recommendation: PriceRecommendationV2;
 }
@@ -492,6 +494,21 @@ const BASE_WEIGHTS_GENERIC: NeighborhoodWeights = {
   buildingMatch:   5,
 };
 
+// ── Adjacent neighborhood fallback map ────────────────────────────────────────
+// Ordered by market proximity / pricing similarity.
+// Only used when the within-neighborhood pool (Steps 1–4) is below MIN_POOL_SIZE.
+const ADJACENT_NEIGHBORHOODS: Record<string, string[]> = {
+  "Hotel Zone":      ["Marina Vallarta", "Centro"],
+  "Marina Vallarta": ["Hotel Zone", "Centro"],
+  "Centro":          ["5 de Diciembre", "Hotel Zone", "Zona Romantica"],
+  "5 de Diciembre":  ["Centro", "Versalles", "Hotel Zone"],
+  "Versalles":       ["5 de Diciembre", "Centro"],
+  "Old Town":        ["Zona Romantica", "Centro"],
+  "Zona Romantica":  ["Old Town", "Amapas"],
+  "Amapas":          ["Zona Romantica", "Conchas Chinas"],
+  "Conchas Chinas":  ["Amapas", "Zona Romantica"],
+};
+
 function getEffectiveWeights(
   neighborhood: string,
   hasSqft: boolean,
@@ -630,7 +647,11 @@ function buildMatchReasonsV2(
   targetBuildingNormalized: string | null
 ): string[] {
   const reasons: string[] = [];
-  reasons.push(`Same neighborhood: ${comp.neighborhoodNormalized}`);
+  if (comp.neighborhoodNormalized === target.neighborhoodNormalized) {
+    reasons.push(`Same neighborhood: ${comp.neighborhoodNormalized}`);
+  } else {
+    reasons.push(`Adjacent neighborhood: ${comp.neighborhoodNormalized} (${target.neighborhoodNormalized} pool too thin)`);
+  }
   reasons.push(`Same bedrooms: ${comp.bedrooms}BR`);
 
   if (breakdown.buildingMatch > 0 && comp.buildingNameNormalized) {
@@ -858,6 +879,8 @@ export class CompsEngineV2 {
     let segment: typeof this.eligible;
     let mixedBeachTiers = false;
     let expandedPool = false;
+    let adjacentNeighborhood = false;
+    let adjacentNeighborhoodsUsed: string[] = [];
 
     if (sameBeachTier.length >= MIN_SAME_TIER_COMPS) {
       segment = sameBeachTier;                        // Step 1: pure same-tier pool
@@ -868,11 +891,41 @@ export class CompsEngineV2 {
       segment = bedroomSegment;                       // Step 3: all tiers (contaminated)
       mixedBeachTiers = true;
     } else {
-      // Step 4: ±1 BR fallback
+      // Step 4: ±1 BR fallback (within same neighborhood)
       const expanded = pool.filter((l) => Math.abs(l.bedrooms - target.bedrooms) <= 1);
-      segment = expanded;
-      expandedPool = expanded.some((l) => l.bedrooms !== target.bedrooms);
-      mixedBeachTiers = segment.some((l) => l.beachTier !== targetBeachTierVal);
+      if (expanded.length >= MIN_POOL_SIZE) {
+        segment = expanded;
+        expandedPool = expanded.some((l) => l.bedrooms !== target.bedrooms);
+        mixedBeachTiers = segment.some((l) => l.beachTier !== targetBeachTierVal);
+      } else {
+        // Step 5: Adjacent neighborhood fallback
+        // Pull comps from geographically adjacent neighborhoods.
+        // Try ±1 BR first; loosen to ±2 BR if still insufficient (extremely thin market).
+        // Only activates when the within-neighborhood pool is genuinely thin.
+        const adjNeighborhoods = ADJACENT_NEIGHBORHOODS[target.neighborhoodNormalized] ?? [];
+        const adjPool1 = this.eligible.filter(
+          (l) => adjNeighborhoods.includes(l.neighborhoodNormalized) &&
+                 Math.abs(l.bedrooms - target.bedrooms) <= 1 &&
+                 (excludeId == null || l.id !== excludeId)
+        );
+        const adjPool2 = adjPool1.length < MIN_POOL_SIZE
+          ? this.eligible.filter(
+              (l) => adjNeighborhoods.includes(l.neighborhoodNormalized) &&
+                     Math.abs(l.bedrooms - target.bedrooms) <= 2 &&
+                     (excludeId == null || l.id !== excludeId)
+            )
+          : [];
+        const adjPool = adjPool1.length >= MIN_POOL_SIZE ? adjPool1
+          : adjPool2.length > adjPool1.length   ? adjPool2
+          : adjPool1;
+        segment = adjPool.length > 0 ? adjPool : expanded.length > 0 ? expanded : pool;
+        adjacentNeighborhood = adjPool.length > 0;
+        adjacentNeighborhoodsUsed = adjPool.length > 0
+          ? [...new Set(adjPool.map((l) => l.neighborhoodNormalized))]
+          : [];
+        expandedPool = segment.some((l) => l.bedrooms !== target.bedrooms);
+        mixedBeachTiers = segment.some((l) => l.beachTier !== targetBeachTierVal);
+      }
     }
 
     // Assign price tier to each comp
@@ -942,6 +995,8 @@ export class CompsEngineV2 {
       eligiblePoolSize: this.eligible.length,
       segmentPoolSize: segment.length,
       expandedPool,
+      adjacentNeighborhood,
+      adjacentNeighborhoodsUsed,
       comps: topN,
       recommendation,
     };
@@ -974,7 +1029,10 @@ export function formatCompsResultV2(
     lines.push(`  Building: ${result.targetBuildingNormalized}${pfStr}`);
   }
   if (actualPrice != null) lines.push(`  Actual price: $${actualPrice}/night`);
-  lines.push(`  Comp pool: ${segmentPoolSize} listings${expandedPool ? " (±1BR expanded)" : ""}`);
+  let poolNote = "";
+  if (result.adjacentNeighborhood) poolNote = ` (adjacent: ${result.adjacentNeighborhoodsUsed.join(", ")})`;
+  else if (expandedPool) poolNote = " (±1BR expanded)";
+  lines.push(`  Comp pool: ${segmentPoolSize} listings${poolNote}`);
 
   lines.push(`\n${"─".repeat(76)}`);
   lines.push(`TOP ${comps.length} COMPS:`);

@@ -174,6 +174,8 @@ function buildWarnings(
   input: CompsRequest,
   poolSize: number,
   expandedPool: boolean,
+  adjacentNeighborhood: boolean,
+  adjacentNeighborhoodsUsed: string[],
   confidence: ConfidenceLabel,
   beachTier: BeachTier
 ): string[] {
@@ -183,7 +185,13 @@ function buildWarnings(
   } else if (confidence === "low") {
     w.push(`Thin comp pool (${poolSize} comps). Use the P25–P75 range, not the point estimate.`);
   }
-  if (expandedPool) {
+  if (adjacentNeighborhood && adjacentNeighborhoodsUsed.length > 0) {
+    w.push(
+      `${input.neighborhood_normalized} has too few listings for a local-only comparison. ` +
+      `Comps pulled from adjacent neighborhoods (${adjacentNeighborhoodsUsed.join(", ")}). ` +
+      `Pricing should be directional — verify against current market.`
+    );
+  } else if (expandedPool) {
     w.push("Comp pool expanded to ±1 bedroom because the same-bedroom segment is too small. Prices may not reflect your exact bedroom count.");
   }
   if (input.neighborhood_normalized === "Amapas" && input.bedrooms >= 3) {
@@ -302,7 +310,7 @@ router.post("/rental/comps", async (req, res) => {
     };
 
     const result = engine.run(target);
-    const { comps, expandedPool } = result;
+    const { comps, expandedPool, adjacentNeighborhood, adjacentNeighborhoodsUsed } = result;
     const poolSize = comps.length;
     const confidence = confidenceLabel(poolSize);
 
@@ -315,7 +323,7 @@ router.post("/rental/comps", async (req, res) => {
 
     const warnings = [
       ...buildingResolutionWarnings,
-      ...buildWarnings(input, poolSize, expandedPool, confidence, result.targetBeachTier),
+      ...buildWarnings(input, poolSize, expandedPool, adjacentNeighborhood, adjacentNeighborhoodsUsed, confidence, result.targetBeachTier),
     ];
 
     // ── Seasonal sweep ────────────────────────────────────────────────────────
@@ -417,8 +425,11 @@ router.post("/rental/comps", async (req, res) => {
       : [];
 
     // ── Explanation ───────────────────────────────────────────────────────────
+    const neighborhoodScope = adjacentNeighborhood && adjacentNeighborhoodsUsed.length > 0
+      ? `${input.neighborhood_normalized} + adjacent (${adjacentNeighborhoodsUsed.join(", ")})`
+      : input.neighborhood_normalized;
     const explanation = [
-      `Recommendation based on ${poolSize} comparable listings in ${input.neighborhood_normalized}.`,
+      `Recommendation based on ${poolSize} comparable listings in ${neighborhoodScope}.`,
       result.adjustmentExplanation,
       "Data scope: multi-source (PVRPV, Vacation Vallarta, Airbnb, VRBO).",
     ].filter(Boolean).join(" ");
@@ -460,6 +471,8 @@ router.post("/rental/comps", async (req, res) => {
       pool_size: poolSize,
       thin_pool_warning: thinPoolWarning,
       expanded_pool: expandedPool,
+      adjacent_neighborhood: adjacentNeighborhood,
+      adjacent_neighborhoods_used: adjacentNeighborhoodsUsed,
       confidence_label: confidence,
 
       conservative_price: confidence === "guidance_only" ? null : result.conservative,

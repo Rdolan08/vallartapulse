@@ -119,6 +119,8 @@ export interface TargetPropertyV3 extends TargetPropertyV2 {
 export interface CompsResultV3 {
   comps: CompResultV2[];
   expandedPool: boolean;
+  adjacentNeighborhood: boolean;
+  adjacentNeighborhoodsUsed: string[];
   targetBeachTier: BeachTier;
   targetPriceTier: "low" | "mid" | "high" | null;
   targetBuildingNormalized: string | null;
@@ -202,7 +204,7 @@ export class CompsEngineV3 {
   run(target: TargetPropertyV3): CompsResultV3 {
     // ── 1. Run v2 engine ─────────────────────────────────────────────────────
     const v2Result = this.v2Engine.run(target);
-    const { recommendation, comps, expandedPool } = v2Result;
+    const { recommendation, comps, expandedPool, adjacentNeighborhood, adjacentNeighborhoodsUsed } = v2Result;
 
     const baseCompMedian = recommendation.baseCompMedian;
     const v2Conservative = recommendation.conservative;
@@ -433,7 +435,7 @@ export class CompsEngineV3 {
     }
 
     return {
-      comps, expandedPool,
+      comps, expandedPool, adjacentNeighborhood, adjacentNeighborhoodsUsed,
       targetBeachTier: v2Result.targetBeachTier,
       targetPriceTier: v2Result.targetPriceTier,
       targetBuildingNormalized: v2Result.targetBuildingNormalized,
