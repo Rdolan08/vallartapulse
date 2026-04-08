@@ -183,14 +183,14 @@ export default function Economic() {
                 up: false,
               },
             ].map(({ label, value, sub, color, up }) => (
-              <div key={label} className="glass-card flex flex-col gap-2" style={{ padding: "1.25rem" }}>
-                <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "#9AA5B1" }}>
+              <div key={label} className="glass-card flex flex-col items-center justify-center text-center gap-2" style={{ padding: "1.25rem" }}>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.1em] leading-tight" style={{ color: "#9AA5B1" }}>
                   {label}
                 </span>
-                <div className="text-2xl font-bold" style={{ color, letterSpacing: "-0.02em" }}>
+                <div className="text-3xl font-bold leading-none" style={{ color, letterSpacing: "-0.02em" }}>
                   {value}
                 </div>
-                <span className={`text-xs ${up === true ? "text-emerald-400" : up === false ? "text-amber-400" : "text-muted-foreground/70"}`}>
+                <span className={`text-[11px] ${up === true ? "text-emerald-400" : up === false ? "text-amber-400" : "text-muted-foreground/60"}`}>
                   {sub}
                 </span>
               </div>
