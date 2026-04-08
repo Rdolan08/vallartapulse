@@ -57,6 +57,12 @@ export default function Economic() {
     workers: r.value,
   }));
 
+  // ── Unemployment rate (ENOE) ──────────────────────────────────────────────
+  const unemployData = pick(rows, "unemployment_rate_pct").map((r) => ({
+    year: r.year,
+    rate: r.value,
+  })).sort((a, b) => a.year - b.year);
+
   // ── Sector breakdown ─────────────────────────────────────────────────────
   const sectorIndicators = [
     { key: "sector_pct_tourism_hospitality", label: t("Tourism & Hospitality", "Turismo y Hotelería") },
@@ -312,6 +318,38 @@ export default function Economic() {
                   {t("2020 dip reflects COVID-19 pandemic job losses in PVR's tourism-heavy economy",
                      "La caída de 2020 refleja el impacto del COVID-19 en la economía turística de PVR")}
                 </p>
+
+                {/* Unemployment rate row */}
+                {unemployData.length > 0 && (
+                  <div className="mt-5 pt-4 border-t border-white/[0.07]">
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9AA5B1" }}>
+                      {t("Unemployment Rate (ENOE · PV Metro Area)", "Tasa de Desocupación (ENOE · ZM Puerto Vallarta)")}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {unemployData.map((d) => {
+                        const isCovid = d.year === 2020;
+                        const isLow   = d.rate <= 3.0;
+                        const color   = isCovid ? "#F87171" : isLow ? "#00C2A8" : "#F59E0B";
+                        const bg      = isCovid ? "rgba(248,113,113,0.08)" : isLow ? "rgba(0,194,168,0.08)" : "rgba(245,158,11,0.08)";
+                        const border  = isCovid ? "rgba(248,113,113,0.2)" : isLow ? "rgba(0,194,168,0.2)" : "rgba(245,158,11,0.2)";
+                        return (
+                          <div key={d.year}
+                            className="flex flex-col items-center rounded-xl px-4 py-2.5 min-w-[60px]"
+                            style={{ background: bg, border: `1px solid ${border}` }}>
+                            <span className="text-[10px] font-semibold" style={{ color: "#9AA5B1" }}>{d.year}</span>
+                            <span className="text-base font-bold mt-0.5" style={{ color }}>{d.rate.toFixed(1)}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] mt-2.5" style={{ color: "#64748B" }}>
+                      {t(
+                        "Open unemployment rate — those actively seeking work. Includes formal & informal workers. Source: INEGI ENOE.",
+                        "Tasa de desocupación abierta — personas buscando empleo activamente. Incluye trabajadores formales e informales. Fuente: INEGI ENOE."
+                      )}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
