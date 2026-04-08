@@ -296,9 +296,14 @@ export default function Tourism() {
                     if (!active || !payload?.length) return null;
                     const dataPoint = payload[0]?.payload as Record<string, unknown>;
                     const hasReal2026 = dataPoint?.["2026"] !== undefined;
-                    const visible = payload.filter((e) =>
-                      !(e.dataKey === "2026est" && hasReal2026)
-                    );
+                    const visible = payload
+                      .filter((e) => !(e.dataKey === "2026est" && hasReal2026))
+                      .slice()
+                      .sort((a, b) => {
+                        const aKey = a.dataKey === "2026est" ? 2026.5 : Number(a.dataKey);
+                        const bKey = b.dataKey === "2026est" ? 2026.5 : Number(b.dataKey);
+                        return bKey - aKey;
+                      });
                     return (
                       <div style={TOOLTIP_CONTENT_STYLE}>
                         <p style={TOOLTIP_LABEL_STYLE}>{tooltipLabel}</p>
