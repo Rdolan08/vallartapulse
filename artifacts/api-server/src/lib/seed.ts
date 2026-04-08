@@ -28,9 +28,20 @@ function dv(seed: string): number {
   return h / 4294967296;
 }
 
-const RENTAL_SOURCE_VERSION  = "Airbnb / VRBO (estimated) v2";
+const RENTAL_SOURCE_VERSION  = "Airbnb / VRBO (estimated) v3";
 const SAFETY_SOURCE_VERSION  = "SESNSP v2";
 const WEATHER_SOURCE_VERSION = "NOAA / CONAGUA v2";
+
+// Demand-shock adjustments for periods with real known market disruptions.
+// Feb 2026: early security warnings — minor demand softening.
+// Mar 2026: peak security event impact — significant drop in visitors → price pressure.
+const DEMAND_SHOCK: Record<string, { rate: number; occ: number }> = {
+  "2026:1": { rate: 0.94, occ: 0.92 },  // Feb 2026: -6% rate, -8% occupancy
+  "2026:2": { rate: 0.81, occ: 0.76 },  // Mar 2026: -19% rate, -24% occupancy
+};
+function shockKey(year: number, m: number) { return `${year}:${m}`; }
+function rateShock(year: number, m: number)  { return DEMAND_SHOCK[shockKey(year, m)]?.rate ?? 1; }
+function occShock(year: number, m: number)   { return DEMAND_SHOCK[shockKey(year, m)]?.occ  ?? 1; }
 
 // ── Economic reseed — replaces old fake indicators with real INEGI/IMSS data ──
 // Triggered when the `population` indicator is absent (old schema had
@@ -467,7 +478,10 @@ export async function seedIfEmpty(): Promise<void> {
         const seasonal = (m < 4 || m >= 10) ? 1.30 : (m >= 5 && m <= 8) ? 0.75 : 1.0;
         const k = `${hood.name}:${year}:${m}`;
         const listings = Math.floor(hood.baseListings * (1 + (year - 2022) * 0.08) * (0.92 + dv(`L:${k}`) * 0.16));
-        const avgRate = hood.baseRate * seasonal * yGrowth * (0.95 + dv(`R:${k}`) * 0.10);
+        const baseRate = hood.baseRate * seasonal * yGrowth * (0.95 + dv(`R:${k}`) * 0.10);
+        const avgRate = baseRate * rateShock(year, m);
+        const baseOcc = Math.min(98, (52 + m * 1.5 + (year - 2022) * 2) * seasonal * (0.93 + dv(`O:${k}`) * 0.14));
+        const adjOcc = baseOcc * occShock(year, m);
         rentalData.push({
           year,
           month: m + 1,
@@ -477,7 +491,7 @@ export async function seedIfEmpty(): Promise<void> {
           activeListings: listings,
           avgNightlyRateUsd: String(avgRate.toFixed(2)),
           medianNightlyRateUsd: String((avgRate * 0.87).toFixed(2)),
-          occupancyRate: String(Math.min(98, (52 + m * 1.5 + (year - 2022) * 2) * seasonal * (0.93 + dv(`O:${k}`) * 0.14)).toFixed(2)),
+          occupancyRate: String(adjOcc.toFixed(2)),
           avgReviewScore: String((4.25 + dv(`S:${k}`) * 0.55).toFixed(2)),
           totalReviews: Math.floor(listings * (2 + dv(`T:${k}`) * 3)),
           source: RENTAL_SOURCE_VERSION,
@@ -647,14 +661,17 @@ export async function repairRentalMarketIfRandom(): Promise<void> {
         const seasonal = (m < 4 || m >= 10) ? 1.30 : (m >= 5 && m <= 8) ? 0.75 : 1.0;
         const k = `${hood.name}:${year}:${m}`;
         const listings = Math.floor(hood.baseListings * (1 + (year - 2022) * 0.08) * (0.92 + dv(`L:${k}`) * 0.16));
-        const avgRate = hood.baseRate * seasonal * yGrowth * (0.95 + dv(`R:${k}`) * 0.10);
+        const baseRate = hood.baseRate * seasonal * yGrowth * (0.95 + dv(`R:${k}`) * 0.10);
+        const avgRate = baseRate * rateShock(year, m);
+        const baseOcc = Math.min(98, (52 + m * 1.5 + (year - 2022) * 2) * seasonal * (0.93 + dv(`O:${k}`) * 0.14));
+        const adjOcc = baseOcc * occShock(year, m);
         rentalData.push({
           year, month: m + 1, monthName: MONTHS[m],
           neighborhood: hood.name, platform: "all",
           activeListings: listings,
           avgNightlyRateUsd:    String(avgRate.toFixed(2)),
           medianNightlyRateUsd: String((avgRate * 0.87).toFixed(2)),
-          occupancyRate: String(Math.min(98, (52 + m * 1.5 + (year - 2022) * 2) * seasonal * (0.93 + dv(`O:${k}`) * 0.14)).toFixed(2)),
+          occupancyRate: String(adjOcc.toFixed(2)),
           avgReviewScore: String((4.25 + dv(`S:${k}`) * 0.55).toFixed(2)),
           totalReviews: Math.floor(listings * (2 + dv(`T:${k}`) * 3)),
           source: RENTAL_SOURCE_VERSION,
@@ -668,7 +685,7 @@ export async function repairRentalMarketIfRandom(): Promise<void> {
   for (let i = 0; i < rentalData.length; i += CHUNK) {
     await db.insert(rentalMarketMetricsTable).values(rentalData.slice(i, i + CHUNK));
   }
-  logger.info({ rebuilt: rentalData.length }, "Rental market data rebuilt with deterministic seed (v2)");
+  logger.info({ rebuilt: rentalData.length }, "Rental market data rebuilt with deterministic seed (v3)");
 }
 
 // ── Repair non-deterministic weather data ────────────────────────────────────
