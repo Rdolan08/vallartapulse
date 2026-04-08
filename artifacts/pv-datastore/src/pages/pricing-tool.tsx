@@ -254,8 +254,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 function SectionLabel({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={cn("text-[10px] font-semibold uppercase tracking-widest mb-3", className)}
-      style={{ color: "rgba(154,165,177,0.55)" }}>
+    <p className={cn("text-sm font-medium text-foreground mb-3", className)}>
       {children}
     </p>
   );
@@ -941,11 +940,10 @@ export default function PricingToolPage() {
             {/* ══ Section E: Optional (collapsed) ══ */}
             <div className="pt-4 border-t border-white/5">
               <button type="button" onClick={() => setShowAdvanced(v => !v)} disabled={isLoading}
-                className="flex items-center gap-1.5 text-xs transition-colors"
-                style={{ color: "rgba(154,165,177,0.45)" }}>
+                className="flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors">
                 {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                 {t("More details", "Más detalles")}
-                <span style={{ color: "rgba(154,165,177,0.3)" }}>
+                <span style={{ color: "rgba(154,165,177,0.55)" }}>
                   · {t("size · rating · year · location hint · URL", "tamaño · rating · año · referencia · URL")}
                 </span>
               </button>
