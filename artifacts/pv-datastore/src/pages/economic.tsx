@@ -319,37 +319,60 @@ export default function Economic() {
                      "La caída de 2020 refleja el impacto del COVID-19 en la economía turística de PVR")}
                 </p>
 
-                {/* Unemployment rate row */}
-                {unemployData.length > 0 && (
-                  <div className="mt-5 pt-4 border-t border-white/[0.07]">
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#9AA5B1" }}>
-                      {t("Unemployment Rate (ENOE · PV Metro Area)", "Tasa de Desocupación (ENOE · ZM Puerto Vallarta)")}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {unemployData.map((d) => {
-                        const isCovid = d.year === 2020;
-                        const isLow   = d.rate <= 3.0;
-                        const color   = isCovid ? "#F87171" : isLow ? "#00C2A8" : "#F59E0B";
-                        const bg      = isCovid ? "rgba(248,113,113,0.08)" : isLow ? "rgba(0,194,168,0.08)" : "rgba(245,158,11,0.08)";
-                        const border  = isCovid ? "rgba(248,113,113,0.2)" : isLow ? "rgba(0,194,168,0.2)" : "rgba(245,158,11,0.2)";
-                        return (
-                          <div key={d.year}
-                            className="flex flex-col items-center rounded-xl px-4 py-2.5 min-w-[60px]"
-                            style={{ background: bg, border: `1px solid ${border}` }}>
-                            <span className="text-[10px] font-semibold" style={{ color: "#9AA5B1" }}>{d.year}</span>
-                            <span className="text-base font-bold mt-0.5" style={{ color }}>{d.rate.toFixed(1)}%</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[11px] mt-2.5" style={{ color: "#64748B" }}>
-                      {t(
-                        "Open unemployment rate — those actively seeking work. Includes formal & informal workers. Source: INEGI ENOE.",
-                        "Tasa de desocupación abierta — personas buscando empleo activamente. Incluye trabajadores formales e informales. Fuente: INEGI ENOE."
-                      )}
+              </CardContent>
+            </Card>
+
+            {/* Chart: Unemployment Rate */}
+            <Card className="glass-card border-0">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base font-semibold">
+                      {t("Unemployment Rate 2019–2024", "Tasa de Desocupación 2019–2024")}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {t("Open unemployment rate · PV metro area · COVID-19 spike visible in 2020",
+                         "Tasa de desocupación abierta · ZM Puerto Vallarta · pico COVID-19 visible en 2020")}
                     </p>
                   </div>
-                )}
+                  <a href="https://www.inegi.org.mx/programas/enoe/15ymas/" target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 shrink-0">
+                    INEGI ENOE <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={240}>
+                  <AreaChart data={unemployData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
+                    <defs>
+                      <linearGradient id="unempGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#F59E0B" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                    <XAxis dataKey="year" axisLine={false} tickLine={false}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                    <YAxis axisLine={false} tickLine={false} domain={[0, 7]} width={40}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                      tickFormatter={(v) => `${v}%`} />
+                    <Tooltip
+                      {...CHART_TOOLTIP}
+                      cursor={TOOLTIP_CURSOR}
+                      labelFormatter={(year) => `${year}`}
+                      formatter={(v: number) => [
+                        `${v.toFixed(1)}%`,
+                        t("Unemployment rate", "Tasa de desocupación"),
+                      ]} />
+                    <Area type="monotone" dataKey="rate" stroke="#F59E0B" strokeWidth={2.5}
+                      fill="url(#unempGrad)" dot={{ r: 4, fill: "#F59E0B", strokeWidth: 0 }}
+                      activeDot={{ r: 6 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+                <p className="text-xs text-muted-foreground/60 text-center mt-1">
+                  {t("2020 spike driven by COVID-19 lockdowns; recovered to pre-pandemic levels by 2022",
+                     "El pico de 2020 fue por los cierres de COVID-19; recuperado a niveles pre-pandemia para 2022")}
+                </p>
               </CardContent>
             </Card>
 
