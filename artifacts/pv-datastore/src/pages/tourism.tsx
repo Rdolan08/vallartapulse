@@ -117,12 +117,12 @@ export default function Tourism() {
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="mb-8">
         <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
-          {t("Tourism Metrics", "Métricas Turísticas")}
+          {t("PVR Airport Metrics", "Métricas Aeropuerto PVR")}
         </h1>
         <p className="text-muted-foreground mt-1">
           {lang === "es"
-            ? "Llegadas, cruceros, ocupación hotelera y tarifas · fuentes: "
-            : "Arrivals, cruise traffic, hotel occupancy & rates · sources: "}
+            ? "Tráfico de pasajeros, llegadas y tendencias · fuentes: "
+            : "Passenger traffic, arrivals & trends · sources: "}
           <a href="https://www.datatur.sectur.gob.mx/" target="_blank" rel="noopener noreferrer"
              className="text-primary hover:underline inline-flex items-center gap-0.5">
             DATATUR <ExternalLink className="w-3 h-3" />
