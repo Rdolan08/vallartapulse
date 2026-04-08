@@ -117,12 +117,12 @@ export default function Tourism() {
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="mb-8">
         <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
-          {t("PVR Airport Metrics", "Métricas Aeropuerto PVR")}
+          {t("Tourism Metrics", "Métricas Turísticas")}
         </h1>
         <p className="text-muted-foreground mt-1">
           {lang === "es"
-            ? "Tráfico de pasajeros, llegadas y tendencias · fuentes: "
-            : "Passenger traffic, arrivals & trends · sources: "}
+            ? "Aeropuertos, hoteles y cruceros · fuentes: "
+            : "Airports, hotels and cruise data · sources: "}
           <a href="https://www.datatur.sectur.gob.mx/" target="_blank" rel="noopener noreferrer"
              className="text-primary hover:underline inline-flex items-center gap-0.5">
             DATATUR <ExternalLink className="w-3 h-3" />
@@ -133,6 +133,16 @@ export default function Tourism() {
              className="text-primary hover:underline inline-flex items-center gap-0.5">
             GAP <ExternalLink className="w-3 h-3" />
           </a>
+        </p>
+      </div>
+
+      {/* ── PVR Airport Metrics subheader ─────────────────────────────────── */}
+      <div className="mb-6">
+        <h2 className="text-xl font-display font-bold tracking-tight text-foreground">
+          {t("PVR Airport Metrics", "Métricas Aeropuerto PVR")}
+        </h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {t("Passenger traffic, arrivals & trends · GAP official data", "Tráfico de pasajeros, llegadas y tendencias · datos oficiales GAP")}
         </p>
       </div>
 
