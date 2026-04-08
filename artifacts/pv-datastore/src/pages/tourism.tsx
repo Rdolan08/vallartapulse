@@ -142,134 +142,6 @@ export default function Tourism() {
         </select>
       </div>
 
-      {/* ── Airport estimates: all months without an official GAP total ── */}
-      {pendingEstimates && pendingEstimates.map((est) => {
-        const monthName   = MONTH_NAMES_LONG[est.month - 1];
-        const yoyPct      = est.estimatedVsSameMonthLastYearPct;
-        const yoyPos      = yoyPct !== null && yoyPct >= 0;
-        const isComplete  = est.monthComplete; // full calendar month elapsed, no official data yet
-
-        const CONF_COLOR: Record<string, string> = {
-          low: "#F59E0B", medium: "#00D1FF", high: "#00C2A8",
-        };
-        const confColor = CONF_COLOR[est.confidence] ?? "#9AA5B1";
-
-        return (
-          <Card key={`${est.year}-${est.month}`} className="glass-card mb-6">
-            <CardHeader className="pb-3">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Plane className="w-4 h-4" style={{ color: "#3B82F6" }} />
-                    <CardTitle>
-                      {t("PVR Airport", "Aeropuerto PVR")} · {monthName} {est.year}
-                    </CardTitle>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
-                      style={{ background: "rgba(148,163,184,0.12)", color: "#94A3B8", border: "1px solid rgba(148,163,184,0.35)" }}>
-                      {t("Estimate", "Estimación")}: {t(
-                        est.confidence === "low" ? "Low Confidence" : est.confidence === "medium" ? "Medium Confidence" : "High Confidence",
-                        est.confidence === "low" ? "Confianza baja" : est.confidence === "medium" ? "Confianza media" : "Confianza alta"
-                      )}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1.5">
-                    {isComplete
-                      ? t(
-                          "Month complete · awaiting official GAP press release",
-                          "Mes completo · en espera del comunicado oficial de GAP",
-                        )
-                      : t(
-                          `${est.daysElapsed} of ${est.daysInMonth} days elapsed — projecting full month from official GAP trends`,
-                          `${est.daysElapsed} de ${est.daysInMonth} días transcurridos — proyectando mes completo con datos GAP`,
-                        )}
-                  </p>
-                </div>
-                <a href="https://www.aeropuertosgap.com.mx/en/material-events.html"
-                   target="_blank" rel="noopener noreferrer"
-                   className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors whitespace-nowrap">
-                  GAP <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                {/* Projected / full-month estimate */}
-                <div className="rounded-xl p-4" style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)" }}>
-                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
-                    {isComplete
-                      ? t("Full Month Estimate", "Estimación Mes Completo")
-                      : t("Projected Full Month", "Proyección Mes Completo")}
-                  </div>
-                  <div className="text-2xl font-bold" style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}>
-                    {formatNumber(est.projectedFullMonthPassengers)}
-                  </div>
-                  <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
-                    {t("passengers", "pasajeros")}
-                  </div>
-                </div>
-
-                {/* Passengers to date (only for open months) */}
-                {!isComplete && (
-                  <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
-                      {t("To Date", "Hasta la Fecha")} ({est.daysElapsed}d)
-                    </div>
-                    <div className="text-2xl font-bold" style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}>
-                      {formatNumber(est.estimatedPassengersToDate)}
-                    </div>
-                    <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
-                      {t("estimated", "estimado")}
-                    </div>
-                  </div>
-                )}
-
-                {/* Avg daily */}
-                <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
-                    {t("Avg Daily", "Promedio Diario")}
-                  </div>
-                  <div className="text-2xl font-bold" style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}>
-                    {formatNumber(est.averageDailyPassengersToDate)}
-                  </div>
-                  <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
-                    {t("passengers/day", "pasajeros/día")}
-                  </div>
-                </div>
-
-                {/* YoY change */}
-                <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
-                    {t(`vs ${monthName} ${est.year - 1}`, `vs ${monthName} ${est.year - 1}`)}
-                  </div>
-                  <div className="text-2xl font-bold" style={{ color: yoyPct !== null ? (yoyPos ? "#00C2A8" : "#F87171") : "#9AA5B1", letterSpacing: "-0.02em" }}>
-                    {yoyPct !== null ? `${yoyPos ? "+" : ""}${yoyPct.toFixed(1)}%` : "—"}
-                  </div>
-                  <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
-                    {est.sameMonthLastYearPassengers !== null
-                      ? formatNumber(est.sameMonthLastYearPassengers) + " " + t("last year", "año pasado")
-                      : t("no prior data", "sin datos previos")}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "rgba(148,163,184,0.06)", color: "#9AA5B1", border: "1px solid rgba(148,163,184,0.12)" }}>
-                <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 opacity-60" />
-                <span>{isComplete
-                  ? t(
-                      "This month is complete but official GAP data has not yet been published. The estimate uses year-over-year pacing from official prior months. It will be replaced automatically when GAP releases the press release (typically the first week of the following month).",
-                      "Este mes ha concluido pero los datos oficiales de GAP aún no han sido publicados. La estimación usa el ritmo interanual de meses oficiales anteriores. Se actualizará automáticamente cuando GAP publique el comunicado (generalmente la primera semana del mes siguiente).",
-                    )
-                  : t(
-                      "Estimate based on recent official GAP passenger trends and seasonal pacing. Final monthly total will be updated when official airport data is released (typically the first week of the following month).",
-                      "Estimación basada en tendencias oficiales de pasajeros GAP y pacing estacional. El total mensual definitivo se actualizará cuando se publiquen datos oficiales del aeropuerto (generalmente la primera semana del mes siguiente).",
-                    )}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-
       {/* ── Airport traffic (always visible — GAP real data incl. 2026) ──── */}
       {airportRaw && airportRaw.length > 0 && (
         <Card className="glass-card mb-6">
@@ -409,6 +281,121 @@ export default function Tourism() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Airport estimates: all months without an official GAP total ── */}
+      {pendingEstimates && pendingEstimates.map((est) => {
+        const monthName   = MONTH_NAMES_LONG[est.month - 1];
+        const yoyPct      = est.estimatedVsSameMonthLastYearPct;
+        const yoyPos      = yoyPct !== null && yoyPct >= 0;
+        const isComplete  = est.monthComplete;
+
+        return (
+          <Card key={`${est.year}-${est.month}`} className="glass-card mb-6">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Plane className="w-4 h-4" style={{ color: "#3B82F6" }} />
+                    <CardTitle>
+                      {t("PVR Airport", "Aeropuerto PVR")} · {monthName} {est.year}
+                    </CardTitle>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                      style={{ background: "rgba(148,163,184,0.12)", color: "#94A3B8", border: "1px solid rgba(148,163,184,0.35)" }}>
+                      {t("Estimate", "Estimación")}: {t(
+                        est.confidence === "low" ? "Low Confidence" : est.confidence === "medium" ? "Medium Confidence" : "High Confidence",
+                        est.confidence === "low" ? "Confianza baja" : est.confidence === "medium" ? "Confianza media" : "Confianza alta"
+                      )}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    {isComplete
+                      ? t(
+                          "Month complete · awaiting official GAP press release",
+                          "Mes completo · en espera del comunicado oficial de GAP",
+                        )
+                      : t(
+                          `${est.daysElapsed} of ${est.daysInMonth} days elapsed — projecting full month from official GAP trends`,
+                          `${est.daysElapsed} de ${est.daysInMonth} días transcurridos — proyectando mes completo con datos GAP`,
+                        )}
+                  </p>
+                </div>
+                <a href="https://www.aeropuertosgap.com.mx/en/material-events.html"
+                   target="_blank" rel="noopener noreferrer"
+                   className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors whitespace-nowrap">
+                  GAP <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                <div className="rounded-xl p-4" style={{ background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.2)" }}>
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
+                    {isComplete
+                      ? t("Full Month Estimate", "Estimación Mes Completo")
+                      : t("Projected Full Month", "Proyección Mes Completo")}
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}>
+                    {formatNumber(est.projectedFullMonthPassengers)}
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
+                    {t("passengers", "pasajeros")}
+                  </div>
+                </div>
+                {!isComplete && (
+                  <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
+                      {t("To Date", "Hasta la Fecha")} ({est.daysElapsed}d)
+                    </div>
+                    <div className="text-2xl font-bold" style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}>
+                      {formatNumber(est.estimatedPassengersToDate)}
+                    </div>
+                    <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
+                      {t("estimated", "estimado")}
+                    </div>
+                  </div>
+                )}
+                <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
+                    {t("Avg Daily", "Promedio Diario")}
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color: "#F5F7FA", letterSpacing: "-0.02em" }}>
+                    {formatNumber(est.averageDailyPassengersToDate)}
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
+                    {t("passengers/day", "pasajeros/día")}
+                  </div>
+                </div>
+                <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "#9AA5B1" }}>
+                    {t(`vs ${monthName} ${est.year - 1}`, `vs ${monthName} ${est.year - 1}`)}
+                  </div>
+                  <div className="text-2xl font-bold" style={{ color: yoyPct !== null ? (yoyPos ? "#00C2A8" : "#F87171") : "#9AA5B1", letterSpacing: "-0.02em" }}>
+                    {yoyPct !== null ? `${yoyPos ? "+" : ""}${yoyPct.toFixed(1)}%` : "—"}
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "#9AA5B1" }}>
+                    {est.sameMonthLastYearPassengers !== null
+                      ? formatNumber(est.sameMonthLastYearPassengers) + " " + t("last year", "año pasado")
+                      : t("no prior data", "sin datos previos")}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "rgba(148,163,184,0.06)", color: "#9AA5B1", border: "1px solid rgba(148,163,184,0.12)" }}>
+                <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 opacity-60" />
+                <span>{isComplete
+                  ? t(
+                      "This month is complete but official GAP data has not yet been published. The estimate uses year-over-year pacing from official prior months. It will be replaced automatically when GAP releases the press release (typically the first week of the following month).",
+                      "Este mes ha concluido pero los datos oficiales de GAP aún no han sido publicados. La estimación usa el ritmo interanual de meses oficiales anteriores. Se actualizará automáticamente cuando GAP publique el comunicado (generalmente la primera semana del mes siguiente).",
+                    )
+                  : t(
+                      "Estimate based on recent official GAP passenger trends and seasonal pacing. Final monthly total will be updated when official airport data is released (typically the first week of the following month).",
+                      "Estimación basada en tendencias oficiales de pasajeros GAP y pacing estacional. El total mensual definitivo se actualizará cuando se publiquen datos oficiales del aeropuerto (generalmente la primera semana del mes siguiente).",
+                    )}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* ── SECTUR / DATATUR section (year-filtered) ─────────────────────── */}
       {isLoading ? (
