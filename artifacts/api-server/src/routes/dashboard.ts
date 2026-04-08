@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { tourismMetricsTable, rentalMarketMetricsTable, safetyMetricsTable, weatherMetricsTable } from "@workspace/db/schema";
+import { tourismMetricsTable, rentalMarketMetricsTable, safetyMetricsTable, weatherMetricsTable, airportMetricsTable } from "@workspace/db/schema";
 import { desc, eq, and, sql } from "drizzle-orm";
 import { GetDashboardSummaryResponse, GetDashboardSummaryQueryParams } from "@workspace/api-zod";
 
@@ -57,6 +57,22 @@ router.get("/dashboard/summary", async (req, res) => {
           )
           .limit(1)
       : [null];
+
+    // Airport passengers query (replaces DATATUR hotel arrivals for the main KPI)
+    const airportYear  = latestTourism?.year  ?? filterYear  ?? new Date().getFullYear();
+    const airportMonth = latestTourism?.month ?? filterMonth ?? new Date().getMonth() + 1;
+
+    const [latestAirport] = await db
+      .select()
+      .from(airportMetricsTable)
+      .where(and(eq(airportMetricsTable.year, airportYear), eq(airportMetricsTable.month, airportMonth)))
+      .limit(1);
+
+    const [prevAirport] = await db
+      .select()
+      .from(airportMetricsTable)
+      .where(and(eq(airportMetricsTable.year, airportYear - 1), eq(airportMetricsTable.month, airportMonth)))
+      .limit(1);
 
     // Rental query
     const rentalBase = db
@@ -208,8 +224,8 @@ router.get("/dashboard/summary", async (req, res) => {
     const activeListings = latestRental ? Number(latestRental.totalListings) : 4850;
     const prevListings = prevRental ? Number(prevRental.totalListings) : 4400;
 
-    const touristArrivals = latestTourism ? (latestTourism.totalArrivals ?? 0) : 125000;
-    const prevArrivals = prevYearTourism ? (prevYearTourism.totalArrivals ?? 0) : 110000;
+    const touristArrivals = latestAirport ? latestAirport.totalPassengers : (latestTourism?.totalArrivals ?? 125000);
+    const prevArrivals    = prevAirport   ? prevAirport.totalPassengers   : (prevYearTourism?.totalArrivals ?? 110000);
 
     const cruiseVisitors = latestTourism ? (latestTourism.cruiseVisitors ?? 0) : 18000;
 
