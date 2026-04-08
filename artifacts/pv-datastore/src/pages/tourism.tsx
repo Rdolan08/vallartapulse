@@ -83,8 +83,13 @@ export default function Tourism() {
   const airportYoYRows = airport2026Official.map((r) => {
     const prior = airportRaw?.find((p) => p.year === 2025 && p.month === r.month);
     const pct   = prior ? (r.totalPassengers - prior.totalPassengers) / prior.totalPassengers * 100 : null;
-    return { month: r.month, cur: r.totalPassengers, prior: prior?.totalPassengers ?? null, pct };
+    return { month: r.month, cur: r.totalPassengers, prior: prior?.totalPassengers ?? null, pct, anomaly: r.anomaly ?? null };
   });
+
+  // Months in the YoY grid that have a detected anomaly (for the market note block)
+  const anomalousThroughOfficialData = airportYoYRows.filter((r) => r.anomaly?.detected);
+  // First anomaly (for the market note) — may be null
+  const firstAnomaly = anomalousThroughOfficialData[0]?.anomaly ?? null;
   const ytd2026 = airport2026Official.reduce((s, r) => s + r.totalPassengers, 0);
   const ytd2025 = airport2026Official.reduce((s, r) => {
     const p = airportRaw?.find((p) => p.year === 2025 && p.month === r.month);
@@ -248,11 +253,28 @@ export default function Tourism() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              {airportYoYRows.map(({ month, cur, prior, pct }) => {
+              {airportYoYRows.map(({ month, cur, prior, pct, anomaly }) => {
                 const positive = pct !== null && pct >= 0;
+                const hasAnomaly = anomaly?.detected;
+                const isRecovery = hasAnomaly && (anomaly?.recoveryPhase === "recovery" || anomaly?.recoveryPhase === "normalised");
                 return (
-                  <div key={month} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <div className="text-xs text-muted-foreground mb-1">{MONTH_NAMES_LONG[month - 1]}</div>
+                  <div key={month} className="rounded-xl p-3" style={{
+                    background: hasAnomaly && !isRecovery ? "rgba(251,191,36,0.05)" : "rgba(255,255,255,0.03)",
+                    border: hasAnomaly && !isRecovery ? "1px solid rgba(251,191,36,0.18)" : "1px solid rgba(255,255,255,0.06)",
+                  }}>
+                    <div className="text-xs text-muted-foreground mb-1 flex items-center justify-between gap-1">
+                      <span>{MONTH_NAMES_LONG[month - 1]}</span>
+                      {hasAnomaly && !isRecovery && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold leading-none" style={{ background: "rgba(251,191,36,0.15)", color: "#FBBF24" }}>
+                          {t("event", "evento")}
+                        </span>
+                      )}
+                      {isRecovery && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold leading-none" style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}>
+                          {t("recovery", "recuperación")}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-base font-bold text-foreground">{formatNumber(cur)}</div>
                     <div className="text-xs mt-0.5" style={{ color: pct !== null ? (positive ? "#00C2A8" : "#F87171") : "#9AA5B1" }}>
                       {pct !== null ? `${positive ? "+" : ""}${pct.toFixed(1)}% YoY` : "—"}
@@ -280,6 +302,23 @@ export default function Tourism() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* ── Market context note (shown when official data includes anomalous months) */}
+      {firstAnomaly && (
+        <div className="rounded-xl px-4 py-3 mb-6 flex items-start gap-3" style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.2)" }}>
+          <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#FBBF24" }} />
+          <div>
+            <p className="text-sm font-semibold mb-0.5" style={{ color: "#FBBF24" }}>
+              {t("Market context", "Contexto de mercado")}
+            </p>
+            <p className="text-xs" style={{ color: "#CBD5E1" }}>
+              {lang === "es"
+                ? firstAnomaly.commentary?.es
+                : firstAnomaly.commentary?.en}
+            </p>
+          </div>
+        </div>
       )}
 
       {/* ── Airport estimates: all months without an official GAP total ── */}
@@ -379,6 +418,17 @@ export default function Tourism() {
                   </div>
                 </div>
               </div>
+              {/* Anomaly context note inside estimate card */}
+              {est.anomaly?.detected && (
+                <div className="flex items-start gap-2 text-xs rounded-lg px-3 py-2 mb-2" style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.2)" }}>
+                  <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#FBBF24" }} />
+                  <span style={{ color: "#CBD5E1" }}>
+                    {lang === "es"
+                      ? est.anomaly.commentary?.es
+                      : est.anomaly.commentary?.en}
+                  </span>
+                </div>
+              )}
               <div className="flex items-start gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "rgba(148,163,184,0.06)", color: "#9AA5B1", border: "1px solid rgba(148,163,184,0.12)" }}>
                 <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 opacity-60" />
                 <span>{isComplete
