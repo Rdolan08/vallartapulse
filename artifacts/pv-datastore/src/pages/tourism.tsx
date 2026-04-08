@@ -309,11 +309,12 @@ export default function Tourism() {
                         <p style={TOOLTIP_LABEL_STYLE}>{tooltipLabel}</p>
                         {visible.map((e, i) => {
                           const isEst = e.dataKey === "2026est";
+                          const isMostRecent = i === 0;
                           const entryLabel = isEst
                             ? `2026 (${t("est.", "est.")}) ${t("passengers", "pasajeros")}`
                             : `${e.name} ${t("passengers", "pasajeros")}`;
                           return (
-                            <p key={i} style={TOOLTIP_ITEM_STYLE}>
+                            <p key={i} style={{ ...TOOLTIP_ITEM_STYLE, fontWeight: isMostRecent ? 700 : 400 }}>
                               {entryLabel} : {formatNumber(e.value as number)}
                             </p>
                           );
