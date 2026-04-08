@@ -629,6 +629,16 @@ export default function Tourism() {
             </CardContent>
           </Card>
 
+          {/* ── Cruise Data section header ───────────────────────────── */}
+          <div className="flex flex-col gap-1 mt-10 mb-6">
+            <h2 className="text-xl font-display font-bold tracking-tight text-foreground">
+              {t("Cruise Data", "Datos de Cruceros")}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {t("Historical visitor counts · SECTUR / DATATUR · live port schedule via CruiseDig", "Conteos históricos · SECTUR / DATATUR · agenda en vivo del puerto vía CruiseDig")}
+            </p>
+          </div>
+
           {/* ── Cruise Visitors ──────────────────────────────────────── */}
           <Card className="glass-card">
             <CardHeader>
