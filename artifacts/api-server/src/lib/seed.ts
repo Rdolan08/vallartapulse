@@ -28,7 +28,9 @@ function dv(seed: string): number {
   return h / 4294967296;
 }
 
-const RENTAL_SOURCE_VERSION = "Airbnb / VRBO (estimated) v2";
+const RENTAL_SOURCE_VERSION  = "Airbnb / VRBO (estimated) v2";
+const SAFETY_SOURCE_VERSION  = "SESNSP v2";
+const WEATHER_SOURCE_VERSION = "NOAA / CONAGUA v2";
 
 // ── Economic reseed — replaces old fake indicators with real INEGI/IMSS data ──
 // Triggered when the `population` indicator is absent (old schema had
@@ -207,13 +209,24 @@ export async function reseedSafetyIfOutdated(): Promise<void> {
   const nullGroup = nullGroupRow[0].value;
   const currentMonthData = currentMonthRow[0].value;
 
-  if (nullGroup === 0 && currentMonthData === 0) {
+  const staleRows = await db.execute(
+    sql`SELECT COUNT(*) AS cnt FROM safety_metrics WHERE source != ${SAFETY_SOURCE_VERSION}`
+  );
+  const staleSourceRow = (staleRows as { rows?: Record<string, unknown>[] }).rows?.[0]
+    ?? (staleRows as unknown as Record<string, unknown>[])[0];
+  const staleSource = Number(staleSourceRow?.["cnt"] ?? 0);
+
+  if (nullGroup === 0 && currentMonthData === 0 && staleSource === 0) {
     logger.info("Safety data is current, skipping reseed");
     return;
   }
 
-  const reason = nullGroup > 0 ? "null categoryGroup" : `current-month (${nowYear}-${nowMonth}) data present`;
-  logger.info({ nullGroup, currentMonthData, safetyTotal }, `Safety data outdated (${reason}) — reseeding`);
+  const reason = nullGroup > 0
+    ? "null categoryGroup"
+    : currentMonthData > 0
+      ? `current-month (${nowYear}-${nowMonth}) data present`
+      : `non-deterministic source (${staleSource} stale rows)`;
+  logger.info({ nullGroup, currentMonthData, staleSource, safetyTotal }, `Safety data outdated (${reason}) — reseeding`);
   await db.execute(sql`TRUNCATE TABLE safety_metrics RESTART IDENTITY CASCADE`);
   await insertSafetyData();
   logger.info("Safety reseed complete");
@@ -256,7 +269,7 @@ async function insertSafetyData(): Promise<void> {
       for (const cat of safetyCategories) {
         const yDelta = Math.pow(1 + cat.trend, year - 2022);
         const base = cat.baseMonthly * yDelta * cat.seasonal[m];
-        const c = Math.max(0, Math.round(base * (1 + (Math.random() - 0.5) * 0.24)));
+        const c = Math.max(0, Math.round(base * (1 + (dv(`crime:${cat.category}:${year}:${m}`) - 0.5) * 0.24)));
         const prevKey = `${cat.category}:${year - 1}:${m + 1}`;
         const prev = priorYearCounts[prevKey];
         const yoy = prev != null && prev > 0
@@ -270,7 +283,7 @@ async function insertSafetyData(): Promise<void> {
           incidentCount: c,
           incidentsPer100k: String(((c / SAFETY_POPULATION) * 100000).toFixed(2)),
           changeVsPriorYear: yoy,
-          source: "SESNSP",
+          source: SAFETY_SOURCE_VERSION,
         });
       }
     }
@@ -526,18 +539,18 @@ export async function seedIfEmpty(): Promise<void> {
     { a: 23.8, mx: 28.8, mn: 18.8, p: 12.0,  h: 64, s: 23.0, sh: 7.9, rd: 1  },
   ];
   const weatherData: (typeof weatherMetricsTable.$inferInsert)[] = [];
-  const j = (v: number) => String((v + (Math.random() - 0.5) * 0.6).toFixed(2));
   for (const year of [2020, 2021, 2022, 2023, 2024, 2025, 2026]) {
     for (let m = 0; m < 12; m++) {
       if (year === currentYear && m + 1 >= currentMonth) continue;
       const w = weatherByMonth[m];
+      const jw = (prefix: string, v: number) => String((v + (dv(`w:${prefix}:${year}:${m}`) - 0.5) * 0.6).toFixed(2));
       weatherData.push({
         year, month: m + 1, monthName: MONTHS[m],
-        avgTempC: j(w.a), maxTempC: j(w.mx), minTempC: j(w.mn),
-        precipitationMm: j(w.p), avgHumidityPct: j(w.h),
-        avgSeaTempC: j(w.s), sunshineHours: j(w.sh),
-        rainyDays: Math.max(0, w.rd + Math.floor((Math.random() - 0.5) * 3)),
-        source: "NOAA / CONAGUA",
+        avgTempC: jw("a", w.a), maxTempC: jw("mx", w.mx), minTempC: jw("mn", w.mn),
+        precipitationMm: jw("p", w.p), avgHumidityPct: jw("h", w.h),
+        avgSeaTempC: jw("s", w.s), sunshineHours: jw("sh", w.sh),
+        rainyDays: Math.max(0, w.rd + Math.floor((dv(`w:rd:${year}:${m}`) - 0.5) * 3)),
+        source: WEATHER_SOURCE_VERSION,
       });
     }
   }
@@ -656,6 +669,66 @@ export async function repairRentalMarketIfRandom(): Promise<void> {
     await db.insert(rentalMarketMetricsTable).values(rentalData.slice(i, i + CHUNK));
   }
   logger.info({ rebuilt: rentalData.length }, "Rental market data rebuilt with deterministic seed (v2)");
+}
+
+// ── Repair non-deterministic weather data ────────────────────────────────────
+export async function repairWeatherIfRandom(): Promise<void> {
+  const rows = await db.execute(
+    sql`SELECT COUNT(*) AS cnt FROM weather_metrics WHERE source != ${WEATHER_SOURCE_VERSION}`
+  );
+  const firstRow = (rows as { rows?: Record<string, unknown>[] }).rows?.[0]
+    ?? (rows as unknown as Record<string, unknown>[])[0];
+  const staleCount = firstRow ? Number(firstRow["cnt"] ?? 0) : 0;
+
+  if (staleCount === 0) {
+    logger.info("Weather data is deterministic (v2), skipping repair");
+    return;
+  }
+
+  logger.info({ staleCount }, "Weather data is non-deterministic — rebuilding with deterministic seed");
+
+  const currentYear  = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+
+  const weatherByMonth = [
+    { a: 23.2, mx: 28.5, mn: 17.9, p: 18.5,  h: 65, s: 22.0, sh: 7.8, rd: 2  },
+    { a: 23.8, mx: 29.2, mn: 18.4, p: 8.2,   h: 63, s: 22.5, sh: 8.2, rd: 1  },
+    { a: 25.1, mx: 30.8, mn: 19.4, p: 5.1,   h: 61, s: 23.5, sh: 8.8, rd: 1  },
+    { a: 27.0, mx: 32.5, mn: 21.5, p: 2.5,   h: 60, s: 25.0, sh: 9.1, rd: 0  },
+    { a: 28.8, mx: 34.1, mn: 23.5, p: 35.8,  h: 67, s: 27.0, sh: 8.5, rd: 4  },
+    { a: 29.5, mx: 34.8, mn: 24.2, p: 145.0, h: 75, s: 29.0, sh: 6.9, rd: 11 },
+    { a: 29.2, mx: 34.2, mn: 24.0, p: 210.5, h: 79, s: 30.0, sh: 6.2, rd: 16 },
+    { a: 29.0, mx: 33.8, mn: 23.8, p: 235.0, h: 81, s: 30.5, sh: 6.0, rd: 17 },
+    { a: 28.5, mx: 33.0, mn: 23.2, p: 185.0, h: 78, s: 29.5, sh: 6.5, rd: 14 },
+    { a: 27.2, mx: 31.5, mn: 22.0, p: 58.0,  h: 71, s: 28.0, sh: 7.8, rd: 6  },
+    { a: 25.5, mx: 30.0, mn: 20.8, p: 15.0,  h: 66, s: 25.5, sh: 8.1, rd: 2  },
+    { a: 23.8, mx: 28.8, mn: 18.8, p: 12.0,  h: 64, s: 23.0, sh: 7.9, rd: 1  },
+  ];
+
+  const weatherData: (typeof weatherMetricsTable.$inferInsert)[] = [];
+  for (const year of [2020, 2021, 2022, 2023, 2024, 2025, 2026]) {
+    for (let m = 0; m < 12; m++) {
+      if (year === currentYear && m + 1 >= currentMonth) continue;
+      const w = weatherByMonth[m];
+      const jw = (prefix: string, v: number) =>
+        String((v + (dv(`w:${prefix}:${year}:${m}`) - 0.5) * 0.6).toFixed(2));
+      weatherData.push({
+        year, month: m + 1, monthName: MONTHS[m],
+        avgTempC: jw("a", w.a), maxTempC: jw("mx", w.mx), minTempC: jw("mn", w.mn),
+        precipitationMm: jw("p", w.p), avgHumidityPct: jw("h", w.h),
+        avgSeaTempC: jw("s", w.s), sunshineHours: jw("sh", w.sh),
+        rainyDays: Math.max(0, w.rd + Math.floor((dv(`w:rd:${year}:${m}`) - 0.5) * 3)),
+        source: WEATHER_SOURCE_VERSION,
+      });
+    }
+  }
+
+  await db.execute(sql`TRUNCATE TABLE weather_metrics RESTART IDENTITY`);
+  const CHUNK = 50;
+  for (let i = 0; i < weatherData.length; i += CHUNK) {
+    await db.insert(weatherMetricsTable).values(weatherData.slice(i, i + CHUNK));
+  }
+  logger.info({ rebuilt: weatherData.length }, "Weather data rebuilt with deterministic seed (v2)");
 }
 
 // External sources have no backing DB table, so their recordCount is a static
