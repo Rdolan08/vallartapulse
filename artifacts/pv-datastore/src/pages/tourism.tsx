@@ -115,36 +115,25 @@ export default function Tourism() {
   return (
     <PageWrapper>
       {/* ── Page header ──────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
-            {t("Tourism Metrics", "Métricas Turísticas")}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {lang === "es"
-              ? "Llegadas, cruceros, ocupación hotelera y tarifas · fuentes: "
-              : "Arrivals, cruise traffic, hotel occupancy & rates · sources: "}
-            <a href="https://www.datatur.sectur.gob.mx/" target="_blank" rel="noopener noreferrer"
-               className="text-primary hover:underline inline-flex items-center gap-0.5">
-              DATATUR <ExternalLink className="w-3 h-3" />
-            </a>
-            {" · "}
-            <a href="https://www.globenewswire.com/search/organization/Grupo%20Aeroportuario%20del%20Pac%C3%ADfico"
-               target="_blank" rel="noopener noreferrer"
-               className="text-primary hover:underline inline-flex items-center gap-0.5">
-              GAP <ExternalLink className="w-3 h-3" />
-            </a>
-          </p>
-        </div>
-        <select
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-          className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          {YEARS.map((y) => (
-            <option key={y} value={y}>{yearLabel(y)}</option>
-          ))}
-        </select>
+      <div className="mb-8">
+        <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
+          {t("Tourism Metrics", "Métricas Turísticas")}
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          {lang === "es"
+            ? "Llegadas, cruceros, ocupación hotelera y tarifas · fuentes: "
+            : "Arrivals, cruise traffic, hotel occupancy & rates · sources: "}
+          <a href="https://www.datatur.sectur.gob.mx/" target="_blank" rel="noopener noreferrer"
+             className="text-primary hover:underline inline-flex items-center gap-0.5">
+            DATATUR <ExternalLink className="w-3 h-3" />
+          </a>
+          {" · "}
+          <a href="https://www.globenewswire.com/search/organization/Grupo%20Aeroportuario%20del%20Pac%C3%ADfico"
+             target="_blank" rel="noopener noreferrer"
+             className="text-primary hover:underline inline-flex items-center gap-0.5">
+            GAP <ExternalLink className="w-3 h-3" />
+          </a>
+        </p>
       </div>
 
       {/* ── Airport traffic (always visible — GAP real data incl. 2026) ──── */}
@@ -435,6 +424,27 @@ export default function Tourism() {
           </Card>
         );
       })}
+
+      {/* ── Hotel & tourism statistics section header ────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-10 mb-6">
+        <div>
+          <h2 className="text-xl font-display font-bold tracking-tight text-foreground">
+            {t("Hotel & Tourism Statistics", "Estadísticas Hoteleras y Turísticas")}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {t("SECTUR / DATATUR official data · select a year to explore", "Datos oficiales SECTUR / DATATUR · selecciona un año para explorar")}
+          </p>
+        </div>
+        <select
+          value={year}
+          onChange={(e) => setYear(Number(e.target.value))}
+          className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          {YEARS.map((y) => (
+            <option key={y} value={y}>{yearLabel(y)}</option>
+          ))}
+        </select>
+      </div>
 
       {/* ── SECTUR / DATATUR section (year-filtered) ─────────────────────── */}
       {isLoading ? (
