@@ -66,6 +66,7 @@ const PRESS_RELEASES: PressRelease[] = [
     "https://www.aeropuertosgap.com.mx/images/files/08_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
     "https://www.aeropuertosgap.com.mx/images/files/09_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
     "https://www.aeropuertosgap.com.mx/images/files/10_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
+    "https://www.aeropuertosgap.com.mx/images/files/11_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
   ]},
 ];
 
