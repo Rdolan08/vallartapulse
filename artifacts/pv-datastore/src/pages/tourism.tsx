@@ -418,17 +418,6 @@ export default function Tourism() {
                   </div>
                 </div>
               </div>
-              {/* Anomaly context note inside estimate card */}
-              {est.anomaly?.detected && (
-                <div className="flex items-start gap-2 text-xs rounded-lg px-3 py-2 mb-2" style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.2)" }}>
-                  <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#FBBF24" }} />
-                  <span style={{ color: "#CBD5E1" }}>
-                    {lang === "es"
-                      ? est.anomaly.commentary?.es
-                      : est.anomaly.commentary?.en}
-                  </span>
-                </div>
-              )}
               <div className="flex items-start gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "rgba(148,163,184,0.06)", color: "#9AA5B1", border: "1px solid rgba(148,163,184,0.12)" }}>
                 <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 opacity-60" />
                 <span>{isComplete
