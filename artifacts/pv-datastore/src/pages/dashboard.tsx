@@ -262,12 +262,12 @@ export default function Dashboard() {
               className="font-bold tracking-tight"
               style={{ fontSize: "clamp(2rem, 4vw, 2.75rem)", color: "#F5F7FA", lineHeight: 1.1 }}
             >
-              {t("Platform Overview", "Resumen de la Plataforma")}
+              {t("PV Market Vitals", "Indicadores del Mercado PV")}
             </h1>
             <p style={{ color: "#9AA5B1", fontSize: "15px", maxWidth: "52ch", marginTop: "8px" }}>
               {t(
-                "Key performance indicators for Puerto Vallarta real estate and tourism.",
-                "Indicadores clave para bienes raíces y turismo en Puerto Vallarta."
+                "Live tourism and rental data for Puerto Vallarta, updated monthly.",
+                "Datos de turismo y renta en Puerto Vallarta, actualizados mensualmente."
               )}
             </p>
           </div>
@@ -367,8 +367,17 @@ export default function Dashboard() {
         </div>
       ) : data ? (
         <div className="space-y-8">
-          {/* KPI Cards */}
+          {/* KPI Cards — order: demand → rates → supply → risk → context */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <StatCard
+              titleEn="Tourist Arrivals"
+              titleEs="Llegada de Turistas"
+              value={formatNumber(data.touristArrivals)}
+              change={data.touristArrivalsChange}
+              icon={<Plane className="text-blue-500" />}
+              trend="up_good"
+              href="/tourism"
+            />
             <StatCard
               titleEn="Hotel Occupancy"
               titleEs="Ocupación Hotelera"
@@ -397,23 +406,6 @@ export default function Dashboard() {
               href="/rental-market"
             />
             <StatCard
-              titleEn="Tourist Arrivals"
-              titleEs="Llegada de Turistas"
-              value={formatNumber(data.touristArrivals)}
-              change={data.touristArrivalsChange}
-              icon={<Plane className="text-blue-500" />}
-              trend="up_good"
-              href="/tourism"
-            />
-            <StatCard
-              titleEn="Avg Temperature"
-              titleEs="Temperatura Promedio"
-              value={fmtTemp(data.avgTemperatureC, tempUnit)}
-              icon={<ThermometerSun className="text-amber-500" />}
-              trend="neutral"
-              href="/weather"
-            />
-            <StatCard
               titleEn="Crime Index"
               titleEs="Índice de Criminalidad"
               value={`${data.crimeIndex.toFixed(1)} / 100`}
@@ -423,6 +415,14 @@ export default function Dashboard() {
               icon={<ShieldAlert className="text-rose-500" />}
               trend="down_good"
               href="/safety"
+            />
+            <StatCard
+              titleEn="Avg Temperature"
+              titleEs="Temperatura Promedio"
+              value={fmtTemp(data.avgTemperatureC, tempUnit)}
+              icon={<ThermometerSun className="text-amber-500" />}
+              trend="neutral"
+              href="/weather"
             />
           </div>
 
