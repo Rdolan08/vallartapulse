@@ -31,12 +31,11 @@ const GRID = <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(
 const TICK = { fill: "hsl(var(--muted-foreground))", fontSize: 12 };
 const AXIS_PROPS = { axisLine: false as const, tickLine: false as const };
 
-// Tourism SECTUR/DATATUR data only goes through 2025 — 2026 official figures not yet published
-const YEARS = [...MONTHLY_DATA_YEARS].filter((y) => y <= 2025).reverse();
+const YEARS = [...MONTHLY_DATA_YEARS].reverse();
 
 export default function Tourism() {
   const { t, lang } = useLanguage();
-  const [year, setYear] = useState<number>(Math.min(LAST_COMPLETED_YEAR, 2025));
+  const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
 
   const { data, isLoading, error } = useGetTourismMetrics({ year });
   const { data: airportRaw } = useGetAirportMetrics();
@@ -78,6 +77,20 @@ export default function Tourism() {
   });
   const airportColors: Record<number, string> = { 2024: "#6366F1", 2025: "#00C2A8", 2026: "#F59E0B" };
   const latestAirportYear = airportYears.length ? Math.max(...airportYears) : 0;
+
+  // ── Airport YoY stats ────────────────────────────────────────────────────
+  const airport2026Official = airportRaw?.filter((r) => r.year === 2026).sort((a, b) => a.month - b.month) ?? [];
+  const airportYoYRows = airport2026Official.map((r) => {
+    const prior = airportRaw?.find((p) => p.year === 2025 && p.month === r.month);
+    const pct   = prior ? (r.totalPassengers - prior.totalPassengers) / prior.totalPassengers * 100 : null;
+    return { month: r.month, cur: r.totalPassengers, prior: prior?.totalPassengers ?? null, pct };
+  });
+  const ytd2026 = airport2026Official.reduce((s, r) => s + r.totalPassengers, 0);
+  const ytd2025 = airport2026Official.reduce((s, r) => {
+    const p = airportRaw?.find((p) => p.year === 2025 && p.month === r.month);
+    return s + (p?.totalPassengers ?? 0);
+  }, 0);
+  const ytdPct = ytd2025 > 0 ? (ytd2026 - ytd2025) / ytd2025 * 100 : null;
 
   // ── SECTUR KPI aggregates ────────────────────────────────────────────────
   const totals = data?.reduce(
@@ -347,6 +360,54 @@ export default function Tourism() {
                 )}
               </LineChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Airport YoY stats for 2026 ───────────────────────────────────── */}
+      {airportYoYRows.length > 0 && (
+        <Card className="glass-card mb-6">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" style={{ color: "#F59E0B" }} />
+              <CardTitle>{t("2026 Airport Traffic vs 2025", "Tráfico Aéreo 2026 vs 2025")}</CardTitle>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t("Year-over-year change per month · PVR total passengers", "Cambio interanual por mes · pasajeros totales PVR")}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              {airportYoYRows.map(({ month, cur, prior, pct }) => {
+                const positive = pct !== null && pct >= 0;
+                return (
+                  <div key={month} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="text-xs text-muted-foreground mb-1">{MONTH_NAMES_LONG[month - 1]}</div>
+                    <div className="text-base font-bold text-foreground">{formatNumber(cur)}</div>
+                    <div className="text-xs mt-0.5" style={{ color: pct !== null ? (positive ? "#00C2A8" : "#F87171") : "#9AA5B1" }}>
+                      {pct !== null ? `${positive ? "+" : ""}${pct.toFixed(1)}% YoY` : "—"}
+                    </div>
+                    {prior !== null && (
+                      <div className="text-xs mt-0.5" style={{ color: "#9AA5B1" }}>
+                        {t("vs", "vs")} {formatNumber(prior)} {t("in 2025", "en 2025")}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {ytdPct !== null && (
+                <div className="rounded-xl p-3" style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.18)" }}>
+                  <div className="text-xs font-semibold mb-1" style={{ color: "#F59E0B" }}>{t("YTD Total", "Total Año")}</div>
+                  <div className="text-base font-bold text-foreground">{formatNumber(ytd2026)}</div>
+                  <div className="text-xs mt-0.5" style={{ color: ytdPct >= 0 ? "#00C2A8" : "#F87171" }}>
+                    {`${ytdPct >= 0 ? "+" : ""}${ytdPct.toFixed(1)}% YoY`}
+                  </div>
+                  <div className="text-xs mt-0.5" style={{ color: "#9AA5B1" }}>
+                    {t("vs", "vs")} {formatNumber(ytd2025)} {t("in 2025", "en 2025")}
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -770,6 +831,23 @@ export default function Tourism() {
             </div>
           </Card>
 
+        </div>
+      ) : year >= 2026 ? (
+        <div className="rounded-2xl p-8" style={{ background: "rgba(0,194,168,0.05)", border: "1px solid rgba(0,194,168,0.15)" }}>
+          <div className="flex items-start gap-3">
+            <TrendingUp className="w-5 h-5 mt-0.5 shrink-0" style={{ color: "#00C2A8" }} />
+            <div>
+              <p className="font-semibold text-foreground mb-1">
+                {t("SECTUR / DATATUR data for 2026 is not yet published", "Los datos de SECTUR / DATATUR para 2026 aún no están publicados")}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {t(
+                  "Mexico's official tourism statistics (DATATUR) are typically released with a 2–3 month lag. Airport passenger data from GAP is already available above and is updated monthly.",
+                  "Las estadísticas de turismo oficiales de México (DATATUR) se publican con un rezago de 2–3 meses. Los datos de pasajeros del aeropuerto GAP ya están disponibles arriba y se actualizan mensualmente."
+                )}
+              </p>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="p-12 text-center text-muted-foreground">
