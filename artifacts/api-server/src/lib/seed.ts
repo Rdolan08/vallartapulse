@@ -7,6 +7,7 @@ import {
   weatherMetricsTable,
   dataSourcesTable,
   marketEventsTable,
+  airportMetricsTable,
 } from "@workspace/db/schema";
 import { and, count, eq, isNull, sql } from "drizzle-orm";
 import { logger } from "./logger";
@@ -658,5 +659,153 @@ export async function seedMarketEvents(): Promise<void> {
     } else {
       logger.info({ slug: event.slug }, "seedMarketEvents: event already exists, skipping");
     }
+  }
+}
+
+// ── Airport data integrity repair ─────────────────────────────────────────────
+
+/**
+ * Self-healing repair function for known official GAP airport totals.
+ *
+ * Run at every startup.  Detects rows in airport_metrics where the stored
+ * totalPassengers deviates from the confirmed official GAP figure by more
+ * than 5% and restores the correct value.
+ *
+ * This prevents scraper parse errors from persisting across restarts.
+ *
+ * HOW TO MAINTAIN
+ * ───────────────
+ * Whenever GAP publishes a new press release and we confirm the PVR figure,
+ * add a row to VERIFIED_PVR_MONTHS below.  Format:
+ *   { year, month, totalPassengers, source, sourceUrl }
+ *
+ * These values are the authoritative ground truth.  The scraper remains the
+ * primary data collection mechanism — this function is a safety net.
+ */
+export async function repairAirportData(): Promise<void> {
+  const VERIFIED_PVR_MONTHS: {
+    year:            number;
+    month:           number;
+    totalPassengers: number;
+    source:          string;
+    sourceUrl:       string;
+  }[] = [
+    // ── 2026 ─────────────────────────────────────────────────────────────────
+    // Jan 2026 — GAP press release 2026-02-05, PVR: -2.2% vs 713,300 (2025)
+    {
+      year: 2026, month: 1, totalPassengers: 731_700,
+      source: "GAP – GlobeNewswire press release (real)",
+      sourceUrl: "https://www.globenewswire.com/news-release/2026/02/05/3233515/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-January-2026-of-2-2-Compared-to-2025.html",
+    },
+    // Feb 2026 — GAP press release 2026-03-06, PVR: -5.5% vs 649,900 (2025)
+    {
+      year: 2026, month: 2, totalPassengers: 615_400,
+      source: "GAP – GlobeNewswire press release (real)",
+      sourceUrl: "https://www.globenewswire.com/news-release/2026/03/06/3251336/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-February-2026-of-5-5-Compared-to-2025.html",
+    },
+    // Mar 2026 — GAP press release 2026-04-07 (PDF), PVR: -24.4% vs 762,800 (2025)
+    // NOTE: the GlobeNewswire headline shows -8.9% for the FULL GAP group;
+    // PVR had a larger decline due to the Feb 22 security disruption.
+    {
+      year: 2026, month: 3, totalPassengers: 576_600,
+      source: "GAP – press release PDF (real)",
+      sourceUrl: "https://www.aeropuertosgap.com.mx/images/files/07_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
+    },
+  ];
+
+  const TOLERANCE_PCT = 5; // allow up to 5% deviation before flagging as corrupted
+
+  let fixed = 0;
+  let confirmed = 0;
+
+  for (const verified of VERIFIED_PVR_MONTHS) {
+    const [existing] = await db
+      .select()
+      .from(airportMetricsTable)
+      .where(
+        and(
+          eq(airportMetricsTable.year,  verified.year),
+          eq(airportMetricsTable.month, verified.month),
+        )
+      )
+      .limit(1);
+
+    if (!existing) {
+      // Row missing entirely — insert it
+      const days       = new Date(verified.year, verified.month, 0).getDate();
+      const avgDaily   = parseFloat((verified.totalPassengers / days).toFixed(2));
+      const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      await db.insert(airportMetricsTable).values({
+        year:                    verified.year,
+        month:                   verified.month,
+        monthName:               MONTH_NAMES[verified.month - 1],
+        totalPassengers:         verified.totalPassengers,
+        avgDailyPassengers:      String(avgDaily),
+        daysInMonth:             days,
+        source:                  verified.source,
+        sourceUrl:               verified.sourceUrl,
+      });
+      logger.warn(
+        { year: verified.year, month: verified.month, totalPassengers: verified.totalPassengers },
+        "repairAirportData: inserted missing verified month"
+      );
+      fixed++;
+      continue;
+    }
+
+    const storedTotal = existing.totalPassengers ?? 0;
+    if (storedTotal === 0) {
+      // Zero in DB — always restore
+      await db
+        .update(airportMetricsTable)
+        .set({ totalPassengers: verified.totalPassengers, source: verified.source, sourceUrl: verified.sourceUrl })
+        .where(
+          and(
+            eq(airportMetricsTable.year,  verified.year),
+            eq(airportMetricsTable.month, verified.month),
+          )
+        );
+      logger.warn(
+        { year: verified.year, month: verified.month, storedTotal, verified: verified.totalPassengers },
+        "repairAirportData: restored zero-valued airport row"
+      );
+      fixed++;
+      continue;
+    }
+
+    const deviation = Math.abs(storedTotal - verified.totalPassengers) / verified.totalPassengers * 100;
+    if (deviation > TOLERANCE_PCT) {
+      // Stored value deviates significantly — overwrite with verified official figure
+      await db
+        .update(airportMetricsTable)
+        .set({
+          totalPassengers: verified.totalPassengers,
+          source:          verified.source,
+          sourceUrl:       verified.sourceUrl,
+        })
+        .where(
+          and(
+            eq(airportMetricsTable.year,  verified.year),
+            eq(airportMetricsTable.month, verified.month),
+          )
+        );
+      logger.error(
+        {
+          year: verified.year, month: verified.month,
+          stored: storedTotal, verified: verified.totalPassengers,
+          deviationPct: deviation.toFixed(1) + "%",
+        },
+        "repairAirportData: CORRECTED corrupted airport total — scraper parse error detected and repaired"
+      );
+      fixed++;
+    } else {
+      confirmed++;
+    }
+  }
+
+  if (fixed > 0) {
+    logger.warn({ fixed }, "repairAirportData: corrected corrupted airport months");
+  } else {
+    logger.info({ confirmed }, "repairAirportData: all verified airport months look correct");
   }
 }
