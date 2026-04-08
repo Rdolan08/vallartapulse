@@ -8,8 +8,9 @@
 
 import { Router, type IRouter } from "express";
 import { z } from "zod";
+import { eq, asc } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { rentalListingsTable } from "@workspace/db/schema";
+import { rentalListingsTable, marketEventsTable } from "@workspace/db/schema";
 import {
   CompsEngineV3,
   type TargetPropertyV3,
@@ -20,6 +21,7 @@ import {
 import { type CompsListingV2, type CompResultV2, type BeachTier } from "../lib/comps-engine-v2";
 import { lookupBuilding } from "../lib/building-lookup";
 import { PV_MONTHLY_FACTORS } from "../lib/pv-seasonality";
+import type { MarketEvent } from "@workspace/db/schema";
 
 const router: IRouter = Router();
 
@@ -66,6 +68,43 @@ async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: numbe
   const engine = new CompsEngineV3(listings);
   engineCache = { engine, builtAt: now, listingCount: listings.length };
   return { engine, listingCount: listings.length };
+}
+
+// ── Market events cache ───────────────────────────────────────────────────────
+
+const EVENTS_CACHE_TTL_MS = 15 * 60 * 1000;
+
+let eventsCache: {
+  events: MarketEvent[];
+  builtAt: number;
+} | null = null;
+
+async function getActiveEvents(): Promise<MarketEvent[]> {
+  const now = Date.now();
+  if (eventsCache && now - eventsCache.builtAt < EVENTS_CACHE_TTL_MS) {
+    return eventsCache.events;
+  }
+  const events = await db.select().from(marketEventsTable)
+    .where(eq(marketEventsTable.isActive, true))
+    .orderBy(asc(marketEventsTable.startDate));
+  eventsCache = { events, builtAt: now };
+  return events;
+}
+
+function eventsForMonth(events: MarketEvent[], year: number, month: number): MarketEvent[] {
+  const mStart = new Date(Date.UTC(year, month - 1, 1));
+  const mEnd   = new Date(Date.UTC(year, month, 0));
+  return events.filter(ev => {
+    if (!ev.affectedMetrics.split(",").map(m => m.trim()).includes("pricing")) return false;
+    const evStart = new Date(ev.startDate + "T00:00:00Z");
+    // Use recovery_window_end as the effective window end (covers recovery phase pricing)
+    const effectiveEnd = ev.recoveryWindowEnd
+      ? new Date(ev.recoveryWindowEnd + "T00:00:00Z")
+      : ev.endDate
+        ? new Date(ev.endDate + "T00:00:00Z")
+        : new Date("2099-12-31T00:00:00Z");
+    return evStart <= mEnd && effectiveEnd >= mStart;
+  });
 }
 
 // ── Request schema ────────────────────────────────────────────────────────────
@@ -207,7 +246,13 @@ router.post("/rental/comps", async (req, res) => {
   }, "comps v3.1 request");
 
   try {
-    const { engine, listingCount } = await getEngine();
+    const [{ engine, listingCount }, allEvents] = await Promise.all([
+      getEngine(),
+      getActiveEvents(),
+    ]);
+
+    const targetYear = new Date().getFullYear();
+    const pricingEvents = eventsForMonth(allEvents, targetYear, input.month);
 
     // Building resolution
     let resolvedBuildingName: string | null = input.building_name ?? null;
@@ -445,6 +490,25 @@ router.post("/rental/comps", async (req, res) => {
       seasonal_sweep: seasonalSweep,
       building_context: buildingContext,
       positioning_statement: buildingContext?.positioning_statement ?? globalPositioningStatement,
+
+      market_anomaly: pricingEvents.length > 0
+        ? {
+            detected: true,
+            severity: pricingEvents[0].severity,
+            events: pricingEvents.map(ev => ({
+              slug:        ev.slug,
+              title:       ev.title,
+              title_es:    ev.titleEs,
+              category:    ev.category,
+              severity:    ev.severity,
+              summary:     ev.summary,
+              summary_es:  ev.summaryEs,
+              start_date:  ev.startDate,
+              end_date:    ev.endDate ?? null,
+              recovery_window_end: ev.recoveryWindowEnd ?? null,
+            })),
+          }
+        : { detected: false, events: [] },
 
       selected_comps: selectedComps,
       top_drivers: topDriversOverall,
