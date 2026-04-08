@@ -425,7 +425,7 @@ export default function Economic() {
           </div>
 
           {/* ── Wages + Context tiles ───────────────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
             {/* Chart 4: Wage growth */}
             <Card className="glass-card border-0">
@@ -485,8 +485,8 @@ export default function Economic() {
               </CardContent>
             </Card>
 
-            {/* Context data tiles — 2×2 stacked */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Context data tiles — single column, each 1/4 height */}
+            <div className="grid grid-cols-1 grid-rows-4 gap-4 h-full">
               {[
                 {
                   label: t("Poverty Rate", "Tasa de Pobreza"),
