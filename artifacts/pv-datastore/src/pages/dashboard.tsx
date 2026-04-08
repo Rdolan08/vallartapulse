@@ -403,10 +403,12 @@ export default function Dashboard() {
           {/* KPI Cards — order: demand → rates → supply → risk → context */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <StatCard
-              titleEn="Tourist Arrivals"
-              titleEs="Llegada de Turistas"
+              titleEn="Airport Passengers"
+              titleEs="Pasajeros Aeropuerto"
               value={formatNumber(data.touristArrivals)}
               change={data.touristArrivalsChange}
+              footnoteEn="PVR · GAP official data"
+              footnoteEs="PVR · datos oficiales GAP"
               icon={<Plane className="text-blue-500" />}
               trend="up_good"
               href="/tourism"
