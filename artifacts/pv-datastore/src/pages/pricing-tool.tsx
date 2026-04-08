@@ -151,6 +151,22 @@ interface CompsResult {
   explanation: string;
   warnings: string[];
   model_limitations: string[];
+  market_anomaly: {
+    detected: boolean;
+    severity?: string;
+    events: Array<{
+      slug: string;
+      title: string;
+      title_es: string;
+      category: string;
+      severity: string;
+      summary: string;
+      summary_es: string;
+      start_date: string;
+      end_date: string | null;
+      recovery_window_end: string | null;
+    }>;
+  };
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -1122,6 +1138,24 @@ export default function PricingToolPage() {
                   </div>
                 </div>
               </div>
+
+              {/* ── Market anomaly banner ── */}
+              {compsResult.market_anomaly?.detected && compsResult.market_anomaly.events.length > 0 && (
+                <div className="rounded-xl px-4 py-3.5 flex gap-3"
+                  style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)" }}>
+                  <span className="mt-0.5 shrink-0 text-base">⚠️</span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold mb-0.5" style={{ color: "#F97316" }}>
+                      {t("Market Conditions Note", "Nota sobre el Mercado")}
+                    </p>
+                    {compsResult.market_anomaly.events.map(ev => (
+                      <p key={ev.slug} className="text-xs leading-relaxed" style={{ color: "rgba(249,115,22,0.8)" }}>
+                        {t(ev.summary, ev.summary_es)}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* ── Building context ── */}
               {compsResult.building_context && (

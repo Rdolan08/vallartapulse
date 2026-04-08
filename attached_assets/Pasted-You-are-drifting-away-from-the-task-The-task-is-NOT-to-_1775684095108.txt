@@ -1,0 +1,151 @@
+You are drifting away from the task.
+
+The task is NOT to redesign scraping architecture, explore every anti-bot dead end, or switch to unrelated work like anomaly notes. The task is simple:
+
+I need materially more Airbnb/VRBO/PVRPV comps in the pricing engine.
+
+Do not pivot to unrelated work.
+Do not propose a new architecture unless absolutely required.
+Do not stop because one scraping path is blocked.
+Do not treat anti-bot limitations as the end of the assignment.
+Do not switch topics.
+
+What I need from you right now:
+
+1) Stay focused on comp density
+The objective is to increase the number of usable normalized listings feeding the pricing engine.
+Success is measured by:
+- more listings
+- more neighborhoods
+- more property types
+- more usable comps returned by the engine
+
+2) Use the scraping paths that already work
+Based on your findings:
+- Airbnb search/discovery pages return some useful data
+- VRBO individual pages work
+- PVRPV already has the deepest coverage
+Use those facts pragmatically.
+
+If Airbnb individual PDP scraping is blocked, then:
+- use whatever can be extracted from Airbnb discovery/search results
+- persist partial records if needed
+- do not wait for full PDP enrichment before using them
+- store these as lower-confidence but still usable comp candidates
+
+If VRBO search is blocked but individual pages work, then:
+- use any existing seeds, sitemaps, known IDs, URL expansion, or related discovery mechanisms
+- expand from known working URLs/buildings/neighborhoods
+- do not stop at the first blocked search route
+
+If PVRPV is already richest, then:
+- materially expand PVRPV now
+- more pages
+- more buildings
+- more neighborhoods
+- more unit sizes
+- treat this as the fastest path to more comps
+
+3) Preserve partial-but-usable records
+A listing does NOT need to be perfect to be useful for comps.
+Do not drop records just because:
+- building is unknown
+- some amenities are missing
+- exact address is missing
+- neighborhood text is messy
+- full PDP enrichment failed
+- one source only gave search-card level data
+
+Instead, persist the best available normalized record and assign a confidence score.
+
+4) Expand neighborhood coverage now
+Prioritize ingest and normalized coverage for:
+- Zona Romantica
+- Amapas
+- Centro
+- Conchas Chinas
+- 5 de Diciembre
+- Marina Vallarta
+Then extend to:
+- Versalles
+- Fluvial Vallarta
+- Emiliano Zapata
+- Hotel Zone / Zona Hotelera
+- Alta Vista
+- Las Glorias
+
+Do not block on perfect neighborhood labels.
+Infer from coordinates or best-guess mapping where possible.
+
+5) Expand property type coverage now
+I need more inventory variety:
+- studio
+- 1BR condo
+- 2BR condo
+- 3BR+ condo
+- penthouse
+- villa
+- house
+- townhouse
+- serviced/hotel-condo style unit
+
+Do not overfilter.
+Keep records usable even if property type is only approximate.
+
+6) Improve comp pool counts before chasing perfect source parity
+Your priority order should be:
+A. Expand PVRPV coverage
+B. Preserve Airbnb search-card data as usable partial records
+C. Expand VRBO from workable discovery/seeding paths
+D. Improve comp fallback logic so sparse exact matches still return useful comps
+
+7) Improve the comp engine fallback now
+Even before perfect new scraping is complete, improve comp selection so it returns more usable matches.
+
+Fallback layers should be:
+- same building
+- same building with looser amenity matching
+- same micro-area / nearby radius
+- same neighborhood
+- adjacent comparable neighborhood
+- broader Puerto Vallarta with distance and quality penalties
+
+Always aim for a healthy comp set, ideally 10 to 25 listings, rather than a tiny perfect set.
+
+8) Add coverage reporting immediately
+I need visibility into gaps.
+Provide counts by:
+- source
+- neighborhood
+- property type
+- bedroom bucket
+- bathroom bucket
+- building
+- confidence level
+- deduped canonical comp count
+
+Also identify:
+- thin neighborhoods
+- missing property types
+- where queries still fail to find enough comps
+
+9) Do not do unrelated work
+Do not touch anomaly notes, tourism overlays, or unrelated route enhancements.
+Stay on the listing expansion and comp density task only.
+
+10) Deliverables I want now
+Return with:
+- current counts before expansion
+- counts after expansion
+- what changed in Airbnb handling
+- what changed in VRBO handling
+- what changed in PVRPV coverage
+- what changed in normalization
+- what changed in comp fallback logic
+- what gaps still remain
+- what can be improved later for anti-bot hardening
+
+Use the existing codebase and extend what is already there.
+Be pragmatic.
+My goal is not perfect scraping purity.
+My goal is more comps in the VallartaPulse pricing engine.

@@ -83,6 +83,8 @@ Internal comparable-property pricing engine covering **8 neighborhoods** across 
 - Required: `neighborhood_normalized` (any of 16 supported), `bedrooms` (1–6), `bathrooms`, `distance_to_beach_m`, `amenities_normalized`
 - Optional: `sqft`, `rating_overall`, `building_name`
 - Response: `conservative_price`, `recommended_price`, `stretch_price`, `confidence_label`, `selected_comps`, `top_drivers`, `warnings`, `explanation`
+- `market_anomaly` field: `{ detected, severity, events[] }` — includes any active market events that affect "pricing" and overlap the target month's window (uses `recovery_window_end` as effective end date)
+- Market events cache: 15-min TTL, queries `market_events` table where `is_active = true`
 - Engine cached in memory (5-min TTL) — reloads all eligible DB rows at startup
 
 **Scripts**:
