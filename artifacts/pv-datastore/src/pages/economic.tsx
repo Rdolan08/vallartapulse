@@ -190,7 +190,7 @@ export default function Economic() {
                 <div className="text-3xl font-bold leading-none" style={{ color, letterSpacing: "-0.02em" }}>
                   {value}
                 </div>
-                <span className={`text-[11px] ${up === true ? "text-emerald-400" : up === false ? "text-amber-400" : "text-muted-foreground/60"}`}>
+                <span className={`text-[9px] ${up === true ? "text-emerald-400" : up === false ? "text-amber-400" : "text-muted-foreground/60"}`}>
                   {sub}
                 </span>
               </div>
@@ -524,8 +524,8 @@ export default function Economic() {
                     {label}
                   </span>
                   <div className="text-3xl font-bold leading-none" style={{ color }}>{value}</div>
-                  <span className="text-[11px] text-muted-foreground/60 flex items-center gap-1">
-                    {sub} <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                  <span className="text-[9px] text-muted-foreground/60 flex items-center gap-1">
+                    {sub} <ExternalLink className="w-2 h-2 shrink-0" />
                   </span>
                 </a>
               ))}
