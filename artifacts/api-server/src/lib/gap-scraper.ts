@@ -61,7 +61,7 @@ const PRESS_RELEASES: PressRelease[] = [
   { dataYear: 2026, dataMonth:  1, url: "https://www.globenewswire.com/news-release/2026/02/05/3233515/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-January-2026-of-2-2-Compared-to-2025.html" },
   { dataYear: 2026, dataMonth:  2, url: "https://www.globenewswire.com/news-release/2026/03/06/3251336/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-February-2026-of-5-5-Compared-to-2025.html",
     pdfUrls: ["https://www.aeropuertosgap.com.mx/images/files/06_03_2026_PR_TRAFICO_FEBRERO_2026_ESP_VF.pdf"] },
-  { dataYear: 2026, dataMonth:  3, url: "https://www.globenewswire.com/en/search/organization/Grupo-Aeroportuario-del-Pacifico", pdfUrls: [
+  { dataYear: 2026, dataMonth:  3, url: "https://www.globenewswire.com/news-release/2026/04/07/3269747/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-March-2026-of-8-9-Compared-to-2025.html", pdfUrls: [
     "https://www.aeropuertosgap.com.mx/images/files/07_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
     "https://www.aeropuertosgap.com.mx/images/files/08_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
     "https://www.aeropuertosgap.com.mx/images/files/09_04_2026_PR_TRAFICO_MARZO_2026_ESP_VF.pdf",
