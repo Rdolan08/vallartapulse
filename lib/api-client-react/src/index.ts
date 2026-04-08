@@ -7,4 +7,4 @@ export type { AirportMetricRow, GetAirportMetricsParams } from "./hooks/useGetAi
 export { useGetCruiseSchedule } from "./hooks/useGetCruiseSchedule";
 export type { CruiseArrival } from "./hooks/useGetCruiseSchedule";
 export { useGetAirportEstimate, useGetPendingAirportEstimates } from "./hooks/useGetAirportEstimate";
-export type { AirportEstimate, EstimateStatus, EstimateConfidence } from "./hooks/useGetAirportEstimate";
+export type { AirportEstimate, AnomalyInfo, EstimateStatus, EstimateConfidence } from "./hooks/useGetAirportEstimate";

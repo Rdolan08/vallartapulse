@@ -6,6 +6,7 @@ import {
   safetyMetricsTable,
   weatherMetricsTable,
   dataSourcesTable,
+  marketEventsTable,
 } from "@workspace/db/schema";
 import { and, count, eq, isNull, sql } from "drizzle-orm";
 import { logger } from "./logger";
@@ -589,5 +590,73 @@ export async function repairDataSourceCounts(): Promise<void> {
 
   if (fixed === 0 && missing.length === 0) {
     logger.info("repairDataSourceCounts: all source counts look correct — nothing to fix");
+  }
+}
+
+// ── Market event seed ─────────────────────────────────────────────────────────
+
+/**
+ * Idempotent seed for the market_events table.
+ * Seeds the canonical event records for known market disruptions.
+ * Adding future events: insert additional objects into MARKET_EVENTS below.
+ * No code changes required outside this file.
+ */
+export async function seedMarketEvents(): Promise<void> {
+  const MARKET_EVENTS: (typeof marketEventsTable.$inferInsert)[] = [
+    {
+      slug:     "pv-security-unrest-feb-2026",
+      title:    "Late February 2026 security disruption — Puerto Vallarta / Jalisco",
+      titleEs:  "Disturbios de seguridad de finales de febrero 2026 — Puerto Vallarta / Jalisco",
+      category: "security",
+      severity: "high",
+      geography: "PV / Jalisco",
+
+      // ── Impact windows ───────────────────────────────────────────────────────
+      startDate:         "2026-02-22",
+      endDate:           "2026-03-10",
+      peakImpactStart:   "2026-02-22",
+      peakImpactEnd:     "2026-03-03",
+      // Booking hesitation: started ~3 weeks before the event as news spread
+      bookingShockStart: "2026-02-01",
+      bookingShockEnd:   "2026-03-10",
+      // Full demand normalisation expected by late April 2026
+      recoveryWindowEnd: "2026-04-25",
+
+      confidence:      "medium",
+      sourceType:      "manual",
+
+      summary:   "Security-related unrest in late February 2026 caused short-term tourism disruption, flight interruptions, booking hesitation, and temporary suppression of March passenger traffic at PVR.",
+      summaryEs: "Los disturbios de seguridad de finales de febrero de 2026 causaron interrupciones turísticas a corto plazo, alteraciones en vuelos, hesitación en reservaciones y una supresión temporal del tráfico de pasajeros en marzo en PVR.",
+
+      expectedEffects:  "lower airport arrivals, weaker short-term booking pace, elevated cancellations, temporary pricing pressure, flight schedule disruptions",
+      recoveryPattern:  "rapid",
+      affectedMetrics:  "airport,tourism,pricing",
+
+      // Weight config: anomaly months count only 30% in airport demand; 35% in pricing
+      // Recovery months (April 2026) count 70%
+      anomalyWeightConfig: JSON.stringify({
+        airportDemand:  0.30,
+        pricingDemand:  0.35,
+        recoveryDemand: 0.70,
+      }),
+
+      notes: "Confirmed via news coverage. March 2026 GAP data confirmed -24.4% YoY. January and February 2026 were positive (+2.6% and normal), supporting external shock classification rather than structural decline.",
+      isActive: true,
+    },
+  ];
+
+  for (const event of MARKET_EVENTS) {
+    // Check if slug already exists
+    const existing = await db
+      .select({ id: marketEventsTable.id })
+      .from(marketEventsTable)
+      .where(eq(marketEventsTable.slug, event.slug));
+
+    if (existing.length === 0) {
+      await db.insert(marketEventsTable).values(event);
+      logger.info({ slug: event.slug }, "seedMarketEvents: inserted market event");
+    } else {
+      logger.info({ slug: event.slug }, "seedMarketEvents: event already exists, skipping");
+    }
   }
 }

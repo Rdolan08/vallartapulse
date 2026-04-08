@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedIfEmpty, reseedEconomicIfOutdated, removeFutureTourismEstimates, reseedTourismIfFake, repairDataSourceCounts } from "./lib/seed";
+import { seedIfEmpty, reseedEconomicIfOutdated, removeFutureTourismEstimates, reseedTourismIfFake, repairDataSourceCounts, seedMarketEvents } from "./lib/seed";
 import { seedAmenitiesLookup, seedRentalListings } from "./lib/rental-ingest";
 import { startScheduler } from "./lib/ingest/sync-scheduler.js";
 import { startDailySync } from "./lib/daily-sync.js";
@@ -37,6 +37,10 @@ reseedTourismIfFake().catch((err) => {
 
 repairDataSourceCounts().catch((err) => {
   logger.error({ err }, "Data source count repair failed — continuing anyway");
+});
+
+seedMarketEvents().catch((err) => {
+  logger.error({ err }, "Market events seed failed — continuing anyway");
 });
 
 seedAmenitiesLookup().catch((err) => {
