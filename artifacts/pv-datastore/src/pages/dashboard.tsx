@@ -99,6 +99,36 @@ export default function Dashboard() {
 
   const selectedMonthName = MONTH_NAMES[month - 1];
 
+  // Peak season: Nov–Apr (months 11,12,1,2,3,4)
+  const isPeakSeason = [11, 12, 1, 2, 3, 4].includes(month);
+
+  // Market momentum: weighted composite of YoY changes from the API
+  // Only compute once data is loaded; fall back to null while loading
+  const momentum: "positive" | "mixed" | "pressure" | null = (() => {
+    if (!data) return null;
+    // hotel occupancy change is in percentage points; convert to % change for comparability
+    const occupancyPct = data.hotelOccupancyChange;
+    const arrivalsPct  = data.touristArrivalsChange;
+    const ratePct      = data.avgNightlyRateChange;
+    // Weighted score: demand signals carry more weight than rate
+    const score = (occupancyPct * 0.35) + (arrivalsPct * 0.45) + (ratePct * 0.20);
+    if (score >= 2)   return "positive";
+    if (score >= -5)  return "mixed";
+    return "pressure";
+  })();
+
+  const momentumLabel = {
+    positive: { en: "Market Momentum: Positive", es: "Impulso del Mercado: Positivo" },
+    mixed:    { en: "Market Momentum: Mixed",    es: "Impulso del Mercado: Mixto" },
+    pressure: { en: "Market Momentum: Slowing",  es: "Impulso del Mercado: A la Baja" },
+  };
+
+  const momentumStyle: Record<string, { bg: string; border: string; color: string }> = {
+    positive: { bg: "rgba(0,209,255,0.08)",   border: "rgba(0,209,255,0.2)",   color: "#00D1FF" },
+    mixed:    { bg: "rgba(245,158,11,0.10)",  border: "rgba(245,158,11,0.25)", color: "#F59E0B" },
+    pressure: { bg: "rgba(248,113,113,0.10)", border: "rgba(248,113,113,0.25)",color: "#F87171" },
+  };
+
   return (
     <PageWrapper>
       {/* ── Pricing Tool CTA — always visible at top ─────────────────── */}
@@ -234,26 +264,29 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 flex-wrap">
             <span
               className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest"
-              style={{
-                background: "rgba(0,194,168,0.12)",
-                border: "1px solid rgba(0,194,168,0.3)",
-                color: "#00C2A8",
-              }}
+              style={isPeakSeason
+                ? { background: "rgba(0,194,168,0.12)", border: "1px solid rgba(0,194,168,0.3)", color: "#00C2A8" }
+                : { background: "rgba(148,163,184,0.10)", border: "1px solid rgba(148,163,184,0.25)", color: "#94A3B8" }
+              }
             >
               <Zap className="w-3 h-3 fill-current" />
-              {t("Peak Season Active", "Temporada Alta Activa")}
+              {isPeakSeason
+                ? t("Peak Season Active", "Temporada Alta Activa")
+                : t("Shoulder Season", "Temporada Baja")}
             </span>
-            <span
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={{
-                background: "rgba(0,209,255,0.08)",
-                border: "1px solid rgba(0,209,255,0.2)",
-                color: "#00D1FF",
-              }}
-            >
-              <TrendingUp className="w-3 h-3" />
-              {t("Market Momentum: Positive", "Impulso del Mercado: Positivo")}
-            </span>
+            {momentum && (() => {
+              const style = momentumStyle[momentum];
+              const label = momentumLabel[momentum];
+              return (
+                <span
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                  style={{ background: style.bg, border: `1px solid ${style.border}`, color: style.color }}
+                >
+                  <TrendingUp className="w-3 h-3" />
+                  {t(label.en, label.es)}
+                </span>
+              );
+            })()}
           </div>
 
           {/* Page title + subtitle */}
