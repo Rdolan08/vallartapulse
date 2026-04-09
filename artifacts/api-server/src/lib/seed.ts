@@ -166,6 +166,27 @@ export async function seed2026TourismData(): Promise<void> {
   logger.info({ inserted: TOURISM_2026.length }, "Seeded 2026 Jan-Mar tourism data (security-event adjusted)");
 }
 
+// Detects and repairs the 50/50 intl/dom split written by the old seed constant.
+// Safe to run every startup — skips immediately if data is already correct.
+export async function repairTourism2026Split(): Promise<void> {
+  const rows = await db.execute(
+    sql`SELECT month, international_arrivals, domestic_arrivals FROM tourism_metrics WHERE year = 2026`
+  );
+  const bad = ((rows as { rows?: Record<string, unknown>[] }).rows ?? [])
+    .filter((r) => r.international_arrivals === r.domestic_arrivals);
+  if (bad.length === 0) {
+    logger.info("repairTourism2026Split: intl/dom split is correct, skipping");
+    return;
+  }
+  for (const { month, intl, dom } of TOURISM_2026) {
+    await db.execute(
+      sql`UPDATE tourism_metrics SET international_arrivals = ${intl}, domestic_arrivals = ${dom}
+          WHERE year = 2026 AND month = ${month}`
+    );
+  }
+  logger.info({ fixed: bad.length }, "repairTourism2026Split: corrected 50/50 intl/dom split in 2026 tourism data");
+}
+
 // ── Unemployment rate (ENOE, PV metro area) ───────────────────────────────────
 const UNEMPLOYMENT_RATES: { year: number; value: number }[] = [
   { year: 2019, value: 2.6 },
