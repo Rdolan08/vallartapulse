@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedIfEmpty, reseedEconomicIfOutdated, seed2026TourismData, seedUnemploymentRates, reseedTourismIfFake, repairDataSourceCounts, repairRentalMarketIfRandom, repairWeatherIfRandom, seedMarketEvents, repairAirportData, repairTourism2026Split } from "./lib/seed";
+import { seedIfEmpty, reseedEconomicIfOutdated, seed2026TourismData, seedUnemploymentRates, reseedTourismIfFake, repairDataSourceCounts, repairRentalMarketIfRandom, repairWeatherIfRandom, seedMarketEvents, repairAirportData, repairTourism2026Split, repairTourismCruiseData } from "./lib/seed";
 import { seedAmenitiesLookup, seedRentalListings } from "./lib/rental-ingest";
 import { startScheduler } from "./lib/ingest/sync-scheduler.js";
 import { startDailySync } from "./lib/daily-sync.js";
@@ -37,6 +37,10 @@ seed2026TourismData().catch((err) => {
 
 repairTourism2026Split().catch((err) => {
   logger.error({ err }, "2026 tourism split repair failed — continuing anyway");
+});
+
+repairTourismCruiseData().catch((err) => {
+  logger.error({ err }, "Tourism cruise data repair failed — continuing anyway");
 });
 
 seedUnemploymentRates().catch((err) => {

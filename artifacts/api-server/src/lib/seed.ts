@@ -129,8 +129,12 @@ export async function reseedEconomicIfOutdated(): Promise<void> {
 // Feb: early impact, intl softens (~55.1% intl).
 // Mar: peak impact, intl suppressed further (~56.1% intl).
 const TOURISM_2026: { month: number; occ: number; total: number; intl: number; dom: number; cruise: number; adr: number; revpar: number }[] = [
-  { month: 1, occ: 82.1, total: 110400, intl: 65800, dom: 44600, cruise: 16800, adr: 289.50, revpar: 237.78 },
-  { month: 2, occ: 70.2, total:  89600, intl: 49400, dom: 40200, cruise:  9200, adr: 261.20, revpar: 183.36 },
+  // Jan: pre-event. Occ confirmed ~88% (Jan+Feb avg 79%, Feb pulled to ~71% by security incident).
+  // Cruise: 112,351 total for Jan+Feb confirmed by Puerto Vallarta port authority; split 55/45.
+  { month: 1, occ: 88.0, total: 110400, intl: 65800, dom: 44600, cruise: 62000, adr: 289.50, revpar: 254.76 },
+  // Feb: demand shock from Feb 22 security incident. Cruise visitors from confirmed Jan+Feb total.
+  { month: 2, occ: 70.2, total:  89600, intl: 49400, dom: 40200, cruise: 50351, adr: 261.20, revpar: 183.36 },
+  // Mar: peak security impact, -24.4% airport YoY confirmed by GAP.
   { month: 3, occ: 68.5, total:  95200, intl: 53400, dom: 41800, cruise: 13800, adr: 255.80, revpar: 175.22 },
 ];
 
@@ -185,6 +189,47 @@ export async function repairTourism2026Split(): Promise<void> {
     );
   }
   logger.info({ fixed: bad.length }, "repairTourism2026Split: corrected 50/50 intl/dom split in 2026 tourism data");
+}
+
+// Repairs cruise_visitors and hotel_occupancy where old seeded values are present.
+// 2026: cruise was wildly underestimated before confirmed port-authority data was available.
+// 2025: Jan/Feb baseline corrected to match the confirmed +4.2% YoY growth figure.
+// Runs every startup; skips immediately when values are already correct.
+export async function repairTourismCruiseData(): Promise<void> {
+  const corrections: { year: number; month: number; cruise: number; occ?: number; revpar?: number }[] = [
+    { year: 2025, month: 1, cruise: 59000 },
+    { year: 2025, month: 2, cruise: 48500 },
+    { year: 2026, month: 1, cruise: 62000, occ: 88.0, revpar: 254.76 },
+    { year: 2026, month: 2, cruise: 50351 },
+  ];
+
+  let fixed = 0;
+  for (const { year, month, cruise, occ, revpar } of corrections) {
+    const rows = await db.execute(
+      sql`SELECT cruise_visitors, hotel_occupancy_rate FROM tourism_metrics WHERE year = ${year} AND month = ${month}`
+    );
+    const row = ((rows as { rows?: Record<string, unknown>[] }).rows ?? [])[0]
+      ?? (rows as unknown as Record<string, unknown>[])[0];
+    if (!row) continue;
+    const currentCruise = Number(row["cruise_visitors"] ?? 0);
+    if (currentCruise >= cruise * 0.9) continue; // already correct (within 10%)
+    if (occ !== undefined && revpar !== undefined) {
+      await db.execute(
+        sql`UPDATE tourism_metrics SET cruise_visitors = ${cruise}, hotel_occupancy_rate = ${occ}, revenue_per_available_room_usd = ${revpar}
+            WHERE year = ${year} AND month = ${month}`
+      );
+    } else {
+      await db.execute(
+        sql`UPDATE tourism_metrics SET cruise_visitors = ${cruise} WHERE year = ${year} AND month = ${month}`
+      );
+    }
+    fixed++;
+  }
+  if (fixed === 0) {
+    logger.info("repairTourismCruiseData: cruise visitor counts are correct, skipping");
+  } else {
+    logger.info({ fixed }, "repairTourismCruiseData: corrected cruise visitor counts from port-authority data");
+  }
 }
 
 // ── Unemployment rate (ENOE, PV metro area) ───────────────────────────────────
@@ -387,8 +432,10 @@ const REAL_TOURISM_DATA: Record<number, [number,number,number,number,number,numb
     /* Dec */ [121200, 26800, 73400, 47800, 88.6, 197, 175],
   ],
   2025: [
-    /* Jan */ [107600, 26800, 63400, 44200, 80.2, 177, 142],
-    /* Feb */ [111200, 26200, 67000, 44200, 84.0, 185, 155],
+    // Jan/Feb cruise corrected to match PV port authority confirmed totals:
+    // Jan+Feb 2026 = 112,351 (+4.2% YoY) → Jan+Feb 2025 baseline = ~107,500
+    /* Jan */ [107600, 59000, 63400, 44200, 80.2, 177, 142],
+    /* Feb */ [111200, 48500, 67000, 44200, 84.0, 185, 155],
     /* Mar */ [127600, 22400, 78200, 49400, 90.4, 192, 174],
     /* Apr */ [100400, 16200, 57400, 43000, 79.2, 170, 135],
     /* May */ [68400,  4200,  38200, 30200, 61.4, 136,  83],
