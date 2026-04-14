@@ -659,7 +659,7 @@ export async function repairRentalMarketIfRandom(): Promise<void> {
   const staleCount = firstRow ? Number(firstRow["cnt"] ?? 0) : 0;
 
   if (staleCount === 0) {
-    logger.info("Rental market data is deterministic (v2), skipping repair");
+    logger.info("Rental market data is deterministic (v3), skipping repair");
     return;
   }
 
