@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedIfEmpty, reseedEconomicIfOutdated, seed2026TourismData, seedUnemploymentRates, reseedTourismIfFake, repairDataSourceCounts, repairRentalMarketIfRandom, repairWeatherIfRandom, seedMarketEvents, repairAirportData, repairTourism2026Split, repairTourismCruiseData } from "./lib/seed";
+import { seedIfEmpty, reseedEconomicIfOutdated, seed2026TourismData, seedUnemploymentRates, reseedTourismIfFake, repairDataSourceCounts, repairRentalMarketIfRandom, repairWeatherIfRandom, seedMarketEvents, repairAirportData, repairTourism2026Split, repairTourismCruiseData, repairSafetyOfficial2025 } from "./lib/seed";
 import { seedAmenitiesLookup, seedRentalListings } from "./lib/rental-ingest";
 import { startScheduler } from "./lib/ingest/sync-scheduler.js";
 import { startDailySync } from "./lib/daily-sync.js";
@@ -61,6 +61,10 @@ repairRentalMarketIfRandom().catch((err) => {
 
 repairWeatherIfRandom().catch((err) => {
   logger.error({ err }, "Weather repair failed — continuing anyway");
+});
+
+repairSafetyOfficial2025().catch((err) => {
+  logger.error({ err }, "Safety official 2025 repair failed — continuing anyway");
 });
 
 seedMarketEvents().catch((err) => {

@@ -292,7 +292,7 @@ export async function reseedSafetyIfOutdated(): Promise<void> {
   const currentMonthData = currentMonthRow[0].value;
 
   const staleRows = await db.execute(
-    sql`SELECT COUNT(*) AS cnt FROM safety_metrics WHERE source != ${SAFETY_SOURCE_VERSION}`
+    sql`SELECT COUNT(*) AS cnt FROM safety_metrics WHERE source NOT IN (${SAFETY_SOURCE_VERSION}, 'SESNSP (official)')`
   );
   const staleSourceRow = (staleRows as { rows?: Record<string, unknown>[] }).rows?.[0]
     ?? (staleRows as unknown as Record<string, unknown>[])[0];
@@ -312,6 +312,62 @@ export async function reseedSafetyIfOutdated(): Promise<void> {
   await db.execute(sql`TRUNCATE TABLE safety_metrics RESTART IDENTITY CASCADE`);
   await insertSafetyData();
   logger.info("Safety reseed complete");
+}
+
+// ── Official 2025 SESNSP data for Puerto Vallarta ────────────────────────────
+// Source: IDM_NM_dic25.csv — Municipio 14067 (Puerto Vallarta, Jalisco)
+// Published: February 2026. Covers Jan–Dec 2025, all crime types.
+// Format: category → [Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec] incident counts
+const SESNSP_2025_PV: Record<string, number[]> = {
+  "Assault / Bodily Harm": [35,42,40,50,44,41,51,58,52,46,40,45],
+  "Burglary (Non-Violent)":[9,13,15,8,11,17,7,20,11,14,14,15],
+  "Burglary (Violent)":    [0,1,1,2,0,1,0,1,1,0,0,0],
+  "Business Robbery":      [16,7,20,12,8,16,20,13,7,20,19,15],
+  "Domestic Violence":     [56,32,37,57,75,55,66,54,49,81,93,80],
+  "Drug Dealing":          [2,2,4,2,3,2,3,2,3,2,2,4],
+  "Extortion":             [2,0,3,1,4,2,4,2,0,0,1,5],
+  "Femicide":              [0,0,0,0,1,0,0,0,0,1,0,1],
+  "Fraud":                 [40,35,44,36,37,25,50,28,38,40,39,47],
+  "Homicide":              [1,1,1,0,0,3,2,0,1,2,2,2],
+  "Kidnapping":            [0,0,0,1,0,0,0,0,0,0,0,1],
+  "Other Robbery":         [29,22,32,34,37,25,37,31,35,30,32,24],
+  "Other Sexual Crimes":   [2,7,8,5,12,6,12,17,11,14,10,5],
+  "Property Damage":       [13,6,6,19,12,10,12,9,7,11,16,15],
+  "Rape":                  [1,2,3,6,1,3,1,1,4,2,3,3],
+  "Sexual Abuse":          [28,26,38,47,37,33,36,33,29,24,27,31],
+  "Sexual Harassment":     [1,4,3,3,4,1,0,0,1,0,5,0],
+  "Street Robbery":        [9,12,7,11,10,13,10,12,3,8,8,16],
+  "Threats":               [34,37,54,69,48,45,47,42,36,32,49,38],
+  "Vehicle Theft":         [47,34,33,42,34,39,36,28,26,34,24,40],
+};
+const SESNSP_OFFICIAL_POPULATION = 302000; // 2025 estimated population for PVR
+
+// Applies real 2025 SESNSP crime data for Puerto Vallarta.
+// Runs every startup; skips if 2025 data already has official source.
+export async function repairSafetyOfficial2025(): Promise<void> {
+  const rows = await db.execute(
+    sql`SELECT COUNT(*) AS cnt FROM safety_metrics WHERE year = 2025 AND source != 'SESNSP (official)'`
+  );
+  const row = ((rows as { rows?: Record<string, unknown>[] }).rows ?? [])[0]
+    ?? (rows as unknown as Record<string, unknown>[])[0];
+  const staleCount = Number(row?.["cnt"] ?? 0);
+  if (staleCount === 0) {
+    logger.info("repairSafetyOfficial2025: 2025 official SESNSP data already applied, skipping");
+    return;
+  }
+
+  for (const [category, counts] of Object.entries(SESNSP_2025_PV)) {
+    for (let m = 0; m < 12; m++) {
+      const incidentCount = counts[m];
+      const rate = Number(((incidentCount / SESNSP_OFFICIAL_POPULATION) * 100000).toFixed(2));
+      await db.execute(
+        sql`UPDATE safety_metrics
+            SET incident_count = ${incidentCount}, incidents_per_100k = ${rate}, source = 'SESNSP (official)'
+            WHERE year = 2025 AND month = ${m + 1} AND category = ${category}`
+      );
+    }
+  }
+  logger.info({ categories: Object.keys(SESNSP_2025_PV).length }, "repairSafetyOfficial2025: applied real 2025 SESNSP data for Puerto Vallarta");
 }
 
 async function insertSafetyData(): Promise<void> {
