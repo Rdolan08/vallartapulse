@@ -4,22 +4,6 @@ import { customFetch } from "../custom-fetch";
 export type EstimateStatus     = "estimated" | "official";
 export type EstimateConfidence = "low" | "medium" | "high";
 
-/** Minimal anomaly result as returned by the API (subset of AnomalyResult). */
-export interface AnomalyInfo {
-  detected: boolean;
-  type: string | null;
-  severity: string | null;
-  eventSlug: string | null;
-  eventTitle: string | null;
-  statusLabel: string | null;
-  statusDetail: string | null;
-  trendClassification: string | null;
-  cautionFlag: boolean;
-  recoveryPhase: string | null;
-  airportDemandWeight: number | null;
-  commentary: { en: string; es: string } | null;
-}
-
 export interface AirportEstimate {
   airportCode: "PVR";
   month: number;
@@ -38,8 +22,6 @@ export interface AirportEstimate {
   /** True when the calendar month is fully elapsed but official data not yet published. */
   monthComplete: boolean;
   lastUpdated: string;
-  /** Anomaly metadata — null when no event is linked to this month. */
-  anomaly: AnomalyInfo | null;
 }
 
 /** Single estimate for the current calendar month. */

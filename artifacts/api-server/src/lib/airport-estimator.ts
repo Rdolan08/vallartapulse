@@ -1,11 +1,3 @@
-import {
-  detectAnomaly,
-  DEFAULT_ANOMALY_CONFIG,
-  type AnomalyResult,
-  type MonthDataPoint,
-} from "./anomaly-engine.js";
-import type { MarketEvent } from "@workspace/db/schema";
-
 /**
  * airport-estimator.ts
  * ─────────────────────────────────────────────────────────────────────────────
@@ -76,9 +68,6 @@ export interface AirportEstimate {
   monthComplete: boolean;
 
   lastUpdated: string; // ISO timestamp
-
-  /** Anomaly detection result — null when no events loaded or not anomalous. */
-  anomaly: AnomalyResult | null;
 }
 
 export interface MonthRow {
@@ -153,7 +142,6 @@ function estimateMonth(
       status: "official",
       monthComplete: true,
       lastUpdated: new Date().toISOString(),
-      anomaly: null, // attached by caller after anomaly detection
     };
   }
 
@@ -229,26 +217,7 @@ function estimateMonth(
     status: "estimated",
     monthComplete,
     lastUpdated: new Date().toISOString(),
-    anomaly: null, // attached by caller after anomaly detection
   };
-}
-
-// ── Helper: build MonthDataPoints for anomaly detection ───────────────────────
-
-/**
- * Converts MonthRow[] into MonthDataPoint[] (with YoY % computed for each row).
- * Used to give the anomaly engine historical context for prior-month checks.
- */
-function buildDataPoints(allMonths: MonthRow[]): MonthDataPoint[] {
-  return allMonths.map((row) => {
-    const priorYear = allMonths.find(
-      (r) => r.year === row.year - 1 && r.month === row.month,
-    );
-    const yoyPct = priorYear
-      ? ((row.totalPassengers - priorYear.totalPassengers) / priorYear.totalPassengers) * 100
-      : null;
-    return { year: row.year, month: row.month, yoyPct, totalPassengers: row.totalPassengers };
-  });
 }
 
 // ── Main export: current month ─────────────────────────────────────────────────
@@ -256,32 +225,16 @@ function buildDataPoints(allMonths: MonthRow[]): MonthDataPoint[] {
 /**
  * Estimate for the current calendar month.
  * Returns null only if there is no usable prior data at all.
- *
- * @param events Optional market events for anomaly detection.
  */
 export function computeAirportEstimate(
   allMonths: MonthRow[],
   now?: Date,
-  events?: MarketEvent[],
 ): AirportEstimate | null {
   const pvNow        = now ?? getNowPuertovallarta();
   const currentYear  = pvNow.getFullYear();
   const currentMonth = pvNow.getMonth() + 1;
   const daysElapsed  = pvNow.getDate();
-  const est = estimateMonth(allMonths, currentYear, currentMonth, daysElapsed);
-  if (!est) return null;
-
-  if (events && events.length > 0) {
-    const dataPoints = buildDataPoints(allMonths);
-    const currentPoint: MonthDataPoint = {
-      year:  currentYear,
-      month: currentMonth,
-      yoyPct: est.estimatedVsSameMonthLastYearPct,
-    };
-    est.anomaly = detectAnomaly(currentPoint, dataPoints, events, DEFAULT_ANOMALY_CONFIG);
-  }
-
-  return est;
+  return estimateMonth(allMonths, currentYear, currentMonth, daysElapsed);
 }
 
 // ── Secondary export: all unconfirmed months ───────────────────────────────────
@@ -291,13 +244,13 @@ export function computeAirportEstimate(
  * ordered chronologically (oldest first).
  *
  * "Recent" = from January of the current year through the current month.
- *
- * @param events Optional market events for anomaly detection.
+ * Already-official months are included with status:"official" so the caller
+ * can render them if desired, but the primary use-case is finding the gap
+ * between the latest official release and today.
  */
 export function computePendingEstimates(
   allMonths: MonthRow[],
   now?: Date,
-  events?: MarketEvent[],
 ): AirportEstimate[] {
   const pvNow        = now ?? getNowPuertovallarta();
   const currentYear  = pvNow.getFullYear();
@@ -315,20 +268,6 @@ export function computePendingEstimates(
     const est = estimateMonth(allMonths, currentYear, m, daysElapsed);
     if (est && est.status === "estimated") {
       results.push(est);
-    }
-  }
-
-  // ── Attach anomaly metadata ────────────────────────────────────────────────
-  if (events && events.length > 0) {
-    const dataPoints = buildDataPoints(allMonths);
-
-    for (const est of results) {
-      const point: MonthDataPoint = {
-        year:   est.year,
-        month:  est.month,
-        yoyPct: est.estimatedVsSameMonthLastYearPct,
-      };
-      est.anomaly = detectAnomaly(point, dataPoints, events, DEFAULT_ANOMALY_CONFIG);
     }
   }
 

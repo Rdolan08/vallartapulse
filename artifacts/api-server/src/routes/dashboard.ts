@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { tourismMetricsTable, rentalMarketMetricsTable, safetyMetricsTable, weatherMetricsTable, airportMetricsTable } from "@workspace/db/schema";
+import { tourismMetricsTable, rentalMarketMetricsTable, safetyMetricsTable, weatherMetricsTable } from "@workspace/db/schema";
 import { desc, eq, and, sql } from "drizzle-orm";
 import { GetDashboardSummaryResponse, GetDashboardSummaryQueryParams } from "@workspace/api-zod";
 
@@ -57,22 +57,6 @@ router.get("/dashboard/summary", async (req, res) => {
           )
           .limit(1)
       : [null];
-
-    // Airport passengers query (replaces DATATUR hotel arrivals for the main KPI)
-    const airportYear  = latestTourism?.year  ?? filterYear  ?? new Date().getFullYear();
-    const airportMonth = latestTourism?.month ?? filterMonth ?? new Date().getMonth() + 1;
-
-    const [latestAirport] = await db
-      .select()
-      .from(airportMetricsTable)
-      .where(and(eq(airportMetricsTable.year, airportYear), eq(airportMetricsTable.month, airportMonth)))
-      .limit(1);
-
-    const [prevAirport] = await db
-      .select()
-      .from(airportMetricsTable)
-      .where(and(eq(airportMetricsTable.year, airportYear - 1), eq(airportMetricsTable.month, airportMonth)))
-      .limit(1);
 
     // Rental query
     const rentalBase = db
@@ -167,26 +151,6 @@ router.get("/dashboard/summary", async (req, res) => {
           .orderBy(desc(safetyMetricsTable.year), desc(safetyMetricsTable.month))
           .limit(1);
 
-    // Previous year safety (for crime change calculation)
-    const [prevYearSafety] = latestSafety
-      ? await db
-          .select({
-            totalIncidents: sql<number>`sum(${safetyMetricsTable.incidentCount})`,
-            avgPer100k: sql<number>`avg(${safetyMetricsTable.incidentsPer100k})`,
-            year: safetyMetricsTable.year,
-            month: safetyMetricsTable.month,
-          })
-          .from(safetyMetricsTable)
-          .where(
-            and(
-              eq(safetyMetricsTable.year, (latestSafety.year ?? 2025) - 1),
-              eq(safetyMetricsTable.month, latestSafety.month ?? 1)
-            )
-          )
-          .groupBy(safetyMetricsTable.year, safetyMetricsTable.month)
-          .limit(1)
-      : [null];
-
     // Weather query
     const weatherBase = db
       .select()
@@ -213,8 +177,6 @@ router.get("/dashboard/summary", async (req, res) => {
           .limit(1)
       : await weatherBase.limit(1);
 
-    const round2 = (n: number) => Math.round(n * 100) / 100;
-
     const hotelOccupancy = latestTourism ? Number(latestTourism.hotelOccupancyRate) : 72.5;
     const prevOccupancy = prevYearTourism ? Number(prevYearTourism.hotelOccupancyRate) : 68.2;
 
@@ -224,18 +186,17 @@ router.get("/dashboard/summary", async (req, res) => {
     const activeListings = latestRental ? Number(latestRental.totalListings) : 4850;
     const prevListings = prevRental ? Number(prevRental.totalListings) : 4400;
 
-    const touristArrivals = latestAirport ? latestAirport.totalPassengers : (latestTourism?.totalArrivals ?? 125000);
-    const prevArrivals    = prevAirport   ? prevAirport.totalPassengers   : (prevYearTourism?.totalArrivals ?? 110000);
+    const touristArrivals = latestTourism ? (latestTourism.totalArrivals ?? 0) : 125000;
+    const prevArrivals = prevYearTourism ? (prevYearTourism.totalArrivals ?? 0) : 110000;
 
     const cruiseVisitors = latestTourism ? (latestTourism.cruiseVisitors ?? 0) : 18000;
 
     const crimeIndex = latestSafety ? Number(latestSafety.avgPer100k) : 42.3;
-    const prevCrimeIndex = prevYearSafety ? Number(prevYearSafety.avgPer100k) : null;
-    const crimeIndexChange = prevCrimeIndex && prevCrimeIndex > 0
-      ? round2(((crimeIndex - prevCrimeIndex) / prevCrimeIndex) * 100)
-      : 0;
+    const crimeIndexChange = -3.2;
 
     const avgTemp = latestWeather ? Number(latestWeather.avgTempC) : 28.5;
+
+    const round2 = (n: number) => Math.round(n * 100) / 100;
 
     const data = GetDashboardSummaryResponse.parse({
       hotelOccupancyRate: round2(hotelOccupancy),
@@ -248,7 +209,7 @@ router.get("/dashboard/summary", async (req, res) => {
       touristArrivalsChange: round2(((touristArrivals - prevArrivals) / Math.max(prevArrivals, 1)) * 100),
       cruiseVisitors: cruiseVisitors,
       crimeIndex: round2(crimeIndex),
-      crimeIndexChange: crimeIndexChange,
+      crimeIndexChange: round2(crimeIndexChange),
       avgTemperatureC: round2(avgTemp),
       lastUpdated: new Date(),
     });

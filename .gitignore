@@ -49,7 +49,7 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# Replit-specific config files
+# Replit-specific config files (not needed outside Replit)
 .replit
 replit.nix
 .cache/

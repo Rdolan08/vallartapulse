@@ -10,9 +10,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { RefreshCw, ExternalLink, Database, Zap, Clock, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { format, formatDistanceToNow, isAfter, subHours, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { getApiBase } from "@/lib/api";
 
-const BASE_URL = getApiBase();
+const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
 function freshnessBadge(lastSyncedAt: string | null | undefined): "fresh" | "stale" | "never" {
   if (!lastSyncedAt) return "never";

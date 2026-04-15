@@ -9,8 +9,6 @@ interface StatCardProps {
   change?: number;
   changeLabelEn?: string;
   changeLabelEs?: string;
-  footnoteEn?: string;
-  footnoteEs?: string;
   icon: React.ReactNode;
   trend?: "up_good" | "down_good" | "neutral";
   href?: string;
@@ -23,8 +21,6 @@ export function StatCard({
   change,
   changeLabelEn = "vs last year",
   changeLabelEs = "vs año anterior",
-  footnoteEn,
-  footnoteEs,
   icon,
   trend = "up_good",
   href,
@@ -96,13 +92,6 @@ export function StatCard({
               {t(changeLabelEn, changeLabelEs)}
             </span>
           </div>
-        )}
-
-        {/* Footnote — data source or qualifier */}
-        {(footnoteEn || footnoteEs) && (
-          <p style={{ color: "rgba(154,165,177,0.5)", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1.3 }}>
-            {t(footnoteEn ?? "", footnoteEs ?? "")}
-          </p>
         )}
 
         {/* "View details" label — fades in at the bottom on hover */}

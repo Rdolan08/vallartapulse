@@ -10,7 +10,6 @@
  * POST /ingest/ical             — parse an iCal feed URL or raw string
  * POST /ingest/inject           — accept a pre-scraped NormalizedRentalListing
  * POST /ingest/scrape-all       — bulk-scrape a source (vacation_vallarta | vrbo_batch | booking_com)
- * POST /ingest/discover         — discover & bulk-scrape Airbnb/VRBO search results for PV
  * POST /ingest/sync-all         — trigger immediate refresh of all automated sources
  * POST /ingest/sync/:source     — trigger immediate refresh of one source
  */
@@ -35,8 +34,6 @@ import {
 import { persistNormalized } from "../lib/ingest/persist.js";
 import { fetchAndParseICal, parseICalText } from "../lib/ingest/ical-parser.js";
 import { syncAll, syncSource, getSyncStatus } from "../lib/ingest/sync-scheduler.js";
-import { discoverVrboListings } from "../lib/ingest/vrbo-search-adapter.js";
-import { fetchAirbnbSearchListings } from "../lib/ingest/airbnb-search-adapter.js";
 import type { SourceKey } from "../lib/ingest/types.js";
 
 const router = Router();
@@ -462,120 +459,6 @@ router.post("/ingest/scrape-all", async (req, res) => {
       return res.status(500).json({ error: "Booking.com scrape failed", message: String(err) });
     }
   }
-});
-
-// ── POST /ingest/discover ─────────────────────────────────────────────────
-// Discovers Airbnb and/or VRBO listings from Puerto Vallarta search results,
-// then scrapes each discovered listing URL and persists it.
-//
-// Body:
-//   source:      "airbnb" | "vrbo" | "both"  (default: "both")
-//   max_pages:   number   — how many search pages to crawl (default: 4)
-//   max_listings: number  — cap on individual listings to scrape (default: 50)
-//   delay_ms:    number   — ms between individual listing requests (default: 1200)
-//   persist:     boolean  — actually save to DB (default: true)
-//   dry_run:     boolean  — discover only, no scraping (default: false)
-
-const DiscoverSchema = z.object({
-  source: z.enum(["airbnb", "vrbo", "both"]).optional().default("both"),
-  max_pages: z.number().int().min(1).max(20).optional().default(4),
-  max_listings: z.number().int().min(1).max(200).optional().default(50),
-  delay_ms: z.number().int().min(500).max(10_000).optional().default(1200),
-  persist: z.boolean().optional().default(true),
-  dry_run: z.boolean().optional().default(false),
-});
-
-router.post("/ingest/discover", async (req, res) => {
-  const parsed = DiscoverSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
-  }
-  const { source, max_pages, max_listings, delay_ms, persist, dry_run } = parsed.data;
-
-  req.log.info({ source, max_pages, max_listings, dry_run }, "ingest/discover: starting");
-
-  const summary: Record<string, unknown> = {};
-
-  // ── VRBO discovery ───────────────────────────────────────────────────────
-  if (source === "vrbo" || source === "both") {
-    try {
-      const discovery = await discoverVrboListings({ maxPages: max_pages, delayMs: 1500 });
-      req.log.info({ found: discovery.listingUrls.length, errors: discovery.errors.length }, "ingest/discover: vrbo discovery complete");
-
-      if (dry_run) {
-        summary["vrbo"] = { discovery_only: true, found: discovery.listingUrls.length, urls: discovery.listingUrls, errors: discovery.errors };
-      } else {
-        const urls = discovery.listingUrls.slice(0, max_listings);
-        const results: unknown[] = [];
-        for (const url of urls) {
-          try {
-            const normalized = await fetchVrboListing(url);
-            if (persist) {
-              const r = await persistNormalized(normalized);
-              results.push({ ok: r.ok, url, title: normalized.title, listing_id: r.listing_id, error: r.error });
-            } else {
-              results.push({ ok: true, url, title: normalized.title });
-            }
-          } catch (err) {
-            results.push({ ok: false, url, error: err instanceof Error ? err.message : String(err) });
-          }
-          await new Promise(r => setTimeout(r, delay_ms));
-        }
-        const succeeded = (results as { ok: boolean }[]).filter(r => r.ok).length;
-        summary["vrbo"] = { found: discovery.listingUrls.length, scraped: urls.length, succeeded, results, discovery_errors: discovery.errors };
-      }
-    } catch (err) {
-      summary["vrbo"] = { error: err instanceof Error ? err.message : String(err) };
-    }
-  }
-
-  // ── Airbnb discovery ─────────────────────────────────────────────────────
-  // Extracts full listing data directly from search result pages — no
-  // individual listing page fetches needed (which are blocked from datacenter IPs).
-  if (source === "airbnb" || source === "both") {
-    try {
-      const searchResult = await fetchAirbnbSearchListings({ maxPages: max_pages, delayMs: 2000 });
-      req.log.info({ found: searchResult.listings.length, ids: searchResult.listingIds.length, errors: searchResult.errors.length }, "ingest/discover: airbnb search complete");
-
-      const listings = searchResult.listings.slice(0, max_listings);
-
-      if (dry_run) {
-        summary["airbnb"] = {
-          discovery_only: true,
-          found: searchResult.listings.length,
-          ids_found: searchResult.listingIds.length,
-          pages_scraped: searchResult.pagesScraped,
-          sample: listings.slice(0, 5).map(l => ({ id: l.source_listing_id, title: l.title, bedrooms: l.bedrooms, price: l.price_nightly_usd })),
-          errors: searchResult.errors,
-        };
-      } else {
-        const results: unknown[] = [];
-        for (const normalized of listings) {
-          if (persist) {
-            const r = await persistNormalized(normalized);
-            results.push({ ok: r.ok, id: normalized.source_listing_id, title: normalized.title, listing_id: r.listing_id, error: r.error });
-          } else {
-            results.push({ ok: true, id: normalized.source_listing_id, title: normalized.title });
-          }
-        }
-        const succeeded = (results as { ok: boolean }[]).filter(r => r.ok).length;
-        summary["airbnb"] = {
-          ids_found: searchResult.listingIds.length,
-          listings_extracted: searchResult.listings.length,
-          persisted: listings.length,
-          succeeded,
-          pages_scraped: searchResult.pagesScraped,
-          results,
-          discovery_errors: searchResult.errors,
-        };
-      }
-    } catch (err) {
-      summary["airbnb"] = { error: err instanceof Error ? err.message : String(err) };
-    }
-  }
-
-  req.log.info({ source, dry_run }, "ingest/discover: complete");
-  res.json({ source, dry_run, persist, summary });
 });
 
 // ── GET /ingest/sync-status ───────────────────────────────────────────────
