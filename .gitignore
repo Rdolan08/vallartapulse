@@ -51,6 +51,7 @@ Thumbs.db
 
 # Replit-specific config files (not needed outside Replit)
 .replit
+.replitignore
 replit.nix
 .cache/
 .local/
