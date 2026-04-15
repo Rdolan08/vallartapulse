@@ -132,3 +132,9 @@ At the end of every task, provide:
 When in doubt:
 
 > Make the smallest possible change that safely solves the problem, and explain exactly what was done.
+
+---
+
+## Git Safety Addendum
+
+- Before suggesting any git commands, always assume I should run `git pull` first unless I explicitly say otherwise.
