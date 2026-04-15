@@ -40,13 +40,18 @@ It is designed for decision-making—pricing, investment, and portfolio strategy
 ---
 
 ## Architecture
+
 /
-├── artifacts/
-│   ├── pv-datastore/   # React frontend
-│   └── api-server/     # Express API
-└── packages/
-└── db/             # Schema + migrations
----
+├── frontend/
+│   ├── pages/       # Dashboard, Pricing Tool, Tourism
+│   ├── components/  # UI and layout
+│   └── context/     # Language + state
+├── api/
+│   ├── routes/      # API endpoints
+│   └── services/    # Pricing engine, data processing
+└── data/
+├── schema/      # Drizzle models
+└── migrations/
 
 ## Pricing Engine
 
