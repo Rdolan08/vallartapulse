@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedIfEmpty, reseedEconomicIfOutdated, removeFutureTourismEstimates, reseedTourismIfFake, repairDataSourceCounts } from "./lib/seed";
+import { seedIfEmpty, reseedEconomicIfOutdated, repairMissing2026Tourism, reseedTourismIfFake, repairDataSourceCounts } from "./lib/seed";
 import { seedAmenitiesLookup, seedRentalListings } from "./lib/rental-ingest";
 import { startScheduler } from "./lib/ingest/sync-scheduler.js";
 import { startDailySync } from "./lib/daily-sync.js";
@@ -27,8 +27,8 @@ reseedEconomicIfOutdated().catch((err) => {
   logger.error({ err }, "Economic reseed failed — continuing anyway");
 });
 
-removeFutureTourismEstimates().catch((err) => {
-  logger.error({ err }, "Tourism cleanup failed — continuing anyway");
+repairMissing2026Tourism().catch((err) => {
+  logger.error({ err }, "2026 tourism repair failed — continuing anyway");
 });
 
 reseedTourismIfFake().catch((err) => {
