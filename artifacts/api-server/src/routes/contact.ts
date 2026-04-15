@@ -22,7 +22,7 @@ router.post("/", async (req, res) => {
   }
 
   const fromEmail = process.env["CONTACT_FROM_EMAIL"];
-  const fromPassword = process.env["CONTACT_FROM_PASSWORD"];
+  const fromPassword = process.env["GMAIL_CONTACT_FORM_PASSWORD"];
   const toEmail = process.env["CONTACT_TO_EMAIL"];
 
   if (!fromEmail || !fromPassword || !toEmail) {
