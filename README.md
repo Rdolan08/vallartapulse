@@ -102,7 +102,7 @@ Neighborhoods covered: Zona Romántica, Centro, Versalles, 5 de Diciembre, Marin
 | `VITE_API_BASE_URL` | No | same-origin | Override API origin for cross-domain deployments (e.g. `https://api.example.com`) |
 | `CONTACT_FROM_EMAIL` | No | — | Gmail address used to send contact form submissions |
 | `CONTACT_TO_EMAIL` | No | — | Destination email for contact form submissions |
-| `CONTACT_FROM_PASSWORD` | No | — | Gmail App Password for the sending account |
+| `GMAIL_CONTACT_FORM_PASSWORD` | No | — | Gmail App Password for the sending account |
 
 ### Local development
 
