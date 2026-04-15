@@ -6,13 +6,13 @@ settings:
 
 catalogs:
   default:
-    '@replit/vite-plugin-cartographer':
+    '@hosting env/vite-plugin-cartographer':
       specifier: ^0.5.1
       version: 0.5.1
-    '@replit/vite-plugin-dev-banner':
+    '@hosting env/vite-plugin-dev-banner':
       specifier: ^0.1.1
       version: 0.1.2
-    '@replit/vite-plugin-runtime-error-modal':
+    '@hosting env/vite-plugin-runtime-error-modal':
       specifier: ^0.0.6
       version: 0.0.6
     '@tailwindcss/vite':
@@ -157,7 +157,7 @@ importers:
 
   .:
     dependencies:
-      '@replit/connectors-sdk':
+      '@hosting env/connectors-sdk':
         specifier: ^0.3.0
         version: 0.3.0
     devDependencies:
@@ -321,10 +321,10 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@replit/vite-plugin-cartographer':
+      '@hosting env/vite-plugin-cartographer':
         specifier: 'catalog:'
         version: 0.5.1
-      '@replit/vite-plugin-runtime-error-modal':
+      '@hosting env/vite-plugin-runtime-error-modal':
         specifier: 'catalog:'
         version: 0.0.6
       '@tailwindcss/vite':
@@ -504,13 +504,13 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@replit/vite-plugin-cartographer':
+      '@hosting env/vite-plugin-cartographer':
         specifier: 'catalog:'
         version: 0.5.1
-      '@replit/vite-plugin-dev-banner':
+      '@hosting env/vite-plugin-dev-banner':
         specifier: 'catalog:'
         version: 0.1.2
-      '@replit/vite-plugin-runtime-error-modal':
+      '@hosting env/vite-plugin-runtime-error-modal':
         specifier: 'catalog:'
         version: 0.0.6
       '@tailwindcss/typography':
@@ -1526,16 +1526,16 @@ packages:
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
 
-  '@replit/connectors-sdk@0.3.0':
+  '@hosting env/connectors-sdk@0.3.0':
     resolution: {integrity: sha512-JBHKPL69UsegdqXXxgUsz+mCps1YwbJELx7SxxsazR9+J3/TWPcuK/tNVO6mGP9Hd+AqeV2pF7BeODoOSyzfDg==}
 
-  '@replit/vite-plugin-cartographer@0.5.1':
+  '@hosting env/vite-plugin-cartographer@0.5.1':
     resolution: {integrity: sha512-KiaQMx4ssTM8hSjMFscyIV1PN1bRVCWCFqN3fXOfXa39uFFCKUaeL3VvH/sxuy7S7ET+MCFOt+J7lLtL56bRrA==}
 
-  '@replit/vite-plugin-dev-banner@0.1.2':
+  '@hosting env/vite-plugin-dev-banner@0.1.2':
     resolution: {integrity: sha512-YfW3U1xKnLrqvSiTzXeEX8AG+Vpz7XwBsJHNvGbp841AE1mLvishMQi2Zw7ApyHp+9EMGthXuCjP+mLbl3IuGA==}
 
-  '@replit/vite-plugin-runtime-error-modal@0.0.6':
+  '@hosting env/vite-plugin-runtime-error-modal@0.0.6':
     resolution: {integrity: sha512-53iuzLsrvcUnWxAo0fvNrUhOf7LYJ+3at61dZeTIrkaZD4vGNjTbvE0j50TFcjjTC9UM74uprlnQ4+L2A//Cjg==}
 
   '@rolldown/pluginutils@1.0.0-rc.3':
@@ -4220,9 +4220,9 @@ snapshots:
 
   '@radix-ui/rect@1.1.1': {}
 
-  '@replit/connectors-sdk@0.3.0': {}
+  '@hosting env/connectors-sdk@0.3.0': {}
 
-  '@replit/vite-plugin-cartographer@0.5.1':
+  '@hosting env/vite-plugin-cartographer@0.5.1':
     dependencies:
       '@babel/parser': 7.29.0
       '@babel/traverse': 7.29.0
@@ -4232,9 +4232,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@replit/vite-plugin-dev-banner@0.1.2': {}
+  '@hosting env/vite-plugin-dev-banner@0.1.2': {}
 
-  '@replit/vite-plugin-runtime-error-modal@0.0.6':
+  '@hosting env/vite-plugin-runtime-error-modal@0.0.6':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
 
