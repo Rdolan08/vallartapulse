@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedIfEmpty, reseedEconomicIfOutdated, repairMissing2026Tourism, reseedTourismIfFake, repairDataSourceCounts } from "./lib/seed";
+import { seedIfEmpty, reseedEconomicIfOutdated, repairMissing2026Tourism, reseedTourismIfFake, repairDataSourceCounts, repairSafetyOfficial2025 } from "./lib/seed";
 import { seedAmenitiesLookup, seedRentalListings } from "./lib/rental-ingest";
 import { startScheduler } from "./lib/ingest/sync-scheduler.js";
 import { startDailySync } from "./lib/daily-sync.js";
@@ -25,6 +25,10 @@ seedIfEmpty().catch((err) => {
 
 reseedEconomicIfOutdated().catch((err) => {
   logger.error({ err }, "Economic reseed failed — continuing anyway");
+});
+
+repairSafetyOfficial2025().catch((err) => {
+  logger.error({ err }, "SESNSP 2025 safety repair failed — continuing anyway");
 });
 
 repairMissing2026Tourism().catch((err) => {

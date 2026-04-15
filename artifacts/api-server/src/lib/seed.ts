@@ -254,6 +254,100 @@ async function insertSafetyData(): Promise<void> {
   logger.info({ count: safetyData.length }, "Safety data inserted");
 }
 
+// ── Official SESNSP 2025 Puerto Vallarta crime data ───────────────────────────
+// Source: SESNSP Incidencia Delictiva Municipal 2025 — Puerto Vallarta, Jalisco.
+// Population denominator: 302,000 (CONAPO 2025 projection for PV municipality).
+// Burglary split corrected: the old single "Burglary" category was split per
+// SESNSP's own "con violencia / sin violencia" distinction. The previous formula
+// had them both rolled into one inflated figure; official data separates them.
+// counts[] index 0 = January … 11 = December.
+const SESNSP_2025_PV: {
+  category:      string;
+  categoryEs:    string;
+  categoryGroup: string;
+  categoryRaw:   string;
+  notes:         string;
+  counts:        number[];
+}[] = [
+  { category: "Assault / Bodily Harm", categoryEs: "Lesiones Dolosas",          categoryGroup: "Violent Crime",        categoryRaw: "Lesiones dolosas",                    notes: "Intentional bodily harm. Traffic injuries (culposas) excluded.",               counts: [35,42,40,50,44,41,51,58,52,46,40,45] },
+  { category: "Burglary (Non-Violent)", categoryEs: "Robo a Casa sin Violencia", categoryGroup: "Property Crime",       categoryRaw: "Robo a casa habitación sin violencia", notes: "Home break-ins when occupants absent. Peak during tourist rental season.",     counts: [ 9,13,15, 8,11,17, 7,20,11,14,14,15] },
+  { category: "Burglary (Violent)",     categoryEs: "Robo a Casa con Violencia", categoryGroup: "Property Crime",       categoryRaw: "Robo a casa habitación con violencia", notes: "Home break-ins with occupants present and threatened or harmed.",              counts: [ 0, 1, 1, 2, 0, 1, 0, 1, 1, 0, 0, 0] },
+  { category: "Business Robbery",       categoryEs: "Robo a Negocio",            categoryGroup: "Property Crime",       categoryRaw: "Robo a negocio",                      notes: "Commercial establishment robberies. Includes violent and non-violent.",         counts: [16, 7,20,12, 8,16,20,13, 7,20,19,15] },
+  { category: "Domestic Violence",      categoryEs: "Violencia Familiar",        categoryGroup: "Domestic & Social",    categoryRaw: "Violencia familiar",                  notes: "Most reported offense in PV. Includes physical and psychological violence.",    counts: [56,32,37,57,75,55,66,54,49,81,93,80] },
+  { category: "Drug Dealing",           categoryEs: "Narcomenudeo",              categoryGroup: "Federal / Drug Crime", categoryRaw: "Narcomenudeo",                        notes: "Retail drug sales (fuero federal). Represents enforcement, not prevalence.",    counts: [ 2, 2, 4, 2, 3, 2, 3, 2, 3, 2, 2, 4] },
+  { category: "Extortion",              categoryEs: "Extorsión",                 categoryGroup: "Violent Crime",        categoryRaw: "Extorsión",                           notes: "Includes cobro de piso and telephone extortion. Highly underreported.",        counts: [ 2, 0, 3, 1, 4, 2, 4, 2, 0, 0, 1, 5] },
+  { category: "Femicide",               categoryEs: "Feminicidio",               categoryGroup: "Violent Crime",        categoryRaw: "Feminicidio",                         notes: "Gender-motivated killings. Separate SESNSP category since 2019.",               counts: [ 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1] },
+  { category: "Fraud",                  categoryEs: "Fraude",                    categoryGroup: "Property Crime",       categoryRaw: "Fraude",                              notes: "Real estate fraud, rental scams, digital fraud. Rising with online commerce.",  counts: [40,35,44,36,37,25,50,28,38,40,39,47] },
+  { category: "Homicide",               categoryEs: "Homicidio Doloso",          categoryGroup: "Violent Crime",        categoryRaw: "Homicidio doloso",                    notes: "Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.", counts: [ 1, 1, 1, 0, 0, 3, 2, 0, 1, 2, 2, 2] },
+  { category: "Kidnapping",             categoryEs: "Secuestro",                 categoryGroup: "Violent Crime",        categoryRaw: "Secuestro",                           notes: "Rare in PV. Includes express and extortive kidnapping.",                        counts: [ 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1] },
+  { category: "Other Robbery",          categoryEs: "Otros Robos",               categoryGroup: "Property Crime",       categoryRaw: "Otros robos",                         notes: "SESNSP catch-all robbery subtype not in specific robbery categories.",          counts: [29,22,32,34,37,25,37,31,35,30,32,24] },
+  { category: "Other Sexual Crimes",    categoryEs: "Otros Delitos Sexuales",    categoryGroup: "Sexual Crime",         categoryRaw: "Otros delitos vs libertad sexual",    notes: "Residual SESNSP sexual offense category.",                                     counts: [ 2, 7, 8, 5,12, 6,12,17,11,14,10, 5] },
+  { category: "Property Damage",        categoryEs: "Daño a la Propiedad",       categoryGroup: "Property Crime",       categoryRaw: "Daño a la propiedad",                 notes: "Criminal property damage (daño en propiedad ajena per SESNSP).",               counts: [13, 6, 6,19,12,10,12, 9, 7,11,16,15] },
+  { category: "Rape",                   categoryEs: "Violación",                 categoryGroup: "Sexual Crime",         categoryRaw: "Violación simple / equiparada",       notes: "Reported cases only. High underreporting estimated.",                          counts: [ 1, 2, 3, 6, 1, 3, 1, 1, 4, 2, 3, 3] },
+  { category: "Sexual Abuse",           categoryEs: "Abuso Sexual",              categoryGroup: "Sexual Crime",         categoryRaw: "Abuso sexual",                        notes: "Non-penetrative sexual offenses. Separate from rape per SESNSP.",              counts: [28,26,38,47,37,33,36,33,29,24,27,31] },
+  { category: "Sexual Harassment",      categoryEs: "Acoso/Hostigamiento Sexual", categoryGroup: "Sexual Crime",        categoryRaw: "Acoso/Hostigamiento sexual",           notes: "Includes acoso (unwanted attention) and hostigamiento (power-based).",         counts: [ 1, 4, 3, 3, 4, 1, 0, 0, 1, 0, 5, 0] },
+  { category: "Street Robbery",         categoryEs: "Robo a Transeúnte",         categoryGroup: "Property Crime",       categoryRaw: "Robo a transeúnte en vía pública",    notes: "Muggings in public spaces. Includes violent and non-violent.",                 counts: [ 9,12, 7,11,10,13,10,12, 3, 8, 8,16] },
+  { category: "Threats",                categoryEs: "Amenazas",                  categoryGroup: "Domestic & Social",    categoryRaw: "Amenazas",                            notes: "Criminal threats, including digital and telephone threats when reported.",      counts: [34,37,54,69,48,45,47,42,36,32,49,38] },
+  { category: "Vehicle Theft",          categoryEs: "Robo de Vehículo",          categoryGroup: "Property Crime",       categoryRaw: "Robo de vehículo automotor",          notes: "Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",        counts: [47,34,33,42,34,39,36,28,26,34,24,40] },
+];
+
+const SESNSP_2025_POPULATION = 302000;
+
+// ── Idempotent repair: replace formula 2025 rows with official SESNSP data ───
+// Trigger: any year=2025 row still has source='SESNSP' (formula-generated).
+// Safe guards:
+//   • Checks source='SESNSP (official)' before doing anything — skips if already applied.
+//   • Only deletes year=2025 rows; 2022-2024 and 2026 rows are never touched.
+//   • Inserts exactly 240 rows (20 categories × 12 months).
+//   • change_vs_prior_year is null for official rows (avoids mixing formula/real values).
+export async function repairSafetyOfficial2025(): Promise<void> {
+  const [{ value: officialCount }] = await db
+    .select({ value: count() })
+    .from(safetyMetricsTable)
+    .where(
+      and(
+        eq(safetyMetricsTable.year, 2025),
+        eq(safetyMetricsTable.source, "SESNSP (official)"),
+      ),
+    );
+
+  if (officialCount > 0) {
+    logger.info({ officialCount }, "Official SESNSP 2025 data already present — skipping repair");
+    return;
+  }
+
+  logger.info("Replacing formula-generated 2025 safety data with official SESNSP figures");
+
+  await db.execute(sql`DELETE FROM safety_metrics WHERE year = 2025`);
+
+  const rows: (typeof safetyMetricsTable.$inferInsert)[] = [];
+  for (const cat of SESNSP_2025_PV) {
+    for (let m = 0; m < 12; m++) {
+      const c = cat.counts[m];
+      rows.push({
+        year:               2025,
+        month:              m + 1,
+        monthName:          MONTHS[m],
+        category:           cat.category,
+        categoryEs:         cat.categoryEs,
+        categoryGroup:      cat.categoryGroup,
+        categoryRaw:        cat.categoryRaw,
+        notes:              cat.notes,
+        incidentCount:      c,
+        incidentsPer100k:   String(((c / SESNSP_2025_POPULATION) * 100000).toFixed(2)),
+        changeVsPriorYear:  null,
+        source:             "SESNSP (official)",
+      });
+    }
+  }
+
+  const CHUNK = 200;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    await db.insert(safetyMetricsTable).values(rows.slice(i, i + CHUNK));
+  }
+  logger.info({ count: rows.length }, "Official SESNSP 2025 data inserted (20 categories × 12 months)");
+}
+
 // ── Real DATATUR/SECTUR monthly data for Puerto Vallarta ────────────────────
 // Source: SECTUR Agenda Estadística de la Actividad Turística, DATATUR Sistema Nacional.
 // Data reflect proper PV seasonality: strong cruise Oct–Apr, dead cruise Jun–Sep
