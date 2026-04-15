@@ -99,36 +99,6 @@ export default function Dashboard() {
 
   const selectedMonthName = MONTH_NAMES[month - 1];
 
-  // Peak season: Nov–Apr (months 11,12,1,2,3,4)
-  const isPeakSeason = [11, 12, 1, 2, 3, 4].includes(month);
-
-  // Market momentum: weighted composite of YoY changes from the API
-  // Only compute once data is loaded; fall back to null while loading
-  const momentum: "positive" | "mixed" | "pressure" | null = (() => {
-    if (!data) return null;
-    // hotel occupancy change is in percentage points; convert to % change for comparability
-    const occupancyPct = data.hotelOccupancyChange;
-    const arrivalsPct  = data.touristArrivalsChange;
-    const ratePct      = data.avgNightlyRateChange;
-    // Weighted score: demand signals carry more weight than rate
-    const score = (occupancyPct * 0.35) + (arrivalsPct * 0.45) + (ratePct * 0.20);
-    if (score >= 2)   return "positive";
-    if (score >= -5)  return "mixed";
-    return "pressure";
-  })();
-
-  const momentumLabel = {
-    positive: { en: "Market Momentum: Positive", es: "Impulso del Mercado: Positivo" },
-    mixed:    { en: "Market Momentum: Mixed",    es: "Impulso del Mercado: Mixto" },
-    pressure: { en: "Market Momentum: Slowing",  es: "Impulso del Mercado: A la Baja" },
-  };
-
-  const momentumStyle: Record<string, { bg: string; border: string; color: string }> = {
-    positive: { bg: "rgba(0,209,255,0.08)",   border: "rgba(0,209,255,0.2)",   color: "#00D1FF" },
-    mixed:    { bg: "rgba(245,158,11,0.10)",  border: "rgba(245,158,11,0.25)", color: "#F59E0B" },
-    pressure: { bg: "rgba(248,113,113,0.10)", border: "rgba(248,113,113,0.25)",color: "#F87171" },
-  };
-
   return (
     <PageWrapper>
       {/* ── Pricing Tool CTA — always visible at top ─────────────────── */}
@@ -264,29 +234,26 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 flex-wrap">
             <span
               className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest"
-              style={isPeakSeason
-                ? { background: "rgba(0,194,168,0.12)", border: "1px solid rgba(0,194,168,0.3)", color: "#00C2A8" }
-                : { background: "rgba(148,163,184,0.10)", border: "1px solid rgba(148,163,184,0.25)", color: "#94A3B8" }
-              }
+              style={{
+                background: "rgba(0,194,168,0.12)",
+                border: "1px solid rgba(0,194,168,0.3)",
+                color: "#00C2A8",
+              }}
             >
               <Zap className="w-3 h-3 fill-current" />
-              {isPeakSeason
-                ? t("Peak Season Active", "Temporada Alta Activa")
-                : t("Shoulder Season", "Temporada Baja")}
+              {t("Peak Season Active", "Temporada Alta Activa")}
             </span>
-            {momentum && (() => {
-              const style = momentumStyle[momentum];
-              const label = momentumLabel[momentum];
-              return (
-                <span
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-                  style={{ background: style.bg, border: `1px solid ${style.border}`, color: style.color }}
-                >
-                  <TrendingUp className="w-3 h-3" />
-                  {t(label.en, label.es)}
-                </span>
-              );
-            })()}
+            <span
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+              style={{
+                background: "rgba(0,209,255,0.08)",
+                border: "1px solid rgba(0,209,255,0.2)",
+                color: "#00D1FF",
+              }}
+            >
+              <TrendingUp className="w-3 h-3" />
+              {t("Market Momentum: Positive", "Impulso del Mercado: Positivo")}
+            </span>
           </div>
 
           {/* Page title + subtitle */}
@@ -295,12 +262,12 @@ export default function Dashboard() {
               className="font-bold tracking-tight"
               style={{ fontSize: "clamp(2rem, 4vw, 2.75rem)", color: "#F5F7FA", lineHeight: 1.1 }}
             >
-              {t("PV Market Vitals", "Indicadores del Mercado PV")}
+              {t("Platform Overview", "Resumen de la Plataforma")}
             </h1>
             <p style={{ color: "#9AA5B1", fontSize: "15px", maxWidth: "52ch", marginTop: "8px" }}>
               {t(
-                "Live tourism and rental data for Puerto Vallarta, updated monthly.",
-                "Datos de turismo y renta en Puerto Vallarta, actualizados mensualmente."
+                "Key performance indicators for Puerto Vallarta real estate and tourism.",
+                "Indicadores clave para bienes raíces y turismo en Puerto Vallarta."
               )}
             </p>
           </div>
@@ -400,19 +367,8 @@ export default function Dashboard() {
         </div>
       ) : data ? (
         <div className="space-y-8">
-          {/* KPI Cards — order: demand → rates → supply → risk → context */}
+          {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <StatCard
-              titleEn="Airport Passengers"
-              titleEs="Pasajeros Aeropuerto"
-              value={formatNumber(data.touristArrivals)}
-              change={data.touristArrivalsChange}
-              footnoteEn="PVR · GAP official data"
-              footnoteEs="PVR · datos oficiales GAP"
-              icon={<Plane className="text-blue-500" />}
-              trend="up_good"
-              href="/tourism"
-            />
             <StatCard
               titleEn="Hotel Occupancy"
               titleEs="Ocupación Hotelera"
@@ -441,6 +397,23 @@ export default function Dashboard() {
               href="/rental-market"
             />
             <StatCard
+              titleEn="Tourist Arrivals"
+              titleEs="Llegada de Turistas"
+              value={formatNumber(data.touristArrivals)}
+              change={data.touristArrivalsChange}
+              icon={<Plane className="text-blue-500" />}
+              trend="up_good"
+              href="/tourism"
+            />
+            <StatCard
+              titleEn="Avg Temperature"
+              titleEs="Temperatura Promedio"
+              value={fmtTemp(data.avgTemperatureC, tempUnit)}
+              icon={<ThermometerSun className="text-amber-500" />}
+              trend="neutral"
+              href="/weather"
+            />
+            <StatCard
               titleEn="Crime Index"
               titleEs="Índice de Criminalidad"
               value={`${data.crimeIndex.toFixed(1)} / 100`}
@@ -450,14 +423,6 @@ export default function Dashboard() {
               icon={<ShieldAlert className="text-rose-500" />}
               trend="down_good"
               href="/safety"
-            />
-            <StatCard
-              titleEn="Avg Temperature"
-              titleEs="Temperatura Promedio"
-              value={fmtTemp(data.avgTemperatureC, tempUnit)}
-              icon={<ThermometerSun className="text-amber-500" />}
-              trend="neutral"
-              href="/weather"
             />
           </div>
 

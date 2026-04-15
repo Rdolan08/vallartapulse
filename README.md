@@ -24,12 +24,12 @@ VallartaPulse aggregates data from multiple sources to give rental owners a clea
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 19, Vite, TypeScript, Tailwind CSS, shadcn/ui, Wouter, Framer Motion |
+| Frontend | React 18, Vite, TypeScript, Tailwind CSS, shadcn/ui, Wouter, Framer Motion |
 | Backend | Node.js, Express, TypeScript, Pino logging |
 | Database | PostgreSQL (Drizzle ORM) |
 | Monorepo | pnpm workspaces |
 | Email | Nodemailer (Gmail SMTP) |
-| Deployment | Any Node.js host (Replit, Render, Railway, Fly.io, VPS, etc.) |
+| Deployment | Replit |
 
 ---
 
@@ -94,34 +94,14 @@ Neighborhoods covered: Zona Romántica, Centro, Versalles, 5 de Diciembre, Marin
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
-| `PORT` | No | `3001` (API) / `5173` (frontend) | Server port |
-| `BASE_PATH` | No | `/` | Frontend Vite base path — set when the app is mounted at a sub-path |
-| `VITE_API_BASE_URL` | No | same-origin | Override API origin for cross-domain deployments (e.g. `https://api.example.com`) |
-| `CONTACT_FROM_EMAIL` | No | — | Gmail address used to send contact form submissions |
-| `CONTACT_TO_EMAIL` | No | — | Destination email for contact form submissions |
-| `GMAIL_CONTACT_FORM_PASSWORD` | No | — | Gmail App Password for the sending account |
-
-### Local development
-
-Copy the example env file and fill in `DATABASE_URL`:
-
-```sh
-cp .env.example .env
-# edit .env with your DATABASE_URL
-pnpm install
-pnpm --filter @workspace/api-server run dev   # API on :3001
-pnpm --filter @workspace/pv-datastore run dev  # Frontend on :5173
-```
-
-### Production build
-
-```sh
-PORT=8080 BASE_PATH="/" pnpm --filter @workspace/api-server run build
-PORT=8080 BASE_PATH="/" pnpm --filter @workspace/pv-datastore run build
-```
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `PORT` | Server port (set by Replit) |
+| `BASE_PATH` | Frontend base path (set by Replit) |
+| `CONTACT_FROM_EMAIL` | Gmail address used to send contact form submissions |
+| `CONTACT_TO_EMAIL` | Destination email for contact form submissions |
+| `CONTACT_FROM_PASSWORD` | Gmail App Password (stored as secret) |
 
 ---
 

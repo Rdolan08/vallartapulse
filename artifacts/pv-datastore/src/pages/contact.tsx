@@ -1,6 +1,5 @@
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
-import { getApiBase } from "@/lib/api";
 import { useState } from "react";
 
 type Status = "idle" | "sending" | "success" | "error";
@@ -21,7 +20,8 @@ export default function Contact() {
     setErrorMsg("");
 
     try {
-      const res = await fetch(`${getApiBase()}/api/contact`, {
+      const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${apiBase}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
