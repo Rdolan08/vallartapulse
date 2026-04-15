@@ -41,6 +41,7 @@ It is designed for decision-making—pricing, investment, and portfolio strategy
 
 ## Architecture
 
+<pre>
 /
 ├── frontend/
 │   ├── pages/       # Dashboard, Pricing Tool, Tourism
@@ -50,8 +51,9 @@ It is designed for decision-making—pricing, investment, and portfolio strategy
 │   ├── routes/      # API endpoints
 │   └── services/    # Pricing engine, data processing
 └── data/
-├── schema/      # Drizzle models
-└── migrations/
+    ├── schema/      # Drizzle models
+    └── migrations/
+</pre>
 
 ## Pricing Engine
 
