@@ -1,22 +1,28 @@
-# VallartaPulse
+# VallartaPulse 
 
-**Business intelligence for Puerto Vallarta's short-term rental market.**
+**Real-time market intelligence for Puerto Vallarta’s short-term rental economy.**
 
-Live at [www.vallartapulse.com](https://www.vallartapulse.com) — a bilingual (EN/ES) data platform built for property managers and rental owners across greater Bahía de Banderas.
+Live at [www.vallartapulse.com](https://www.vallartapulse.com) — a bilingual (EN/ES) data platform built for property owners, investors, and managers across Bahía de Banderas.
 
 ---
 
-## What It Does
+## Overview
 
-VallartaPulse aggregates data from multiple sources to give rental owners a clear, unbiased view of the Puerto Vallarta market:
+VallartaPulse aggregates and normalizes data from multiple sources to deliver a clear, unbiased view of the Puerto Vallarta rental market.
 
-- **Rental Pricing Tool** — Comp-based nightly rate guidance powered by 192+ multi-source listings. A 7-layer pricing stack accounts for neighborhood, beach distance, view type, rooftop pool, seasonality, guest rating, and amenity quality.
-- **Tourism Metrics** — Hotel occupancy, tourist arrivals, and average nightly rates from DATATUR and SECTUR, updated monthly.
-- **Rental Market** — Active listing counts, nightly rate benchmarks, and occupancy trends by neighborhood.
-- **Economic Indicators** — Peso/dollar exchange rates, inflation, and regional economic context from Banxico.
-- **Safety & Crime** — Crime index trends and neighborhood comparisons for investor context.
-- **Weather & Climate** — Monthly temperature, rainfall, and humidity to understand demand seasonality.
-- **Data Sources** — Full transparency on every data source, refresh cadence, and validation method.
+It is designed for decision-making—pricing, investment, and portfolio strategy—not just passive analytics.
+
+---
+
+## Core Features
+
+- **Pricing Tool** — Comp-based nightly rate guidance powered by 190+ listings and a 7-layer pricing model accounting for location, seasonality, amenities, and quality
+- **Tourism Metrics** — Occupancy, arrivals, and ADR from DATATUR and SECTUR
+- **Rental Market** — Active listings, rate benchmarks, and occupancy trends by neighborhood
+- **Economic Indicators** — Exchange rates, inflation, and macro signals from Banxico
+- **Safety & Crime** — Index trends and neighborhood comparisons for investor context
+- **Weather & Climate** — Seasonal patterns influencing demand (temperature, rainfall, humidity)
+- **Data Transparency** — Clear sourcing, refresh cadence, and validation methodology
 
 ---
 
@@ -24,71 +30,56 @@ VallartaPulse aggregates data from multiple sources to give rental owners a clea
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, Vite, TypeScript, Tailwind CSS, shadcn/ui, Wouter, Framer Motion |
-| Backend | Node.js, Express, TypeScript, Pino logging |
+| Frontend | React, Vite, TypeScript, Tailwind CSS, shadcn/ui |
+| Backend | Node.js, Express |
 | Database | PostgreSQL (Drizzle ORM) |
 | Monorepo | pnpm workspaces |
-| Email | Nodemailer (Gmail SMTP) |
-| Deployment | Node.js host (any platform) |
+| Email | SMTP (Nodemailer) |
+| Deployment | Any Node.js-compatible hosting environment |
 
 ---
 
-## Project Structure
+## Architecture
 
-```
+<pre>
 /
-├── artifacts/
-│   ├── pv-datastore/        # React frontend (Vite)
-│   │   ├── src/
-│   │   │   ├── pages/       # Dashboard, Pricing Tool, Tourism, etc.
-│   │   │   ├── components/  # Layout, UI, charts
-│   │   │   └── contexts/    # Language (EN/ES)
-│   │   ├── about/           # Standalone About page entry point
-│   │   ├── contact/         # Standalone Contact page entry point
-│   │   ├── pricing-tool/    # Page-specific OG meta entry points
-│   │   ├── tourism/
-│   │   └── ...
-│   └── api-server/          # Express API
-│       └── src/
-│           ├── routes/      # API endpoints
-│           └── lib/
-│               ├── comps-engine-v3.ts    # 7-layer pricing engine
-│               ├── pv-seasonality.ts     # 12-month + 11-event multipliers
-│               └── building-lookup.ts    # 30+ known PV buildings
-└── packages/
-    └── db/                  # Drizzle schema + migrations
-```
-
----
+├── frontend/
+│   ├── pages/       # Dashboard, Pricing Tool, Tourism
+│   ├── components/  # UI and layout
+│   └── context/     # Language + state
+├── api/
+│   ├── routes/      # API endpoints
+│   └── services/    # Pricing engine, data processing
+└── data/
+    ├── schema/      # Drizzle models
+    └── migrations/
+</pre>
 
 ## Pricing Engine
 
-The `comps-engine-v3` applies seven sequential pricing layers:
+The pricing model applies seven sequential adjustments:
 
-1. **Comp median** — Filtered comparable listings from the database
-2. **Building premium** — Known building-level price factors
-3. **Beach tier** — Distance-to-beach pricing tiers (Beachfront → 6-10 blocks)
-4. **Seasonality** — 12 monthly multipliers (Sep 0.68× → Mar 1.20×) plus 11 event overlays
-5. **View premium** — Ocean +20%, Partial +10%, City +2%, Garden 0%, None −2%
-6. **Rooftop pool** — +12–15% over standard pool
-7. **Quality score** — Guest rating + amenity breadth composite
+1. Comparable listing median  
+2. Building-level premium  
+3. Beach proximity tier  
+4. Seasonality (monthly + event overlays)  
+5. View premium (ocean, partial, city, etc.)  
+6. Rooftop pool premium  
+7. Quality score (rating + amenities)  
 
-Neighborhoods covered: Zona Romántica, Centro, Versalles, 5 de Diciembre, Marina Vallarta, Conchas Chinas, Amapas, Fluvial, Emiliano Zapata, Pitillal, Nuevo Vallarta, Bucerias, La Cruz, Punta Mita, Sayulita, San Pancho, and more.
+Coverage includes all major Puerto Vallarta and Riviera Nayarit neighborhoods.
 
 ---
 
 ## Data Sources
 
-| Source | Data Type | Refresh |
+| Source | Data | Refresh |
 |---|---|---|
-| Airbnb | Listings, rates, reviews | Weekly |
-| VRBO | Listings, rates | Weekly |
-| Booking.com | Listings, rates | Weekly |
-| Vacation Vallarta | Local agency listings | Monthly |
-| DATATUR / SECTUR | Hotel occupancy, tourist arrivals | Monthly |
-| Banxico | Exchange rates, inflation | Monthly |
-| Local agencies | Off-platform comps | Ongoing |
-| Manual / CSV | Owner-submitted data | As provided |
+| Airbnb / VRBO / Booking | Listings, rates, reviews | Weekly |
+| Local agencies | Off-platform comps | Monthly |
+| DATATUR / SECTUR | Tourism metrics | Monthly |
+| Banxico | Economic indicators | Monthly |
+| Manual / CSV | Owner data | As provided |
 
 ---
 
@@ -96,23 +87,23 @@ Neighborhoods covered: Zona Romántica, Centro, Versalles, 5 de Diciembre, Marin
 
 | Variable | Description |
 |---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `PORT` | Server port (default: `8080` for API, `5173` for frontend) |
-| `BASE_PATH` | Frontend URL prefix (default: `/`) |
-| `CONTACT_FROM_EMAIL` | Gmail address used to send contact form submissions |
-| `CONTACT_TO_EMAIL` | Destination email for contact form submissions |
-| `CONTACT_FROM_PASSWORD` | Gmail App Password (stored as secret) |
+| `DATABASE_URL` | PostgreSQL connection |
+| `PORT` | Server port |
+| `BASE_PATH` | Frontend base path |
+| `CONTACT_FROM_EMAIL` | Sender email |
+| `CONTACT_TO_EMAIL` | Recipient email |
+| `CONTACT_FROM_PASSWORD` | SMTP credential (stored securely) |
 
 ---
 
 ## About
 
-VallartaPulse was founded by **Ryan Dolan** — a 20+ year veteran of AI, data, and technology, including leadership roles in the U.S. federal government. Ryan is an owner at [Ciye](https://www.vallartapulse.com/about), an upcoming development on Lázaro Cárdenas Park in Puerto Vallarta's Zona Romántica.
+VallartaPulse was created by **Ryan Dolan**, a 20+ year leader in AI, data systems, and large-scale technology programs.
 
-He built VallartaPulse from the perspective of someone actively investing in the area — not just analyzing it from the outside.
+The platform is built from direct ownership and investment experience in Puerto Vallarta—not theoretical analysis.
 
 ---
 
 ## Contact
 
-Questions, data requests, or feedback → [www.vallartapulse.com/contact](https://www.vallartapulse.com/contact)
+[www.vallartapulse.com/contact](https://www.vallartapulse.com/contact)
