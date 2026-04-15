@@ -1,5 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { customFetch } from "../custom-fetch";
+import type { AnomalyInfo } from "./useGetAirportEstimate";
+
+export type { AnomalyInfo };
 
 export interface AirportMetricRow {
   id: number;
@@ -13,6 +16,8 @@ export interface AirportMetricRow {
   daysInMonth: number | null;
   source: string;
   sourceUrl: string | null;
+  /** Anomaly metadata — null when no event is linked to this month. */
+  anomaly: AnomalyInfo | null;
 }
 
 export interface GetAirportMetricsParams {

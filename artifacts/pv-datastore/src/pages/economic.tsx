@@ -57,6 +57,12 @@ export default function Economic() {
     workers: r.value,
   }));
 
+  // ── Unemployment rate (ENOE) ──────────────────────────────────────────────
+  const unemployData = pick(rows, "unemployment_rate_pct").map((r) => ({
+    year: r.year,
+    rate: r.value,
+  })).sort((a, b) => a.year - b.year);
+
   // ── Sector breakdown ─────────────────────────────────────────────────────
   const sectorIndicators = [
     { key: "sector_pct_tourism_hospitality", label: t("Tourism & Hospitality", "Turismo y Hotelería") },
@@ -177,14 +183,14 @@ export default function Economic() {
                 up: false,
               },
             ].map(({ label, value, sub, color, up }) => (
-              <div key={label} className="glass-card flex flex-col gap-2" style={{ padding: "1.25rem" }}>
-                <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "#9AA5B1" }}>
+              <div key={label} className="glass-card flex flex-col items-center justify-center text-center gap-2" style={{ padding: "1.25rem" }}>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.1em] leading-tight" style={{ color: "#9AA5B1" }}>
                   {label}
                 </span>
-                <div className="text-2xl font-bold" style={{ color, letterSpacing: "-0.02em" }}>
+                <div className="text-3xl font-bold leading-none" style={{ color, letterSpacing: "-0.02em" }}>
                   {value}
                 </div>
-                <span className={`text-xs ${up === true ? "text-emerald-400" : up === false ? "text-amber-400" : "text-muted-foreground/70"}`}>
+                <span className={`text-[9px] ${up === true ? "text-emerald-400" : up === false ? "text-amber-400" : "text-muted-foreground/60"}`}>
                   {sub}
                 </span>
               </div>
@@ -312,6 +318,61 @@ export default function Economic() {
                   {t("2020 dip reflects COVID-19 pandemic job losses in PVR's tourism-heavy economy",
                      "La caída de 2020 refleja el impacto del COVID-19 en la economía turística de PVR")}
                 </p>
+
+              </CardContent>
+            </Card>
+
+            {/* Chart: Unemployment Rate */}
+            <Card className="glass-card border-0">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base font-semibold">
+                      {t("Unemployment Rate 2019–2024", "Tasa de Desocupación 2019–2024")}
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {t("Open unemployment rate · PV metro area · COVID-19 spike visible in 2020",
+                         "Tasa de desocupación abierta · ZM Puerto Vallarta · pico COVID-19 visible en 2020")}
+                    </p>
+                  </div>
+                  <a href="https://www.inegi.org.mx/programas/enoe/15ymas/" target="_blank" rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 shrink-0">
+                    INEGI ENOE <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={240}>
+                  <AreaChart data={unemployData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
+                    <defs>
+                      <linearGradient id="unempGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#F59E0B" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                    <XAxis dataKey="year" axisLine={false} tickLine={false}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+                    <YAxis axisLine={false} tickLine={false} domain={[0, 7]} width={40}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                      tickFormatter={(v) => `${v}%`} />
+                    <Tooltip
+                      {...CHART_TOOLTIP}
+                      cursor={TOOLTIP_CURSOR}
+                      labelFormatter={(year) => `${year}`}
+                      formatter={(v: number) => [
+                        `${v.toFixed(1)}%`,
+                        t("Unemployment rate", "Tasa de desocupación"),
+                      ]} />
+                    <Area type="monotone" dataKey="rate" stroke="#F59E0B" strokeWidth={2.5}
+                      fill="url(#unempGrad)" dot={{ r: 4, fill: "#F59E0B", strokeWidth: 0 }}
+                      activeDot={{ r: 6 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+                <p className="text-xs text-muted-foreground/60 text-center mt-1">
+                  {t("2020 spike driven by COVID-19 lockdowns; recovered to pre-pandemic levels by 2022",
+                     "El pico de 2020 fue por los cierres de COVID-19; recuperado a niveles pre-pandemia para 2022")}
+                </p>
               </CardContent>
             </Card>
 
@@ -360,6 +421,11 @@ export default function Economic() {
                 </ResponsiveContainer>
               </CardContent>
             </Card>
+
+          </div>
+
+          {/* ── Wages + Context tiles ───────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
             {/* Chart 4: Wage growth */}
             <Card className="glass-card border-0">
@@ -419,52 +485,52 @@ export default function Economic() {
               </CardContent>
             </Card>
 
-          </div>
+            {/* Context data tiles — 2×2, total area matches chart */}
+            <div className="grid grid-cols-2 grid-rows-2 gap-4 h-full">
+              {[
+                {
+                  label: t("Poverty Rate", "Tasa de Pobreza"),
+                  value: "33.4%",
+                  sub: "CONEVAL 2020 (est.)",
+                  href: "https://www.coneval.org.mx/Medicion/Paginas/Medici%C3%B3n.aspx",
+                  color: "#F59E0B",
+                },
+                {
+                  label: t("Extreme Poverty", "Pobreza Extrema"),
+                  value: "5.1%",
+                  sub: "CONEVAL 2020 (est.)",
+                  href: "https://www.coneval.org.mx/Medicion/Paginas/Medici%C3%B3n.aspx",
+                  color: "#EF4444",
+                },
+                {
+                  label: t("Economic Units (2019)", "Unidades Económicas (2019)"),
+                  value: "17,786",
+                  sub: t("INEGI Censo Económico 2019 (exact)", "INEGI Censo Económico 2019 (exacto)"),
+                  href: "https://www.inegi.org.mx/programas/ce/2019/",
+                  color: "#6366F1",
+                },
+                {
+                  label: t("Formal Workers (2019 Census)", "Trabajadores Formales (Censo 2019)"),
+                  value: "78,447",
+                  sub: t("dependent workers across all sectors", "trabajadores dependientes en todos los sectores"),
+                  href: "https://www.inegi.org.mx/programas/ce/2019/",
+                  color: "#3B82F6",
+                },
+              ].map(({ label, value, sub, href, color }) => (
+                <a key={label} href={href} target="_blank" rel="noopener noreferrer"
+                  className="glass-card flex flex-col items-center justify-center text-center gap-2 hover:border-primary/30 transition-colors no-underline"
+                  style={{ padding: "1.1rem" }}>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.1em] leading-tight" style={{ color: "#9AA5B1" }}>
+                    {label}
+                  </span>
+                  <div className="text-3xl font-bold leading-none" style={{ color }}>{value}</div>
+                  <span className="text-[9px] text-muted-foreground/60 flex items-center gap-1">
+                    {sub} <ExternalLink className="w-2 h-2 shrink-0" />
+                  </span>
+                </a>
+              ))}
+            </div>
 
-          {/* ── Context data cards ─────────────────────────────────────── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              {
-                label: t("Poverty Rate", "Tasa de Pobreza"),
-                value: "33.4%",
-                sub: "CONEVAL 2020 (est.)",
-                href: "https://www.coneval.org.mx/Medicion/Paginas/Medici%C3%B3n.aspx",
-                color: "#F59E0B",
-              },
-              {
-                label: t("Extreme Poverty", "Pobreza Extrema"),
-                value: "5.1%",
-                sub: "CONEVAL 2020 (est.)",
-                href: "https://www.coneval.org.mx/Medicion/Paginas/Medici%C3%B3n.aspx",
-                color: "#EF4444",
-              },
-              {
-                label: t("Economic Units (2019)", "Unidades Económicas (2019)"),
-                value: "17,786",
-                sub: t("INEGI Censo Económico 2019 (exact)", "INEGI Censo Económico 2019 (exacto)"),
-                href: "https://www.inegi.org.mx/programas/ce/2019/",
-                color: "#6366F1",
-              },
-              {
-                label: t("Formal Workers (2019 Census)", "Trabajadores Formales (Censo 2019)"),
-                value: "78,447",
-                sub: t("dependent workers across all sectors", "trabajadores dependientes en todos los sectores"),
-                href: "https://www.inegi.org.mx/programas/ce/2019/",
-                color: "#3B82F6",
-              },
-            ].map(({ label, value, sub, href, color }) => (
-              <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-                className="glass-card flex flex-col gap-1.5 hover:border-primary/30 transition-colors no-underline"
-                style={{ padding: "1.1rem" }}>
-                <span className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: "#9AA5B1" }}>
-                  {label}
-                </span>
-                <div className="text-xl font-bold" style={{ color }}>{value}</div>
-                <span className="text-xs text-muted-foreground/70 flex items-center gap-1">
-                  {sub} <ExternalLink className="w-2.5 h-2.5 shrink-0" />
-                </span>
-              </a>
-            ))}
           </div>
 
           {/* ── Data notes ──────────────────────────────────────────────── */}
