@@ -29,7 +29,7 @@ VallartaPulse aggregates data from multiple sources to give rental owners a clea
 | Database | PostgreSQL (Drizzle ORM) |
 | Monorepo | pnpm workspaces |
 | Email | Nodemailer (Gmail SMTP) |
-| Deployment | Replit |
+| Deployment | Node.js host (any platform) |
 
 ---
 
@@ -97,8 +97,8 @@ Neighborhoods covered: Zona Romántica, Centro, Versalles, 5 de Diciembre, Marin
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `PORT` | Server port (set by Replit) |
-| `BASE_PATH` | Frontend base path (set by Replit) |
+| `PORT` | Server port (default: `8080` for API, `5173` for frontend) |
+| `BASE_PATH` | Frontend URL prefix (default: `/`) |
 | `CONTACT_FROM_EMAIL` | Gmail address used to send contact form submissions |
 | `CONTACT_TO_EMAIL` | Destination email for contact form submissions |
 | `CONTACT_FROM_PASSWORD` | Gmail App Password (stored as secret) |
