@@ -1,4 +1,4 @@
-# VallartaPulse - > Data-driven pricing and market intelligence for Puerto Vallarta rentals.
+# VallartaPulse 
 
 **Real-time market intelligence for Puerto Vallarta’s short-term rental economy.**
 
