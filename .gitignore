@@ -49,9 +49,9 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# Replit-specific config files (not needed outside Replit)
-.replit
-.replitignore
-replit.nix
+# hosting env-specific config files (not needed outside hosting env)
+.hosting env
+.hosting envignore
+hosting env.nix
 .cache/
 .local/
