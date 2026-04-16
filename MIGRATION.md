@@ -74,20 +74,26 @@ No commits, no pushes, no production changes have been made.
 
 ## 3. CORS configuration the API will accept
 
-Set on the Railway service:
+Each comma-separated entry in `CORS_ORIGINS` is either an exact origin or a
+regex literal in `/…/flags` form. Set on the Railway service:
 
 ```
-CORS_ORIGINS=https://www.vallartapulse.com,https://vallartapulse.com,https://vallartapulse.vercel.app,http://localhost:5173,http://localhost:3000
+CORS_ORIGINS=https://www.vallartapulse.com,https://vallartapulse.com,https://api.vallartapulse.com,/^https:\/\/[a-z0-9-]+\.vercel\.app$/,http://localhost:5173,http://localhost:3000
 ```
 
 Notes:
-- `vallartapulse.vercel.app` covers the auto-generated production URL.
-- Vercel preview URLs (`*.vercel.app`) are not included — add specific
-  preview domains to the allowlist as needed, or extend the middleware to
-  accept a regex if you want all `*.vercel.app` origins.
+- The regex `/^https:\/\/[a-z0-9-]+\.vercel\.app$/` covers the production
+  Vercel URL **and** every preview deployment
+  (e.g. `vallartapulse-git-feature-x-acme.vercel.app`). Anchored at start
+  and end, alphanumeric + hyphen subdomain only — won't match
+  `evil.vercel.app.attacker.com`.
+- Invalid regex entries are logged and skipped (won't crash the server).
 - Same-origin and tooling requests (no `Origin` header) are always allowed.
 - When `CORS_ORIGINS` is unset the server is permissive — keep this for
   local dev, set the variable in production.
+- When passing the value via Railway's UI, paste it as-is (no shell
+  escaping needed). When using the Railway CLI, single-quote the value to
+  avoid your shell expanding the backslashes.
 
 ---
 
