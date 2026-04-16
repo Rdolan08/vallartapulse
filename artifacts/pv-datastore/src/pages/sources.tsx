@@ -10,9 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { RefreshCw, ExternalLink, Database, Zap, Clock, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { format, formatDistanceToNow, isAfter, subHours, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { getApiBase } from "@/lib/api";
-
-const BASE_URL = getApiBase();
+import { apiUrl } from "@/lib/api-base";
 
 function freshnessBadge(lastSyncedAt: string | null | undefined): "fresh" | "stale" | "never" {
   if (!lastSyncedAt) return "never";
@@ -54,7 +52,7 @@ export default function Sources() {
   const handleSyncAll = async () => {
     setSyncingAll(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/sources/sync-all`, { method: "POST" });
+      const res = await fetch(apiUrl("/api/sources/sync-all"), { method: "POST" });
       const json = await res.json();
       if (res.ok) {
         toast({
