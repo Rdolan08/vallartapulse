@@ -1,28 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/pv-datastore... build",
+  "installCommand": "corepack enable && corepack prepare pnpm@latest --activate && pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/pv-datastore... build",
   "outputDirectory": "artifacts/pv-datastore/dist/public",
-  "installCommand": "corepack enable && corepack prepare pnpm@latest --activate",
   "framework": null,
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "rewrites": [
-    { "source": "/tourism", "destination": "/tourism/index.html" },
-    { "source": "/rental-market", "destination": "/rental-market/index.html" },
-    { "source": "/pricing-tool", "destination": "/pricing-tool/index.html" },
-    { "source": "/economic", "destination": "/economic/index.html" },
-    { "source": "/safety", "destination": "/safety/index.html" },
-    { "source": "/weather", "destination": "/weather/index.html" },
-    { "source": "/sources", "destination": "/sources/index.html" },
-    { "source": "/about", "destination": "/about/index.html" },
-    { "source": "/contact", "destination": "/contact/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
-    }
-  ]
+  "cleanUrls": true
 }
