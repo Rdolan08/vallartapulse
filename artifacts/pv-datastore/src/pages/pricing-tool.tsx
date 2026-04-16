@@ -249,8 +249,10 @@ const DRIVER_LABELS: Record<string, { en: string; es: string }> = {
 };
 
 // ── API helpers ────────────────────────────────────────────────────────────────
+import { apiUrl } from "@/lib/api-base";
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(path, options);
+  const res = await fetch(apiUrl(path), options);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { message?: string }).message ?? `API error: HTTP ${res.status}`);
