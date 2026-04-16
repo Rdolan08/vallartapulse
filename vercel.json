@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/pv-datastore... build",
+  "installCommand": "corepack enable && corepack prepare pnpm@latest --activate && pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm --filter @workspace/pv-datastore... build",
   "outputDirectory": "artifacts/pv-datastore/dist/public",
-  "installCommand": "corepack enable && corepack prepare pnpm@latest --activate",
   "framework": null,
   "cleanUrls": true,
   "trailingSlash": false,
