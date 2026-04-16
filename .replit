@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-22"]
 
 [[artifacts]]
 id = "artifacts/api-server"
@@ -7,12 +7,9 @@ id = "artifacts/api-server"
 id = "artifacts/mockup-sandbox"
 
 [deployment]
-router = "application"
 deploymentTarget = "autoscale"
-
-[deployment.postBuild]
-args = ["pnpm", "store", "prune"]
-env = { "CI" = "true" }
+build = ["sh", "-c", "pnpm install --frozen-lockfile && pnpm build"]
+run = ["sh", "-c", "pnpm start"]
 
 [workflows]
 runButton = "Project"
