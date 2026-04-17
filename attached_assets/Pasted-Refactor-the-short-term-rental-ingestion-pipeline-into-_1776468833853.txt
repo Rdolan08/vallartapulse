@@ -1,0 +1,498 @@
+Refactor the short-term rental ingestion pipeline into a durable, repeatable, refreshable market-collection system for both Airbnb and VRBO, with special emphasis on Puerto Vallarta and with neighborhood coverage aligned to the VallartaPulse pricing tool.
+
+Primary goal:
+Stop relying on one-off scrapes that stall early and instead build a source-agnostic discovery + enrichment + refresh pipeline that continuously collects, stores, and updates listing-level market data for Airbnb and VRBO, especially for Puerto Vallarta.
+
+Core outcomes required:
+- materially improve Airbnb coverage beyond the current ceiling
+- increase VRBO discovery and ingestion coverage using the same durable framework
+- make the whole process resumable, repeatable, and refreshable
+- track listing history over time, especially nightly pricing, total stay pricing, fees, reviews, and availability-related signals
+- preserve enough history to power trend analysis, seasonality logic, and pricing intelligence later
+- prioritize Puerto Vallarta proper over the broader Riviera Nayarit region
+
+Market priority rules:
+1. Puerto Vallarta neighborhoods are the top priority and should receive the deepest and most frequent coverage.
+2. Riviera Nayarit locations should be supported too, but as a lower-priority secondary market unless explicitly requested.
+3. The discovery system should understand that VallartaPulse pricing-tool neighborhoods are product-facing groupings and should map raw source geography into those normalized buckets wherever possible.
+
+Implement the following:
+
+1. Replace the current “single search” approach with a source-agnostic tiled discovery system for both Airbnb and VRBO.
+
+Build discovery for both sources using the VallartaPulse neighborhood structure.
+
+Primary Puerto Vallarta pricing-tool neighborhood buckets:
+- Zona Romántica
+- Amapas / Conchas Chinas
+- Centro / Alta Vista
+- Hotel Zone / Malecón
+- 5 de Diciembre
+- Old Town
+- Versalles
+- Marina Vallarta
+- Mismaloya
+
+Secondary broader-region buckets to support, but at lower priority:
+- Nuevo Vallarta
+- Bucerías
+- La Cruz de Huanacaxtle
+- Punta Mita
+- El Anclote
+- Sayulita
+- San Pancho
+
+Also account for higher-level grouping:
+- Puerto Vallarta
+- Riviera Nayarit
+
+Important geographic behavior:
+- Puerto Vallarta proper should not get diluted by broad “Bay of Banderas” style searches that over-return Riviera Nayarit inventory.
+- Discovery should bias toward Puerto Vallarta seeds first, then expand outward to secondary Riviera Nayarit seeds afterward.
+- Coverage and scheduling should be weighted so Puerto Vallarta runs more often and more deeply than the secondary markets.
+
+For each neighborhood / area bucket, generate discovery permutations across:
+- source: airbnb, vrbo
+- guest counts: 1, 2, 4, 6
+- stay lengths: 3, 5, 7 nights
+- bedroom buckets where possible: studio/0, 1, 2, 3, 4+
+- check-in windows: next weekend, +14 days, +30 days, +60 days
+
+The exact search mechanics can differ by source, but the system must intentionally run many narrower search seeds instead of trying to pull the whole market from one giant search.
+
+2. Add neighborhood normalization and mapping logic aligned to the pricing tool.
+
+Create a normalized neighborhood mapping layer that can take raw source location hints and map them into VallartaPulse buckets.
+
+Examples:
+- map raw mentions of “Romantic Zone”, “Zona Romantica”, “Emiliano Zapata”, “Old Town”, and similar overlapping source labels into the appropriate normalized Puerto Vallarta bucket(s)
+- map raw references to Conchas Chinas and Amapas into “Amapas / Conchas Chinas”
+- map raw references to Centro, Downtown, Alta Vista, or related labels into “Centro / Alta Vista” where appropriate
+- map raw references to Marina Vallarta directly into that bucket
+- map raw references to Hotel Zone / Las Glorias / Malecón-adjacent labels into “Hotel Zone / Malecón” where appropriate
+
+Requirements:
+- preserve raw source neighborhood text
+- also store normalized VallartaPulse neighborhood bucket
+- support confidence levels for location mapping:
+  - exact
+  - high confidence
+  - inferred
+  - unknown
+- if a listing cannot be confidently mapped to a pricing-tool neighborhood, retain it but flag it for lower confidence
+
+3. Split the workflow into four explicit phases.
+
+Phase A: discovery
+- discover listing IDs / URLs and lightweight search-card metadata only
+- fields to capture if present:
+  - source
+  - external_listing_id
+  - canonical_url
+  - title
+  - nightly_price_displayed
+  - total_price_displayed
+  - rating_displayed
+  - review_count_displayed
+  - thumbnail_url
+  - raw location text
+  - normalized neighborhood bucket if inferable
+  - parent region bucket: Puerto Vallarta or Riviera Nayarit
+  - query seed parameters
+  - scraped_at
+- do not do deep extraction here unless necessary to identify the listing
+- stop each seed when marginal yield drops to near zero or configured limits are reached
+
+Phase B: enrichment
+- visit individual listing pages for deduped listings from discovery
+- extract deeper normalized fields such as:
+  - title
+  - full URL
+  - source
+  - bedrooms
+  - bathrooms
+  - guest capacity
+  - amenities
+  - property type
+  - building or condo name if inferable
+  - host / manager / agency if available
+  - rating
+  - review count
+  - latitude / longitude or map hints if available
+  - raw neighborhood / location hints
+  - normalized pricing-tool neighborhood bucket
+  - Puerto Vallarta vs Riviera Nayarit region bucket
+  - image count
+  - cleaning fee
+  - service fee
+  - taxes if visible
+  - minimum stay if visible
+  - cancellation hints if visible
+  - raw price text / fragments
+- store raw payload fragments where helpful for future parser repair
+
+Phase C: quote collection / pricing snapshots
+- for known listings, run recurring quote checks across selected dates and stay lengths
+- store date-specific pricing history instead of overwriting current values
+- capture pricing for at least these future windows where possible:
+  - next weekend
+  - +14 days
+  - +30 days
+  - +60 days
+- capture at least these stay lengths:
+  - 3 nights
+  - 5 nights
+  - 7 nights
+- where available, store:
+  - quote date collected
+  - check-in
+  - checkout
+  - stay_length_nights
+  - nightly price
+  - subtotal
+  - cleaning fee
+  - service fee
+  - taxes
+  - total stay price
+  - currency
+  - availability status if inferable
+- this is required for tracking seasonality, volatility, and booking-window pricing behavior over time
+
+Phase D: refresh
+- revisit previously known listings on a recurring schedule
+- update volatile fields without losing historical observations
+- refresh listing metadata separately from quote collection
+- discovery should focus on net-new inventory; refresh should focus on maintaining known inventory and building time series
+
+4. Add durable checkpointing and resume support for everything.
+
+Persist state after every batch / seed / listing batch. At minimum track:
+- source
+- parent region bucket
+- normalized neighborhood bucket
+- guest count
+- stay length
+- bedroom bucket
+- check-in window
+- job type: discovery, enrichment, pricing_snapshot, refresh
+- status: pending, in_progress, complete, failed
+- last cursor / page / scroll / checkpoint state
+- discovered count
+- new listing count
+- retries
+- last successful timestamp
+- failure reason
+
+If a job crashes, the system must resume from saved state instead of restarting the market from zero.
+
+5. Add global source-aware deduplication.
+
+Create a canonical listing identity strategy:
+- source + external_listing_id as preferred primary identity
+- fallback: normalized canonical URL
+- optional secondary fingerprint for edge cases:
+  - normalized title + normalized neighborhood bucket + bedroom count
+
+Do not create duplicates when a listing is rediscovered.
+Instead:
+- update first_seen_at / last_seen_at
+- increment seen_count
+- attach additional search-seed metadata
+- maintain source-specific identity cleanly
+
+6. Store history, not just current values.
+
+This is critical.
+
+Do not overwrite pricing and review values as if they are static.
+Create time-series tables / models for:
+- price quotes by collection date and stay date
+- rating / review snapshots
+- listing seen / not seen observations
+- optional availability indicators if inferable
+- neighborhood mapping changes if source location labels drift over time
+
+We need to be able to answer questions like:
+- how has this listing’s weekend pricing changed over the last 60 days
+- which Puerto Vallarta neighborhoods are raising rates fastest
+- how volatile are 1BR listings in Zona Romántica
+- how does Marina Vallarta compare with Centro / Alta Vista
+- when does pricing begin to spike before holidays or events
+
+7. Add recurring schedules so the pipeline is truly repeatable and refreshable.
+
+Support scheduled runs for:
+- Puerto Vallarta discovery sweep:
+  - highest priority
+  - more frequent and deeper than secondary regions
+- Riviera Nayarit discovery sweep:
+  - lower priority, lighter frequency unless explicitly requested
+- enrichment queue:
+  - ongoing, based on newly discovered or stale listings
+- pricing snapshot collection:
+  - frequent, ideally daily
+  - goal: collect date-based pricing history
+- listing refresh:
+  - periodic, every few days or configurable
+  - goal: refresh listing metadata, reviews, amenities, and source status
+
+Make all schedules configurable.
+The system should support manual run, scheduled run, resume-only run, source-specific run, and neighborhood-specific run.
+
+8. Add a hard runtime budget, not fragile one-shot behavior.
+
+Use configurable limits such as:
+- max runtime minutes
+- max discovery seeds per run
+- max enrichments per run
+- max quote checks per run
+- max retries per failed item
+
+When limits are reached:
+- save state cleanly
+- mark remaining work pending
+- resume on next run
+
+Do not stop because of arbitrary listing counts.
+
+9. Add yield-based stop conditions for discovery seeds.
+
+For each discovery seed:
+- if 2 consecutive pages / scrolls / result batches produce zero net-new listing IDs, mark the seed exhausted
+- make threshold configurable
+- track termination reason:
+  - exhausted
+  - timeout
+  - blocked
+  - parse_fail
+  - duplicate_only
+  - manual_cap
+
+This prevents endless recycling of the same inventory.
+
+10. Add source-agnostic queue tables / collections.
+
+Create durable backing tables / models similar to:
+
+discovery_jobs
+- id
+- source
+- market
+- parent_region_bucket
+- normalized_neighborhood_bucket
+- guest_count
+- stay_length
+- bedroom_bucket
+- checkin_window
+- status
+- attempts
+- discovered_count
+- new_count
+- started_at
+- completed_at
+- error_message
+- cursor_state_json
+
+listing_master
+- id
+- source
+- external_listing_id
+- canonical_url
+- normalized_identity_key
+- title
+- raw_location_text
+- parent_region_bucket
+- normalized_neighborhood_bucket
+- neighborhood_mapping_confidence
+- first_seen_at
+- last_seen_at
+- seen_count
+- active_status
+- first_area_bucket
+- last_area_bucket
+
+listing_search_observations
+- id
+- listing_master_id
+- observed_at
+- source
+- search_seed_json
+- displayed_nightly_price
+- displayed_total_price
+- displayed_rating
+- displayed_review_count
+- thumbnail_url
+- raw_location_text
+- parent_region_bucket
+- normalized_neighborhood_bucket
+
+listing_details
+- id
+- listing_master_id
+- enriched_at
+- parse_version
+- raw_payload_json
+- normalized_fields_json
+
+listing_price_quotes
+- id
+- listing_master_id
+- collected_at
+- checkin_date
+- checkout_date
+- stay_length_nights
+- nightly_price
+- subtotal
+- cleaning_fee
+- service_fee
+- taxes
+- total_price
+- currency
+- availability_status
+- raw_quote_json
+
+listing_review_snapshots
+- id
+- listing_master_id
+- collected_at
+- rating
+- review_count
+
+Use the project’s existing ORM and migration patterns.
+
+11. Build explicit source modules for Airbnb and VRBO using shared orchestration.
+
+Architect this so Airbnb and VRBO each get their own:
+- search discovery adapter
+- listing detail adapter
+- pricing quote adapter
+- identity normalization rules if needed
+
+But they should share:
+- queue engine
+- checkpoint manager
+- retry logic
+- scheduling
+- dedupe framework
+- metrics reporting
+- storage models
+- neighborhood normalization layer
+
+This must be easy to extend later to other sources.
+
+12. Add repeatable scripts and/or admin endpoints.
+
+Support at minimum:
+- full discovery sweep for all sources
+- source-specific discovery sweep
+- Puerto Vallarta-only discovery sweep
+- Riviera Nayarit-only discovery sweep
+- neighborhood-specific discovery sweep
+- resume incomplete jobs
+- enrich pending listings
+- collect pricing snapshots
+- refresh stale listings
+
+Examples are fine if they match the current stack:
+- pnpm tsx scripts/str-discovery.ts --source=airbnb --region=puerto-vallarta
+- pnpm tsx scripts/str-discovery.ts --source=vrbo --region=puerto-vallarta
+- pnpm tsx scripts/str-discovery.ts --source=all --region=puerto-vallarta --neighborhood="Zona Romántica"
+- pnpm tsx scripts/str-discovery.ts --source=all --region=riviera-nayarit
+- pnpm tsx scripts/str-pricing-snapshots.ts
+- pnpm tsx scripts/str-refresh.ts
+or equivalent internal admin endpoints
+
+13. Add strong diagnostics and coverage reporting.
+
+At the end of each run, output structured metrics:
+- jobs attempted / completed / failed by type
+- unique listings discovered this run by source
+- cumulative listings by source
+- cumulative active listings by source
+- unique listings by normalized neighborhood bucket
+- unique listings by parent region bucket
+- unique listings by bedroom bucket if inferable
+- quote snapshots collected this run
+- cumulative quote snapshots stored
+- listings refreshed this run
+- seeds that produced zero new listings
+- top failure reasons
+- termination reason per seed
+- stale listings remaining
+- pending jobs remaining
+
+Also add reporting that specifically highlights:
+- Puerto Vallarta coverage depth vs Riviera Nayarit coverage depth
+- listing counts by pricing-tool neighborhood
+- pricing snapshot density by pricing-tool neighborhood
+- neighborhoods with thin coverage that need more discovery attention
+
+This should make it obvious whether low coverage is caused by discovery design, parser drift, runtime ceilings, or source blocking.
+
+14. Track listing lifecycle state.
+
+For each listing, maintain state such as:
+- active
+- stale
+- unavailable
+- removed
+- failed_enrichment
+
+Do not immediately delete listings just because they disappear once.
+Instead, track:
+- last_seen_at
+- consecutive_missed_refreshes
+- inferred source status
+
+This matters for market history and inventory trend analysis.
+
+15. Preserve enough raw data for future parser repair.
+
+For both Airbnb and VRBO:
+- save raw fragments from search cards
+- save raw fragments from listing detail extraction
+- save raw fragments from quote extraction
+- version the parsers
+
+This allows future recovery when source markup changes.
+
+16. Align output directly to the pricing tool.
+
+The ingestion system should produce data that is directly usable by the VallartaPulse pricing tool and analytics pages.
+
+Requirements:
+- every listing should attempt to map to a pricing-tool neighborhood bucket
+- pricing summaries should be roll-up ready at the pricing-tool neighborhood level
+- preserve ability to compare Puerto Vallarta neighborhoods against each other
+- keep secondary Riviera Nayarit markets separate rather than blending them into Puerto Vallarta medians
+- if a listing is outside the core Puerto Vallarta neighborhoods, it should not contaminate Puerto Vallarta-specific pricing logic
+
+17. Add a README section documenting the new system.
+
+Document:
+- how discovery works
+- how Airbnb and VRBO differ
+- how Puerto Vallarta is prioritized
+- how neighborhood normalization works
+- how checkpointing works
+- how pricing snapshots work
+- how refresh works
+- how to resume failed runs
+- how to inspect coverage metrics
+- where historical price tables live
+
+18. Success criteria.
+
+The implementation is only complete if:
+- Airbnb discovery no longer depends on one large Puerto Vallarta search
+- VRBO is also using the same durable framework and gets materially broader coverage
+- Puerto Vallarta is the explicit top-priority market
+- neighborhood coverage reflects the pricing-tool structure
+- progress is saved continuously
+- discovery, enrichment, pricing snapshots, and refresh are separate concerns
+- the system can stop and resume cleanly without losing work
+- listing history is preserved over time rather than overwritten
+- date-based pricing can be collected and analyzed later
+- repeated runs improve market coverage and build a durable historical dataset
+- Puerto Vallarta medians and comp logic remain cleanly separated from secondary Riviera Nayarit markets
+- the pipeline is suitable for ongoing scheduled operation, not just one-off scraping
