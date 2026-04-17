@@ -15,11 +15,11 @@ router.get("/sources", async (req, res) => {
     const rows = await db.select().from(dataSourcesTable).orderBy(dataSourcesTable.id);
 
     const data = GetDataSourcesResponse.parse(
-      rows.map((r) => ({
-        ...r,
-        lastSyncedAt: r.lastSyncedAt ?? undefined,
-        createdAt: r.createdAt,
-      }))
+      rows.map((r) =>
+        Object.fromEntries(
+          Object.entries(r).map(([k, v]) => [k, v === null ? undefined : v])
+        )
+      )
     );
 
     res.json(data);
