@@ -17,7 +17,7 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_OG = resolve(__dirname, "../../artifacts/pv-datastore/public/og");
-const BASE_URL = (process.env.BASE_URL ?? "https://www.vallartapulse.com").replace(/\/$/, "");
+const BASE_URL = (process.env.BASE_URL ?? "https://www.vallartapulse.com").replace(/\/$/,'');
 
 mkdirSync(PUBLIC_OG, { recursive: true });
 
@@ -46,7 +46,7 @@ const ROUTES: Route[] = [
 type Result = { slug: string; ok: boolean; error?: string };
 
 async function screenshot(
-  page: Awaited<ReturnType<Awaited<ReturnType<typeof chromium.launch>>["newPage"]>>,
+  page: Awaited<ReturnType<Awaited<ReturnType<typeof chromium.launch>>["newPage"]>>,  
   route: Route
 ): Promise<Result> {
   const url = `${BASE_URL}${route.path}`;
@@ -56,7 +56,8 @@ async function screenshot(
   try {
     console.log(`  → ${url}`);
 
-    await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
+    const waitUntil = route.slug === "tourism" ? "domcontentloaded" : "networkidle";
+    await page.goto(url, { waitUntil, timeout: 30_000 });
 
     // Wait for fonts (document.fonts.ready)
     await page.evaluate(() => document.fonts.ready);
