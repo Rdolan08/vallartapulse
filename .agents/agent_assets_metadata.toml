@@ -23,3 +23,9 @@ id = "xQFqJqooTg0_Jsd3kwFdq"
 uri = "file://scripts/output/safety_crime_category_map.csv"
 type = "table"
 title = "safety_crime_category_map.csv — 20 category mappings with notes"
+
+[[outputs]]
+id = "3FidHFc9Gv51T4rqiBDVl"
+uri = "file://.local/QA_FINDINGS.md"
+type = "text"
+title = "VallartaPulse QA Findings — Vercel vs Production"
