@@ -70,6 +70,31 @@ export const rentalListingsTable = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+
+    // ── Phase 1: durable identity & lifecycle (all nullable, additive) ───────
+    /** First time this listing was observed by any seed. */
+    firstSeenAt: timestamp("first_seen_at"),
+    /** Most recent observation timestamp from any source-search seed. */
+    lastSeenAt: timestamp("last_seen_at"),
+    /** Cumulative count of search-card observations across all seeds. */
+    seenCount: integer("seen_count").default(0),
+    /** "active" | "stale" | "unavailable" | "removed" | "failed_enrichment" */
+    lifecycleStatus: text("lifecycle_status").default("active"),
+    /**
+     * Stable cross-source identity key. Preferred form: "<source>:<external_listing_id>".
+     * Fallback: hash of normalized canonical_url. Used by the queue to dedupe across seeds.
+     */
+    identityKey: text("identity_key"),
+    /** "puerto_vallarta" | "riviera_nayarit" — pricing-tool top-level region. */
+    parentRegionBucket: text("parent_region_bucket"),
+    /**
+     * Pricing-tool neighborhood bucket (see rental-normalize PRICING_TOOL_BUCKETS).
+     * Distinct from the existing neighborhood_normalized field, which holds the
+     * lower-level canonical name. This column is the product-facing roll-up.
+     */
+    normalizedNeighborhoodBucket: text("normalized_neighborhood_bucket"),
+    /** "exact" | "high" | "inferred" | "unknown" */
+    neighborhoodMappingConfidence: text("neighborhood_mapping_confidence"),
   },
   (table) => [
     index("idx_rl_neighborhood").on(table.neighborhoodNormalized),
@@ -78,6 +103,11 @@ export const rentalListingsTable = pgTable(
     index("idx_rl_price").on(table.nightlyPriceUsd),
     index("idx_rl_active").on(table.isActive),
     uniqueIndex("idx_rl_source_unique").on(table.sourcePlatform, table.sourceUrl),
+    index("idx_rl_lifecycle").on(table.lifecycleStatus),
+    index("idx_rl_identity_key").on(table.identityKey),
+    index("idx_rl_parent_region").on(table.parentRegionBucket),
+    index("idx_rl_pricing_bucket").on(table.normalizedNeighborhoodBucket),
+    index("idx_rl_last_seen").on(table.lastSeenAt),
   ]
 );
 
