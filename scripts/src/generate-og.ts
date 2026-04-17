@@ -56,7 +56,7 @@ async function screenshot(
   try {
     console.log(`  → ${url}`);
 
-    await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
 
     // Wait for fonts (document.fonts.ready)
     await page.evaluate(() => document.fonts.ready);
