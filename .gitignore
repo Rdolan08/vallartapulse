@@ -44,15 +44,8 @@ Thumbs.db
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 
-# Environment — never commit real secrets
-.env
-.env.local
-.env.*.local
-
-# hosting env-specific config files (not needed outside hosting env)
-.hosting env
-.hosting envignore
-hosting env.nix
+# Replit
 .cache/
 .local/
-
+.replit
+.replitignore
