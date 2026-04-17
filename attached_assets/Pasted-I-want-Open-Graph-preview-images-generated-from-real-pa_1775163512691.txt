@@ -38,7 +38,7 @@ Naming:
 Set this up to refresh automatically once per week.
 Preferred options:
 - GitHub Actions weekly cron
-- or hosting env scheduled job if that is more reliable in this environment
+- or Replit scheduled job if that is more reliable in this environment
 
 3. Page-specific OG tags
 Update each route/page so the og:image and twitter:image use the correct file for that page.
