@@ -6,6 +6,16 @@ Live at [www.vallartapulse.com](https://www.vallartapulse.com) — a bilingual (
 
 ---
 
+## Current deployment
+
+- **Frontend:** Vercel
+- **Backend API:** Railway
+- **Database:** Railway Postgres
+
+See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for details.
+
+---
+
 ## What It Does
 
 VallartaPulse aggregates data from multiple sources to give rental owners a clear, unbiased view of the Puerto Vallarta market:
