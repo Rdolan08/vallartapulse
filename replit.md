@@ -2,13 +2,6 @@
 
 Real-time insights for Puerto Vallarta's rental and tourism market. Bilingual (EN/ES) data platform for property managers and rental property owners.
 
-## Hosting
-
-- **Frontend** (`artifacts/pv-datastore`): hosted on **Vercel**, served at `https://www.vallartapulse.com` (apex 307-redirects to www). Build config: `vercel.json` at repo root. Required env: `VITE_API_URL=https://the-data-store-production.up.railway.app` (set in Vercel → Settings → Environment Variables for Production/Preview/Development; baked in at build time, so a redeploy is required after changes).
-- **API + Postgres** (`artifacts/api-server`): hosted on **Railway** at `https://the-data-store-production.up.railway.app`. Auto-deploys on push to `origin/main`. CORS is reflective (any origin).
-- **DNS** (GoDaddy): `A @ → 216.150.1.1`, `CNAME www → d52af9c37b1c47e5.vercel-dns-017.com.` Vercel manages SSL.
-- **Replit** is the dev environment only. The old Replit deployment (`vallarta-pulse.replit.app`) was stopped on 2026-04-16.
-
 ## Branding
 
 - **Name**: VallartaPulse
