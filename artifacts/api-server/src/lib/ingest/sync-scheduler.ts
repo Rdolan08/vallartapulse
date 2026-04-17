@@ -91,7 +91,14 @@ export function registerSource(
     credentialVars,
   };
 
-  const timer = setInterval(() => runSource(source), intervalMs);
+  // Node's setInterval uses a 32-bit signed integer for the delay (max
+  // 2_147_483_647 ms ≈ 24.85 days). Values above that emit a
+  // TimeoutOverflowWarning and silently fall back to 1 ms — which causes
+  // the handler to fire on every tick. Clamp to a safe ceiling (21 days)
+  // for placeholder long-interval sources like pvrpv.
+  const MAX_SAFE_INTERVAL_MS = 21 * 24 * 60 * 60 * 1000; // 1_814_400_000
+  const safeIntervalMs = Math.min(intervalMs, MAX_SAFE_INTERVAL_MS);
+  const timer = setInterval(() => runSource(source), safeIntervalMs);
 
   registry.set(source, { record, handler, timer });
 }
