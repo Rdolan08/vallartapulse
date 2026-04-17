@@ -1,0 +1,60 @@
+~/restore-work$ cd /home/runner/restore-work && \
+echo "=== FETCHING latest main ===" && \
+git fetch origin main && \
+echo "=== new main tip ===" && \
+git rev-parse origin/main && \
+echo "=== files changed on main since our merge ===" && \
+git log --name-only --format='%n--- %h %s ---' ac7b0dd..origin/main && \
+echo "=== MERGING (keep restore tree) ===" && \
+git -c user.email="restore@vallartapulse.local" -c user.name="Feature Restore" \
+  merge -s ours origin/main \
+  -m "Merge latest origin/main into restore/feature-work (-s ours)
+
+Absorb new main commits after ac7b0dd so restore branch is a true
+superset ancestor of main. Restore branch tree unchanged." && \
+echo "=== new restore tip ===" && git rev-parse HEAD && \
+echo "=== PUSHING ===" && \
+git push origin restore/feature-work && \
+echo "=== DONE ==="
+=== FETCHING latest main ===
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (3/3), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 7 (delta 1), reused 0 (delta 0), pack-reused 4 (from 1)
+Unpacking objects: 100% (7/7), 4.24 KiB | 2.12 MiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+ * branch            main       -> FETCH_HEAD
+   905da73..4a4d5c4  main       -> origin/main
+=== new main tip ===
+4a4d5c46958400942d972a170fcf1a2c798d4b4a
+=== files changed on main since our merge ===
+
+--- 4a4d5c4 Update install and build commands in vercel.json ---
+
+vercel.json
+
+--- 0f097e0 Chore/migration prep (#8) ---
+
+.env.example
+.node-version
+MIGRATION.md
+artifacts/api-server/src/app.ts
+artifacts/pv-datastore/src/lib/api-base.ts
+artifacts/pv-datastore/src/main.tsx
+artifacts/pv-datastore/src/pages/contact.tsx
+artifacts/pv-datastore/src/pages/pricing-tool.tsx
+artifacts/pv-datastore/src/pages/sources.tsx
+attached_assets/image_1776298595009.png
+railway.json
+vercel.json
+=== MERGING (keep restore tree) ===
+Merge made by the 'ours' strategy.
+=== new restore tip ===
+8d1c9f9ba8432eb5b33077f6db6870e7bb0175c7
+=== PUSHING ===
+Enumerating objects: 1, done.
+Counting objects: 100% (1/1), done.
+Writing objects: 100% (1/1), 321 bytes | 321.00 KiB/s, done.
+Total 1 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To https://github.com/Rdolan08/vallartapulse
+   66ba14d..8d1c

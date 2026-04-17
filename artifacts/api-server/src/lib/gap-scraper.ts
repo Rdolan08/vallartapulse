@@ -425,7 +425,7 @@ async function upsertAirportMonth(data: PVRMonthData): Promise<void> {
     internationalPassengers: data.international ?? undefined,
     avgDailyPassengers:      String(avgDaily),
     daysInMonth:             days,
-    source:                  data.sourceLabel ?? "GAP – GlobeNewswire press release (real)",
+    source:                  data.sourceLabel ?? "GAP · PVR monthly traffic",
     sourceUrl:               data.sourceUrl   ?? "https://www.globenewswire.com",
   };
 

@@ -1046,13 +1046,13 @@ export async function repairAirportData(): Promise<void> {
     // Jan 2026 — GAP press release 2026-02-05, PVR: -2.2% vs 713,300 (2025)
     {
       year: 2026, month: 1, totalPassengers: 731_700,
-      source: "GAP – GlobeNewswire press release (real)",
+      source: "GAP · PVR monthly traffic",
       sourceUrl: "https://www.globenewswire.com/news-release/2026/02/05/3233515/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-January-2026-of-2-2-Compared-to-2025.html",
     },
     // Feb 2026 — GAP press release 2026-03-06, PVR: -5.5% vs 649,900 (2025)
     {
       year: 2026, month: 2, totalPassengers: 615_400,
-      source: "GAP – GlobeNewswire press release (real)",
+      source: "GAP · PVR monthly traffic",
       sourceUrl: "https://www.globenewswire.com/news-release/2026/03/06/3251336/0/en/Grupo-Aeroportuario-del-Pacifico-Reports-a-Passenger-Traffic-Decrease-in-February-2026-of-5-5-Compared-to-2025.html",
     },
     // Mar 2026 — GAP press release 2026-04-07 (PDF), PVR: -24.4% vs 762,800 (2025)

@@ -163,7 +163,7 @@ export default function Tourism() {
               <a href="https://www.globenewswire.com/search/organization/Grupo%20Aeroportuario%20del%20Pac%C3%ADfico"
                  target="_blank" rel="noopener noreferrer"
                  className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
-                GAP / GlobeNewswire <ExternalLink className="w-3 h-3" />
+                GAP <ExternalLink className="w-3 h-3" />
               </a>
             </div>
           </CardHeader>
