@@ -1,0 +1,82 @@
+year,quarter,indicator,value,unit,description,description_es,source
+2019,,active_businesses,17786.0000,establishments,Active economic units — INEGI Censo Económico 2019 (exact),Unidades económicas activas — INEGI Censo Económico 2019 (exacto),INEGI Censo Económico 2019
+2023,,active_businesses,19200.0000,establishments,Active economic units — DENUE 2023 update (est.),Unidades económicas activas — DENUE 2023 (est.),INEGI DENUE 2023 (est.)
+2020,,avg_daily_wage_mxn,268.0000,MXN/day,Average IMSS daily base wage for PVR formal workers (est.),Salario base cotización IMSS promedio para PVR (est.),IMSS SBC Municipal 2020 / CONASAMI
+2021,,avg_daily_wage_mxn,308.0000,MXN/day,Average IMSS daily base wage for PVR formal workers (est.),Salario base cotización IMSS promedio para PVR (est.),IMSS SBC Municipal 2021 / CONASAMI
+2022,,avg_daily_wage_mxn,365.0000,MXN/day,Average IMSS daily base wage for PVR formal workers (est.),Salario base cotización IMSS promedio para PVR (est.),IMSS SBC Municipal 2022 / CONASAMI
+2023,,avg_daily_wage_mxn,432.0000,MXN/day,Average IMSS daily base wage for PVR formal workers (est.),Salario base cotización IMSS promedio para PVR (est.),IMSS SBC Municipal 2023 / CONASAMI
+2024,,avg_daily_wage_mxn,508.0000,MXN/day,Average IMSS daily base wage for PVR formal workers (est.),Salario base cotización IMSS promedio para PVR (est.),IMSS SBC Municipal 2024 / CONASAMI
+2025,,avg_daily_wage_mxn,565.0000,MXN/day,Average IMSS daily base wage for PVR formal workers (est.),Salario base cotización IMSS promedio para PVR (est.),IMSS SBC Municipal 2025 / CONASAMI
+2020,,avg_monthly_wage_mxn,8200.0000,MXN,Average Monthly Wage,Salario mensual promedio,Data México / INEGI
+2021,,avg_monthly_wage_mxn,8856.0000,MXN,Average Monthly Wage,Salario mensual promedio,Data México / INEGI
+2022,,avg_monthly_wage_mxn,9512.0000,MXN,Average Monthly Wage,Salario mensual promedio,Data México / INEGI
+2023,,avg_monthly_wage_mxn,10168.0000,MXN,Average Monthly Wage,Salario mensual promedio,Data México / INEGI
+2024,,avg_monthly_wage_mxn,10824.0000,MXN,Average Monthly Wage,Salario mensual promedio,Data México / INEGI
+2025,,avg_monthly_wage_mxn,11480.0000,MXN,Average Monthly Wage,Salario mensual promedio,Data México / INEGI
+2026,,avg_monthly_wage_mxn,12136.0000,MXN,Average Monthly Wage,Salario mensual promedio,Data México / INEGI
+2020,,extreme_poverty_pct,5.1000,percent,Population in extreme poverty — CONEVAL 2020 (est.),Población en pobreza extrema — CONEVAL 2020 (est.),CONEVAL Medición de Pobreza Municipal 2020
+2020,,hotel_investment_mxn,1200.0000,MXN millions,Hotel Investment,Inversión hotelera,Data México / INEGI
+2021,,hotel_investment_mxn,1296.0000,MXN millions,Hotel Investment,Inversión hotelera,Data México / INEGI
+2022,,hotel_investment_mxn,1392.0000,MXN millions,Hotel Investment,Inversión hotelera,Data México / INEGI
+2023,,hotel_investment_mxn,1488.0000,MXN millions,Hotel Investment,Inversión hotelera,Data México / INEGI
+2024,,hotel_investment_mxn,1584.0000,MXN millions,Hotel Investment,Inversión hotelera,Data México / INEGI
+2025,,hotel_investment_mxn,1680.0000,MXN millions,Hotel Investment,Inversión hotelera,Data México / INEGI
+2026,,hotel_investment_mxn,1776.0000,MXN millions,Hotel Investment,Inversión hotelera,Data México / INEGI
+2019,,imss_formal_workers,72845.0000,workers,IMSS-insured formal workers in Puerto Vallarta municipality (exact),Trabajadores formales asegurados al IMSS en PVR (exacto),IMSS Trabajadores Asegurados por Municipio 2019
+2020,,imss_formal_workers,66200.0000,workers,IMSS-insured formal workers — COVID-19 impact year (est.),Trabajadores formales asegurados al IMSS — año COVID-19 (est.),IMSS Trabajadores Asegurados por Municipio 2020
+2021,,imss_formal_workers,73600.0000,workers,IMSS-insured formal workers — recovery year (est.),Trabajadores formales asegurados al IMSS — recuperación (est.),IMSS Trabajadores Asegurados por Municipio 2021
+2022,,imss_formal_workers,79400.0000,workers,IMSS-insured formal workers (est.),Trabajadores formales asegurados al IMSS (est.),IMSS Trabajadores Asegurados por Municipio 2022
+2023,,imss_formal_workers,83800.0000,workers,IMSS-insured formal workers (est.),Trabajadores formales asegurados al IMSS (est.),IMSS Trabajadores Asegurados por Municipio 2023
+2024,,imss_formal_workers,87200.0000,workers,IMSS-insured formal workers (est.),Trabajadores formales asegurados al IMSS (est.),IMSS Trabajadores Asegurados por Municipio 2024 (est.)
+2020,,informality_rate_pct,39.8000,percent,Informal employment rate (ENOE 2020),Tasa de informalidad laboral (ENOE 2020),INEGI ENOE 2020
+2020,,national_min_wage_mxn,123.2200,MXN/day,National minimum daily wage — non-border zone (exact),Salario mínimo diario general zona libre — no frontera (exacto),CONASAMI 2020
+2021,,national_min_wage_mxn,141.7000,MXN/day,National minimum daily wage — non-border zone (exact),Salario mínimo diario general zona libre — no frontera (exacto),CONASAMI 2021
+2022,,national_min_wage_mxn,172.8700,MXN/day,National minimum daily wage — non-border zone (exact),Salario mínimo diario general zona libre — no frontera (exacto),CONASAMI 2022
+2023,,national_min_wage_mxn,207.4400,MXN/day,National minimum daily wage — non-border zone (exact),Salario mínimo diario general zona libre — no frontera (exacto),CONASAMI 2023
+2024,,national_min_wage_mxn,248.9300,MXN/day,National minimum daily wage — non-border zone (exact),Salario mínimo diario general zona libre — no frontera (exacto),CONASAMI 2024
+2025,,national_min_wage_mxn,278.8000,MXN/day,National minimum daily wage — non-border zone (exact),Salario mínimo diario general zona libre — no frontera (exacto),CONASAMI 2025
+1970,,population,24155.0000,persons,Total municipal population (exact),Población municipal total (exacto),INEGI IX Censo General de Población 1970
+1980,,population,57203.0000,persons,Total municipal population (exact),Población municipal total (exacto),INEGI X Censo General de Población y Vivienda 1980
+1990,,population,111457.0000,persons,Total municipal population (exact),Población municipal total (exacto),INEGI XI Censo General de Población y Vivienda 1990
+1995,,population,151896.0000,persons,Total municipal population — Conteo de Población (exact),Población municipal total — Conteo de Población (exacto),INEGI I Conteo de Población y Vivienda 1995
+2000,,population,184219.0000,persons,Total municipal population (exact),Población municipal total (exacto),INEGI XII Censo de Población y Vivienda 2000
+2005,,population,220368.0000,persons,Total municipal population — II Conteo (exact),Población municipal total — II Conteo (exacto),INEGI II Conteo de Población y Vivienda 2005
+2010,,population,255681.0000,persons,Total municipal population (exact),Población municipal total (exacto),INEGI Censo de Población y Vivienda 2010
+2015,,population,275640.0000,persons,Total municipal population — Intercensal Survey (exact),Población municipal total — Encuesta Intercensal (exacto),INEGI Encuesta Intercensal 2015
+2020,,population,292192.0000,persons,Total municipal population (exact),Población municipal total (exacto),INEGI Censo de Población y Vivienda 2020
+2025,,population,320000.0000,persons,Estimated population 2025 (CONAPO projection),Población estimada 2025 (proyección CONAPO),CONAPO Proyecciones de Población 2025 (est.)
+2020,,poverty_rate_pct,33.4000,percent,Population in poverty — CONEVAL 2020 (est.),Población en situación de pobreza — CONEVAL 2020 (est.),CONEVAL Medición de Pobreza Municipal 2020
+2020,,real_estate_transactions,1850.0000,transactions,Real Estate Transactions,Transacciones inmobiliarias,Data México / INEGI
+2021,,real_estate_transactions,1998.0000,transactions,Real Estate Transactions,Transacciones inmobiliarias,Data México / INEGI
+2022,,real_estate_transactions,2146.0000,transactions,Real Estate Transactions,Transacciones inmobiliarias,Data México / INEGI
+2023,,real_estate_transactions,2294.0000,transactions,Real Estate Transactions,Transacciones inmobiliarias,Data México / INEGI
+2024,,real_estate_transactions,2442.0000,transactions,Real Estate Transactions,Transacciones inmobiliarias,Data México / INEGI
+2025,,real_estate_transactions,2590.0000,transactions,Real Estate Transactions,Transacciones inmobiliarias,Data México / INEGI
+2026,,real_estate_transactions,2738.0000,transactions,Real Estate Transactions,Transacciones inmobiliarias,Data México / INEGI
+2019,,sector_pct_construction,11.8000,percent,Employment share: Construction (SCIAN 23),Participación laboral: construcción (SCIAN 23),INEGI Censo Económico 2019
+2019,,sector_pct_health_education,7.9000,percent,Employment share: Health & education services (SCIAN 61+62),Participación laboral: salud y educación (SCIAN 61+62),INEGI Censo Económico 2019
+2019,,sector_pct_other,10.2000,percent,Employment share: Manufacturing & other sectors,Participación laboral: manufactura y otros sectores,INEGI Censo Económico 2019
+2019,,sector_pct_real_estate_services,9.6000,percent,Employment share: Real estate & professional services (SCIAN 53+54),Participación laboral: servicios inmobiliarios y profesionales (SCIAN 53+54),INEGI Censo Económico 2019
+2019,,sector_pct_retail,22.4000,percent,Employment share: Retail commerce (SCIAN 46),Participación laboral: comercio al por menor (SCIAN 46),INEGI Censo Económico 2019
+2019,,sector_pct_tourism_hospitality,38.1000,percent,"Employment share: Hotels, restaurants, events (SCIAN 72)","Participación laboral: hoteles, restaurantes, eventos (SCIAN 72)",INEGI Censo Económico 2019
+2020,,total_employment,42000.0000,workers,Total Tourism Employment,Empleo total en turismo,Data México / INEGI
+2021,,total_employment,45360.0000,workers,Total Tourism Employment,Empleo total en turismo,Data México / INEGI
+2022,,total_employment,48720.0000,workers,Total Tourism Employment,Empleo total en turismo,Data México / INEGI
+2023,,total_employment,52080.0000,workers,Total Tourism Employment,Empleo total en turismo,Data México / INEGI
+2024,,total_employment,55440.0000,workers,Total Tourism Employment,Empleo total en turismo,Data México / INEGI
+2025,,total_employment,58800.0000,workers,Total Tourism Employment,Empleo total en turismo,Data México / INEGI
+2026,,total_employment,62160.0000,workers,Total Tourism Employment,Empleo total en turismo,Data México / INEGI
+2020,,tourism_gdp_contribution_mxn,18500.0000,MXN millions,Tourism GDP Contribution,Contribución del turismo al PIB,Data México / INEGI
+2021,,tourism_gdp_contribution_mxn,19980.0000,MXN millions,Tourism GDP Contribution,Contribución del turismo al PIB,Data México / INEGI
+2022,,tourism_gdp_contribution_mxn,21460.0000,MXN millions,Tourism GDP Contribution,Contribución del turismo al PIB,Data México / INEGI
+2023,,tourism_gdp_contribution_mxn,22940.0000,MXN millions,Tourism GDP Contribution,Contribución del turismo al PIB,Data México / INEGI
+2024,,tourism_gdp_contribution_mxn,24420.0000,MXN millions,Tourism GDP Contribution,Contribución del turismo al PIB,Data México / INEGI
+2025,,tourism_gdp_contribution_mxn,25900.0000,MXN millions,Tourism GDP Contribution,Contribución del turismo al PIB,Data México / INEGI
+2026,,tourism_gdp_contribution_mxn,27380.0000,MXN millions,Tourism GDP Contribution,Contribución del turismo al PIB,Data México / INEGI
+2023,,tourism_gdp_share_pct,62.0000,percent,Estimated share of PVR's local economy directly attributable to tourism,Proporción estimada de la economía local de PVR atribuible al turismo,SECTUR/DATATUR analysis 2023 (est.)
+2019,,unemployment_rate_pct,2.6000,percent,Open unemployment rate — persons actively seeking work (formal + informal). PV metro area.,Tasa de desocupación abierta — personas buscando empleo activamente. ZM Puerto Vallarta.,INEGI ENOE
+2020,,unemployment_rate_pct,5.3000,percent,Open unemployment rate — persons actively seeking work (formal + informal). PV metro area.,Tasa de desocupación abierta — personas buscando empleo activamente. ZM Puerto Vallarta.,INEGI ENOE
+2021,,unemployment_rate_pct,4.1000,percent,Open unemployment rate — persons actively seeking work (formal + informal). PV metro area.,Tasa de desocupación abierta — personas buscando empleo activamente. ZM Puerto Vallarta.,INEGI ENOE
+2022,,unemployment_rate_pct,3.4000,percent,Open unemployment rate — persons actively seeking work (formal + informal). PV metro area.,Tasa de desocupación abierta — personas buscando empleo activamente. ZM Puerto Vallarta.,INEGI ENOE
+2023,,unemployment_rate_pct,2.8000,percent,Open unemployment rate — persons actively seeking work (formal + informal). PV metro area.,Tasa de desocupación abierta — personas buscando empleo activamente. ZM Puerto Vallarta.,INEGI ENOE
+2024,,unemployment_rate_pct,2.5000,percent,Open unemployment rate — persons actively seeking work (formal + informal). PV metro area.,Tasa de desocupación abierta — personas buscando empleo activamente. ZM Puerto Vallarta.,INEGI ENOE

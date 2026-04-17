@@ -1,0 +1,1021 @@
+year,month,month_name,category,category_es,category_group,category_raw,notes,incident_count,incidents_per_100k,change_vs_prior_year,source
+2022,1,January,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,62,20.85,,SESNSP v2
+2022,1,January,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,41,13.79,,SESNSP v2
+2022,1,January,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,14,4.71,,SESNSP v2
+2022,1,January,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,29,9.75,,SESNSP v2
+2022,1,January,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,96,32.28,,SESNSP v2
+2022,1,January,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",8,2.69,,SESNSP v2
+2022,1,January,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,1,January,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,1,January,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",21,7.06,,SESNSP v2
+2022,1,January,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,,SESNSP v2
+2022,1,January,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,1,January,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,26,8.74,,SESNSP v2
+2022,1,January,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,,SESNSP v2
+2022,1,January,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,,SESNSP v2
+2022,1,January,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,,SESNSP v2
+2022,1,January,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,,SESNSP v2
+2022,1,January,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,1,January,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,93,31.27,,SESNSP v2
+2022,1,January,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",21,7.06,,SESNSP v2
+2022,1,January,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",47,15.80,,SESNSP v2
+2022,2,February,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,59,19.84,,SESNSP v2
+2022,2,February,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,37,12.44,,SESNSP v2
+2022,2,February,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,13,4.37,,SESNSP v2
+2022,2,February,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,27,9.08,,SESNSP v2
+2022,2,February,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,87,29.26,,SESNSP v2
+2022,2,February,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,,SESNSP v2
+2022,2,February,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,2,February,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,2,February,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",21,7.06,,SESNSP v2
+2022,2,February,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,,SESNSP v2
+2022,2,February,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,2,February,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,24,8.07,,SESNSP v2
+2022,2,February,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,,SESNSP v2
+2022,2,February,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,,SESNSP v2
+2022,2,February,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,,SESNSP v2
+2022,2,February,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,,SESNSP v2
+2022,2,February,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,2,February,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,86,28.92,,SESNSP v2
+2022,2,February,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",20,6.73,,SESNSP v2
+2022,2,February,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",43,14.46,,SESNSP v2
+2022,3,March,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,66,22.19,,SESNSP v2
+2022,3,March,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,34,11.43,,SESNSP v2
+2022,3,March,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,12,4.04,,SESNSP v2
+2022,3,March,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,24,8.07,,SESNSP v2
+2022,3,March,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,92,30.94,,SESNSP v2
+2022,3,March,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,,SESNSP v2
+2022,3,March,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,3,March,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,3,March,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",21,7.06,,SESNSP v2
+2022,3,March,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,,SESNSP v2
+2022,3,March,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,3,March,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,22,7.40,,SESNSP v2
+2022,3,March,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,,SESNSP v2
+2022,3,March,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,,SESNSP v2
+2022,3,March,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,,SESNSP v2
+2022,3,March,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,,SESNSP v2
+2022,3,March,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,3,March,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,79,26.57,,SESNSP v2
+2022,3,March,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",21,7.06,,SESNSP v2
+2022,3,March,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",43,14.46,,SESNSP v2
+2022,4,April,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,69,23.20,,SESNSP v2
+2022,4,April,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,28,9.42,,SESNSP v2
+2022,4,April,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,11,3.70,,SESNSP v2
+2022,4,April,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,23,7.73,,SESNSP v2
+2022,4,April,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,92,30.94,,SESNSP v2
+2022,4,April,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,,SESNSP v2
+2022,4,April,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,4,April,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,4,April,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",21,7.06,,SESNSP v2
+2022,4,April,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,,SESNSP v2
+2022,4,April,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,4,April,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,21,7.06,,SESNSP v2
+2022,4,April,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,,SESNSP v2
+2022,4,April,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,,SESNSP v2
+2022,4,April,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,,SESNSP v2
+2022,4,April,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,,SESNSP v2
+2022,4,April,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,4,April,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,68,22.87,,SESNSP v2
+2022,4,April,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",21,7.06,,SESNSP v2
+2022,4,April,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",43,14.46,,SESNSP v2
+2022,5,May,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,73,24.55,,SESNSP v2
+2022,5,May,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,25,8.41,,SESNSP v2
+2022,5,May,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,10,3.36,,SESNSP v2
+2022,5,May,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,22,7.40,,SESNSP v2
+2022,5,May,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,87,29.26,,SESNSP v2
+2022,5,May,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,,SESNSP v2
+2022,5,May,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,5,May,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,5,May,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",21,7.06,,SESNSP v2
+2022,5,May,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,,SESNSP v2
+2022,5,May,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,5,May,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,20,6.73,,SESNSP v2
+2022,5,May,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,,SESNSP v2
+2022,5,May,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,,SESNSP v2
+2022,5,May,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,,SESNSP v2
+2022,5,May,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,,SESNSP v2
+2022,5,May,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,5,May,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,61,20.51,,SESNSP v2
+2022,5,May,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",21,7.06,,SESNSP v2
+2022,5,May,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",41,13.79,,SESNSP v2
+2022,6,June,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,76,25.56,,SESNSP v2
+2022,6,June,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,23,7.73,,SESNSP v2
+2022,6,June,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,9,3.03,,SESNSP v2
+2022,6,June,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,21,7.06,,SESNSP v2
+2022,6,June,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,92,30.94,,SESNSP v2
+2022,6,June,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,,SESNSP v2
+2022,6,June,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,6,June,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,6,June,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",21,7.06,,SESNSP v2
+2022,6,June,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,,SESNSP v2
+2022,6,June,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,6,June,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,19,6.39,,SESNSP v2
+2022,6,June,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,,SESNSP v2
+2022,6,June,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,,SESNSP v2
+2022,6,June,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,6,2.02,,SESNSP v2
+2022,6,June,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,8,2.69,,SESNSP v2
+2022,6,June,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,6,June,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,57,19.17,,SESNSP v2
+2022,6,June,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",21,7.06,,SESNSP v2
+2022,6,June,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",39,13.11,,SESNSP v2
+2022,7,July,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,80,26.90,,SESNSP v2
+2022,7,July,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,25,8.41,,SESNSP v2
+2022,7,July,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,10,3.36,,SESNSP v2
+2022,7,July,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,22,7.40,,SESNSP v2
+2022,7,July,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,96,32.28,,SESNSP v2
+2022,7,July,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,,SESNSP v2
+2022,7,July,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,7,July,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,7,July,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",21,7.06,,SESNSP v2
+2022,7,July,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,,SESNSP v2
+2022,7,July,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,7,July,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,20,6.73,,SESNSP v2
+2022,7,July,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,,SESNSP v2
+2022,7,July,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,,SESNSP v2
+2022,7,July,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,6,2.02,,SESNSP v2
+2022,7,July,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,8,2.69,,SESNSP v2
+2022,7,July,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,7,July,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,61,20.51,,SESNSP v2
+2022,7,July,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",21,7.06,,SESNSP v2
+2022,7,July,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",39,13.11,,SESNSP v2
+2022,8,August,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,76,25.56,,SESNSP v2
+2022,8,August,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,27,9.08,,SESNSP v2
+2022,8,August,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,11,3.70,,SESNSP v2
+2022,8,August,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,22,7.40,,SESNSP v2
+2022,8,August,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,96,32.28,,SESNSP v2
+2022,8,August,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,,SESNSP v2
+2022,8,August,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,8,August,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,8,August,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",21,7.06,,SESNSP v2
+2022,8,August,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,,SESNSP v2
+2022,8,August,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,8,August,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,20,6.73,,SESNSP v2
+2022,8,August,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,,SESNSP v2
+2022,8,August,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,,SESNSP v2
+2022,8,August,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,,SESNSP v2
+2022,8,August,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,,SESNSP v2
+2022,8,August,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,8,August,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,64,21.52,,SESNSP v2
+2022,8,August,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",21,7.06,,SESNSP v2
+2022,8,August,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",41,13.79,,SESNSP v2
+2022,9,September,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,68,22.87,,SESNSP v2
+2022,9,September,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,22,7.40,,SESNSP v2
+2022,9,September,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,11,3.70,,SESNSP v2
+2022,9,September,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,23,7.73,,SESNSP v2
+2022,9,September,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,93,31.27,,SESNSP v2
+2022,9,September,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,,SESNSP v2
+2022,9,September,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,9,September,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,9,September,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",21,7.06,,SESNSP v2
+2022,9,September,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,,SESNSP v2
+2022,9,September,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,9,September,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,21,7.06,,SESNSP v2
+2022,9,September,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,,SESNSP v2
+2022,9,September,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,,SESNSP v2
+2022,9,September,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,,SESNSP v2
+2022,9,September,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,,SESNSP v2
+2022,9,September,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,9,September,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,65,21.86,,SESNSP v2
+2022,9,September,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",21,7.06,,SESNSP v2
+2022,9,September,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",42,14.12,,SESNSP v2
+2022,10,October,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,65,21.86,,SESNSP v2
+2022,10,October,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,25,8.41,,SESNSP v2
+2022,10,October,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,12,4.04,,SESNSP v2
+2022,10,October,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,25,8.41,,SESNSP v2
+2022,10,October,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,93,31.27,,SESNSP v2
+2022,10,October,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,,SESNSP v2
+2022,10,October,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,10,October,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,10,October,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",21,7.06,,SESNSP v2
+2022,10,October,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,,SESNSP v2
+2022,10,October,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,10,October,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,22,7.40,,SESNSP v2
+2022,10,October,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,,SESNSP v2
+2022,10,October,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,,SESNSP v2
+2022,10,October,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,,SESNSP v2
+2022,10,October,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,,SESNSP v2
+2022,10,October,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,10,October,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,69,23.20,,SESNSP v2
+2022,10,October,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",21,7.06,,SESNSP v2
+2022,10,October,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",44,14.80,,SESNSP v2
+2022,11,November,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,51,17.15,,SESNSP v2
+2022,11,November,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,33,11.10,,SESNSP v2
+2022,11,November,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,15,5.04,,SESNSP v2
+2022,11,November,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,30,10.09,,SESNSP v2
+2022,11,November,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,100,33.63,,SESNSP v2
+2022,11,November,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,,SESNSP v2
+2022,11,November,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,11,November,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,11,November,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",23,7.73,,SESNSP v2
+2022,11,November,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,,SESNSP v2
+2022,11,November,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,11,November,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,21,7.06,,SESNSP v2
+2022,11,November,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,,SESNSP v2
+2022,11,November,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,16,5.38,,SESNSP v2
+2022,11,November,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,3,1.01,,SESNSP v2
+2022,11,November,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,,SESNSP v2
+2022,11,November,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,11,November,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,68,22.87,,SESNSP v2
+2022,11,November,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",21,7.06,,SESNSP v2
+2022,11,November,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",40,13.45,,SESNSP v2
+2022,12,December,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,59,19.84,,SESNSP v2
+2022,12,December,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,41,13.79,,SESNSP v2
+2022,12,December,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,17,5.72,,SESNSP v2
+2022,12,December,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,35,11.77,,SESNSP v2
+2022,12,December,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,110,36.99,,SESNSP v2
+2022,12,December,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,,SESNSP v2
+2022,12,December,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,,SESNSP v2
+2022,12,December,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2022,12,December,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",24,8.07,,SESNSP v2
+2022,12,December,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,5,1.68,,SESNSP v2
+2022,12,December,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2022,12,December,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,24,8.07,,SESNSP v2
+2022,12,December,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,,SESNSP v2
+2022,12,December,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,16,5.38,,SESNSP v2
+2022,12,December,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,,SESNSP v2
+2022,12,December,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,,SESNSP v2
+2022,12,December,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,,SESNSP v2
+2022,12,December,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,89,29.93,,SESNSP v2
+2022,12,December,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",23,7.73,,SESNSP v2
+2022,12,December,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",42,14.12,,SESNSP v2
+2023,1,January,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,60,20.18,-3.23,SESNSP v2
+2023,1,January,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,32,10.76,-21.95,SESNSP v2
+2023,1,January,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,15,5.04,7.14,SESNSP v2
+2023,1,January,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,35,11.77,20.69,SESNSP v2
+2023,1,January,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,97,32.62,1.04,SESNSP v2
+2023,1,January,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",8,2.69,0.00,SESNSP v2
+2023,1,January,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,1,January,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,1,January,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,4.76,SESNSP v2
+2023,1,January,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,0.00,SESNSP v2
+2023,1,January,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,1,January,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,26,8.74,0.00,SESNSP v2
+2023,1,January,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2023,1,January,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2023,1,January,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2023,1,January,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,0.00,SESNSP v2
+2023,1,January,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,1,January,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,92,30.94,-1.08,SESNSP v2
+2023,1,January,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,-14.29,SESNSP v2
+2023,1,January,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",40,13.45,-14.89,SESNSP v2
+2023,2,February,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,57,19.17,-3.39,SESNSP v2
+2023,2,February,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,29,9.75,-21.62,SESNSP v2
+2023,2,February,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,14,4.71,7.69,SESNSP v2
+2023,2,February,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,32,10.76,18.52,SESNSP v2
+2023,2,February,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,87,29.26,0.00,SESNSP v2
+2023,2,February,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,0.00,SESNSP v2
+2023,2,February,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,2,February,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,2,February,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,4.76,SESNSP v2
+2023,2,February,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2023,2,February,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,2,February,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,24,8.07,0.00,SESNSP v2
+2023,2,February,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2023,2,February,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2023,2,February,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2023,2,February,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,0.00,SESNSP v2
+2023,2,February,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,2,February,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,85,28.58,-1.16,SESNSP v2
+2023,2,February,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",17,5.72,-15.00,SESNSP v2
+2023,2,February,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",36,12.11,-16.28,SESNSP v2
+2023,3,March,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,64,21.52,-3.03,SESNSP v2
+2023,3,March,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,27,9.08,-20.59,SESNSP v2
+2023,3,March,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,13,4.37,8.33,SESNSP v2
+2023,3,March,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,29,9.75,20.83,SESNSP v2
+2023,3,March,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,92,30.94,0.00,SESNSP v2
+2023,3,March,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,0.00,SESNSP v2
+2023,3,March,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,3,March,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,3,March,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,4.76,SESNSP v2
+2023,3,March,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2023,3,March,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,3,March,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,22,7.40,0.00,SESNSP v2
+2023,3,March,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,20.00,SESNSP v2
+2023,3,March,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2023,3,March,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,-20.00,SESNSP v2
+2023,3,March,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,16.67,SESNSP v2
+2023,3,March,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,3,March,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,78,26.23,-1.27,SESNSP v2
+2023,3,March,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,-14.29,SESNSP v2
+2023,3,March,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",37,12.44,-13.95,SESNSP v2
+2023,4,April,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,67,22.53,-2.90,SESNSP v2
+2023,4,April,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,22,7.40,-21.43,SESNSP v2
+2023,4,April,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,12,4.04,9.09,SESNSP v2
+2023,4,April,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,28,9.42,21.74,SESNSP v2
+2023,4,April,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,92,30.94,0.00,SESNSP v2
+2023,4,April,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,0.00,SESNSP v2
+2023,4,April,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,4,April,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,4,April,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,4.76,SESNSP v2
+2023,4,April,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2023,4,April,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,4,April,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,20,6.73,-4.76,SESNSP v2
+2023,4,April,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,20.00,SESNSP v2
+2023,4,April,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2023,4,April,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,-20.00,SESNSP v2
+2023,4,April,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,16.67,SESNSP v2
+2023,4,April,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,4,April,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,67,22.53,-1.47,SESNSP v2
+2023,4,April,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,-14.29,SESNSP v2
+2023,4,April,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",36,12.11,-16.28,SESNSP v2
+2023,5,May,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,70,23.54,-4.11,SESNSP v2
+2023,5,May,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,20,6.73,-20.00,SESNSP v2
+2023,5,May,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,11,3.70,10.00,SESNSP v2
+2023,5,May,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,21,7.06,-4.55,SESNSP v2
+2023,5,May,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,88,29.59,1.15,SESNSP v2
+2023,5,May,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,0.00,SESNSP v2
+2023,5,May,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,5,May,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,5,May,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,4.76,SESNSP v2
+2023,5,May,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2023,5,May,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,5,May,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,19,6.39,-5.00,SESNSP v2
+2023,5,May,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,0.00,SESNSP v2
+2023,5,May,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2023,5,May,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,0.00,SESNSP v2
+2023,5,May,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,0.00,SESNSP v2
+2023,5,May,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,5,May,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,61,20.51,0.00,SESNSP v2
+2023,5,May,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,-14.29,SESNSP v2
+2023,5,May,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",34,11.43,-17.07,SESNSP v2
+2023,6,June,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,73,24.55,-3.95,SESNSP v2
+2023,6,June,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,18,6.05,-21.74,SESNSP v2
+2023,6,June,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,10,3.36,11.11,SESNSP v2
+2023,6,June,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,20,6.73,-4.76,SESNSP v2
+2023,6,June,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,92,30.94,0.00,SESNSP v2
+2023,6,June,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,16.67,SESNSP v2
+2023,6,June,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,6,June,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,6,June,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,4.76,SESNSP v2
+2023,6,June,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,0.00,SESNSP v2
+2023,6,June,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,6,June,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,18,6.05,-5.26,SESNSP v2
+2023,6,June,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,0.00,SESNSP v2
+2023,6,June,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2023,6,June,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,-16.67,SESNSP v2
+2023,6,June,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,8,2.69,0.00,SESNSP v2
+2023,6,June,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,6,June,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,57,19.17,0.00,SESNSP v2
+2023,6,June,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,-14.29,SESNSP v2
+2023,6,June,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",33,11.10,-15.38,SESNSP v2
+2023,7,July,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,77,25.89,-3.75,SESNSP v2
+2023,7,July,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,19,6.39,-24.00,SESNSP v2
+2023,7,July,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,11,3.70,10.00,SESNSP v2
+2023,7,July,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,27,9.08,22.73,SESNSP v2
+2023,7,July,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,97,32.62,1.04,SESNSP v2
+2023,7,July,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,0.00,SESNSP v2
+2023,7,July,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,7,July,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,7,July,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,4.76,SESNSP v2
+2023,7,July,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,0.00,SESNSP v2
+2023,7,July,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,7,July,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,19,6.39,-5.00,SESNSP v2
+2023,7,July,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,0.00,SESNSP v2
+2023,7,July,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2023,7,July,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,-16.67,SESNSP v2
+2023,7,July,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,8,2.69,0.00,SESNSP v2
+2023,7,July,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,7,July,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,61,20.51,0.00,SESNSP v2
+2023,7,July,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,-14.29,SESNSP v2
+2023,7,July,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",33,11.10,-15.38,SESNSP v2
+2023,8,August,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,74,24.88,-2.63,SESNSP v2
+2023,8,August,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,21,7.06,-22.22,SESNSP v2
+2023,8,August,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,12,4.04,9.09,SESNSP v2
+2023,8,August,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,27,9.08,22.73,SESNSP v2
+2023,8,August,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,97,32.62,1.04,SESNSP v2
+2023,8,August,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,0.00,SESNSP v2
+2023,8,August,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,8,August,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,8,August,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,4.76,SESNSP v2
+2023,8,August,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2023,8,August,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,8,August,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,19,6.39,-5.00,SESNSP v2
+2023,8,August,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,0.00,SESNSP v2
+2023,8,August,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2023,8,August,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,0.00,SESNSP v2
+2023,8,August,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,0.00,SESNSP v2
+2023,8,August,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,8,August,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,64,21.52,0.00,SESNSP v2
+2023,8,August,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,-14.29,SESNSP v2
+2023,8,August,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",35,11.77,-14.63,SESNSP v2
+2023,9,September,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,67,22.53,-1.47,SESNSP v2
+2023,9,September,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,22,7.40,0.00,SESNSP v2
+2023,9,September,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,12,4.04,9.09,SESNSP v2
+2023,9,September,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,22,7.40,-4.35,SESNSP v2
+2023,9,September,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,91,30.60,-2.15,SESNSP v2
+2023,9,September,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,0.00,SESNSP v2
+2023,9,September,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,9,September,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,9,September,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,4.76,SESNSP v2
+2023,9,September,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,-25.00,SESNSP v2
+2023,9,September,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,9,September,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,21,7.06,0.00,SESNSP v2
+2023,9,September,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2023,9,September,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2023,9,September,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,-20.00,SESNSP v2
+2023,9,September,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,16.67,SESNSP v2
+2023,9,September,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,9,September,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,64,21.52,-1.54,SESNSP v2
+2023,9,September,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,-14.29,SESNSP v2
+2023,9,September,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",46,15.47,9.52,SESNSP v2
+2023,10,October,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,63,21.18,-3.08,SESNSP v2
+2023,10,October,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,25,8.41,0.00,SESNSP v2
+2023,10,October,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,13,4.37,8.33,SESNSP v2
+2023,10,October,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,23,7.73,-8.00,SESNSP v2
+2023,10,October,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,91,30.60,-2.15,SESNSP v2
+2023,10,October,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,0.00,SESNSP v2
+2023,10,October,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,10,October,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,10,October,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,4.76,SESNSP v2
+2023,10,October,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,-25.00,SESNSP v2
+2023,10,October,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,10,October,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,22,7.40,0.00,SESNSP v2
+2023,10,October,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2023,10,October,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2023,10,October,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,-20.00,SESNSP v2
+2023,10,October,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,16.67,SESNSP v2
+2023,10,October,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,10,October,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,67,22.53,-2.90,SESNSP v2
+2023,10,October,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,-14.29,SESNSP v2
+2023,10,October,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",48,16.14,9.09,SESNSP v2
+2023,11,November,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,53,17.82,3.92,SESNSP v2
+2023,11,November,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,29,9.75,-12.12,SESNSP v2
+2023,11,November,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,13,4.37,-13.33,SESNSP v2
+2023,11,November,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,26,8.74,-13.33,SESNSP v2
+2023,11,November,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,112,37.66,12.00,SESNSP v2
+2023,11,November,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,16.67,SESNSP v2
+2023,11,November,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,11,November,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,11,November,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",21,7.06,-8.70,SESNSP v2
+2023,11,November,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,-25.00,SESNSP v2
+2023,11,November,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,11,November,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,23,7.73,9.52,SESNSP v2
+2023,11,November,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2023,11,November,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,16,5.38,0.00,SESNSP v2
+2023,11,November,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,33.33,SESNSP v2
+2023,11,November,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,0.00,SESNSP v2
+2023,11,November,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,11,November,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,67,22.53,-1.47,SESNSP v2
+2023,11,November,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,-14.29,SESNSP v2
+2023,11,November,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",42,14.12,5.00,SESNSP v2
+2023,12,December,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,62,20.85,5.08,SESNSP v2
+2023,12,December,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,36,12.11,-12.20,SESNSP v2
+2023,12,December,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,16,5.38,-5.88,SESNSP v2
+2023,12,December,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,29,9.75,-17.14,SESNSP v2
+2023,12,December,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,123,41.36,11.82,SESNSP v2
+2023,12,December,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",8,2.69,14.29,SESNSP v2
+2023,12,December,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2023,12,December,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2023,12,December,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,-8.33,SESNSP v2
+2023,12,December,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,-20.00,SESNSP v2
+2023,12,December,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2023,12,December,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,26,8.74,8.33,SESNSP v2
+2023,12,December,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2023,12,December,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,16,5.38,0.00,SESNSP v2
+2023,12,December,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2023,12,December,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,0.00,SESNSP v2
+2023,12,December,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2023,12,December,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,88,29.59,-1.12,SESNSP v2
+2023,12,December,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",19,6.39,-17.39,SESNSP v2
+2023,12,December,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",44,14.80,4.76,SESNSP v2
+2024,1,January,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,53,17.82,-11.67,SESNSP v2
+2024,1,January,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,35,11.77,9.38,SESNSP v2
+2024,1,January,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,13,4.37,-13.33,SESNSP v2
+2024,1,January,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,32,10.76,-8.57,SESNSP v2
+2024,1,January,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,107,35.98,10.31,SESNSP v2
+2024,1,January,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,-12.50,SESNSP v2
+2024,1,January,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,1,January,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,1,January,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.41,13.64,SESNSP v2
+2024,1,January,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,0.00,SESNSP v2
+2024,1,January,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,1,January,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,23,7.73,-11.54,SESNSP v2
+2024,1,January,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2024,1,January,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2024,1,January,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2024,1,January,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,0.00,SESNSP v2
+2024,1,January,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,1,January,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,80,26.90,-13.04,SESNSP v2
+2024,1,January,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",19,6.39,5.56,SESNSP v2
+2024,1,January,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",40,13.45,0.00,SESNSP v2
+2024,2,February,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,50,16.81,-12.28,SESNSP v2
+2024,2,February,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,32,10.76,10.34,SESNSP v2
+2024,2,February,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,12,4.04,-14.29,SESNSP v2
+2024,2,February,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,29,9.75,-9.38,SESNSP v2
+2024,2,February,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,96,32.28,10.34,SESNSP v2
+2024,2,February,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,-14.29,SESNSP v2
+2024,2,February,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,2,February,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,2,February,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.41,13.64,SESNSP v2
+2024,2,February,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2024,2,February,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,2,February,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,21,7.06,-12.50,SESNSP v2
+2024,2,February,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2024,2,February,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2024,2,February,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2024,2,February,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,0.00,SESNSP v2
+2024,2,February,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,2,February,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,74,24.88,-12.94,SESNSP v2
+2024,2,February,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,5.88,SESNSP v2
+2024,2,February,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",36,12.11,0.00,SESNSP v2
+2024,3,March,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,56,18.83,-12.50,SESNSP v2
+2024,3,March,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,30,10.09,11.11,SESNSP v2
+2024,3,March,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,11,3.70,-15.38,SESNSP v2
+2024,3,March,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,26,8.74,-10.34,SESNSP v2
+2024,3,March,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,101,33.96,9.78,SESNSP v2
+2024,3,March,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,-14.29,SESNSP v2
+2024,3,March,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,3,March,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,3,March,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.41,13.64,SESNSP v2
+2024,3,March,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2024,3,March,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,3,March,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,19,6.39,-13.64,SESNSP v2
+2024,3,March,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,-16.67,SESNSP v2
+2024,3,March,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2024,3,March,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2024,3,March,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,0.00,SESNSP v2
+2024,3,March,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,3,March,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,68,22.87,-12.82,SESNSP v2
+2024,3,March,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",19,6.39,5.56,SESNSP v2
+2024,3,March,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",36,12.11,-2.70,SESNSP v2
+2024,4,April,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,59,19.84,-11.94,SESNSP v2
+2024,4,April,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,24,8.07,9.09,SESNSP v2
+2024,4,April,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,10,3.36,-16.67,SESNSP v2
+2024,4,April,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,25,8.41,-10.71,SESNSP v2
+2024,4,April,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,101,33.96,9.78,SESNSP v2
+2024,4,April,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,-14.29,SESNSP v2
+2024,4,April,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,4,April,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,4,April,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.41,13.64,SESNSP v2
+2024,4,April,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2024,4,April,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,4,April,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,18,6.05,-10.00,SESNSP v2
+2024,4,April,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,-16.67,SESNSP v2
+2024,4,April,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2024,4,April,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2024,4,April,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,0.00,SESNSP v2
+2024,4,April,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,4,April,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,58,19.50,-13.43,SESNSP v2
+2024,4,April,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",19,6.39,5.56,SESNSP v2
+2024,4,April,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",36,12.11,0.00,SESNSP v2
+2024,5,May,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,62,20.85,-11.43,SESNSP v2
+2024,5,May,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,21,7.06,5.00,SESNSP v2
+2024,5,May,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,9,3.03,-18.18,SESNSP v2
+2024,5,May,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,24,8.07,14.29,SESNSP v2
+2024,5,May,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,97,32.62,10.23,SESNSP v2
+2024,5,May,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,-14.29,SESNSP v2
+2024,5,May,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,5,May,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,5,May,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.41,13.64,SESNSP v2
+2024,5,May,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2024,5,May,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,5,May,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,17,5.72,-10.53,SESNSP v2
+2024,5,May,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,0.00,SESNSP v2
+2024,5,May,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2024,5,May,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,0.00,SESNSP v2
+2024,5,May,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,0.00,SESNSP v2
+2024,5,May,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,5,May,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,52,17.49,-14.75,SESNSP v2
+2024,5,May,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,0.00,SESNSP v2
+2024,5,May,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",34,11.43,0.00,SESNSP v2
+2024,6,June,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,65,21.86,-10.96,SESNSP v2
+2024,6,June,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,20,6.73,11.11,SESNSP v2
+2024,6,June,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,9,3.03,-10.00,SESNSP v2
+2024,6,June,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,22,7.40,10.00,SESNSP v2
+2024,6,June,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,102,34.30,10.87,SESNSP v2
+2024,6,June,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,-14.29,SESNSP v2
+2024,6,June,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,6,June,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,6,June,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.41,13.64,SESNSP v2
+2024,6,June,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,0.00,SESNSP v2
+2024,6,June,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,6,June,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,16,5.38,-11.11,SESNSP v2
+2024,6,June,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,0.00,SESNSP v2
+2024,6,June,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2024,6,June,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,0.00,SESNSP v2
+2024,6,June,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,8,2.69,0.00,SESNSP v2
+2024,6,June,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,6,June,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,49,16.48,-14.04,SESNSP v2
+2024,6,June,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",19,6.39,5.56,SESNSP v2
+2024,6,June,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",32,10.76,-3.03,SESNSP v2
+2024,7,July,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,67,22.53,-12.99,SESNSP v2
+2024,7,July,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,21,7.06,10.53,SESNSP v2
+2024,7,July,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,9,3.03,-18.18,SESNSP v2
+2024,7,July,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,24,8.07,-11.11,SESNSP v2
+2024,7,July,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,107,35.98,10.31,SESNSP v2
+2024,7,July,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,-14.29,SESNSP v2
+2024,7,July,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,7,July,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,7,July,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.41,13.64,SESNSP v2
+2024,7,July,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,0.00,SESNSP v2
+2024,7,July,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,7,July,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,17,5.72,-10.53,SESNSP v2
+2024,7,July,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,0.00,SESNSP v2
+2024,7,July,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2024,7,July,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,0.00,SESNSP v2
+2024,7,July,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,8,2.69,0.00,SESNSP v2
+2024,7,July,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,7,July,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,52,17.49,-14.75,SESNSP v2
+2024,7,July,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,0.00,SESNSP v2
+2024,7,July,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",32,10.76,-3.03,SESNSP v2
+2024,8,August,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,65,21.86,-12.16,SESNSP v2
+2024,8,August,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,23,7.73,9.52,SESNSP v2
+2024,8,August,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,10,3.36,-16.67,SESNSP v2
+2024,8,August,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,24,8.07,-11.11,SESNSP v2
+2024,8,August,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,107,35.98,10.31,SESNSP v2
+2024,8,August,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,-14.29,SESNSP v2
+2024,8,August,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,8,August,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,8,August,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.41,13.64,SESNSP v2
+2024,8,August,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2024,8,August,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,8,August,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,17,5.72,-10.53,SESNSP v2
+2024,8,August,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,0.00,SESNSP v2
+2024,8,August,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2024,8,August,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,0.00,SESNSP v2
+2024,8,August,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,0.00,SESNSP v2
+2024,8,August,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,8,August,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,55,18.49,-14.06,SESNSP v2
+2024,8,August,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,0.00,SESNSP v2
+2024,8,August,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",34,11.43,-2.86,SESNSP v2
+2024,9,September,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,59,19.84,-11.94,SESNSP v2
+2024,9,September,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,24,8.07,9.09,SESNSP v2
+2024,9,September,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,10,3.36,-16.67,SESNSP v2
+2024,9,September,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,25,8.41,13.64,SESNSP v2
+2024,9,September,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,102,34.30,12.09,SESNSP v2
+2024,9,September,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,-14.29,SESNSP v2
+2024,9,September,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,9,September,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,9,September,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.41,13.64,SESNSP v2
+2024,9,September,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2024,9,September,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,9,September,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,18,6.05,-14.29,SESNSP v2
+2024,9,September,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2024,9,September,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2024,9,September,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2024,9,September,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,0.00,SESNSP v2
+2024,9,September,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,9,September,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,56,18.83,-12.50,SESNSP v2
+2024,9,September,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,0.00,SESNSP v2
+2024,9,September,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",36,12.11,-21.74,SESNSP v2
+2024,10,October,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,56,18.83,-11.11,SESNSP v2
+2024,10,October,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,27,9.08,8.00,SESNSP v2
+2024,10,October,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,11,3.70,-15.38,SESNSP v2
+2024,10,October,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,26,8.74,13.04,SESNSP v2
+2024,10,October,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,102,34.30,12.09,SESNSP v2
+2024,10,October,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,-14.29,SESNSP v2
+2024,10,October,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,10,October,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,10,October,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.41,13.64,SESNSP v2
+2024,10,October,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2024,10,October,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,10,October,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,19,6.39,-13.64,SESNSP v2
+2024,10,October,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2024,10,October,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,14,4.71,0.00,SESNSP v2
+2024,10,October,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2024,10,October,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,0.00,SESNSP v2
+2024,10,October,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,10,October,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,59,19.84,-11.94,SESNSP v2
+2024,10,October,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,0.00,SESNSP v2
+2024,10,October,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",38,12.78,-20.83,SESNSP v2
+2024,11,November,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,58,19.50,9.43,SESNSP v2
+2024,11,November,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,26,8.74,-10.34,SESNSP v2
+2024,11,November,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,13,4.37,0.00,SESNSP v2
+2024,11,November,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,24,8.07,-7.69,SESNSP v2
+2024,11,November,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,92,30.94,-17.86,SESNSP v2
+2024,11,November,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",6,2.02,-14.29,SESNSP v2
+2024,11,November,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,11,November,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,11,November,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.41,19.05,SESNSP v2
+2024,11,November,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,33.33,SESNSP v2
+2024,11,November,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,11,November,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,22,7.40,-4.35,SESNSP v2
+2024,11,November,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2024,11,November,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,15,5.04,-6.25,SESNSP v2
+2024,11,November,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2024,11,November,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,7,2.35,16.67,SESNSP v2
+2024,11,November,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,11,November,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,63,21.18,-5.97,SESNSP v2
+2024,11,November,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",18,6.05,0.00,SESNSP v2
+2024,11,November,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",41,13.79,-2.38,SESNSP v2
+2024,12,December,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,68,22.87,9.68,SESNSP v2
+2024,12,December,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,32,10.76,-11.11,SESNSP v2
+2024,12,December,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,16,5.38,0.00,SESNSP v2
+2024,12,December,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,27,9.08,-6.90,SESNSP v2
+2024,12,December,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,101,33.96,-17.89,SESNSP v2
+2024,12,December,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,-12.50,SESNSP v2
+2024,12,December,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2024,12,December,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2024,12,December,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",26,8.74,18.18,SESNSP v2
+2024,12,December,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,0.00,SESNSP v2
+2024,12,December,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2024,12,December,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,25,8.41,-3.85,SESNSP v2
+2024,12,December,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,2.02,20.00,SESNSP v2
+2024,12,December,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,15,5.04,-6.25,SESNSP v2
+2024,12,December,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2024,12,December,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,8,2.69,14.29,SESNSP v2
+2024,12,December,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2024,12,December,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,83,27.91,-5.68,SESNSP v2
+2024,12,December,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",19,6.39,0.00,SESNSP v2
+2024,12,December,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",42,14.12,-4.55,SESNSP v2
+2025,1,January,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,51,17.15,-3.77,SESNSP v2
+2025,1,January,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,34,11.43,-2.86,SESNSP v2
+2025,1,January,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,0,0.00,0.00,SESNSP (official)
+2025,1,January,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,16,5.30,-6.25,SESNSP (official)
+2025,1,January,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,56,18.54,0.93,SESNSP (official)
+2025,1,January,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",2,0.66,0.00,SESNSP (official)
+2025,1,January,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,2,0.66,0.00,SESNSP (official)
+2025,1,January,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP (official)
+2025,1,January,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",40,13.25,4.00,SESNSP (official)
+2025,1,January,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,1,0.33,0.00,SESNSP (official)
+2025,1,January,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP (official)
+2025,1,January,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,29,9.60,-4.35,SESNSP (official)
+2025,1,January,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,2,0.66,0.00,SESNSP (official)
+2025,1,January,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,13,4.30,7.14,SESNSP (official)
+2025,1,January,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,1,0.33,0.00,SESNSP (official)
+2025,1,January,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,28,9.27,0.00,SESNSP (official)
+2025,1,January,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,1,0.33,0.00,SESNSP (official)
+2025,1,January,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,9,2.98,0.00,SESNSP (official)
+2025,1,January,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",34,11.26,-5.26,SESNSP (official)
+2025,1,January,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",47,15.56,20.00,SESNSP (official)
+2025,2,February,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,48,16.14,-4.00,SESNSP v2
+2025,2,February,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,32,10.76,0.00,SESNSP v2
+2025,2,February,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,1,0.33,0.00,SESNSP (official)
+2025,2,February,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,7,2.32,-3.45,SESNSP (official)
+2025,2,February,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,32,10.60,2.08,SESNSP (official)
+2025,2,February,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",2,0.66,16.67,SESNSP (official)
+2025,2,February,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,0,0.00,0.00,SESNSP (official)
+2025,2,February,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP (official)
+2025,2,February,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",35,11.59,4.00,SESNSP (official)
+2025,2,February,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,1,0.33,0.00,SESNSP (official)
+2025,2,February,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP (official)
+2025,2,February,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,22,7.28,-4.76,SESNSP (official)
+2025,2,February,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,7,2.32,0.00,SESNSP (official)
+2025,2,February,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,6,1.99,7.14,SESNSP (official)
+2025,2,February,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,2,0.66,0.00,SESNSP (official)
+2025,2,February,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,26,8.61,0.00,SESNSP (official)
+2025,2,February,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,4,1.32,0.00,SESNSP (official)
+2025,2,February,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,12,3.97,0.00,SESNSP (official)
+2025,2,February,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",37,12.25,-5.56,SESNSP (official)
+2025,2,February,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",34,11.26,22.22,SESNSP (official)
+2025,3,March,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,53,17.82,-5.36,SESNSP v2
+2025,3,March,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,29,9.75,-3.33,SESNSP v2
+2025,3,March,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,1,0.33,0.00,SESNSP (official)
+2025,3,March,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,20,6.62,-3.85,SESNSP (official)
+2025,3,March,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,37,12.25,1.98,SESNSP (official)
+2025,3,March,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",4,1.32,16.67,SESNSP (official)
+2025,3,March,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,0.99,0.00,SESNSP (official)
+2025,3,March,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP (official)
+2025,3,March,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",44,14.57,4.00,SESNSP (official)
+2025,3,March,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,1,0.33,0.00,SESNSP (official)
+2025,3,March,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP (official)
+2025,3,March,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,32,10.60,-5.26,SESNSP (official)
+2025,3,March,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,8,2.65,0.00,SESNSP (official)
+2025,3,March,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,6,1.99,7.14,SESNSP (official)
+2025,3,March,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,3,0.99,0.00,SESNSP (official)
+2025,3,March,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,38,12.58,0.00,SESNSP (official)
+2025,3,March,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,3,0.99,0.00,SESNSP (official)
+2025,3,March,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,7,2.32,0.00,SESNSP (official)
+2025,3,March,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",54,17.88,-5.26,SESNSP (official)
+2025,3,March,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",33,10.93,22.22,SESNSP (official)
+2025,4,April,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,56,18.83,-5.08,SESNSP v2
+2025,4,April,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,24,8.07,0.00,SESNSP v2
+2025,4,April,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,2,0.66,0.00,SESNSP (official)
+2025,4,April,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,12,3.97,-4.00,SESNSP (official)
+2025,4,April,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,57,18.87,1.98,SESNSP (official)
+2025,4,April,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",2,0.66,16.67,SESNSP (official)
+2025,4,April,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,1,0.33,0.00,SESNSP (official)
+2025,4,April,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP (official)
+2025,4,April,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",36,11.92,4.00,SESNSP (official)
+2025,4,April,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,0,0.00,0.00,SESNSP (official)
+2025,4,April,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,1,0.33,,SESNSP (official)
+2025,4,April,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,34,11.26,-5.56,SESNSP (official)
+2025,4,April,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.66,0.00,SESNSP (official)
+2025,4,April,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,19,6.29,7.14,SESNSP (official)
+2025,4,April,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,6,1.99,0.00,SESNSP (official)
+2025,4,April,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,47,15.56,0.00,SESNSP (official)
+2025,4,April,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,3,0.99,0.00,SESNSP (official)
+2025,4,April,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,11,3.64,1.72,SESNSP (official)
+2025,4,April,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",69,22.85,-5.26,SESNSP (official)
+2025,4,April,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",42,13.91,22.22,SESNSP (official)
+2025,5,May,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,59,19.84,-4.84,SESNSP v2
+2025,5,May,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,21,7.06,0.00,SESNSP v2
+2025,5,May,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,0,0.00,0.00,SESNSP (official)
+2025,5,May,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,8,2.65,-4.17,SESNSP (official)
+2025,5,May,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,75,24.83,1.03,SESNSP (official)
+2025,5,May,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",3,0.99,0.00,SESNSP (official)
+2025,5,May,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,4,1.32,0.00,SESNSP (official)
+2025,5,May,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,1,0.33,,SESNSP (official)
+2025,5,May,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",37,12.25,4.00,SESNSP (official)
+2025,5,May,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,0,0.00,0.00,SESNSP (official)
+2025,5,May,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP (official)
+2025,5,May,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,37,12.25,0.00,SESNSP (official)
+2025,5,May,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,12,3.97,0.00,SESNSP (official)
+2025,5,May,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,12,3.97,7.14,SESNSP (official)
+2025,5,May,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,1,0.33,0.00,SESNSP (official)
+2025,5,May,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,37,12.25,14.29,SESNSP (official)
+2025,5,May,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,4,1.32,0.00,SESNSP (official)
+2025,5,May,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,10,3.31,0.00,SESNSP (official)
+2025,5,May,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",48,15.89,0.00,SESNSP (official)
+2025,5,May,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",34,11.26,23.53,SESNSP (official)
+2025,6,June,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,62,20.85,-4.62,SESNSP v2
+2025,6,June,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,20,6.73,0.00,SESNSP v2
+2025,6,June,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,1,0.33,0.00,SESNSP (official)
+2025,6,June,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,16,5.30,-4.55,SESNSP (official)
+2025,6,June,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,55,18.21,0.98,SESNSP (official)
+2025,6,June,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",2,0.66,0.00,SESNSP (official)
+2025,6,June,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,2,0.66,0.00,SESNSP (official)
+2025,6,June,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP (official)
+2025,6,June,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",25,8.28,4.00,SESNSP (official)
+2025,6,June,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,0.99,0.00,SESNSP (official)
+2025,6,June,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP (official)
+2025,6,June,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,25,8.28,0.00,SESNSP (official)
+2025,6,June,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,6,1.99,0.00,SESNSP (official)
+2025,6,June,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,10,3.31,7.14,SESNSP (official)
+2025,6,June,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,3,0.99,0.00,SESNSP (official)
+2025,6,June,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,33,10.93,0.00,SESNSP (official)
+2025,6,June,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,1,0.33,0.00,SESNSP (official)
+2025,6,June,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,13,4.30,0.00,SESNSP (official)
+2025,6,June,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",45,14.90,-5.26,SESNSP (official)
+2025,6,June,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",39,12.91,25.00,SESNSP (official)
+2025,7,July,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,65,21.86,-2.99,SESNSP v2
+2025,7,July,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,21,7.06,0.00,SESNSP v2
+2025,7,July,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,0,0.00,0.00,SESNSP (official)
+2025,7,July,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,20,6.62,-4.17,SESNSP (official)
+2025,7,July,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,66,21.85,0.93,SESNSP (official)
+2025,7,July,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",3,0.99,0.00,SESNSP (official)
+2025,7,July,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,4,1.32,0.00,SESNSP (official)
+2025,7,July,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP (official)
+2025,7,July,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",50,16.56,4.00,SESNSP (official)
+2025,7,July,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,2,0.66,0.00,SESNSP (official)
+2025,7,July,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP (official)
+2025,7,July,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,37,12.25,0.00,SESNSP (official)
+2025,7,July,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,12,3.97,0.00,SESNSP (official)
+2025,7,July,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,12,3.97,7.14,SESNSP (official)
+2025,7,July,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,1,0.33,0.00,SESNSP (official)
+2025,7,July,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,36,11.92,0.00,SESNSP (official)
+2025,7,July,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,0,0.00,0.00,SESNSP (official)
+2025,7,July,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,10,3.31,0.00,SESNSP (official)
+2025,7,July,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",47,15.56,0.00,SESNSP (official)
+2025,7,July,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",36,11.92,25.00,SESNSP (official)
+2025,8,August,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,62,20.85,-4.62,SESNSP v2
+2025,8,August,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,23,7.73,0.00,SESNSP v2
+2025,8,August,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,1,0.33,0.00,SESNSP (official)
+2025,8,August,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,13,4.30,-4.17,SESNSP (official)
+2025,8,August,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,54,17.88,0.93,SESNSP (official)
+2025,8,August,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",2,0.66,16.67,SESNSP (official)
+2025,8,August,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,2,0.66,0.00,SESNSP (official)
+2025,8,August,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP (official)
+2025,8,August,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",28,9.27,4.00,SESNSP (official)
+2025,8,August,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,0,0.00,0.00,SESNSP (official)
+2025,8,August,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP (official)
+2025,8,August,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,31,10.26,0.00,SESNSP (official)
+2025,8,August,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,17,5.63,0.00,SESNSP (official)
+2025,8,August,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,9,2.98,7.14,SESNSP (official)
+2025,8,August,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,1,0.33,0.00,SESNSP (official)
+2025,8,August,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,33,10.93,14.29,SESNSP (official)
+2025,8,August,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,0,0.00,0.00,SESNSP (official)
+2025,8,August,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,12,3.97,1.82,SESNSP (official)
+2025,8,August,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",42,13.91,0.00,SESNSP (official)
+2025,8,August,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",28,9.27,23.53,SESNSP (official)
+2025,9,September,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,56,18.83,-5.08,SESNSP v2
+2025,9,September,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,11,3.64,0.00,SESNSP (official)
+2025,9,September,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,1,0.33,0.00,SESNSP (official)
+2025,9,September,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,7,2.32,-4.00,SESNSP (official)
+2025,9,September,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,49,16.23,0.00,SESNSP (official)
+2025,9,September,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",3,0.99,0.00,SESNSP (official)
+2025,9,September,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,0,0.00,0.00,SESNSP (official)
+2025,9,September,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP (official)
+2025,9,September,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",38,12.58,4.00,SESNSP (official)
+2025,9,September,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,1,0.33,0.00,SESNSP (official)
+2025,9,September,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP (official)
+2025,9,September,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,35,11.59,0.00,SESNSP (official)
+2025,9,September,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,11,3.64,0.00,SESNSP (official)
+2025,9,September,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,7,2.32,7.14,SESNSP (official)
+2025,9,September,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.32,0.00,SESNSP (official)
+2025,9,September,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,29,9.60,0.00,SESNSP (official)
+2025,9,September,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,1,0.33,0.00,SESNSP (official)
+2025,9,September,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,3,0.99,-1.79,SESNSP (official)
+2025,9,September,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",36,11.92,0.00,SESNSP (official)
+2025,9,September,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",26,8.61,22.22,SESNSP (official)
+2025,10,October,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,53,17.82,-5.36,SESNSP v2
+2025,10,October,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,14,4.64,0.00,SESNSP (official)
+2025,10,October,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,0,0.00,0.00,SESNSP (official)
+2025,10,October,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,20,6.62,0.00,SESNSP (official)
+2025,10,October,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,81,26.82,0.00,SESNSP (official)
+2025,10,October,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",2,0.66,0.00,SESNSP (official)
+2025,10,October,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,0,0.00,0.00,SESNSP (official)
+2025,10,October,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,1,0.33,,SESNSP (official)
+2025,10,October,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",40,13.25,4.00,SESNSP (official)
+2025,10,October,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,2,0.66,0.00,SESNSP (official)
+2025,10,October,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP (official)
+2025,10,October,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,30,9.93,0.00,SESNSP (official)
+2025,10,October,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,14,4.64,0.00,SESNSP (official)
+2025,10,October,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,11,3.64,7.14,SESNSP (official)
+2025,10,October,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,2,0.66,0.00,SESNSP (official)
+2025,10,October,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,24,7.95,0.00,SESNSP (official)
+2025,10,October,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,0,0.00,0.00,SESNSP (official)
+2025,10,October,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,8,2.65,-1.69,SESNSP (official)
+2025,10,October,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",32,10.60,0.00,SESNSP (official)
+2025,10,October,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",34,11.26,21.05,SESNSP (official)
+2025,11,November,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,50,16.81,-13.79,SESNSP v2
+2025,11,November,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,14,4.64,15.38,SESNSP (official)
+2025,11,November,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,0,0.00,0.00,SESNSP (official)
+2025,11,November,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,19,6.29,8.33,SESNSP (official)
+2025,11,November,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,93,30.79,-1.09,SESNSP (official)
+2025,11,November,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",2,0.66,33.33,SESNSP (official)
+2025,11,November,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,1,0.33,0.00,SESNSP (official)
+2025,11,November,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP (official)
+2025,11,November,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",39,12.91,-4.00,SESNSP (official)
+2025,11,November,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,2,0.66,-25.00,SESNSP (official)
+2025,11,November,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP (official)
+2025,11,November,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,32,10.60,-4.55,SESNSP (official)
+2025,11,November,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,10,3.31,0.00,SESNSP (official)
+2025,11,November,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,16,5.30,-13.33,SESNSP (official)
+2025,11,November,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,3,0.99,0.00,SESNSP (official)
+2025,11,November,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,27,8.94,-14.29,SESNSP (official)
+2025,11,November,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,5,1.66,0.00,SESNSP (official)
+2025,11,November,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,8,2.65,-11.11,SESNSP (official)
+2025,11,November,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",49,16.23,-5.56,SESNSP (official)
+2025,11,November,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",24,7.95,-4.88,SESNSP (official)
+2025,12,December,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,58,19.50,-14.71,SESNSP v2
+2025,12,December,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,15,4.97,12.50,SESNSP (official)
+2025,12,December,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,0,0.00,0.00,SESNSP (official)
+2025,12,December,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,15,4.97,7.41,SESNSP (official)
+2025,12,December,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,80,26.49,-0.99,SESNSP (official)
+2025,12,December,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",4,1.32,28.57,SESNSP (official)
+2025,12,December,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,5,1.66,0.00,SESNSP (official)
+2025,12,December,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,1,0.33,,SESNSP (official)
+2025,12,December,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",47,15.56,-3.85,SESNSP (official)
+2025,12,December,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,2,0.66,0.00,SESNSP (official)
+2025,12,December,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,1,0.33,,SESNSP (official)
+2025,12,December,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,24,7.95,-4.00,SESNSP (official)
+2025,12,December,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.66,-16.67,SESNSP (official)
+2025,12,December,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,15,4.97,-13.33,SESNSP (official)
+2025,12,December,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,3,0.99,25.00,SESNSP (official)
+2025,12,December,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,31,10.26,-25.00,SESNSP (official)
+2025,12,December,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,0,0.00,0.00,SESNSP (official)
+2025,12,December,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,16,5.30,-13.25,SESNSP (official)
+2025,12,December,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",38,12.58,0.00,SESNSP (official)
+2025,12,December,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",40,13.25,-2.38,SESNSP (official)
+2026,1,January,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,54,18.16,5.88,SESNSP v2
+2026,1,January,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,35,11.77,2.94,SESNSP v2
+2026,1,January,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,13,4.37,0.00,SESNSP v2
+2026,1,January,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,32,10.76,6.67,SESNSP v2
+2026,1,January,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,106,35.64,-1.85,SESNSP v2
+2026,1,January,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",8,2.69,14.29,SESNSP v2
+2026,1,January,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2026,1,January,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2026,1,January,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,-15.38,SESNSP v2
+2026,1,January,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,0.00,SESNSP v2
+2026,1,January,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2026,1,January,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,25,8.41,13.64,SESNSP v2
+2026,1,January,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,4,1.35,-20.00,SESNSP v2
+2026,1,January,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,16,5.38,6.67,SESNSP v2
+2026,1,January,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2026,1,January,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,0.00,SESNSP v2
+2026,1,January,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2026,1,January,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,88,29.59,10.00,SESNSP v2
+2026,1,January,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",20,6.73,11.11,SESNSP v2
+2026,1,January,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",41,13.79,-14.58,SESNSP v2
+2026,2,February,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,51,17.15,6.25,SESNSP v2
+2026,2,February,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,32,10.76,0.00,SESNSP v2
+2026,2,February,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,12,4.04,0.00,SESNSP v2
+2026,2,February,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,29,9.75,3.57,SESNSP v2
+2026,2,February,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,96,32.28,-2.04,SESNSP v2
+2026,2,February,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,0.00,SESNSP v2
+2026,2,February,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2026,2,February,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2026,2,February,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,-15.38,SESNSP v2
+2026,2,February,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,3,1.01,0.00,SESNSP v2
+2026,2,February,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2026,2,February,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,23,7.73,15.00,SESNSP v2
+2026,2,February,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,4,1.35,-20.00,SESNSP v2
+2026,2,February,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,16,5.38,6.67,SESNSP v2
+2026,2,February,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,4,1.35,0.00,SESNSP v2
+2026,2,February,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,0.00,SESNSP v2
+2026,2,February,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2026,2,February,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,81,27.24,9.46,SESNSP v2
+2026,2,February,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",19,6.39,11.76,SESNSP v2
+2026,2,February,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",37,12.44,-15.91,SESNSP v2
+2026,3,March,Assault / Bodily Harm,Lesiones Dolosas,Violent Crime,Lesiones dolosas,Intentional bodily harm. Traffic injuries (culposas) excluded.,57,19.17,7.55,SESNSP v2
+2026,3,March,Burglary (Non-Violent),Robo a Casa sin Violencia,Property Crime,Robo a casa habitación sin violencia,Home break-ins when occupants absent. Peak during tourist rental season.,29,9.75,0.00,SESNSP v2
+2026,3,March,Burglary (Violent),Robo a Casa con Violencia,Property Crime,Robo a casa habitación con violencia,Home break-ins with occupants present and threatened or harmed.,11,3.70,0.00,SESNSP v2
+2026,3,March,Business Robbery,Robo a Negocio,Property Crime,Robo a negocio,Commercial establishment robberies. Includes violent and non-violent.,26,8.74,4.00,SESNSP v2
+2026,3,March,Domestic Violence,Violencia Familiar,Domestic & Social,Violencia familiar,Most reported offense in PV. Includes physical and psychological violence.,101,33.96,-1.94,SESNSP v2
+2026,3,March,Drug Dealing,Narcomenudeo,Federal / Drug Crime,Narcomenudeo,"Retail drug sales (fuero federal). Represents enforcement, not prevalence.",7,2.35,0.00,SESNSP v2
+2026,3,March,Extortion,Extorsión,Violent Crime,Extorsión,Includes cobro de piso and telephone extortion. Highly underreported.,3,1.01,0.00,SESNSP v2
+2026,3,March,Femicide,Feminicidio,Violent Crime,Feminicidio,Gender-motivated killings. Separate SESNSP category since 2019.,0,0.00,,SESNSP v2
+2026,3,March,Fraud,Fraude,Property Crime,Fraude,"Real estate fraud, rental scams, digital fraud. Rising with online commerce.",22,7.40,-15.38,SESNSP v2
+2026,3,March,Homicide,Homicidio Doloso,Violent Crime,Homicidio doloso,Intentional homicides only (doloso). Negligent homicide excluded per SESNSP.,4,1.35,33.33,SESNSP v2
+2026,3,March,Kidnapping,Secuestro,Violent Crime,Secuestro,Rare in PV. Includes express and extortive kidnapping.,0,0.00,,SESNSP v2
+2026,3,March,Other Robbery,Otros Robos,Property Crime,Otros robos,SESNSP catch-all robbery subtype not in specific robbery categories.,21,7.06,16.67,SESNSP v2
+2026,3,March,Other Sexual Crimes,Otros Delitos Sexuales,Sexual Crime,Otros delitos vs libertad sexual,Residual SESNSP sexual offense category.,5,1.68,0.00,SESNSP v2
+2026,3,March,Property Damage,Daño a la Propiedad,Property Crime,Daño a la propiedad,Criminal property damage (daño en propiedad ajena per SESNSP).,16,5.38,6.67,SESNSP v2
+2026,3,March,Rape,Violación,Sexual Crime,Violación simple / equiparada,Reported cases only. High underreporting estimated.,5,1.68,25.00,SESNSP v2
+2026,3,March,Sexual Abuse,Abuso Sexual,Sexual Crime,Abuso sexual,Non-penetrative sexual offenses. Separate from rape per SESNSP.,6,2.02,-14.29,SESNSP v2
+2026,3,March,Sexual Harassment,Acoso/Hostigamiento Sexual,Sexual Crime,Acoso/Hostigamiento sexual,Includes acoso (unwanted attention) and hostigamiento (power-based).,2,0.67,0.00,SESNSP v2
+2026,3,March,Street Robbery,Robo a Transeúnte,Property Crime,Robo a transeúnte en vía pública,Muggings in public spaces. Includes violent and non-violent.,74,24.88,8.82,SESNSP v2
+2026,3,March,Threats,Amenazas,Domestic & Social,Amenazas,"Criminal threats, including digital and telephone threats when reported.",20,6.73,11.11,SESNSP v2
+2026,3,March,Vehicle Theft,Robo de Vehículo,Property Crime,Robo de vehículo automotor,"Cars, motorcycles, and trucks. All vehicle theft subtypes aggregated.",37,12.44,-15.91,SESNSP v2

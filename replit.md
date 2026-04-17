@@ -20,6 +20,23 @@ Real-time insights for Puerto Vallarta's rental and tourism market. Bilingual (E
 - **Language**: Bilingual English/Spanish
 - **Data sources**: DATATUR, INEGI, Data México, SESNSP, NOAA, Airbnb/VRBO (estimated), OpenStreetMap
 
+## Data Architecture (single source of truth)
+
+Every DB row in the seven core tables has exactly one origin: a CSV under `data/`.
+Drift is corrected by re-ingesting the CSV, not by row-level SQL patches.
+
+- **CSV layout** (`data/<domain>/*.csv`):
+  - `airport/pvr-passenger-traffic.csv`     → `airport_metrics`
+  - `tourism/datatur-monthly.csv`           → `tourism_metrics`
+  - `safety/sesnsp-incidents.csv`           → `safety_metrics`
+  - `economic/inegi-imss-indicators.csv`    → `economic_metrics`
+  - `weather/pvr-monthly.csv`               → `weather_metrics`
+  - `sources/data-sources-registry.csv`     → `data_sources`
+  - `events/market-events.csv`              → `market_events`
+- **Ingest pipeline** (`scripts/ingest/`): one file per table + `all.ts` runner. Truncate-and-reload — idempotent. Run manually with `pnpm --filter @workspace/scripts run ingest`; `data_sources` is ingested last so its `record_count` column is re-derived from the live metric tables.
+- **Boot-time seed**: `artifacts/api-server/src/lib/seed.ts` (56 lines) spawns the ingest pipeline **only when `airport_metrics` is empty**. All the former `repair*` / `reseed*` helpers (the old 1,164-line `seed.ts`) have been retired.
+- **To refresh DB values**: edit the CSV and re-run the ingest script. Manual DB edits will be overwritten on the next ingest — this is intentional.
+
 ## Data Coverage
 
 - Tourism metrics (DATATUR): hotel occupancy, tourist arrivals, cruise visitors — 2022–2024 monthly
