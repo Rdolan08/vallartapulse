@@ -1,0 +1,74 @@
+Proceed with Phase 1 only.
+
+Approved for Railway production DB writes under these constraints:
+- additive changes only
+- new tables are fine
+- new nullable columns on existing rental_listings are fine
+- no dropping, renaming, or changing semantics of existing columns/tables
+- no changes that would break the live site’s current reads/writes
+- if any backfill is needed, make it non-destructive and safe to rerun
+
+Phase 1 scope for this session:
+1. Add the new schema objects:
+   - discovery_jobs
+   - listing_search_observations
+   - listing_details
+   - listing_price_quotes
+   - listing_review_snapshots
+
+2. Extend rental_listings safely with additive nullable columns for:
+   - first_seen_at
+   - last_seen_at
+   - seen_count
+   - lifecycle_status
+   - identity_key
+   - parent_region_bucket
+   - normalized_neighborhood_bucket
+   - neighborhood_mapping_confidence
+
+3. Build the neighborhood normalization layer aligned to the pricing tool, with special emphasis on Puerto Vallarta:
+   Primary PV buckets:
+   - Zona Romántica
+   - Amapas / Conchas Chinas
+   - Centro / Alta Vista
+   - Hotel Zone / Malecón
+   - 5 de Diciembre
+   - Old Town
+   - Versalles
+   - Marina Vallarta
+   - Mismaloya
+
+   Secondary buckets:
+   - Nuevo Vallarta
+   - Bucerías
+   - La Cruz de Huanacaxtle
+   - Punta Mita
+   - El Anclote
+   - Sayulita
+   - San Pancho
+
+4. Store both:
+   - raw source location text
+   - normalized VallartaPulse neighborhood bucket
+   - mapping confidence level
+
+5. Make the mapper deterministic and reusable by later discovery/enrichment/refresh jobs.
+
+6. Do not refactor scraper behavior yet.
+   - no seeded discovery rollout yet
+   - no queue runner yet
+   - no quote collection yet
+   - no refresh state machine yet
+
+7. Deliverables for this session:
+   - schema/migration changes pushed safely
+   - neighborhood lookup/mapping layer implemented
+   - minimal smoke test confirming the live site still works
+   - short summary of what changed
+   - note any required backfill scripts, but do not run anything risky without explicit approval
+
+After Phase 1 is deployed and verified clean, we will do Phase 2 separately:
+- PV-first seeded discovery
+- queue runner with resume/checkpointing
+- yield-based exhaustion logic
+- Airbnb and VRBO adapters feeding the queue

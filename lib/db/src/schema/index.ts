@@ -9,3 +9,8 @@ export * from "./rental_listings";
 export * from "./rental_prices_by_date";
 export * from "./rental_amenities_lookup";
 export * from "./market_events";
+export * from "./discovery_jobs";
+export * from "./listing_search_observations";
+export * from "./listing_details";
+export * from "./listing_price_quotes";
+export * from "./listing_review_snapshots";
