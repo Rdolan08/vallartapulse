@@ -93,6 +93,10 @@ export interface AirbnbDetailRaw {
   jsonLdBlocks: unknown[];
   /** First Apollo DemandStayListing node we found in the cache (verbatim). */
   apolloDemandStayListing: unknown | null;
+  /** Raw <meta property="og:title"> content — present even on partially
+   *  hydrated pages, used as a tertiary fallback. Optional for backward
+   *  compatibility with rows persisted before this field was added. */
+  ogTitle?: string | null;
 }
 
 const EMPTY_NORMALIZED: AirbnbDetailNormalized = {
@@ -308,6 +312,83 @@ export function extractBedroomsFromText(text: string): number | null {
   return null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// og:title tertiary fallback.
+//
+// Airbnb embeds a richly structured Open Graph title on every PDP, and it
+// renders into the SSR HTML even on responses where Apollo deferred-state
+// or JSON-LD fail to hydrate fully. Format examples observed in the wild:
+//   "Condo in Puerto Vallarta · ★4.96 · 2 bedrooms · 2 beds · 2 private baths"
+//   "Rental unit in Sayulita · ★4.89 · 1 bedroom · 1 bed · 1 private bath"
+//   "Studio in Romantic Zone · ★4.7 · 1 bed · 1 bath"
+//
+// The parsed parts (propertyType, neighborhood, ratingOverall, bedrooms,
+// bedCount, bathrooms) are applied ONLY where prior signals left a null,
+// so this fallback can never overwrite higher-trust data.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface OgTitleParts {
+  propertyType: string | null;
+  neighborhood: string | null;
+  ratingOverall: number | null;
+  bedrooms: number | null;
+  bedCount: number | null;
+  bathrooms: number | null;
+}
+
+/** Pulls the raw og:title content (or null). */
+export function extractOgTitle(html: string): string | null {
+  const m = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+  return m ? m[1] : null;
+}
+
+/** Best-effort parse of the structured "X in Y · ★R · Z bedrooms · ..." og:title. */
+export function parseOgTitle(og: string): OgTitleParts {
+  const out: OgTitleParts = {
+    propertyType: null, neighborhood: null, ratingOverall: null,
+    bedrooms: null, bedCount: null, bathrooms: null,
+  };
+  if (!og) return out;
+
+  // "<propertyType> in <neighborhood> · ..." — captured up to the first " · "
+  // boundary so we don't pull rating/bedrooms into the locality slot.
+  const inMatch = og.match(/^([^·]+?)\s+in\s+([^·]+?)\s*(?:·|$)/i);
+  if (inMatch) {
+    out.propertyType = inMatch[1].trim() || null;
+    out.neighborhood = inMatch[2].trim() || null;
+  }
+
+  const rating = og.match(/★\s*(\d+(?:\.\d+)?)/);
+  if (rating) {
+    const r = parseFloat(rating[1]);
+    if (Number.isFinite(r) && r >= 0 && r <= 5) out.ratingOverall = r;
+  }
+
+  // Studio = 0 bedrooms, but only when no explicit bedroom count appears.
+  if (/\bstudio\b/i.test(og) && !/\d+\s*bedroom/i.test(og)) {
+    out.bedrooms = 0;
+  }
+  const br = og.match(/(\d+)\s*bedroom/i);
+  if (br) {
+    const n = parseInt(br[1], 10);
+    if (Number.isFinite(n) && n >= 0 && n <= 30) out.bedrooms = n;
+  }
+  // bedCount — match "X bed" / "X beds" but NOT "X bedroom" (negative lookahead).
+  const bd = og.match(/(\d+)\s*beds?\b(?!\s*room)/i);
+  if (bd) {
+    const n = parseInt(bd[1], 10);
+    if (Number.isFinite(n) && n >= 0 && n <= 50) out.bedCount = n;
+  }
+  // bathrooms — handle "X bath", "X baths", "X private baths", "X.5 baths"
+  const ba = og.match(/(\d+(?:\.5)?)\s*(?:private\s+|shared\s+)?baths?\b/i);
+  if (ba) {
+    const n = parseFloat(ba[1]);
+    if (Number.isFinite(n) && n >= 0 && n <= 30) out.bathrooms = n;
+  }
+
+  return out;
+}
+
 export function extractBathroomsFromText(text: string): number | null {
   if (!text) return null;
   const lower = text.toLowerCase();
@@ -456,6 +537,28 @@ export function parseAirbnbDetailHtml(html: string): AirbnbDetailParse {
     out.bathrooms = extractBathroomsFromText(`${out.title ?? ""}\n${out.description ?? ""}`);
   }
 
+  // ── 2.7. og:title tertiary fallback ──────────────────────────────────
+  // The Open Graph title is structured ("X in Y · ★R · N bedrooms · N beds
+  // · N baths") and ships in the SSR HTML even when Apollo deferred-state
+  // or JSON-LD fail to hydrate. We apply each parsed part ONLY where the
+  // corresponding field is still null, so this fallback can never overwrite
+  // higher-trust data from JSON-LD or Apollo.
+  const ogTitle = extractOgTitle(html);
+  if (ogTitle) {
+    const og = parseOgTitle(ogTitle);
+    if (out.title === null) out.title = ogTitle;
+    if (out.propertyType === null && og.propertyType !== null) out.propertyType = og.propertyType;
+    if (out.bedrooms === null && og.bedrooms !== null) out.bedrooms = og.bedrooms;
+    if (out.bedCount === null && og.bedCount !== null) out.bedCount = og.bedCount;
+    if (out.bathrooms === null && og.bathrooms !== null) out.bathrooms = og.bathrooms;
+    if (out.ratingOverall === null && og.ratingOverall !== null) out.ratingOverall = og.ratingOverall;
+    if (out.rawLocationHints.addressLocality === null && og.neighborhood !== null) {
+      out.rawLocationHints.addressLocality = og.neighborhood;
+    }
+  } else {
+    errors.push("og:title meta tag not present");
+  }
+
   // ── 3. Status classification ──────────────────────────────────────────
   // "parse_fail" = no usable structured data at all
   // "ok" = at least title + (lat OR maxGuests OR rating)
@@ -478,6 +581,6 @@ export function parseAirbnbDetailHtml(html: string): AirbnbDetailParse {
     parseErrors: errors,
     parseVersion: "airbnb-detail-v1",
     normalized: out,
-    raw: { jsonLdBlocks, apolloDemandStayListing: apolloRaw },
+    raw: { jsonLdBlocks, apolloDemandStayListing: apolloRaw, ogTitle },
   };
 }

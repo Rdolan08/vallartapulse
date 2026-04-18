@@ -19,7 +19,7 @@ import { parseAirbnbDetailHtml, type AirbnbDetailParse } from "./airbnb-detail-a
 export interface EnrichResult {
   listingId: number;
   url: string;
-  outcome: "enriched" | "parse_fail" | "blocked" | "error";
+  outcome: "enriched" | "parse_fail" | "blocked" | "delisted" | "error";
   parseStatus?: AirbnbDetailParse["parseStatus"];
   /** Number of normalized fields that came back non-null (excluding nested helpers). */
   filledFieldCount?: number;
@@ -75,6 +75,31 @@ function withHardCap<T>(p: Promise<T>, ms: number, tag: string): Promise<T> {
  * The two-signal check lets us distinguish blocks from parse failures
  * cleanly in the report.
  */
+/**
+ * Delisted-page detector. Airbnb serves an `app/views/routes/helpful_404.html.erb`
+ * template (HTTP 200, ~2671 bytes, byte-stable across listings) when a host has
+ * removed a listing the discovery layer previously found. Without this check
+ * the runner classifies these as "blocked" (the body trips `looksBlocked`'s
+ * <40KB threshold) — which inflates the apparent block rate and hides the
+ * actual cause. We split delisted out so reports can compute "% success on
+ * live listings" honestly. The persisted row still suppresses re-enrichment
+ * via the same listing_details candidate-query mechanism as blocked rows.
+ *
+ * Detection is deliberately conservative: a small body AND at least one of
+ * the template's stable markers. Either marker on its own is sufficient so a
+ * minor Airbnb-side template tweak (e.g. dropping the sourcegraph comment)
+ * doesn't silently re-route us back to the noisy 'blocked' bucket.
+ */
+function looksDelisted(html: string): { delisted: boolean; reason?: string } {
+  if (html.length > 6_000) return { delisted: false };
+  if (html.includes("helpful_404.html.erb") ||
+      html.includes("404 Page Not Found - Airbnb") ||
+      /<title>\s*404\b/i.test(html)) {
+    return { delisted: true, reason: `airbnb helpful_404 template ${html.length}b` };
+  }
+  return { delisted: false };
+}
+
 function looksBlocked(html: string): { blocked: boolean; reason?: string } {
   if (html.length < 40_000) return { blocked: true, reason: `short body ${html.length}b` };
 
@@ -191,6 +216,26 @@ export async function enrichOneAirbnbListing(
         errorMessage: `fetch failed twice: ${(err2 as Error).message.slice(0, 200)}`,
       };
     }
+  }
+
+  // Delisted check runs FIRST — these pages would otherwise fail the
+  // looksBlocked < 40KB threshold and get tagged as blocked. Persist with
+  // parseStatus = 'delisted' so downstream queries can distinguish dead
+  // links from genuine bot-walls.
+  const delisted = looksDelisted(html);
+  if (delisted.delisted) {
+    if (!opts.dryRun) {
+      await db.insert(listingDetailsTable).values({
+        listingId,
+        enrichedAt: new Date(),
+        parseVersion: "airbnb-detail-v1",
+        rawPayload: { kind: "delisted-stub", htmlBytes: html.length, headHash: html.slice(0, 200) },
+        normalizedFields: null,
+        parseStatus: "delisted",
+        parseErrors: [delisted.reason ?? "delisted"],
+      });
+    }
+    return { listingId, url, outcome: "delisted", errorMessage: delisted.reason };
   }
 
   const block = looksBlocked(html);
