@@ -20,7 +20,7 @@
     "nodemailer": "^8.0.4",
     "pino": "^9",
     "pino-http": "^10",
-    "undici": "^8.1.0",
+    "undici": "^6.21.0",
     "zod": "catalog:"
   },
   "devDependencies": {
