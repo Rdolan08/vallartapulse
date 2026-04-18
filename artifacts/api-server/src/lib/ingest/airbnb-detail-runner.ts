@@ -78,24 +78,26 @@ function looksBlocked(html: string): { blocked: boolean; reason?: string } {
   if (html.length < 40_000) return { blocked: true, reason: `short body ${html.length}b` };
 
   const lower = html.toLowerCase();
+  // Hard bot-wall markers — unambiguous interstitials that ONLY appear on
+  // genuinely blocked pages. We deliberately do NOT include the bare token
+  // "captcha" here: Airbnb preloads reCAPTCHA Enterprise on every PDP for
+  // the booking flow, so the substring shows up in benign script tags on
+  // perfectly normal listing pages (same false-positive we already removed
+  // for search-page block detection in `airbnb-discovery-wrapper.ts`).
   if (lower.includes("px-captcha") || lower.includes("perimeterx") ||
       lower.includes("/distil_r_") || lower.includes("access denied") ||
-      lower.includes("are you a human") || lower.includes("blocked by the airbnb")) {
+      lower.includes("are you a human") || lower.includes("blocked by the airbnb") ||
+      lower.includes("pardon our interruption") || lower.includes("/forbidden")) {
     return { blocked: true, reason: "captcha/bot-wall markers detected" };
   }
 
-  // Generic captcha mention is only meaningful when paired with the
-  // missing real-listing anchors — otherwise we'd false-positive on
-  // legitimate pages whose copy/T&C mentions captcha.
-  const hasJsonLd = html.includes("application/ld+json");
-  const hasDemandStay = html.includes("DemandStayListing");
-  if (!hasJsonLd && !hasDemandStay) {
-    if (lower.includes("captcha")) {
-      return { blocked: true, reason: "no SSR anchors + captcha mentioned" };
-    }
-    return { blocked: true, reason: "no JSON-LD and no DemandStayListing in body" };
-  }
-
+  // Note: missing SSR anchors (no JSON-LD AND no DemandStayListing) are
+  // intentionally NOT classified as blocked here. Some real PDPs hydrate
+  // late — Apollo state can arrive after networkidle, and the parser may
+  // still be able to recover something useful. We let the parser try, and
+  // downstream classification (parseStatus = 'parse_fail') will tag pages
+  // that genuinely yielded no data. Only the hard markers above and the
+  // short-body check trip the block classification.
   return { blocked: false };
 }
 
