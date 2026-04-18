@@ -131,6 +131,25 @@ PYEOF
 - **Workflow files**: require `workflow` scope — PAT has this, integration token does NOT
 - **Safety filter**: bash commands containing `git commit/push/pull` strings are blocked even inside heredocs; write file content with the `write` tool first, then reference the file in the script
 
+## STR Discovery Pipeline (Phase 2b — April 2026)
+
+Composition layer for queued, history-preserving Airbnb/VRBO ingestion: `airbnb-discovery-wrapper.ts`, `vrbo-discovery-wrapper.ts`, `runner.ts` (atomic markComplete/markFailed, wall-clock + job-count budgets), CLI `--run` with strict guards (single source/neighborhood/local-DB-only).
+
+**Proxy layer**: `artifacts/api-server/src/lib/ingest/http-proxy.ts` reads `PROXY_URL` env var (http/https/socks5), threaded into `airbnbHttpGet` and `vrboHttpGet`. Direct-fetch when unset. Use `describeProxy()` for redacted logging — never log the URL.
+
+**Decodo proxy connection string** (working format): `http://sphs30ddit:<password>@mx.decodo.com:20001` (Mexico residential, sticky session per-username; rotate by appending `-session-XXXX`). Dashboard sample uses `gate.decodo.com:10001` (rotates country by gateway port). The `mx.decodo.com:20001` MX gateway returned a Total Play residential IP in Hermosillo — verified live.
+
+**Critical finding (April 2026)**: Even with verified-clean Mexican residential IP, simple HTTP fetches FAIL on both targets:
+- **VRBO** → `HTTP 429` immediately (24KB challenge body) on every attempt regardless of IP geo. Akamai Bot Manager blocks at TLS/header-fingerprint layer, not IP layer.
+- **Airbnb** → `HTTP 200` with full ~830KB body and correct page title ("Zona Romántica - Vacation Rentals - Emiliano Zapata, Puerto Vallarta") but ZERO `/rooms/` matches. Page is a niobeMinimal SPA shell; listing cards render via client-side GraphQL after JS execution. Static-HTML scraping cannot extract listings from this.
+- 2nd consecutive Airbnb hit from same IP returned 523 bytes (rate-limited within seconds).
+
+**Implication**: `airbnb-search-adapter.ts` and `vrbo-search-adapter.ts` (curl-style HTTP GET → cheerio parse) are structurally insufficient for Phase 2b live runs. Proxy was a necessary precondition but not sufficient. **Next architectural decision required from user**: switch fetch layer to a real headless browser (Playwright/Puppeteer over the same proxy) so we present a genuine browser TLS/HTTP2 fingerprint and can execute the JS that materializes Airbnb's cards.
+
+**Pipeline atomic accounting verified** under block conditions: jobsAttempted=1, cardsObserved=0, terminationReason='blocked', zero DB writes — runner correctly marks jobs complete-but-blocked and stops the loop.
+
+**Pre-existing issues (not blockers, deferred)**: 2 unmapped neighborhood rows ("Lázaro Cardenas" + empty string) need a one-line alias fix in `rental-normalize.ts`; 2 pre-existing TS7030 errors in `src/routes/ingest.ts` lines 325/488; api-server workflow occasionally fails with EADDRINUSE on port 8080 (stale process — restart fixes).
+
 ## Known Fixes & Notes
 
 - **Chart colors**: Recharts `hsl(var(--chart-N))` variables are NOT defined in the design system. All chart strokes/fills must use hardcoded brand hex values: `#00C2A8` (primary teal), `#00D1FF` (accent cyan), `#F59E0B` (amber), `#6366F1` (indigo), `#3B82F6` (blue). Do not use `--chart-N` CSS variables.
