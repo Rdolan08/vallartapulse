@@ -26,7 +26,7 @@
 import type { Agent as HttpAgent } from "http";
 import type { Agent as HttpsAgent } from "https";
 
-export type FetchMode = "direct" | "proxy" | "unblocker";
+export type FetchMode = "direct" | "proxy" | "unblocker" | "browser";
 
 interface CachedAgent {
   mode: FetchMode;
@@ -51,6 +51,10 @@ export async function getProxyAgent(
   mode: FetchMode = "proxy"
 ): Promise<HttpAgent | HttpsAgent | null> {
   if (mode === "direct") return null;
+  // Browser mode never uses node http; the Chromium instance owns its own
+  // proxy config (see browser-fetch.ts). Returning null here is correct —
+  // callers in browser mode should not be issuing node http requests at all.
+  if (mode === "browser") return null;
 
   const raw = readUrl(mode);
   if (!raw) return null;
@@ -100,6 +104,17 @@ export function isUnblockerConfigured(): boolean {
  */
 export function describeProxy(mode: FetchMode = "proxy"): string {
   if (mode === "direct") return "direct (no proxy)";
+  if (mode === "browser") {
+    // Browser mode wraps PROXY_URL inside Chromium.
+    const raw = readUrl("proxy");
+    if (!raw) return "browser (direct, no PROXY_URL)";
+    try {
+      const u = new URL(raw);
+      return `browser → ${u.protocol}//${u.hostname}:${u.port || "(default)"}`;
+    } catch {
+      return "browser (PROXY_URL unparseable)";
+    }
+  }
   const raw = readUrl(mode);
   if (!raw) return mode === "unblocker" ? "unblocker not configured" : "direct (no proxy)";
   try {

@@ -16,6 +16,7 @@ import http from "http";
 import zlib from "zlib";
 import type { IncomingMessage } from "http";
 import { getProxyAgent, type FetchMode } from "./http-proxy.js";
+import { fetchWithBrowser } from "./browser-fetch.js";
 
 const BROWSER_HEADERS: Record<string, string> = {
   "User-Agent":
@@ -53,6 +54,19 @@ export function vrboHttpGet(url: string, opts?: VrboHttpGetOpts | number): Promi
 
 async function get(url: string, fetchMode: FetchMode, redirects: number): Promise<string> {
   if (redirects > 5) throw new Error("Too many redirects");
+  // Browser mode: short-circuit the node http stack entirely. Chromium handles
+  // its own proxy, redirects, JS rendering, and cookie storage.
+  if (fetchMode === "browser") {
+    return fetchWithBrowser(url, {
+      timeoutMs: 30_000,
+      // VRBO search pages render cards inside [data-stid*='property-card'].
+      // We don't strictly require it (networkidle is the primary signal) but
+      // having it as a fallback selector makes us resilient when a background
+      // tracker prevents networkidle from firing.
+      waitForSelector: "[data-stid*='property-card'], [data-wdio='search-results']",
+      fallbackOnTimeout: true,
+    });
+  }
   const parsed = new URL(url);
   const mod = parsed.protocol === "https:" ? https : http;
   const proxyAgent = await getProxyAgent(fetchMode);
