@@ -14,7 +14,13 @@ import { db } from "@workspace/db";
 import { listingDetailsTable, rentalListingsTable } from "@workspace/db/schema";
 import { sql } from "drizzle-orm";
 import { fetchWithBrowser } from "./browser-fetch.js";
+import {
+  fetchAirbnbDetailHybrid,
+  HybridFetchError,
+  type HybridFetchObservability,
+} from "./raw-fetch.js";
 import { parseAirbnbDetailHtml, type AirbnbDetailParse } from "./airbnb-detail-adapter.js";
+import { logger } from "../logger.js";
 
 export interface EnrichResult {
   listingId: number;
@@ -29,6 +35,35 @@ export interface EnrichResult {
   errorMessage?: string;
   /** Snapshot of normalized fields for reporting (not persisted here — DB has it). */
   normalized?: AirbnbDetailParse["normalized"];
+  /**
+   * Per-listing fetch-path metrics. Populated for every outcome (including
+   * blocked/delisted/error) so post-batch comparisons across the three fetch
+   * modes can be assembled from logs alone, without re-fetching.
+   *
+   * `fetchMode` records WHICH transport produced the body that drove the
+   * outcome — for "browser" it'll always be "browser"; for "raw" it'll be
+   * "raw"; for "hybrid" it'll be either "raw" (raw succeeded) or
+   * "browser-fallback" (raw was unusable, browser ran).
+   */
+  fetch?: HybridFetchObservability & {
+    /** AIRBNB_DETAIL_FETCH_MODE value at the time of the call. */
+    requestedMode: AirbnbDetailFetchMode;
+    /** Total wall time across raw + (optional) browser, in ms. */
+    totalMs: number;
+  };
+}
+
+/** Runtime-selectable fetch-path. Default is "browser" so a deploy with no
+ *  env change preserves current production behavior exactly. */
+export type AirbnbDetailFetchMode = "browser" | "raw" | "hybrid";
+
+function readFetchMode(): AirbnbDetailFetchMode {
+  const v = (process.env.AIRBNB_DETAIL_FETCH_MODE ?? "browser").trim().toLowerCase();
+  if (v === "raw" || v === "hybrid" || v === "browser") return v;
+  // Unknown values silently degrade to the safe default rather than throwing —
+  // an env typo should not take the enrichment loop down.
+  logger.warn({ requestedMode: v }, "airbnb-detail-runner: unrecognized AIRBNB_DETAIL_FETCH_MODE, defaulting to 'browser'");
+  return "browser";
 }
 
 interface EnrichOpts {
@@ -151,35 +186,28 @@ function countFilled(n: AirbnbDetailParse["normalized"]): number {
 }
 
 /**
- * Enrich one listing. Errors are caught and translated into outcomes —
- * the caller's loop should NEVER abort on a single page.
- *
- * The brief allows "no retries unless a page outright fails once". We
- * implement that as a single re-try on transport-level failure (no
- * re-try on parse_fail or block).
+ * Selector that the browser path waits for before reading the rendered HTML.
+ * Either anchor is sufficient for the parser to extract usable structured
+ * data — requiring both was over-restrictive and produced PARSE_FAIL on
+ * pages where one anchor lands well after the other.
  */
-export async function enrichOneAirbnbListing(
-  listingId: number,
-  url: string,
-  opts: EnrichOpts = {}
-): Promise<EnrichResult> {
-  const timeoutMs = opts.timeoutMs ?? 30_000;
-  const hardCapMs = opts.hardCapMs ?? 70_000;
+const HYDRATION_SELECTOR =
+  'script[type="application/ld+json"], script[id^="data-deferred-state"]';
 
-  // Pass 1
-  // Wait for EITHER the JSON-LD bootstrapper OR the Apollo deferred-state
-  // script ("data-deferred-state-0" is the post-hydration boundary). Either
-  // anchor is sufficient for the parser to extract usable structured data —
-  // requiring both was over-restrictive and contributed to PARSE_FAIL on
-  // pages where one anchor lands well after the other. networkidle is
-  // racing alongside it inside fetchWithBrowser; fallbackOnTimeout returns
-  // whatever HTML loaded so far if neither selector resolves.
-  const HYDRATION_SELECTOR =
-    'script[type="application/ld+json"], script[id^="data-deferred-state"]';
-  let html: string;
+/**
+ * Browser-mode fetch helper. Two-pass with one transport-only retry, both
+ * bounded by hardCapMs. Behavior is byte-identical to pre-Phase-A code so
+ * a deploy without an env-var change preserves current production
+ * outcomes exactly.
+ */
+async function fetchHtmlBrowserMode(
+  url: string,
+  timeoutMs: number,
+  hardCapMs: number,
+): Promise<{ html: string; ms: number }> {
   const t0 = Date.now();
   try {
-    html = await withHardCap(
+    const html = await withHardCap(
       fetchWithBrowser(url, {
         timeoutMs,
         waitForSelector: HYDRATION_SELECTOR,
@@ -188,19 +216,14 @@ export async function enrichOneAirbnbListing(
       timeoutMs + 8_000,
       `fetch pass-1 ${url}`,
     );
+    return { html, ms: Date.now() - t0 };
   } catch (err) {
-    // One transport-only retry, per the brief — but only if we still have
-    // budget left under the hard cap.
     const remaining = hardCapMs - (Date.now() - t0);
     if (remaining < 8_000) {
-      return {
-        listingId, url,
-        outcome: "error",
-        errorMessage: `pass-1 failed and no retry budget: ${(err as Error).message.slice(0, 200)}`,
-      };
+      throw new Error(`pass-1 failed and no retry budget: ${(err as Error).message.slice(0, 200)}`);
     }
     try {
-      html = await withHardCap(
+      const html = await withHardCap(
         fetchWithBrowser(url, {
           timeoutMs: Math.min(timeoutMs, remaining - 4_000),
           waitForSelector: HYDRATION_SELECTOR,
@@ -209,14 +232,128 @@ export async function enrichOneAirbnbListing(
         remaining - 2_000,
         `fetch pass-2 ${url}`,
       );
+      return { html, ms: Date.now() - t0 };
     } catch (err2) {
-      return {
-        listingId, url,
-        outcome: "error",
-        errorMessage: `fetch failed twice: ${(err2 as Error).message.slice(0, 200)}`,
-      };
+      throw new Error(`fetch failed twice: ${(err2 as Error).message.slice(0, 200)}`);
     }
   }
+}
+
+/** Synthesize a "didn't even attempt" observability record for the error path. */
+function emptyFetchObs(mode: AirbnbDetailFetchMode, totalMs: number): HybridFetchObservability {
+  return {
+    fetchMode: mode === "browser" ? "browser" : "raw",
+    rawAttempted: mode !== "browser",
+    rawSucceeded: false,
+    rawStatus: null,
+    rawMs: null,
+    rawFallbackReason: null,
+    browserUsed: mode === "browser",
+    browserMs: mode === "browser" ? totalMs : null,
+  };
+}
+
+/** Single structured log line per enrichment, regardless of outcome. The
+ *  shape is stable so post-batch analyses can `jq` over the workflow logs. */
+function logEnrichOutcome(result: EnrichResult): void {
+  logger.info(
+    {
+      evt: "airbnb_detail_enriched",
+      listingId: result.listingId,
+      url: result.url,
+      outcome: result.outcome,
+      parseStatus: result.parseStatus,
+      filledFieldCount: result.filledFieldCount,
+      fetch: result.fetch,
+      errorMessage: result.errorMessage,
+    },
+    "airbnb-detail enrichment outcome",
+  );
+}
+
+/**
+ * Enrich one listing. Errors are caught and translated into outcomes —
+ * the caller's loop should NEVER abort on a single page.
+ *
+ * Fetch transport is selected at runtime via AIRBNB_DETAIL_FETCH_MODE:
+ *   - "browser" (default): browser-only, two-pass with one retry. Identical
+ *     to pre-Phase-A behavior.
+ *   - "raw": raw HTTP via proxy only. No browser fallback — raw failures
+ *     surface as outcome=error. Used for clean A/B measurement.
+ *   - "hybrid": raw first, browser fallback when raw is unusable
+ *     (captcha/perimeterx markers, transport error, or short non-delisted
+ *     body). Successful raw responses skip the browser entirely.
+ *
+ * Per-listing fetch metrics are attached to EnrichResult.fetch and emitted
+ * as a structured log line so we can compare modes from logs alone.
+ */
+export async function enrichOneAirbnbListing(
+  listingId: number,
+  url: string,
+  opts: EnrichOpts = {}
+): Promise<EnrichResult> {
+  const timeoutMs = opts.timeoutMs ?? 30_000;
+  const hardCapMs = opts.hardCapMs ?? 70_000;
+  const requestedMode = readFetchMode();
+
+  // ── Fetch (mode-dispatched) ────────────────────────────────────────────
+  const fetchT0 = Date.now();
+  let html: string;
+  let fetchObs: HybridFetchObservability;
+  try {
+    if (requestedMode === "browser") {
+      const r = await fetchHtmlBrowserMode(url, timeoutMs, hardCapMs);
+      html = r.html;
+      fetchObs = {
+        fetchMode: "browser",
+        rawAttempted: false,
+        rawSucceeded: false,
+        rawStatus: null,
+        rawMs: null,
+        rawFallbackReason: null,
+        browserUsed: true,
+        browserMs: r.ms,
+      };
+    } else {
+      // raw or hybrid — orchestrator handles raw + (optional) browser fallback.
+      const r = await fetchAirbnbDetailHybrid(url, {
+        timeoutMs,
+        allowBrowserFallback: requestedMode === "hybrid",
+        browserWaitForSelector: HYDRATION_SELECTOR,
+      });
+      html = r.html;
+      fetchObs = r.observability;
+    }
+  } catch (err) {
+    const totalMs = Date.now() - fetchT0;
+    // Browser-mode error messages are preserved verbatim (no extra slice
+    // beyond what fetchHtmlBrowserMode already does internally) so this
+    // branch is byte-identical to pre-Phase-A semantics — callers / log
+    // grep patterns can still rely on the original "pass-1 failed..." /
+    // "fetch failed twice..." strings.  Raw/hybrid messages get a mode
+    // prefix so post-batch analysis can distinguish browser-path from
+    // raw-path failures at a glance.
+    const errMsg = (err as Error).message;
+    const errorMessage = requestedMode === "browser"
+      ? errMsg
+      : `fetch failed (${requestedMode}): ${errMsg.slice(0, 200)}`;
+    // Raw/hybrid throw HybridFetchError carrying real raw-attempt metrics
+    // (rawStatus, rawMs, rawFallbackReason). Preserve them for Phase B
+    // failure-cohort analysis instead of nulling everything out.
+    const obs = err instanceof HybridFetchError
+      ? err.observability
+      : emptyFetchObs(requestedMode, totalMs);
+    const result: EnrichResult = {
+      listingId, url,
+      outcome: "error",
+      errorMessage,
+      fetch: { ...obs, requestedMode, totalMs },
+    };
+    logEnrichOutcome(result);
+    return result;
+  }
+  const totalFetchMs = Date.now() - fetchT0;
+  const fetchAttachment = { ...fetchObs, requestedMode, totalMs: totalFetchMs };
 
   // Delisted check runs FIRST — these pages would otherwise fail the
   // looksBlocked < 40KB threshold and get tagged as blocked. Persist with
@@ -235,7 +372,12 @@ export async function enrichOneAirbnbListing(
         parseErrors: [delisted.reason ?? "delisted"],
       });
     }
-    return { listingId, url, outcome: "delisted", errorMessage: delisted.reason };
+    const result: EnrichResult = {
+      listingId, url, outcome: "delisted", errorMessage: delisted.reason,
+      fetch: fetchAttachment,
+    };
+    logEnrichOutcome(result);
+    return result;
   }
 
   const block = looksBlocked(html);
@@ -259,7 +401,12 @@ export async function enrichOneAirbnbListing(
         parseErrors: [block.reason ?? "blocked"],
       });
     }
-    return { listingId, url, outcome: "blocked", errorMessage: block.reason };
+    const result: EnrichResult = {
+      listingId, url, outcome: "blocked", errorMessage: block.reason,
+      fetch: fetchAttachment,
+    };
+    logEnrichOutcome(result);
+    return result;
   }
 
   const parsed = parseAirbnbDetailHtml(html);
@@ -278,13 +425,16 @@ export async function enrichOneAirbnbListing(
         parseErrors: parsed.parseErrors,
       });
     }
-    return {
+    const result: EnrichResult = {
       listingId, url, outcome: "parse_fail",
       parseStatus: parsed.parseStatus,
       filledFieldCount: filled,
       parseErrors: parsed.parseErrors,
       normalized: parsed.normalized,
+      fetch: fetchAttachment,
     };
+    logEnrichOutcome(result);
+    return result;
   }
 
   if (!opts.dryRun) {
@@ -319,12 +469,15 @@ export async function enrichOneAirbnbListing(
     `);
   }
 
-  return {
+  const result: EnrichResult = {
     listingId, url,
     outcome: "enriched",
     parseStatus: parsed.parseStatus,
     filledFieldCount: filled,
     parseErrors: parsed.parseErrors,
     normalized: parsed.normalized,
+    fetch: fetchAttachment,
   };
+  logEnrichOutcome(result);
+  return result;
 }

@@ -149,3 +149,188 @@ export function rawFetchLooksUnusable(html: string, status: number): { unusable:
 
   return { unusable: false };
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Hybrid orchestrator: try raw first, fall back to browser when raw is
+// unusable. Used by the airbnb detail runner when AIRBNB_DETAIL_FETCH_MODE
+// is set to "hybrid". Lives here (not in a separate file) so the predicate
+// + the orchestration that depends on it stay co-located.
+// ─────────────────────────────────────────────────────────────────────────
+
+import { fetchWithBrowser } from "./browser-fetch.js";
+
+export interface HybridFetchOpts {
+  /** Per-attempt timeout for raw and (separately) browser. Default 25s each. */
+  timeoutMs?: number;
+  /**
+   * If true, fall back to the browser path when the raw response trips
+   * `rawFetchLooksUnusable`. If false, raw failures surface as a thrown
+   * error (used for the "raw" mode where we explicitly want to evaluate
+   * raw without the browser safety net).
+   */
+  allowBrowserFallback?: boolean;
+  /**
+   * Selector to wait for in browser mode — same default as the runner's
+   * pass-1 call, so behavior is identical when we do fall back.
+   */
+  browserWaitForSelector?: string;
+}
+
+export interface HybridFetchObservability {
+  /** Which transport produced the body that's returned. */
+  fetchMode: "raw" | "browser-fallback" | "browser";
+  /** Did we attempt raw at all? */
+  rawAttempted: boolean;
+  /** Did the raw response come back AND pass rawFetchLooksUnusable? */
+  rawSucceeded: boolean;
+  /** Status code from the raw attempt (null if raw not attempted). */
+  rawStatus: number | null;
+  /** Wall-clock ms for the raw attempt (null if raw not attempted). */
+  rawMs: number | null;
+  /** If raw was unusable, why we fell back. Null if raw succeeded or was skipped. */
+  rawFallbackReason: string | null;
+  /** True iff the browser path was used (either as fallback or as primary). */
+  browserUsed: boolean;
+  /** Wall-clock ms for the browser attempt (null if browser not used). */
+  browserMs: number | null;
+}
+
+export interface HybridFetchResult {
+  html: string;
+  bytes: number;
+  observability: HybridFetchObservability;
+}
+
+/**
+ * Error thrown by `fetchAirbnbDetailHybrid` when raw is unusable AND
+ * `allowBrowserFallback` is false (i.e. "raw" mode). Carries the partial
+ * observability captured during the raw attempt so the caller can persist
+ * `rawStatus`, `rawMs`, and `rawFallbackReason` in its log/return shape
+ * — important for Phase B failure-cohort analysis.
+ */
+export class HybridFetchError extends Error {
+  readonly observability: HybridFetchObservability;
+  constructor(message: string, observability: HybridFetchObservability) {
+    super(message);
+    this.name = "HybridFetchError";
+    this.observability = observability;
+  }
+}
+
+/**
+ * Try raw first; fall back to the browser path when the raw body looks
+ * unusable AND `allowBrowserFallback` is true. The returned observability
+ * payload is the source of truth for per-listing comparison metrics.
+ */
+export async function fetchAirbnbDetailHybrid(
+  url: string,
+  opts: HybridFetchOpts = {}
+): Promise<HybridFetchResult> {
+  const timeoutMs = opts.timeoutMs ?? 25_000;
+  const allowFallback = opts.allowBrowserFallback ?? true;
+  const browserSelector = opts.browserWaitForSelector ??
+    'script[type="application/ld+json"], script[id^="data-deferred-state"]';
+
+  // ── Raw attempt ─────────────────────────────────────────────────────
+  let rawErr: Error | null = null;
+  let rawBytes = 0;
+  let rawHtml = "";
+  let rawStatus: number | null = null;
+  let rawMs: number | null = null;
+  try {
+    const r = await fetchAirbnbRaw(url, { timeoutMs });
+    rawHtml = r.html;
+    rawBytes = r.bytes;
+    rawStatus = r.status;
+    rawMs = r.ms;
+  } catch (err) {
+    rawErr = err as Error;
+  }
+
+  // If raw threw outright, treat it as unusable for the predicate.
+  let usable: ReturnType<typeof rawFetchLooksUnusable>;
+  if (rawErr) {
+    usable = { unusable: true, reason: `raw transport error: ${rawErr.message.slice(0, 120)}` };
+  } else {
+    usable = rawFetchLooksUnusable(rawHtml, rawStatus ?? 0);
+  }
+
+  if (!usable.unusable) {
+    return {
+      html: rawHtml,
+      bytes: rawBytes,
+      observability: {
+        fetchMode: "raw",
+        rawAttempted: true,
+        rawSucceeded: true,
+        rawStatus,
+        rawMs,
+        rawFallbackReason: null,
+        browserUsed: false,
+        browserMs: null,
+      },
+    };
+  }
+
+  // ── Browser fallback (only in hybrid mode) ─────────────────────────
+  if (!allowFallback) {
+    throw new HybridFetchError(
+      `raw fetch unusable and fallback disabled: ${usable.reason}`,
+      {
+        fetchMode: "raw",
+        rawAttempted: true,
+        rawSucceeded: false,
+        rawStatus,
+        rawMs,
+        rawFallbackReason: usable.reason ?? "raw unusable",
+        browserUsed: false,
+        browserMs: null,
+      },
+    );
+  }
+
+  const bt0 = Date.now();
+  let html: string;
+  try {
+    html = await fetchWithBrowser(url, {
+      timeoutMs,
+      waitForSelector: browserSelector,
+      fallbackOnTimeout: true,
+    });
+  } catch (browserErr) {
+    // Both transports failed. Re-throw as HybridFetchError so the caller
+    // still gets structured raw-attempt metrics — without this, the
+    // outer catch would see a plain Error and lose rawStatus/rawMs/
+    // rawFallbackReason, defeating the purpose of the fallback path's
+    // observability for Phase B failure-cohort analysis.
+    throw new HybridFetchError(
+      `raw unusable + browser fallback failed: raw=[${usable.reason}] browser=[${(browserErr as Error).message.slice(0, 160)}]`,
+      {
+        fetchMode: "browser-fallback",
+        rawAttempted: true,
+        rawSucceeded: false,
+        rawStatus,
+        rawMs,
+        rawFallbackReason: usable.reason ?? "raw unusable",
+        browserUsed: true,
+        browserMs: Date.now() - bt0,
+      },
+    );
+  }
+  const browserMs = Date.now() - bt0;
+
+  return {
+    html,
+    bytes: html.length,
+    observability: {
+      fetchMode: "browser-fallback",
+      rawAttempted: true,
+      rawSucceeded: false,
+      rawStatus,
+      rawMs,
+      rawFallbackReason: usable.reason ?? "raw unusable",
+      browserUsed: true,
+      browserMs,
+    },
+  };
+}
