@@ -311,9 +311,13 @@ async function processJob(
         },
         titleDisplayed: card.name ?? null,
         displayedNightlyPrice: card.price ?? null,
-        currency: "USD",
+        displayedTotalPrice: card.totalPrice ?? null,
+        // Use the card's detected currency when present; fall back to USD
+        // (matches Airbnb's default pricing context for our PV searches).
+        currency: card.priceCurrency ?? "USD",
         displayedRating: card.rating ?? null,
         displayedReviewCount: card.reviews ?? null,
+        thumbnailUrl: card.thumbnail ?? null,
         rawLocationText: card.city ?? neighborhoodRaw,
         normalizedNeighborhoodBucket: mapping.pricingToolBucket,
         parentRegionBucket: mapping.parentRegion,
