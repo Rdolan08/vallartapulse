@@ -29,6 +29,7 @@ import {
   fetchAirbnbSeedBatch,
   type AirbnbBatch,
 } from "./airbnb-discovery-wrapper.js";
+import { fetchVrboSeedBatch } from "./vrbo-discovery-wrapper.js";
 import { mapToPricingToolBucket } from "../neighborhood-buckets.js";
 import type { DiscoveryJob } from "@workspace/db/schema";
 
@@ -205,6 +206,10 @@ async function processJob(
     batch = await fetchAirbnbSeedBatch(seed as never, {
       maxCards: opts.maxResultsPerJob ?? 50,
     });
+  } else if (job.source === "vrbo") {
+    batch = await fetchVrboSeedBatch(seed as never, {
+      maxCards: opts.maxResultsPerJob ?? 50,
+    });
   } else {
     return {
       jobId: job.id,
@@ -250,7 +255,10 @@ async function processJob(
   const observedAt = new Date();
   for (const card of batch.cards) {
     try {
-      const sourceUrl = `https://www.airbnb.com/rooms/${card.id}`;
+      const sourceUrl =
+        job.source === "vrbo"
+          ? `https://www.vrbo.com/${card.id}`
+          : `https://www.airbnb.com/rooms/${card.id}`;
       const neighborhoodRaw =
         job.normalizedNeighborhoodBucket ?? card.city ?? "Puerto Vallarta";
 
