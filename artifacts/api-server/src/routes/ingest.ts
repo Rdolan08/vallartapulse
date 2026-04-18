@@ -37,6 +37,10 @@ import { fetchAndParseICal, parseICalText } from "../lib/ingest/ical-parser.js";
 import { syncAll, syncSource, getSyncStatus } from "../lib/ingest/sync-scheduler.js";
 import { discoverVrboListings } from "../lib/ingest/vrbo-search-adapter.js";
 import { fetchAirbnbSearchListings } from "../lib/ingest/airbnb-search-adapter.js";
+import {
+  enrichOneAirbnbListing,
+  type EnrichResult,
+} from "../lib/ingest/airbnb-detail-runner.js";
 import type { SourceKey } from "../lib/ingest/types.js";
 
 const router = Router();
@@ -647,6 +651,131 @@ router.post("/ingest/sync/:source", async (req, res) => {
   } catch (err) {
     req.log.error({ err, source }, "ingest/sync/:source failed");
     res.status(500).json({ error: "Sync failed", message: String(err) });
+  }
+});
+
+// ── POST /ingest/enrich-airbnb-detail ─────────────────────────────────────
+//
+// On-demand trigger for the Airbnb listing-detail enrichment loop. Mirrors
+// the candidate query used by scripts/src/enrich-airbnb-listings.ts: any
+// rental_listings row whose source_platform='airbnb', has a source_url, and
+// has no listing_details row yet, optionally restricted to a set of
+// normalized neighborhood buckets. Hard-capped at maxListings=50 per call.
+//
+// The fetch path (browser/raw/hybrid) is dictated by the AIRBNB_DETAIL_FETCH_MODE
+// env var on the server — this endpoint just iterates and reports.
+//
+// Auth: requires the X-Internal-Token request header to match
+// process.env.INTERNAL_TRIGGER_TOKEN. If the env var is not set on the
+// server, the endpoint refuses with 503 — there is no "no auth" mode.
+
+const DEFAULT_DETAIL_BUCKETS = [
+  "Zona Romántica",
+  "Amapas / Conchas Chinas",
+  "Centro / Alta Vista",
+];
+
+const EnrichDetailSchema = z.object({
+  maxListings: z.number().int().positive().max(50).optional().default(5),
+  buckets: z.array(z.string().min(1)).optional(),
+  dryRun: z.boolean().optional().default(false),
+});
+
+router.post("/ingest/enrich-airbnb-detail", async (req, res) => {
+  const expected = process.env["INTERNAL_TRIGGER_TOKEN"];
+  if (!expected || expected.length === 0) {
+    return res.status(503).json({
+      error: "INTERNAL_TRIGGER_TOKEN not configured on server",
+    });
+  }
+  const provided = req.header("x-internal-token");
+  if (provided !== expected) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const parsed = EnrichDetailSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+  }
+  const { maxListings, dryRun } = parsed.data;
+  const buckets = parsed.data.buckets && parsed.data.buckets.length > 0
+    ? parsed.data.buckets
+    : DEFAULT_DETAIL_BUCKETS;
+
+  try {
+    const bucketList = sql.join(buckets.map((b) => sql`${b}`), sql`, `);
+    const candidatesRaw = await db.execute(sql`
+      SELECT rl.id,
+             rl.external_id,
+             rl.source_url,
+             rl.normalized_neighborhood_bucket AS bucket
+      FROM rental_listings rl
+      LEFT JOIN listing_details ld ON ld.listing_id = rl.id
+      WHERE rl.source_platform = 'airbnb'
+        AND rl.source_url IS NOT NULL
+        AND ld.id IS NULL
+        AND rl.normalized_neighborhood_bucket IN (${bucketList})
+      ORDER BY rl.id DESC
+      LIMIT ${maxListings}
+    `);
+    const candidates = (candidatesRaw as unknown as {
+      rows: Array<{ id: number; external_id: string | null; source_url: string; bucket: string }>;
+    }).rows;
+
+    req.log.info(
+      { count: candidates.length, maxListings, buckets, dryRun, mode: process.env["AIRBNB_DETAIL_FETCH_MODE"] ?? "browser" },
+      "ingest/enrich-airbnb-detail: starting"
+    );
+
+    const perListing: Array<{
+      listingId: number;
+      externalId: string | null;
+      bucket: string;
+      outcome: EnrichResult["outcome"];
+      parseStatus?: string | null;
+      filledFieldCount?: number;
+      errorMessage?: string | null;
+      ms: number;
+    }> = [];
+
+    for (const c of candidates) {
+      const t0 = Date.now();
+      const r = await enrichOneAirbnbListing(c.id, c.source_url, { dryRun });
+      const ms = Date.now() - t0;
+      perListing.push({
+        listingId: c.id,
+        externalId: c.external_id,
+        bucket: c.bucket,
+        outcome: r.outcome,
+        parseStatus: r.outcome === "enriched" || r.outcome === "parse_fail" ? r.parseStatus : null,
+        filledFieldCount: r.outcome === "enriched" || r.outcome === "parse_fail" ? r.filledFieldCount : undefined,
+        errorMessage: r.outcome === "blocked" || r.outcome === "error" ? r.errorMessage : null,
+        ms,
+      });
+    }
+
+    const summary = {
+      attempted: perListing.length,
+      enriched: perListing.filter((r) => r.outcome === "enriched").length,
+      parse_fail: perListing.filter((r) => r.outcome === "parse_fail").length,
+      blocked: perListing.filter((r) => r.outcome === "blocked").length,
+      error: perListing.filter((r) => r.outcome === "error").length,
+      delisted: perListing.filter((r) => r.outcome === "delisted").length,
+    };
+
+    res.json({
+      mode: process.env["AIRBNB_DETAIL_FETCH_MODE"] ?? "browser",
+      dryRun,
+      buckets,
+      summary,
+      listings: perListing,
+    });
+  } catch (err) {
+    req.log.error({ err }, "ingest/enrich-airbnb-detail failed");
+    res.status(500).json({
+      error: "Enrichment loop failed",
+      message: err instanceof Error ? err.message : String(err),
+    });
   }
 });
 
