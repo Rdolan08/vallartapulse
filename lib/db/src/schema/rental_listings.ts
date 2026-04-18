@@ -10,6 +10,7 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -105,6 +106,19 @@ export const rentalListingsTable = pgTable(
     uniqueIndex("idx_rl_source_unique").on(table.sourcePlatform, table.sourceUrl),
     index("idx_rl_lifecycle").on(table.lifecycleStatus),
     index("idx_rl_identity_key").on(table.identityKey),
+    /**
+     * Partial unique index on identity_key — guarantees one row per logical
+     * listing even when two concurrent discovery workers see the same listing
+     * via different URLs (mobile vs desktop, with vs without query params).
+     * Phase 2b's upsertListing can rely on `ON CONFLICT (identity_key)` for
+     * a simpler atomic upsert path.
+     *
+     * NULL identity_keys (legacy rows that couldn't be backfilled) are
+     * intentionally excluded so the index doesn't block them.
+     */
+    uniqueIndex("idx_rl_identity_key_unique")
+      .on(table.identityKey)
+      .where(sql`identity_key IS NOT NULL`),
     index("idx_rl_parent_region").on(table.parentRegionBucket),
     index("idx_rl_pricing_bucket").on(table.normalizedNeighborhoodBucket),
     index("idx_rl_last_seen").on(table.lastSeenAt),
