@@ -292,3 +292,29 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+
+## STR Comp-Signal Inventory Build (Phase 2d — April 2026)
+
+Scaled the Airbnb comp inventory from 94 listings (3 buckets) to **402 listings (16 buckets, balanced)** in a single session, using only existing CLI + browser-mode discovery — no schema, scraper, or extractor changes.
+
+**Approach**: idempotent re-seed of the discovery queue across both regions (`--seed-only --region=puerto_vallarta`, then `--region=riviera_nayarit`), then alternating PV/RN `--run --max-jobs=3 --fetch-mode=browser` invocations per neighborhood. Wave 1 = breadth across all 16 buckets (16 invocations); Wave 2 = depth on top yielders (7 invocations); stopped when wave-2 yield collapsed to 2-4 new/job (marginal-yield gate per brief).
+
+**Inventory delta**:
+- 94 → 402 Airbnb listings (+306 this session, +325%)
+- PV: 207 listings across 9 buckets (was 3); RN: 194 listings across 7 buckets (was 0)
+- 11 of 16 buckets now ≥15 listings (was 3); 4 thin buckets remain: Old Town (4), El Anclote (6), Hotel Zone/Malecón (9), plus 1 stray uncategorized row
+- 863 search observations (avg 2.2 per listing); 770 with derived nightly price
+
+**Comp-signal usability** (via `airbnb_comp_signal` view):
+- 367/402 minimum-usable (91%, was 21%)
+- 287/402 rich-usable (71%, was 5%)
+- Currency: 388 MXN / 9 USD (97% MXN — Airbnb default for the geo)
+- 5 detail-enriched (carryover from Phase 2b)
+
+**Discovery throughput (this session)**: 69 jobs run, 680 cards observed, 306 new listings, avg 4.4 new/job, **0 blocks, 0 errors** — Decodo browser-mode performance was perfect across all 23 invocations. Termination mix: 53 manual_cap, 9 duplicate_only, 7 exhausted (<10 cards on page).
+
+**Remaining queue**: 1,659 pending discovery jobs across all 16 buckets (105/bucket) — available for future depth/refresh sessions without re-seeding.
+
+**Known data hygiene**:
+- Region-casing inconsistency persists in `discovery_jobs.parent_region_bucket`: 25 legacy rows have `Puerto Vallarta` (Title Case), all 1,728 new rows have `puerto_vallarta` (snake_case). Doesn't affect the comp-signal view (which keys off rental_listings, not jobs) but downstream report queries should normalize via `lower()` and accept both spellings. Same fixed alias-pair as called out in Phase 2b notes; not corrected in this session.
+- 1 rental_listings row has NULL `normalized_neighborhood_bucket` (pre-existing; same Lázaro Cárdenas / empty-string class flagged in Phase 2b).
