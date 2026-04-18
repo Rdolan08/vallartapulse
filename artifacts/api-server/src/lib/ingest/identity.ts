@@ -228,13 +228,6 @@ export interface InsertObservationInput {
   titleDisplayed?: string | null;
   displayedNightlyPrice?: number | null;
   displayedTotalPrice?: number | null;
-  /**
-   * Analytics-only projection: displayed_total_price / stayLengthNights.
-   * Caller (the discovery runner) is responsible for the division — this
-   * column is never derived inside the DB layer, to keep the data flow
-   * explicit and the column nullable when stay length is unknown.
-   */
-  derivedNightlyPrice?: number | null;
   currency?: string | null;
   displayedRating?: number | null;
   displayedReviewCount?: number | null;
@@ -260,7 +253,6 @@ export async function insertObservation(
       titleDisplayed: input.titleDisplayed ?? null,
       displayedNightlyPrice: input.displayedNightlyPrice ?? null,
       displayedTotalPrice: input.displayedTotalPrice ?? null,
-      derivedNightlyPrice: input.derivedNightlyPrice ?? null,
       currency: input.currency ?? null,
       displayedRating: input.displayedRating ?? null,
       displayedReviewCount: input.displayedReviewCount ?? null,

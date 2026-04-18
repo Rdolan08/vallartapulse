@@ -15,8 +15,6 @@ import https from "https";
 import http from "http";
 import zlib from "zlib";
 import type { IncomingMessage } from "http";
-import { getProxyAgent, type FetchMode } from "./http-proxy.js";
-import { fetchWithBrowser } from "./browser-fetch.js";
 
 const BROWSER_HEADERS: Record<string, string> = {
   "User-Agent":
@@ -39,51 +37,24 @@ const BROWSER_HEADERS: Record<string, string> = {
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 
-export interface VrboHttpGetOpts {
-  /** Fetch mode: "direct" | "proxy" (default; uses PROXY_URL) | "unblocker" (uses UNBLOCKER_URL). */
-  fetchMode?: FetchMode;
-  /** Redirect-recursion guard; callers should not set this. */
-  redirects?: number;
-}
-
-export function vrboHttpGet(url: string, opts?: VrboHttpGetOpts | number): Promise<string> {
-  // Backward compat: previous signature was (url, redirects: number).
-  const o: VrboHttpGetOpts = typeof opts === "number" ? { redirects: opts } : (opts ?? {});
-  return get(url, o.fetchMode ?? "proxy", o.redirects ?? 0);
-}
-
-async function get(url: string, fetchMode: FetchMode, redirects: number): Promise<string> {
-  if (redirects > 5) throw new Error("Too many redirects");
-  // Browser mode: short-circuit the node http stack entirely. Chromium handles
-  // its own proxy, redirects, JS rendering, and cookie storage.
-  if (fetchMode === "browser") {
-    return fetchWithBrowser(url, {
-      timeoutMs: 30_000,
-      // VRBO search pages render cards inside [data-stid*='property-card'].
-      // We don't strictly require it (networkidle is the primary signal) but
-      // having it as a fallback selector makes us resilient when a background
-      // tracker prevents networkidle from firing.
-      waitForSelector: "[data-stid*='property-card'], [data-wdio='search-results']",
-      fallbackOnTimeout: true,
-    });
-  }
-  const parsed = new URL(url);
-  const mod = parsed.protocol === "https:" ? https : http;
-  const proxyAgent = await getProxyAgent(fetchMode);
+function get(url: string, redirects = 0): Promise<string> {
   return new Promise((resolve, reject) => {
+    if (redirects > 5) return reject(new Error("Too many redirects"));
+    const parsed = new URL(url);
+    const mod = parsed.protocol === "https:" ? https : http;
+
     const req = (mod as typeof https).request(
       {
         hostname: parsed.hostname,
         path: parsed.pathname + parsed.search,
         method: "GET",
         headers: { ...BROWSER_HEADERS, Host: parsed.hostname },
-        ...(proxyAgent ? { agent: proxyAgent } : {}),
       },
       (res: IncomingMessage) => {
         const encoding = (res.headers["content-encoding"] ?? "") as string;
 
         if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          return resolve(get(new URL(res.headers.location, url).toString(), fetchMode, redirects + 1));
+          return resolve(get(new URL(res.headers.location, url).toString(), redirects + 1));
         }
         if (res.statusCode === 403 || res.statusCode === 429) {
           return reject(new Error(`HTTP ${res.statusCode} (rate-limited)`));
@@ -113,10 +84,6 @@ async function get(url: string, fetchMode: FetchMode, redirects: number): Promis
 }
 
 // ── Listing ID extraction ─────────────────────────────────────────────────────
-
-export function extractVrboListingIds(html: string): string[] {
-  return extractListingIds(html);
-}
 
 function extractListingIds(html: string): string[] {
   const ids = new Set<string>();
@@ -176,7 +143,7 @@ export async function discoverVrboListings(opts?: {
 
   for (const searchUrl of urls) {
     try {
-      const html = await get(searchUrl, "proxy", 0);
+      const html = await get(searchUrl);
       const ids = extractListingIds(html);
       ids.forEach(id => allIds.add(id));
       pagesScraped++;

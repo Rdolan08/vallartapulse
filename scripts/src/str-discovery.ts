@@ -35,15 +35,8 @@ import {
   reclaimStaleInProgress,
 } from "../../artifacts/api-server/src/lib/ingest/discovery-queue.js";
 import { runBackfill } from "../../artifacts/api-server/src/lib/ingest/backfill.js";
-import { runDiscoveryLoop } from "../../artifacts/api-server/src/lib/ingest/runner.js";
-import {
-  describeProxy,
-  isProxyConfigured,
-  isUnblockerConfigured,
-  type FetchMode,
-} from "../../artifacts/api-server/src/lib/ingest/http-proxy.js";
 
-type Mode = "seed-only" | "resume" | "backfill" | "run" | "default";
+type Mode = "seed-only" | "resume" | "backfill" | "default";
 
 interface CliArgs {
   mode: Mode;
@@ -52,12 +45,6 @@ interface CliArgs {
   region: RegionFilter | null;
   neighborhoods: string[];
   maxSeeds: number | null;
-  maxJobs: number;
-  maxResultsPerJob: number;
-  maxDurationMs: number;
-  fetchMode: FetchMode | null;
-  bedroom: string | null;
-  window: string | null;
   help: boolean;
 }
 
@@ -69,12 +56,6 @@ function parseArgs(argv: string[]): CliArgs {
     region: null,
     neighborhoods: [],
     maxSeeds: null,
-    maxJobs: 1,
-    maxResultsPerJob: 10,
-    maxDurationMs: 5 * 60 * 1000,
-    fetchMode: null,
-    bedroom: null,
-    window: null,
     help: false,
   };
 
@@ -84,7 +65,6 @@ function parseArgs(argv: string[]): CliArgs {
     else if (a === "--seed-only") args.mode = "seed-only";
     else if (a === "--resume") args.mode = "resume";
     else if (a === "--backfill") args.mode = "backfill";
-    else if (a === "--run") args.mode = "run";
     else if (a.startsWith("--source=")) {
       const v = a.slice("--source=".length);
       args.source = v === "all" ? ALL_SOURCES : (v.split(",") as Source[]);
@@ -95,29 +75,6 @@ function parseArgs(argv: string[]): CliArgs {
       args.neighborhoods.push(a.slice("--neighborhood=".length));
     } else if (a.startsWith("--max-seeds=")) {
       args.maxSeeds = parseInt(a.slice("--max-seeds=".length), 10);
-    } else if (a.startsWith("--max-jobs=")) {
-      args.maxJobs = parseInt(a.slice("--max-jobs=".length), 10);
-    } else if (a.startsWith("--max-results-per-job=")) {
-      args.maxResultsPerJob = parseInt(
-        a.slice("--max-results-per-job=".length),
-        10
-      );
-    } else if (a.startsWith("--max-duration-sec=")) {
-      args.maxDurationMs =
-        parseInt(a.slice("--max-duration-sec=".length), 10) * 1000;
-    } else if (a.startsWith("--bedroom=")) {
-      args.bedroom = a.slice("--bedroom=".length);
-    } else if (a.startsWith("--window=")) {
-      args.window = a.slice("--window=".length);
-    } else if (a.startsWith("--fetch-mode=")) {
-      const v = a.slice("--fetch-mode=".length) as FetchMode;
-      if (v !== "direct" && v !== "proxy" && v !== "unblocker" && v !== "browser") {
-        console.warn(
-          `[str-discovery] Invalid --fetch-mode='${v}'. Expected: direct|proxy|unblocker|browser. Ignoring.`
-        );
-      } else {
-        args.fetchMode = v;
-      }
     } else {
       console.warn(`[str-discovery] Ignoring unknown argument: ${a}`);
     }
@@ -143,12 +100,6 @@ Filters:
   --region=puerto_vallarta|riviera_nayarit|all   Default: all
   --neighborhood="Zona Romántica"   Repeatable (exact bucket name)
   --max-seeds=<n>                   Cap total seeds generated/inserted
-  --fetch-mode=direct|proxy|unblocker|browser
-                                    Outbound transport for --run mode.
-                                    Default: unblocker if UNBLOCKER_URL set,
-                                    else proxy if PROXY_URL set, else direct.
-                                    'browser' runs Playwright Chromium,
-                                    tunneled through PROXY_URL.
 
 Behaviour:
   --dry-run       Show what would be done; do not write to the database.
@@ -225,95 +176,6 @@ async function main(): Promise<void> {
     console.log(
       `\n[str-discovery] insertSeeds → attempted=${result.attempted} inserted=${result.inserted} skipped=${result.skipped}`
     );
-    return;
-  }
-
-  if (args.mode === "run") {
-    if (args.dryRun) {
-      console.log("[str-discovery] --dry-run incompatible with --run; aborting.");
-      return;
-    }
-    if (
-      !args.source ||
-      args.source.length !== 1 ||
-      (args.source[0] !== "airbnb" && args.source[0] !== "vrbo")
-    ) {
-      console.log(
-        "[str-discovery] Phase 2b run requires exactly one --source=airbnb or --source=vrbo. Aborting."
-      );
-      return;
-    }
-    if (args.neighborhoods.length !== 1) {
-      console.log(
-        "[str-discovery] Phase 2b first-run scope requires exactly one --neighborhood. Aborting."
-      );
-      return;
-    }
-    const dbUrl = process.env.DATABASE_URL ?? "";
-    if (
-      process.env.RAILWAY_DATABASE_URL &&
-      dbUrl === process.env.RAILWAY_DATABASE_URL
-    ) {
-      console.log(
-        "[str-discovery] DATABASE_URL points at Railway prod — Phase 2b runs are local-only by policy. Aborting."
-      );
-      return;
-    }
-
-    // Resolve effective fetch mode.
-    //  - explicit flag wins
-    //  - else: unblocker if UNBLOCKER_URL set, else proxy if PROXY_URL set, else direct
-    let effectiveFetchMode: FetchMode;
-    if (args.fetchMode) {
-      effectiveFetchMode = args.fetchMode;
-    } else if (isUnblockerConfigured()) {
-      effectiveFetchMode = "unblocker";
-    } else if (isProxyConfigured()) {
-      effectiveFetchMode = "proxy";
-    } else {
-      effectiveFetchMode = "direct";
-    }
-
-    if (effectiveFetchMode === "unblocker" && !isUnblockerConfigured()) {
-      console.log(
-        "[str-discovery] --fetch-mode=unblocker requires UNBLOCKER_URL secret to be set. Aborting."
-      );
-      return;
-    }
-    if (effectiveFetchMode === "proxy" && !isProxyConfigured()) {
-      console.log(
-        "[str-discovery] --fetch-mode=proxy requires PROXY_URL secret to be set. Aborting."
-      );
-      return;
-    }
-    if (effectiveFetchMode === "browser" && !isProxyConfigured()) {
-      console.log(
-        "[str-discovery] --fetch-mode=browser requires PROXY_URL secret to be set " +
-          "(Chromium tunnels through the residential proxy). Aborting."
-      );
-      return;
-    }
-
-    console.log(
-      `\n[str-discovery] LIVE RUN — source=${args.source[0]} neighborhood="${args.neighborhoods[0]}" maxJobs=${args.maxJobs} maxResultsPerJob=${args.maxResultsPerJob} maxDurationSec=${Math.round(args.maxDurationMs / 1000)}`
-    );
-    console.log(
-      `[str-discovery] Fetch transport: ${effectiveFetchMode} → ${describeProxy(effectiveFetchMode)}`
-    );
-    const report = await runDiscoveryLoop({
-      maxJobs: args.maxJobs,
-      maxDurationMs: args.maxDurationMs,
-      maxResultsPerJob: args.maxResultsPerJob,
-      source: args.source[0],
-      parentRegion:
-        args.region && args.region !== "all" ? args.region : undefined,
-      neighborhood: args.neighborhoods[0],
-      bedroom: args.bedroom ?? undefined,
-      window: args.window ?? undefined,
-      fetchMode: effectiveFetchMode,
-    });
-    console.log("\n── Run Report ──────────────────────────────────────────");
-    console.log(JSON.stringify(report, null, 2));
     return;
   }
 

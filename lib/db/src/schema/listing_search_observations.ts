@@ -45,15 +45,6 @@ export const listingSearchObservationsTable = pgTable(
     titleDisplayed: text("title_displayed"),
     displayedNightlyPrice: real("displayed_nightly_price"),
     displayedTotalPrice: real("displayed_total_price"),
-    /**
-     * Analytics-only derived value: displayed_total_price / stayLengthNights
-     * when both are known. Populated by the discovery runner so downstream
-     * pricing analytics can join on a single nightly column without having
-     * to remember to divide. NEVER treat this as authoritative source data —
-     * it is a normalised projection of the displayed total, not a value
-     * Airbnb explicitly emitted as nightly.
-     */
-    derivedNightlyPrice: real("derived_nightly_price"),
     currency: text("currency"),
     displayedRating: real("displayed_rating"),
     displayedReviewCount: integer("displayed_review_count"),

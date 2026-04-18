@@ -23,8 +23,6 @@ import zlib from "zlib";
 import type { IncomingMessage } from "http";
 import type { NormalizedRentalListing } from "./types.js";
 import { normalizeNeighborhood } from "../rental-normalize.js";
-import { getProxyAgent, type FetchMode } from "./http-proxy.js";
-import { fetchWithBrowser } from "./browser-fetch.js";
 
 export const SOURCE = "airbnb" as const;
 
@@ -49,52 +47,24 @@ const BROWSER_HEADERS: Record<string, string> = {
   "Upgrade-Insecure-Requests": "1",
 };
 
-export interface AirbnbHttpGetOpts {
-  /** Fetch mode: "direct" | "proxy" (default; uses PROXY_URL) | "unblocker" (uses UNBLOCKER_URL). */
-  fetchMode?: FetchMode;
-  /** Redirect-recursion guard; callers should not set this. */
-  redirects?: number;
-}
-
-export function airbnbHttpGet(url: string, opts?: AirbnbHttpGetOpts | number): Promise<string> {
-  // Backward compat: previous signature was (url, redirects: number).
-  const o: AirbnbHttpGetOpts = typeof opts === "number" ? { redirects: opts } : (opts ?? {});
-  return get(url, o.fetchMode ?? "proxy", o.redirects ?? 0);
-}
-
-async function get(url: string, fetchMode: FetchMode, redirects: number): Promise<string> {
-  if (redirects > 5) throw new Error("Too many redirects");
-  // Browser mode: short-circuit the node http stack entirely. Chromium handles
-  // its own proxy, redirects, JS rendering, and cookie storage. Airbnb's SPA
-  // renders cards client-side after a GraphQL fetch, so we MUST be in a real
-  // browser context to see /rooms/* in the rendered HTML.
-  if (fetchMode === "browser") {
-    return fetchWithBrowser(url, {
-      timeoutMs: 30_000,
-      // Once any /rooms/ link appears in the DOM, the search GraphQL query
-      // has resolved and we have something extractable. Card containers vary
-      // across Airbnb A/B variants, so anchor on /rooms/ links instead.
-      waitForSelector: "a[href*='/rooms/']",
-      fallbackOnTimeout: true,
-    });
-  }
-  const parsed = new URL(url);
-  const mod = parsed.protocol === "https:" ? https : http;
-  const proxyAgent = await getProxyAgent(fetchMode);
+function get(url: string, redirects = 0): Promise<string> {
   return new Promise((resolve, reject) => {
+    if (redirects > 5) return reject(new Error("Too many redirects"));
+    const parsed = new URL(url);
+    const mod = parsed.protocol === "https:" ? https : http;
+
     const req = (mod as typeof https).request(
       {
         hostname: parsed.hostname,
         path: parsed.pathname + parsed.search,
         method: "GET",
         headers: { ...BROWSER_HEADERS, Host: parsed.hostname },
-        ...(proxyAgent ? { agent: proxyAgent } : {}),
       },
       (res: IncomingMessage) => {
         const encoding = (res.headers["content-encoding"] ?? "") as string;
 
         if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          return resolve(get(new URL(res.headers.location, url).toString(), fetchMode, redirects + 1));
+          return resolve(get(new URL(res.headers.location, url).toString(), redirects + 1));
         }
         if (res.statusCode === 403 || res.statusCode === 429) {
           return reject(new Error(`HTTP ${res.statusCode} (rate-limited)`));
@@ -125,29 +95,19 @@ async function get(url: string, fetchMode: FetchMode, redirects: number): Promis
 
 // ── Search card data parser ───────────────────────────────────────────────────
 
-export interface SearchCard {
+interface SearchCard {
   id: string;
   name?: string;
   bedrooms?: number;
   bathrooms?: number;
   maxGuests?: number;
-  /** Displayed nightly price (parsed from "$245" or `pricingQuote.rate.amount`). */
   price?: number;
-  /** Displayed total stay price (parsed from "$735 total" secondary line). */
-  totalPrice?: number;
-  /** ISO currency code (USD, MXN, …) when present. */
-  priceCurrency?: string;
-  /** Free-text qualifier from primaryLine ("night", "month", …). */
-  priceQualifier?: string;
   rating?: number;
   reviews?: number;
-  /** Free-text location label as displayed on the card (city / area string). */
   city?: string;
   lat?: number;
   lng?: number;
   roomType?: string;
-  /** Direct image URL for the card's primary photo. */
-  thumbnail?: string;
 }
 
 /**
@@ -160,7 +120,7 @@ export interface SearchCard {
  * Rather than chasing the exact schema, we walk the raw JSON and
  * correlate fields that appear near known listing ID patterns.
  */
-export function extractSearchCards(html: string): SearchCard[] {
+function extractSearchCards(html: string): SearchCard[] {
   const cards: Map<string, SearchCard> = new Map();
 
   // ── Step 1: Extract all /rooms/XXXXXXXX IDs from the page ─────────────────
@@ -238,12 +198,6 @@ function scanJsonForCards(node: unknown, cards: Map<string, SearchCard>, depth =
   if (typeof node === "object") {
     const obj = node as Record<string, unknown>;
 
-    // ── Airbnb StaySearchResult shape: { listing: {...}, pricingQuote: {...} }
-    // This is the canonical card object from the staysSearch GraphQL response
-    // (modern Airbnb SPA). We try this rich-shape extractor first; it's
-    // additive, so falling through to the generic walker below is safe.
-    tryAirbnbStayResult(obj, cards);
-
     // Check if this object looks like a listing card
     const idVal = (obj["id"] ?? obj["listingId"] ?? obj["listing_id"]) as string | number | undefined;
     if (idVal !== undefined) {
@@ -306,243 +260,6 @@ function scanJsonForCards(node: unknown, cards: Map<string, SearchCard>, depth =
   }
 }
 
-// ── Airbnb StaySearchResult-shape rich extractor ─────────────────────────────
-//
-// Modern Airbnb search responses (April 2026) serialize each card as a flat
-// `StaySearchResult` object — there is no `{listing, pricingQuote}` wrapper.
-// Verified shape (per live HTML inspection 2026-04-18):
-//   {
-//     __typename: "StaySearchResult",
-//     avgRatingA11yLabel: "4.83 out of 5 average rating, 139 reviews",
-//     avgRatingLocalized: "4.83 (139)",
-//     structuredDisplayPrice: {
-//       primaryLine: { discountedPrice|price, originalPrice?, qualifier,
-//                      accessibilityLabel },
-//       secondaryLine: { price?, accessibilityLabel? } | null,
-//       displayPriceStyle: "TOTAL_ONLY" | "PER_NIGHT_ONLY" | …,
-//     },
-//     contextualPictures: [ { picture: "https://a0.muscache.com/…" }, … ],
-//     title: "Condo in Puerto Vallarta",
-//     subtitle: "Stunning condo in SOHO by …",
-//     nameLocalized: { localizedStringWithTranslationPreference: "…" },
-//     demandStayListing: {
-//       id: "RGVtYW5kU3RheUxpc3Rpbmc6MTE5NjQzNjIwMDU1MDYzMjA0NQ==",
-//       location: { coordinate: { latitude, longitude } },
-//       description: { name: { localizedStringWithTranslationPreference } },
-//     },
-//   }
-//
-// All assignments are guarded so a missing field never invalidates the card;
-// the listing ID captured by the /rooms/ regex pass remains the sole
-// validity requirement (a card may exist with id only).
-
-function tryAirbnbStayResult(
-  obj: Record<string, unknown>,
-  cards: Map<string, SearchCard>
-): void {
-  // Detect the StaySearchResult shape: either by typename or by the presence
-  // of the modern price wrapper. Bail out cheaply if neither is present.
-  const typename = obj["__typename"];
-  const sdp = obj["structuredDisplayPrice"] as Record<string, unknown> | undefined;
-  if (typename !== "StaySearchResult" && !sdp) return;
-
-  // Listing ID lives in `demandStayListing.id` as a base64-encoded
-  // GraphQL global-id of the form "DemandStayListing:1196436200550632045".
-  const dsl = obj["demandStayListing"] as Record<string, unknown> | undefined;
-  let id: string | undefined;
-  if (dsl) {
-    const rawId = dsl["id"];
-    if (typeof rawId === "string" && rawId.length > 0) {
-      id = decodeStayListingId(rawId);
-    }
-  }
-  if (!id || !/^\d{7,12}$/.test(id)) return;
-
-  const card = cards.get(id) ?? { id };
-  let updated = false;
-
-  // ── Title ──────────────────────────────────────────────────────────────────
-  // `subtitle` is the host-supplied descriptive name (e.g. "Stunning condo in
-  // SOHO by Maxwell Residences"); `title` is the property-type bucket
-  // (e.g. "Condo in Puerto Vallarta"). Prefer the descriptive name when
-  // available; fall back to the localized name then the bucket title.
-  const nameLocalized = obj["nameLocalized"] as Record<string, unknown> | undefined;
-  const localizedName = nameLocalized?.["localizedStringWithTranslationPreference"];
-  const subtitle = obj["subtitle"];
-  const title = obj["title"];
-  let chosenName: string | undefined;
-  if (typeof subtitle === "string" && subtitle.length > 2) chosenName = subtitle;
-  else if (typeof localizedName === "string" && localizedName.length > 2) chosenName = localizedName;
-  else if (typeof title === "string" && title.length > 2) chosenName = title;
-  if (chosenName && !card.name) {
-    card.name = chosenName.slice(0, 300);
-    updated = true;
-  }
-
-  // ── Thumbnail ──────────────────────────────────────────────────────────────
-  const pics = obj["contextualPictures"] as unknown[] | undefined;
-  if (Array.isArray(pics) && pics.length > 0) {
-    const first = pics[0] as Record<string, unknown> | undefined;
-    if (first) {
-      const url = (first["picture"] ?? first["baseUrl"] ?? first["url"]) as string | undefined;
-      if (typeof url === "string" && url.startsWith("http") && !card.thumbnail) {
-        card.thumbnail = url;
-        updated = true;
-      }
-    }
-  }
-
-  // ── Rating + reviews from a11y label ───────────────────────────────────────
-  const ratingLabel =
-    (obj["avgRatingA11yLabel"] as string | undefined) ??
-    (obj["avgRatingLocalized"] as string | undefined);
-  if (typeof ratingLabel === "string") {
-    const parsed = parseRatingLabel(ratingLabel);
-    if (parsed.rating !== null && card.rating === undefined) {
-      card.rating = parsed.rating;
-      updated = true;
-    }
-    if (parsed.reviews !== null && card.reviews === undefined) {
-      card.reviews = parsed.reviews;
-      updated = true;
-    }
-  }
-
-  // ── Coordinates ────────────────────────────────────────────────────────────
-  const loc = dsl?.["location"] as Record<string, unknown> | undefined;
-  const coord = loc?.["coordinate"] as Record<string, unknown> | undefined;
-  if (coord) {
-    const lat = coord["latitude"];
-    const lng = coord["longitude"];
-    if (typeof lat === "number" && card.lat === undefined) { card.lat = lat; updated = true; }
-    if (typeof lng === "number" && card.lng === undefined) { card.lng = lng; updated = true; }
-  }
-
-  // ── Pricing ────────────────────────────────────────────────────────────────
-  // structuredDisplayPrice.primaryLine carries the displayed price string.
-  // displayPriceStyle tells us whether it's a per-night or per-stay number;
-  // qualifier ("for N nights" / "night") is the human-readable hint and is
-  // also a reliable fallback when the style field is missing.
-  if (sdp) {
-    const primary = sdp["primaryLine"] as Record<string, unknown> | undefined;
-    const styleRaw = sdp["displayPriceStyle"];
-    const style = typeof styleRaw === "string" ? styleRaw.toUpperCase() : "";
-    if (primary) {
-      // Displayed price string: discountedPrice (sale) > price (regular).
-      const priceStr =
-        (typeof primary["discountedPrice"] === "string" ? primary["discountedPrice"] : undefined) ??
-        (typeof primary["price"] === "string" ? primary["price"] : undefined);
-      const parsedPrice = parseMoney(priceStr as string | undefined);
-      const currency = parseCurrency(priceStr as string | undefined);
-      const qualifier = primary["qualifier"];
-      const qStr = typeof qualifier === "string" ? qualifier : "";
-
-      // Classify: per-stay total vs per-night.
-      const isTotal =
-        style === "TOTAL_ONLY" ||
-        /\bfor\s+\d+\s+nights?\b/i.test(qStr) ||
-        /\btotal\b/i.test(qStr);
-
-      if (parsedPrice !== null) {
-        if (isTotal && card.totalPrice === undefined) {
-          card.totalPrice = parsedPrice;
-          updated = true;
-        } else if (!isTotal && card.price === undefined) {
-          card.price = parsedPrice;
-          updated = true;
-        }
-      }
-      if (currency && !card.priceCurrency) { card.priceCurrency = currency; updated = true; }
-      if (qStr && !card.priceQualifier) { card.priceQualifier = qStr.slice(0, 40); updated = true; }
-    }
-
-    // secondaryLine sometimes carries a per-night breakdown when primary is total
-    const secondary = sdp["secondaryLine"] as Record<string, unknown> | undefined;
-    if (secondary) {
-      const sPriceStr =
-        (typeof secondary["discountedPrice"] === "string" ? secondary["discountedPrice"] : undefined) ??
-        (typeof secondary["price"] === "string" ? secondary["price"] : undefined);
-      const sParsed = parseMoney(sPriceStr as string | undefined);
-      if (sParsed !== null) {
-        // If primary is total and secondary is present, secondary is usually nightly.
-        if (card.price === undefined && card.totalPrice !== undefined) {
-          card.price = sParsed; updated = true;
-        } else if (card.totalPrice === undefined && card.price !== undefined) {
-          card.totalPrice = sParsed; updated = true;
-        }
-      }
-    }
-  }
-
-  if (updated) cards.set(id, card);
-}
-
-/**
- * Decode a base64 GraphQL global-id of the form "DemandStayListing:NNNN"
- * back to the numeric Airbnb listing ID. Returns undefined when the input
- * is not a recognisable encoded id.
- */
-function decodeStayListingId(b64: string): string | undefined {
-  try {
-    const decoded = Buffer.from(b64, "base64").toString("utf-8");
-    const m = decoded.match(/(?:DemandStayListing|StayListing|Listing):(\d{7,12})/);
-    if (m) return m[1];
-  } catch {
-    /* fallthrough */
-  }
-  // Some builds expose the numeric id directly.
-  if (/^\d{7,12}$/.test(b64)) return b64;
-  return undefined;
-}
-
-/**
- * Extract a 3-letter ISO currency code from a money string.
- * "$8,537 MXN" → "MXN" ; "$245" → undefined ; "USD 245" → "USD".
- */
-function parseCurrency(s: string | undefined): string | undefined {
-  if (typeof s !== "string") return undefined;
-  const m = s.match(/\b([A-Z]{3})\b/);
-  return m ? m[1] : undefined;
-}
-
-/**
- * Parse a money string into a plain number. Tolerates currency symbols,
- * thousands separators, and trailing qualifiers ("$1,234 total" → 1234).
- * Returns null when no digits are present.
- */
-function parseMoney(s: string | undefined): number | null {
-  if (typeof s !== "string") return null;
-  const cleaned = s.replace(/[, \u00A0]/g, "");
-  const m = cleaned.match(/(\d+(?:\.\d+)?)/);
-  if (!m) return null;
-  const n = parseFloat(m[1]);
-  return Number.isFinite(n) ? n : null;
-}
-
-/**
- * Parse Airbnb's accessibility rating label into (rating, reviews).
- * Examples handled:
- *   "4.92 out of 5 average rating, 88 reviews" → { 4.92, 88 }
- *   "4.92 (88)"                                → { 4.92, 88 }
- *   "Rated 4.8 out of 5 from 12 reviews"       → { 4.8, 12 }
- *   "New"                                       → { null, null }
- */
-function parseRatingLabel(
-  s: string
-): { rating: number | null; reviews: number | null } {
-  const ratingM = s.match(/(\d+\.\d+)/);
-  const reviewsM =
-    s.match(/(\d+)\s*reviews?/i) ??
-    s.match(/from\s+(\d+)/i) ??
-    s.match(/\((\d+)\)/);
-  const rating = ratingM ? parseFloat(ratingM[1]) : null;
-  const reviews = reviewsM ? parseInt(reviewsM[1], 10) : null;
-  return {
-    rating: rating !== null && rating > 0 && rating <= 5 ? rating : null,
-    reviews: reviews !== null && Number.isFinite(reviews) ? reviews : null,
-  };
-}
-
 // ── Neighbourhood / coord based normalisation ─────────────────────────────────
 
 // Known PV neighbourhood bounding boxes [minLat, maxLat, minLng, maxLng]
@@ -570,7 +287,7 @@ function coordToNeighborhood(lat: number, lng: number): string | null {
 
 // ── Normalise a search card → NormalizedRentalListing ────────────────────────
 
-export function normalizeCard(card: SearchCard): NormalizedRentalListing | null {
+function normalizeCard(card: SearchCard): NormalizedRentalListing | null {
   if (!card.id || card.id.length < 7) return null;
 
   // Determine neighbourhood from coordinates or city string
@@ -639,7 +356,7 @@ export async function fetchAirbnbSearchListings(opts?: {
 
   for (const searchUrl of urls) {
     try {
-      const html = await get(searchUrl, "proxy", 0);
+      const html = await get(searchUrl);
       const cards = extractSearchCards(html);
       for (const card of cards) {
         // Prefer cards with more data
