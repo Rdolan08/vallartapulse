@@ -91,6 +91,10 @@ export function computeStayDates(
     checkin = addDays(base, 30);
   } else if (window === "+60") {
     checkin = addDays(base, 60);
+  } else if (window === "+90") {
+    checkin = addDays(base, 90);
+  } else if (window === "+180") {
+    checkin = addDays(base, 180);
   } else {
     checkin = addDays(base, 14);
   }

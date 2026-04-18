@@ -44,6 +44,10 @@ export interface RunDiscoveryOptions {
   neighborhood?: string;
   /** Set to true to bypass the per-job neighborhood filter (use with caution). */
   ignoreNeighborhoodGuard?: boolean;
+  /** Optional exact-match filter on bedroom_bucket. CLI: `--bedroom=`. */
+  bedroom?: string;
+  /** Optional exact-match filter on checkin_window. CLI: `--window=`. */
+  window?: string;
   /** Outbound fetch transport. Defaults to "proxy" (uses PROXY_URL if set, else direct). */
   fetchMode?: FetchMode;
 }
@@ -104,6 +108,8 @@ export async function runDiscoveryLoop(
   // higher-priority job from a different bucket. The post-claim defensive
   // check below stays as belt-and-suspenders.
   if (opts.neighborhood) filter.neighborhood = opts.neighborhood;
+  if (opts.bedroom) filter.bedroom = opts.bedroom;
+  if (opts.window) filter.window = opts.window;
 
   while (report.jobsAttempted < opts.maxJobs) {
     if (Date.now() - t0 >= opts.maxDurationMs) {

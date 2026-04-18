@@ -76,6 +76,17 @@ export interface ClaimFilter {
    * having to release it. The CLI's `--neighborhood` flag flows through here.
    */
   neighborhood?: string;
+  /**
+   * Optional exact-match filter on bedroom_bucket. CLI flag: `--bedroom=`.
+   * Used in Phase 2d-ext to target newly-added studio/4plus seeds first
+   * without waiting for the priority queue to drain bed=1/2/3 combos.
+   */
+  bedroom?: string;
+  /**
+   * Optional exact-match filter on checkin_window. CLI flag: `--window=`.
+   * Used in Phase 2d-ext to target newly-added +90/+180 seeds.
+   */
+  window?: string;
 }
 
 /**
@@ -141,6 +152,10 @@ function buildClaimSql(filter: ClaimFilter) {
   if (filter.jobType) parts.push(sql` AND job_type = ${filter.jobType}`);
   if (filter.neighborhood)
     parts.push(sql` AND normalized_neighborhood_bucket = ${filter.neighborhood}`);
+  if (filter.bedroom)
+    parts.push(sql` AND bedroom_bucket = ${filter.bedroom}`);
+  if (filter.window)
+    parts.push(sql` AND checkin_window = ${filter.window}`);
   parts.push(
     sql` ORDER BY priority DESC, id ASC FOR UPDATE SKIP LOCKED LIMIT 1)
     UPDATE discovery_jobs dj

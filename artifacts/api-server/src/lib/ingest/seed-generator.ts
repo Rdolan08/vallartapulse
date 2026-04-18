@@ -21,25 +21,45 @@ import type { InsertDiscoveryJob } from "@workspace/db/schema";
 
 export type Source = "airbnb" | "vrbo";
 export type RegionFilter = "puerto_vallarta" | "riviera_nayarit" | "all";
-export type CheckinWindow = "next_weekend" | "+14" | "+30" | "+60";
+export type CheckinWindow =
+  | "next_weekend"
+  | "+14"
+  | "+30"
+  | "+60"
+  | "+90"
+  | "+180";
 export type BedroomBucket = "studio" | "1" | "2" | "3" | "4plus";
 
 export const ALL_SOURCES: Source[] = ["airbnb", "vrbo"];
 export const DEFAULT_GUEST_COUNTS = [2, 4, 6] as const;
 export const DEFAULT_STAY_LENGTHS = [3, 5, 7] as const;
-export const DEFAULT_BEDROOM_BUCKETS: BedroomBucket[] = ["1", "2", "3"];
+// Phase 2d-ext (April 2026): expanded full-coverage defaults.
+// Bedroom defaults now include studio + 4plus for full PV coverage.
+// Checkin defaults extend to +90/+180 to surface listings whose calendars
+// are blocked closer in but open further out.
+export const DEFAULT_BEDROOM_BUCKETS: BedroomBucket[] = [
+  "studio",
+  "1",
+  "2",
+  "3",
+  "4plus",
+];
 export const DEFAULT_CHECKIN_WINDOWS: CheckinWindow[] = [
   "next_weekend",
   "+14",
   "+30",
   "+60",
+  "+90",
+  "+180",
 ];
 
 const WINDOW_WEIGHT: Record<CheckinWindow, number> = {
-  next_weekend: 4,
-  "+14": 3,
-  "+30": 2,
-  "+60": 1,
+  next_weekend: 6,
+  "+14": 5,
+  "+30": 4,
+  "+60": 3,
+  "+90": 2,
+  "+180": 1,
 };
 const STAY_WEIGHT: Record<number, number> = { 3: 3, 5: 2, 7: 1 };
 const GUEST_WEIGHT: Record<number, number> = { 1: 0, 2: 3, 4: 2, 6: 1 };
