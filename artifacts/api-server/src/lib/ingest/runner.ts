@@ -312,6 +312,19 @@ async function processJob(
         titleDisplayed: card.name ?? null,
         displayedNightlyPrice: card.price ?? null,
         displayedTotalPrice: card.totalPrice ?? null,
+        // Analytics-only normalisation. Airbnb is currently total-stay-first
+        // for our PV seed space (see Apr 2026 validation notes), so persist
+        // a derived per-night value whenever we have a real total AND a
+        // known stay length. Downstream queries can join on a single
+        // nightly column without re-implementing the division. The
+        // displayed_nightly_price field above remains the truth marker for
+        // "Airbnb actually emitted a per-night price."
+        derivedNightlyPrice:
+          card.totalPrice != null &&
+          job.stayLengthNights != null &&
+          job.stayLengthNights > 0
+            ? card.totalPrice / job.stayLengthNights
+            : null,
         // Use the card's detected currency when present; fall back to USD
         // (matches Airbnb's default pricing context for our PV searches).
         currency: card.priceCurrency ?? "USD",
