@@ -47,6 +47,10 @@ const BROWSER_HEADERS: Record<string, string> = {
   "Upgrade-Insecure-Requests": "1",
 };
 
+export function airbnbHttpGet(url: string, redirects = 0): Promise<string> {
+  return get(url, redirects);
+}
+
 function get(url: string, redirects = 0): Promise<string> {
   return new Promise((resolve, reject) => {
     if (redirects > 5) return reject(new Error("Too many redirects"));
@@ -95,7 +99,7 @@ function get(url: string, redirects = 0): Promise<string> {
 
 // ── Search card data parser ───────────────────────────────────────────────────
 
-interface SearchCard {
+export interface SearchCard {
   id: string;
   name?: string;
   bedrooms?: number;
@@ -120,7 +124,7 @@ interface SearchCard {
  * Rather than chasing the exact schema, we walk the raw JSON and
  * correlate fields that appear near known listing ID patterns.
  */
-function extractSearchCards(html: string): SearchCard[] {
+export function extractSearchCards(html: string): SearchCard[] {
   const cards: Map<string, SearchCard> = new Map();
 
   // ── Step 1: Extract all /rooms/XXXXXXXX IDs from the page ─────────────────
@@ -287,7 +291,7 @@ function coordToNeighborhood(lat: number, lng: number): string | null {
 
 // ── Normalise a search card → NormalizedRentalListing ────────────────────────
 
-function normalizeCard(card: SearchCard): NormalizedRentalListing | null {
+export function normalizeCard(card: SearchCard): NormalizedRentalListing | null {
   if (!card.id || card.id.length < 7) return null;
 
   // Determine neighbourhood from coordinates or city string
