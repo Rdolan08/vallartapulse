@@ -19,6 +19,7 @@ import {
   type SearchCard,
 } from "./airbnb-search-adapter.js";
 import type { DiscoverySeed } from "./seed-generator.js";
+import type { FetchMode } from "./http-proxy.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // URL construction
@@ -167,13 +168,13 @@ export interface AirbnbBatch {
  */
 export async function fetchAirbnbSeedBatch(
   seed: DiscoverySeed,
-  opts: { maxCards?: number } = {}
+  opts: { maxCards?: number; fetchMode?: FetchMode } = {}
 ): Promise<AirbnbBatch> {
   const url = buildAirbnbSearchUrl(seed);
   const t0 = Date.now();
   let html = "";
   try {
-    html = await airbnbHttpGet(url);
+    html = await airbnbHttpGet(url, { fetchMode: opts.fetchMode });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     const blocked = /403|429|rate-limited/i.test(msg) ? `http:${msg}` : null;

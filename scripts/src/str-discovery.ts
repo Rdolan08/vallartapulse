@@ -36,6 +36,12 @@ import {
 } from "../../artifacts/api-server/src/lib/ingest/discovery-queue.js";
 import { runBackfill } from "../../artifacts/api-server/src/lib/ingest/backfill.js";
 import { runDiscoveryLoop } from "../../artifacts/api-server/src/lib/ingest/runner.js";
+import {
+  describeProxy,
+  isProxyConfigured,
+  isUnblockerConfigured,
+  type FetchMode,
+} from "../../artifacts/api-server/src/lib/ingest/http-proxy.js";
 
 type Mode = "seed-only" | "resume" | "backfill" | "run" | "default";
 
@@ -49,6 +55,7 @@ interface CliArgs {
   maxJobs: number;
   maxResultsPerJob: number;
   maxDurationMs: number;
+  fetchMode: FetchMode | null;
   help: boolean;
 }
 
@@ -63,6 +70,7 @@ function parseArgs(argv: string[]): CliArgs {
     maxJobs: 1,
     maxResultsPerJob: 10,
     maxDurationMs: 5 * 60 * 1000,
+    fetchMode: null,
     help: false,
   };
 
@@ -93,6 +101,15 @@ function parseArgs(argv: string[]): CliArgs {
     } else if (a.startsWith("--max-duration-sec=")) {
       args.maxDurationMs =
         parseInt(a.slice("--max-duration-sec=".length), 10) * 1000;
+    } else if (a.startsWith("--fetch-mode=")) {
+      const v = a.slice("--fetch-mode=".length) as FetchMode;
+      if (v !== "direct" && v !== "proxy" && v !== "unblocker") {
+        console.warn(
+          `[str-discovery] Invalid --fetch-mode='${v}'. Expected: direct|proxy|unblocker. Ignoring.`
+        );
+      } else {
+        args.fetchMode = v;
+      }
     } else {
       console.warn(`[str-discovery] Ignoring unknown argument: ${a}`);
     }
@@ -118,6 +135,10 @@ Filters:
   --region=puerto_vallarta|riviera_nayarit|all   Default: all
   --neighborhood="Zona Romántica"   Repeatable (exact bucket name)
   --max-seeds=<n>                   Cap total seeds generated/inserted
+  --fetch-mode=direct|proxy|unblocker
+                                    Outbound transport for --run mode.
+                                    Default: unblocker if UNBLOCKER_URL set,
+                                    else proxy if PROXY_URL set, else direct.
 
 Behaviour:
   --dry-run       Show what would be done; do not write to the database.
@@ -229,8 +250,38 @@ async function main(): Promise<void> {
       return;
     }
 
+    // Resolve effective fetch mode.
+    //  - explicit flag wins
+    //  - else: unblocker if UNBLOCKER_URL set, else proxy if PROXY_URL set, else direct
+    let effectiveFetchMode: FetchMode;
+    if (args.fetchMode) {
+      effectiveFetchMode = args.fetchMode;
+    } else if (isUnblockerConfigured()) {
+      effectiveFetchMode = "unblocker";
+    } else if (isProxyConfigured()) {
+      effectiveFetchMode = "proxy";
+    } else {
+      effectiveFetchMode = "direct";
+    }
+
+    if (effectiveFetchMode === "unblocker" && !isUnblockerConfigured()) {
+      console.log(
+        "[str-discovery] --fetch-mode=unblocker requires UNBLOCKER_URL secret to be set. Aborting."
+      );
+      return;
+    }
+    if (effectiveFetchMode === "proxy" && !isProxyConfigured()) {
+      console.log(
+        "[str-discovery] --fetch-mode=proxy requires PROXY_URL secret to be set. Aborting."
+      );
+      return;
+    }
+
     console.log(
       `\n[str-discovery] LIVE RUN — source=${args.source[0]} neighborhood="${args.neighborhoods[0]}" maxJobs=${args.maxJobs} maxResultsPerJob=${args.maxResultsPerJob} maxDurationSec=${Math.round(args.maxDurationMs / 1000)}`
+    );
+    console.log(
+      `[str-discovery] Fetch transport: ${effectiveFetchMode} → ${describeProxy(effectiveFetchMode)}`
     );
     const report = await runDiscoveryLoop({
       maxJobs: args.maxJobs,
@@ -240,6 +291,7 @@ async function main(): Promise<void> {
       parentRegion:
         args.region && args.region !== "all" ? args.region : undefined,
       neighborhood: args.neighborhoods[0],
+      fetchMode: effectiveFetchMode,
     });
     console.log("\n── Run Report ──────────────────────────────────────────");
     console.log(JSON.stringify(report, null, 2));

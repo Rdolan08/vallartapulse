@@ -1,36 +1,61 @@
 /**
  * ingest/http-proxy.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Source-agnostic proxy support for the discovery scrapers.
+ * Source-agnostic outbound-fetch transport. Three modes are supported:
  *
- * Reads PROXY_URL from the environment. When unset (or empty), all consumers
- * fall back to direct fetches — current behavior is preserved exactly.
+ *   - "direct":     no proxy, plain Node https/http.
+ *   - "proxy":      tunnel via PROXY_URL. Used for residential proxies
+ *                   (e.g. Decodo Residential gate). Cheap; minimal anti-bot
+ *                   power on its own.
+ *   - "unblocker":  tunnel via UNBLOCKER_URL. Used for Decodo Site Unblocker
+ *                   (host:port = unblock.decodo.com:60000), which performs
+ *                   server-side JS rendering, IP rotation, and TLS/header
+ *                   fingerprint spoofing. Decodo terminates and re-signs the
+ *                   target site's TLS, so we must accept their cert
+ *                   (rejectUnauthorized: false on the agent).
  *
- * Supported PROXY_URL schemes:
- *   - http://[user:pass@]host:port    (most residential proxy providers)
- *   - https://[user:pass@]host:port   (rare; same handler as http://)
- *   - socks5://[user:pass@]host:port  (Bright Data SOCKS, etc.)
- *   - socks://[user:pass@]host:port   (alias for socks5)
+ * Reads two env vars, both optional:
+ *   - PROXY_URL       e.g. http://user:pass@mx.decodo.com:20000
+ *                     Schemes: http, https, socks5, socks
+ *   - UNBLOCKER_URL   e.g. http://user:pass@unblock.decodo.com:60000
  *
- * The agent is created lazily on first use and cached by URL — providers'
- * residential rotation typically happens server-side, so a single agent is
- * fine. To force re-creation (e.g. in tests), call resetProxyAgent().
+ * Each mode's agent is cached per-(mode, url). Calling `getProxyAgent()` with
+ * no arg keeps the legacy behavior (mode = "proxy", reads PROXY_URL).
  */
 
 import type { Agent as HttpAgent } from "http";
 import type { Agent as HttpsAgent } from "https";
 
-let cached: { url: string; agent: HttpAgent | HttpsAgent } | null = null;
+export type FetchMode = "direct" | "proxy" | "unblocker";
+
+interface CachedAgent {
+  mode: FetchMode;
+  url: string;
+  agent: HttpAgent | HttpsAgent;
+}
+
+let cached: CachedAgent | null = null;
+
+function readUrl(mode: FetchMode): string {
+  if (mode === "proxy") return (process.env.PROXY_URL ?? "").trim();
+  if (mode === "unblocker") return (process.env.UNBLOCKER_URL ?? "").trim();
+  return "";
+}
 
 /**
- * Returns a per-process Agent for outbound HTTPS through PROXY_URL, or null
- * if no proxy is configured. Safe to call on every request — agent is cached.
+ * Returns a per-process Agent for outbound HTTPS through the requested mode,
+ * or null if that mode has no URL configured (or mode = "direct"). Safe to
+ * call on every request — the agent is cached.
  */
-export async function getProxyAgent(): Promise<HttpAgent | HttpsAgent | null> {
-  const raw = (process.env.PROXY_URL ?? "").trim();
+export async function getProxyAgent(
+  mode: FetchMode = "proxy"
+): Promise<HttpAgent | HttpsAgent | null> {
+  if (mode === "direct") return null;
+
+  const raw = readUrl(mode);
   if (!raw) return null;
 
-  if (cached && cached.url === raw) return cached.agent;
+  if (cached && cached.mode === mode && cached.url === raw) return cached.agent;
 
   const scheme = raw.split(":", 1)[0]?.toLowerCase();
   let agent: HttpAgent | HttpsAgent;
@@ -40,33 +65,60 @@ export async function getProxyAgent(): Promise<HttpAgent | HttpsAgent | null> {
     agent = new SocksProxyAgent(raw);
   } else if (scheme === "http" || scheme === "https") {
     const { HttpsProxyAgent } = await import("https-proxy-agent");
-    agent = new HttpsProxyAgent(raw);
+    if (mode === "unblocker") {
+      // Decodo Site Unblocker performs server-side TLS termination + re-sign,
+      // so the cert presented to us is Decodo's, not the target site's.
+      // We must skip cert verification on this leg only.
+      agent = new HttpsProxyAgent(raw, { rejectUnauthorized: false });
+    } else {
+      agent = new HttpsProxyAgent(raw);
+    }
   } else {
     throw new Error(
-      `[http-proxy] Unsupported PROXY_URL scheme: '${scheme}'. ` +
-        `Supported: http://, https://, socks5://, socks://`
+      `[http-proxy] Unsupported ${mode === "unblocker" ? "UNBLOCKER_URL" : "PROXY_URL"} ` +
+        `scheme: '${scheme}'. Supported: http://, https://, socks5://, socks://`
     );
   }
 
-  cached = { url: raw, agent };
+  cached = { mode, url: raw, agent };
   return agent;
 }
 
-/** True if PROXY_URL is configured (cheap check; doesn't load any modules). */
+/** True if PROXY_URL is configured (cheap; no module load). */
 export function isProxyConfigured(): boolean {
-  return (process.env.PROXY_URL ?? "").trim().length > 0;
+  return readUrl("proxy").length > 0;
 }
 
-/** Returns a redacted PROXY_URL for safe logging (host:port only, no creds). */
-export function describeProxy(): string {
-  const raw = (process.env.PROXY_URL ?? "").trim();
-  if (!raw) return "direct (no proxy)";
+/** True if UNBLOCKER_URL is configured (cheap; no module load). */
+export function isUnblockerConfigured(): boolean {
+  return readUrl("unblocker").length > 0;
+}
+
+/**
+ * Returns a redacted form of the given mode's URL for safe logging
+ * (host:port only, no creds).
+ */
+export function describeProxy(mode: FetchMode = "proxy"): string {
+  if (mode === "direct") return "direct (no proxy)";
+  const raw = readUrl(mode);
+  if (!raw) return mode === "unblocker" ? "unblocker not configured" : "direct (no proxy)";
   try {
     const u = new URL(raw);
     return `${u.protocol}//${u.hostname}:${u.port || "(default)"}`;
   } catch {
     return "configured (unparseable)";
   }
+}
+
+/**
+ * Resolves the effective fetch mode given a requested mode.
+ * - "direct" / "unblocker"  → returned as-is (caller must ensure URL is set
+ *                             for "unblocker"; this fn doesn't read env).
+ * - "proxy"                 → returned as-is. getProxyAgent() will fall back
+ *                             to direct fetches if PROXY_URL is unset.
+ */
+export function effectiveMode(mode: FetchMode): FetchMode {
+  return mode;
 }
 
 /** Reset the cached agent — used by tests or after rotating credentials. */

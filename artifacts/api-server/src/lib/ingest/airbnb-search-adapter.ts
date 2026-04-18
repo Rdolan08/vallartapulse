@@ -23,7 +23,7 @@ import zlib from "zlib";
 import type { IncomingMessage } from "http";
 import type { NormalizedRentalListing } from "./types.js";
 import { normalizeNeighborhood } from "../rental-normalize.js";
-import { getProxyAgent } from "./http-proxy.js";
+import { getProxyAgent, type FetchMode } from "./http-proxy.js";
 
 export const SOURCE = "airbnb" as const;
 
@@ -48,15 +48,24 @@ const BROWSER_HEADERS: Record<string, string> = {
   "Upgrade-Insecure-Requests": "1",
 };
 
-export function airbnbHttpGet(url: string, redirects = 0): Promise<string> {
-  return get(url, redirects);
+export interface AirbnbHttpGetOpts {
+  /** Fetch mode: "direct" | "proxy" (default; uses PROXY_URL) | "unblocker" (uses UNBLOCKER_URL). */
+  fetchMode?: FetchMode;
+  /** Redirect-recursion guard; callers should not set this. */
+  redirects?: number;
 }
 
-async function get(url: string, redirects = 0): Promise<string> {
+export function airbnbHttpGet(url: string, opts?: AirbnbHttpGetOpts | number): Promise<string> {
+  // Backward compat: previous signature was (url, redirects: number).
+  const o: AirbnbHttpGetOpts = typeof opts === "number" ? { redirects: opts } : (opts ?? {});
+  return get(url, o.fetchMode ?? "proxy", o.redirects ?? 0);
+}
+
+async function get(url: string, fetchMode: FetchMode, redirects: number): Promise<string> {
   if (redirects > 5) throw new Error("Too many redirects");
   const parsed = new URL(url);
   const mod = parsed.protocol === "https:" ? https : http;
-  const proxyAgent = await getProxyAgent();
+  const proxyAgent = await getProxyAgent(fetchMode);
   return new Promise((resolve, reject) => {
     const req = (mod as typeof https).request(
       {
@@ -70,7 +79,7 @@ async function get(url: string, redirects = 0): Promise<string> {
         const encoding = (res.headers["content-encoding"] ?? "") as string;
 
         if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          return resolve(get(new URL(res.headers.location, url).toString(), redirects + 1));
+          return resolve(get(new URL(res.headers.location, url).toString(), fetchMode, redirects + 1));
         }
         if (res.statusCode === 403 || res.statusCode === 429) {
           return reject(new Error(`HTTP ${res.statusCode} (rate-limited)`));
@@ -362,7 +371,7 @@ export async function fetchAirbnbSearchListings(opts?: {
 
   for (const searchUrl of urls) {
     try {
-      const html = await get(searchUrl);
+      const html = await get(searchUrl, "proxy", 0);
       const cards = extractSearchCards(html);
       for (const card of cards) {
         // Prefer cards with more data
