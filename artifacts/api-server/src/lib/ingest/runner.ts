@@ -32,6 +32,7 @@ import {
 import { fetchVrboSeedBatch } from "./vrbo-discovery-wrapper.js";
 import { mapToPricingToolBucket } from "../neighborhood-buckets.js";
 import type { DiscoveryJob } from "@workspace/db/schema";
+import type { FetchMode } from "./http-proxy.js";
 
 export interface RunDiscoveryOptions {
   maxJobs: number;
@@ -43,6 +44,8 @@ export interface RunDiscoveryOptions {
   neighborhood?: string;
   /** Set to true to bypass the per-job neighborhood filter (use with caution). */
   ignoreNeighborhoodGuard?: boolean;
+  /** Outbound fetch transport. Defaults to "proxy" (uses PROXY_URL if set, else direct). */
+  fetchMode?: FetchMode;
 }
 
 export interface JobOutcome {
@@ -205,10 +208,12 @@ async function processJob(
   if (job.source === "airbnb") {
     batch = await fetchAirbnbSeedBatch(seed as never, {
       maxCards: opts.maxResultsPerJob ?? 50,
+      fetchMode: opts.fetchMode,
     });
   } else if (job.source === "vrbo") {
     batch = await fetchVrboSeedBatch(seed as never, {
       maxCards: opts.maxResultsPerJob ?? 50,
+      fetchMode: opts.fetchMode,
     });
   } else {
     return {

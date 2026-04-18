@@ -19,6 +19,7 @@ import {
 import type { SearchCard } from "./airbnb-search-adapter.js";
 import type { DiscoverySeed } from "./seed-generator.js";
 import { computeStayDates } from "./airbnb-discovery-wrapper.js";
+import type { FetchMode } from "./http-proxy.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // URL construction
@@ -120,13 +121,13 @@ export interface VrboBatch {
 
 export async function fetchVrboSeedBatch(
   seed: DiscoverySeed,
-  opts: { maxCards?: number } = {}
+  opts: { maxCards?: number; fetchMode?: FetchMode } = {}
 ): Promise<VrboBatch> {
   const url = buildVrboSearchUrl(seed);
   const t0 = Date.now();
   let html = "";
   try {
-    html = await vrboHttpGet(url);
+    html = await vrboHttpGet(url, { fetchMode: opts.fetchMode });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     const blocked = /403|429|rate-limited/i.test(msg) ? `http:${msg}` : null;
