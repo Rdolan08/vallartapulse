@@ -56,13 +56,17 @@ interface CliArgs {
 
 function parseArgs(argv: string[]): CliArgs {
   let maxListings = 10;
-  let buckets = DEFAULT_BUCKETS;
+  // Track whether the user passed any --bucket= flag. If they did, the
+  // resulting list replaces the defaults. Multiple --bucket= flags accumulate
+  // (e.g. `--bucket="Marina Vallarta" --bucket="Zona Romántica"` runs both).
+  let userBuckets: string[] = [];
   let dryRun = false;
   for (const a of argv.slice(2)) {
     if (a.startsWith("--max-listings=")) maxListings = Number(a.split("=")[1]);
-    else if (a.startsWith("--bucket=")) buckets = [a.split("=")[1]];
+    else if (a.startsWith("--bucket=")) userBuckets.push(a.split("=").slice(1).join("="));
     else if (a === "--dry-run") dryRun = true;
   }
+  const buckets = userBuckets.length > 0 ? userBuckets : DEFAULT_BUCKETS;
   if (!Number.isFinite(maxListings) || maxListings <= 0) maxListings = 10;
   return { maxListings, buckets, dryRun };
 }
