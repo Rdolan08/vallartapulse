@@ -24,6 +24,7 @@ import type { IncomingMessage } from "http";
 import type { NormalizedRentalListing } from "./types.js";
 import { normalizeNeighborhood } from "../rental-normalize.js";
 import { getProxyAgent, type FetchMode } from "./http-proxy.js";
+import { fetchWithBrowser } from "./browser-fetch.js";
 
 export const SOURCE = "airbnb" as const;
 
@@ -63,6 +64,20 @@ export function airbnbHttpGet(url: string, opts?: AirbnbHttpGetOpts | number): P
 
 async function get(url: string, fetchMode: FetchMode, redirects: number): Promise<string> {
   if (redirects > 5) throw new Error("Too many redirects");
+  // Browser mode: short-circuit the node http stack entirely. Chromium handles
+  // its own proxy, redirects, JS rendering, and cookie storage. Airbnb's SPA
+  // renders cards client-side after a GraphQL fetch, so we MUST be in a real
+  // browser context to see /rooms/* in the rendered HTML.
+  if (fetchMode === "browser") {
+    return fetchWithBrowser(url, {
+      timeoutMs: 30_000,
+      // Once any /rooms/ link appears in the DOM, the search GraphQL query
+      // has resolved and we have something extractable. Card containers vary
+      // across Airbnb A/B variants, so anchor on /rooms/ links instead.
+      waitForSelector: "a[href*='/rooms/']",
+      fallbackOnTimeout: true,
+    });
+  }
   const parsed = new URL(url);
   const mod = parsed.protocol === "https:" ? https : http;
   const proxyAgent = await getProxyAgent(fetchMode);

@@ -103,9 +103,9 @@ function parseArgs(argv: string[]): CliArgs {
         parseInt(a.slice("--max-duration-sec=".length), 10) * 1000;
     } else if (a.startsWith("--fetch-mode=")) {
       const v = a.slice("--fetch-mode=".length) as FetchMode;
-      if (v !== "direct" && v !== "proxy" && v !== "unblocker") {
+      if (v !== "direct" && v !== "proxy" && v !== "unblocker" && v !== "browser") {
         console.warn(
-          `[str-discovery] Invalid --fetch-mode='${v}'. Expected: direct|proxy|unblocker. Ignoring.`
+          `[str-discovery] Invalid --fetch-mode='${v}'. Expected: direct|proxy|unblocker|browser. Ignoring.`
         );
       } else {
         args.fetchMode = v;
@@ -135,10 +135,12 @@ Filters:
   --region=puerto_vallarta|riviera_nayarit|all   Default: all
   --neighborhood="Zona Romántica"   Repeatable (exact bucket name)
   --max-seeds=<n>                   Cap total seeds generated/inserted
-  --fetch-mode=direct|proxy|unblocker
+  --fetch-mode=direct|proxy|unblocker|browser
                                     Outbound transport for --run mode.
                                     Default: unblocker if UNBLOCKER_URL set,
                                     else proxy if PROXY_URL set, else direct.
+                                    'browser' runs Playwright Chromium,
+                                    tunneled through PROXY_URL.
 
 Behaviour:
   --dry-run       Show what would be done; do not write to the database.
@@ -273,6 +275,13 @@ async function main(): Promise<void> {
     if (effectiveFetchMode === "proxy" && !isProxyConfigured()) {
       console.log(
         "[str-discovery] --fetch-mode=proxy requires PROXY_URL secret to be set. Aborting."
+      );
+      return;
+    }
+    if (effectiveFetchMode === "browser" && !isProxyConfigured()) {
+      console.log(
+        "[str-discovery] --fetch-mode=browser requires PROXY_URL secret to be set " +
+          "(Chromium tunnels through the residential proxy). Aborting."
       );
       return;
     }
