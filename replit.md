@@ -295,23 +295,28 @@ Utility scripts package. Each script is a `.ts` file in `src/` with a correspond
 
 ## STR Comp-Signal Inventory Build (Phase 2d — April 2026)
 
-Scaled the Airbnb comp inventory from 94 listings (3 buckets) to **402 listings (16 buckets, balanced)** in a single session, using only existing CLI + browser-mode discovery — no schema, scraper, or extractor changes.
+Scaled the Airbnb comp inventory from 94 listings (3 buckets) to **447 listings (16 buckets, balanced)** in a single session, using only existing CLI + browser-mode discovery — no schema, scraper, or extractor changes.
 
-**Approach**: idempotent re-seed of the discovery queue across both regions (`--seed-only --region=puerto_vallarta`, then `--region=riviera_nayarit`), then alternating PV/RN `--run --max-jobs=3 --fetch-mode=browser` invocations per neighborhood. Wave 1 = breadth across all 16 buckets (16 invocations); Wave 2 = depth on top yielders (7 invocations); stopped when wave-2 yield collapsed to 2-4 new/job (marginal-yield gate per brief).
+**Approach**: idempotent re-seed of the discovery queue across both regions (`--seed-only --region=puerto_vallarta`, then `--region=riviera_nayarit`), then alternating PV/RN `--run --max-jobs=3 --fetch-mode=browser` invocations per neighborhood. Wave 1 = breadth across all 16 buckets (16 invocations); Wave 2 = depth on top yielders (7 invocations); Waves 3-4 = revisit medium-yield buckets + saturation checks on top performers (8 invocations). Total: ~31 invocations / 93 jobs. Stopped when per-bucket yield collapsed below the 20-30% net-new threshold across all neighborhoods (the marginal-yield gate per brief).
 
-**Inventory delta**:
-- 94 → 402 Airbnb listings (+306 this session, +325%)
-- PV: 207 listings across 9 buckets (was 3); RN: 194 listings across 7 buckets (was 0)
-- 11 of 16 buckets now ≥15 listings (was 3); 4 thin buckets remain: Old Town (4), El Anclote (6), Hotel Zone/Malecón (9), plus 1 stray uncategorized row
-- 863 search observations (avg 2.2 per listing); 770 with derived nightly price
+**Per-bucket yield decay** (avg new/job): typical curve was 8-10 → 1-3 → <2 across waves. Two buckets (Nuevo Vallarta, Marina Vallarta) sustained 2-3 new/job through wave 3 before crashing in wave 4; all others collapsed after wave 1 or 2. Duplicate rate climbed from ~45% (wave 1) to ~80% (waves 3-4). Zero blocks, zero errors across all 31 invocations — Decodo browser-mode performed perfectly.
+
+**Estimated remaining upside under current architecture**: LOW-MEDIUM. Structural ceiling appears to be ~500-550 listings with the existing seed defaults (guests {2,4,6} × stays {3,5,7} × bedrooms {1,2,3} × windows {next_weekend, +14, +30, +60}) — Airbnb returns the same top-rated/popular properties regardless of combo. To push past 500 would require: (a) adding `studio` and `4plus` to the bedroom default set; (b) longer-horizon checkin windows (+90, +180); or (c) a second source (VRBO — out of brief scope).
+
+**Inventory delta** (final, post wave 3-4):
+- 94 → **447 Airbnb listings** (+353 this session, +376%)
+- PV: 229 listings across 9 buckets (was 3); RN: 217 listings across 7 buckets (was 0) — 51/49 balance
+- 13 of 16 buckets now ≥20 listings (was 0); 3 thin buckets remain: Old Town (4), El Anclote (6), Hotel Zone/Malecón (13)
+- **1,103 search observations** (avg 2.5 per listing)
+- Top-10 buckets: Nuevo Vallarta 49 · Zona Romántica 45 · Sayulita 41 · Marina Vallarta 39 · Bucerías 33 · La Cruz 31 · Amapas 30 · San Pancho 30 · Punta Mita 27 · Centro 25
 
 **Comp-signal usability** (via `airbnb_comp_signal` view):
-- 367/402 minimum-usable (91%, was 21%)
-- 287/402 rich-usable (71%, was 5%)
-- Currency: 388 MXN / 9 USD (97% MXN — Airbnb default for the geo)
+- **412/447 minimum-usable (92%**, was 21%)
+- **325/447 rich-usable (73%**, was 5%)
+- Currency: ~430 MXN / ~10 USD (97% MXN — Airbnb default for the geo)
 - 5 detail-enriched (carryover from Phase 2b)
 
-**Discovery throughput (this session)**: 69 jobs run, 680 cards observed, 306 new listings, avg 4.4 new/job, **0 blocks, 0 errors** — Decodo browser-mode performance was perfect across all 23 invocations. Termination mix: 53 manual_cap, 9 duplicate_only, 7 exhausted (<10 cards on page).
+**Discovery throughput (this session)**: 93 jobs run, ~870 cards observed, 353 new listings, **0 blocks, 0 errors** across all 31 invocations. Yields per wave: W1 47% net-new, W2 41%, W3-4 38% (still well above the 20-30% deprioritization threshold in aggregate, but per-bucket signal showed clear saturation in 14 of 16 buckets).
 
 **Remaining queue**: 1,659 pending discovery jobs across all 16 buckets (105/bucket) — available for future depth/refresh sessions without re-seeding.
 
