@@ -202,9 +202,13 @@ async function main(): Promise<void> {
       console.log("[str-discovery] --dry-run incompatible with --run; aborting.");
       return;
     }
-    if (!args.source || args.source.length !== 1 || args.source[0] !== "airbnb") {
+    if (
+      !args.source ||
+      args.source.length !== 1 ||
+      (args.source[0] !== "airbnb" && args.source[0] !== "vrbo")
+    ) {
       console.log(
-        "[str-discovery] Phase 2b first-run scope requires --source=airbnb (only). Aborting."
+        "[str-discovery] Phase 2b run requires exactly one --source=airbnb or --source=vrbo. Aborting."
       );
       return;
     }

@@ -37,6 +37,10 @@ const BROWSER_HEADERS: Record<string, string> = {
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 
+export function vrboHttpGet(url: string, redirects = 0): Promise<string> {
+  return get(url, redirects);
+}
+
 function get(url: string, redirects = 0): Promise<string> {
   return new Promise((resolve, reject) => {
     if (redirects > 5) return reject(new Error("Too many redirects"));
@@ -84,6 +88,10 @@ function get(url: string, redirects = 0): Promise<string> {
 }
 
 // ── Listing ID extraction ─────────────────────────────────────────────────────
+
+export function extractVrboListingIds(html: string): string[] {
+  return extractListingIds(html);
+}
 
 function extractListingIds(html: string): string[] {
   const ids = new Set<string>();
