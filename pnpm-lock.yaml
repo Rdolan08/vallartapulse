@@ -187,6 +187,9 @@ importers:
       pino-http:
         specifier: ^10
         version: 10.5.0
+      undici:
+        specifier: ^8.1.0
+        version: 8.1.0
       zod:
         specifier: 'catalog:'
         version: 3.25.76
@@ -218,6 +221,9 @@ importers:
       pino-pretty:
         specifier: ^13
         version: 13.1.3
+      playwright:
+        specifier: ^1.59.1
+        version: 1.59.1
       thread-stream:
         specifier: 3.1.0
         version: 3.1.0
@@ -3043,6 +3049,10 @@ packages:
   undici-types@7.18.2:
     resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
+  undici@8.1.0:
+    resolution: {integrity: sha512-E9MkTS4xXLnRPYqxH2e6Hr2/49e7WFDKczKcCaFH4VaZs2iNvHMqeIkyUAD9vM8kujy9TjVrRlQ5KkdEJxB2pw==}
+    engines: {node: '>=22.19.0'}
+
   unicorn-magic@0.3.0:
     resolution: {integrity: sha512-+QBBXBCvifc56fsbuxZQ6Sic3wqqc3WWaqxs58gvJrcOuN83HGTCwz3oS5phzU9LthRNE9VrJCFCLUgHeeFnfA==}
     engines: {node: '>=18'}
@@ -5613,6 +5623,8 @@ snapshots:
   uc.micro@2.1.0: {}
 
   undici-types@7.18.2: {}
+
+  undici@8.1.0: {}
 
   unicorn-magic@0.3.0: {}
 
