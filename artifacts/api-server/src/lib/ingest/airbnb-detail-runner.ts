@@ -11,7 +11,8 @@
  */
 
 import { db } from "@workspace/db";
-import { listingDetailsTable } from "@workspace/db/schema";
+import { listingDetailsTable, rentalListingsTable } from "@workspace/db/schema";
+import { sql } from "drizzle-orm";
 import { fetchWithBrowser } from "./browser-fetch.js";
 import { parseAirbnbDetailHtml, type AirbnbDetailParse } from "./airbnb-detail-adapter.js";
 
@@ -251,6 +252,26 @@ export async function enrichOneAirbnbListing(
       parseStatus: parsed.parseStatus, // "ok" | "partial"
       parseErrors: parsed.parseErrors.length > 0 ? parsed.parseErrors : null,
     });
+
+    // Back-write canonical attribute columns to rental_listings so the comp
+    // engine can query bedrooms/bathrooms/max_guests directly without joining
+    // listing_details JSON. GREATEST never destroys a real existing value
+    // (incoming 0 stays at the larger existing count); COALESCE preserves an
+    // existing non-null lat/lng/rating instead of overwriting with null.
+    const n = parsed.normalized;
+    await db.execute(sql`
+      UPDATE rental_listings
+      SET
+        bedrooms       = GREATEST(rental_listings.bedrooms,  ${n.bedrooms  ?? 0}),
+        bathrooms      = GREATEST(rental_listings.bathrooms, ${n.bathrooms ?? 0}),
+        max_guests     = COALESCE(rental_listings.max_guests,     ${n.maxGuests   ?? null}),
+        latitude       = COALESCE(rental_listings.latitude,       ${n.latitude    ?? null}),
+        longitude      = COALESCE(rental_listings.longitude,      ${n.longitude   ?? null}),
+        rating_overall = COALESCE(rental_listings.rating_overall, ${n.ratingOverall ?? null}),
+        review_count   = COALESCE(rental_listings.review_count,   ${n.reviewCount  ?? null}),
+        updated_at     = NOW()
+      WHERE id = ${listingId}
+    `);
   }
 
   return {

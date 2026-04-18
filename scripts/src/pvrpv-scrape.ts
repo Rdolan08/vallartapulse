@@ -780,9 +780,16 @@ async function scrapeListing(url: string): Promise<IngestResult> {
           latitude: sql`excluded.latitude`,
           longitude: sql`excluded.longitude`,
           distanceToBeachM: sql`excluded.distance_to_beach_m`,
-          bedrooms: sql`excluded.bedrooms`,
-          bathrooms: sql`excluded.bathrooms`,
-          maxGuests: sql`excluded.max_guests`,
+          // Preserve known attribute values when re-scraping. PVRPV's HTML
+          // sometimes drops the "Bed(s):" / "Bath(s):" markers on partial
+          // detail pages, in which case `specs.bedrooms` falls back to the
+          // 0-default at insert. Without GREATEST, a re-scrape of a stale
+          // page would erase a real value previously written by a richer
+          // crawl (or by a Phase 2d-ext airbnb back-write into the same
+          // sourceUrl key). Same rationale as rental-ingest.ts.
+          bedrooms: sql`GREATEST(${rentalListingsTable.bedrooms}, excluded.bedrooms)`,
+          bathrooms: sql`GREATEST(${rentalListingsTable.bathrooms}, excluded.bathrooms)`,
+          maxGuests: sql`COALESCE(${rentalListingsTable.maxGuests}, excluded.max_guests)`,
           sqft: sql`excluded.sqft`,
           amenitiesRaw: sql`excluded.amenities_raw`,
           amenitiesNormalized: sql`excluded.amenities_normalized`,
