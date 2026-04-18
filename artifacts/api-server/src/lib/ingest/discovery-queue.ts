@@ -69,6 +69,13 @@ export interface ClaimFilter {
   source?: string;
   parentRegion?: "puerto_vallarta" | "riviera_nayarit";
   jobType?: string;
+  /**
+   * Optional exact-match filter on normalized_neighborhood_bucket. When set,
+   * claimNext() will only return jobs for this bucket — preventing the runner
+   * from claiming a higher-priority job for an unrelated neighborhood and then
+   * having to release it. The CLI's `--neighborhood` flag flows through here.
+   */
+  neighborhood?: string;
 }
 
 /**
@@ -132,6 +139,8 @@ function buildClaimSql(filter: ClaimFilter) {
   if (filter.parentRegion)
     parts.push(sql` AND parent_region_bucket = ${filter.parentRegion}`);
   if (filter.jobType) parts.push(sql` AND job_type = ${filter.jobType}`);
+  if (filter.neighborhood)
+    parts.push(sql` AND normalized_neighborhood_bucket = ${filter.neighborhood}`);
   parts.push(
     sql` ORDER BY priority DESC, id ASC FOR UPDATE SKIP LOCKED LIMIT 1)
     UPDATE discovery_jobs dj
