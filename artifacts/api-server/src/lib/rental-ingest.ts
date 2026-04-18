@@ -236,9 +236,15 @@ export async function ingestListing(raw: RawListing): Promise<{
         buildingName: record.buildingName,
         latitude: record.latitude,
         longitude: record.longitude,
-        bedrooms: record.bedrooms,
-        bathrooms: record.bathrooms,
-        maxGuests: record.maxGuests,
+        // Preserve known attribute values when re-discovering. Discovery often
+        // returns 0/null for bedrooms/bathrooms (Airbnb stopped surfacing them
+        // in search-card SSR), so a naive `excluded.bedrooms` overwrite would
+        // erase any real value previously written by detail enrichment or an
+        // earlier richer crawl. GREATEST keeps the larger known count;
+        // COALESCE keeps the existing non-null value for max_guests.
+        bedrooms: sql`GREATEST(${rentalListingsTable.bedrooms}, excluded.bedrooms)`,
+        bathrooms: sql`GREATEST(${rentalListingsTable.bathrooms}, excluded.bathrooms)`,
+        maxGuests: sql`COALESCE(${rentalListingsTable.maxGuests}, excluded.max_guests)`,
         sqft: record.sqft,
         amenitiesRaw: record.amenitiesRaw,
         amenitiesNormalized: record.amenitiesNormalized,
@@ -396,8 +402,11 @@ export async function seedRentalListings(): Promise<void> {
         neighborhoodNormalized: sql`excluded.neighborhood_normalized`,
         buildingName:           sql`excluded.building_name`,
         distanceToBeachM:       sql`excluded.distance_to_beach_m`,
-        bedrooms:               sql`excluded.bedrooms`,
-        bathrooms:              sql`excluded.bathrooms`,
+        // GREATEST keeps a real bedroom/bathroom count from a previous richer
+        // crawl when the current bulk-seed row carries 0 (see comment on the
+        // per-listing UPSERT above for the full rationale).
+        bedrooms:               sql`GREATEST(${rentalListingsTable.bedrooms}, excluded.bedrooms)`,
+        bathrooms:              sql`GREATEST(${rentalListingsTable.bathrooms}, excluded.bathrooms)`,
         sqft:                   sql`excluded.sqft`,
         amenitiesNormalized:    sql`excluded.amenities_normalized`,
         ratingOverall:          sql`excluded.rating_overall`,

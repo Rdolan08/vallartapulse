@@ -362,3 +362,27 @@ Extension of Phase 2d to cover **all unit types in Puerto Vallarta** by neighbor
 - **Comp-signal usability** (PV only): ZR 43 rich + 22 min-only · Marina 38 rich + 9 min · 5 de Diciembre 25 rich + 3 min · Versalles 21 rich + 2 min · Mismaloya 20 rich + 5 min · Hotel Zone 13 rich + 1 min · Centro 11 rich + 14 min · Amapas 8 rich + 21 min · Old Town 4 rich. Comp signal coverage now spans **all 9 PV buckets** at meaningful depth.
 
 **Operational note**: With the new defaults in place, future `--seed-only` invocations on RN will also expand to 270 seeds/bucket, but RN was not re-seeded in this session per the user's PV-focused brief. Re-running `--seed-only --source=airbnb --region=riviera_nayarit` would idempotently add ~1,134 RN seeds for parity. The new `--bedroom=` and `--window=` CLI filters are reusable for future targeted refresh sessions on either region.
+
+## Phase 2d-ext patch — Bedroom Data-Flow Bug Fix (April 18, 2026)
+
+**Context**: Audit of `rental_listings.bedrooms` revealed 286/290 PV airbnb listings stored as `bedrooms=0` despite the discovery + detail-enrichment pipelines both extracting bedroom data. Root cause was a destructive write pattern, not a scraping problem.
+
+**Three bugs fixed**:
+1. `persist.ts:32` — defaulted `listing.bedrooms ?? 0` on every ingest (missing-data masquerading as studio).
+2. `rental-ingest.ts:239,399` — UPSERT used `bedrooms: record.bedrooms` / `sql\`excluded.bedrooms\``, overwriting any real previously-stored value with the new (often 0) default on every re-discovery.
+3. `airbnb-detail-runner.ts` — successful detail enrichments wrote bedrooms only into `listing_details.normalized_fields` JSON; the canonical `rental_listings.bedrooms` column was never updated, so the comp engine couldn't see them.
+
+**Fix pattern** (no schema change — `bedrooms`/`bathrooms`/`max_guests` columns already exist):
+- Both `rental_listings` UPSERT sites switched to `bedrooms: sql\`GREATEST(${rentalListingsTable.bedrooms}, excluded.bedrooms)\`` (and `COALESCE(...)` for nullable `max_guests`). Real values now survive re-discovery; new larger values still propagate.
+- `airbnb-detail-runner.ts` success path now runs `UPDATE rental_listings SET bedrooms = GREATEST(...), bathrooms = GREATEST(...), max_guests = COALESCE(...), latitude = COALESCE(...), longitude = COALESCE(...), rating_overall = COALESCE(...), review_count = COALESCE(...) WHERE id = $1` immediately after the `listing_details` insert. Every successful enrichment now permanently populates the canonical columns for the comp engine.
+
+**One-time backfill**: `scripts/src/backfill-bedrooms-from-text.ts` re-extracts bedroom/bathroom counts from `rental_listings.title` (and `listing_details.normalized_fields.description` when present) using the EN/ES regex helpers added in Parser Fix 2. Pure offline math, no scraping. Result on PV airbnb (290 listings):
+- Before: bedrooms_with_value = 4 (1.4%) · bathrooms_with_value = 4 (1.4%)
+- After:  bedrooms_with_value = 58 (20.0%) · bathrooms_with_value = 9 (3.1%)
+- Delta:  +54 bedroom rows · +5 bathroom rows (~14× lift on bedrooms with zero new scraping)
+
+**Validation**: Stage B SQL exercised live against listing 339 with mock back-write values, then re-applied with all-NULL/0 inputs. GREATEST/COALESCE guards confirmed — real values were not destroyed by missing-data inputs. Listing reset to original 0/0/NULL state after test.
+
+**Why this matters for the comp engine**: The Layer-3 comp query layer relies on `rental_listings.bedrooms` for the `±1 bedroom` comp filter (per Phase 1 design). With 1.4% coverage, the filter would have rejected almost every listing as ineligible. With 20% baseline + Stage B contributing more on every future enrichment, the comp engine now has a usable bedroom signal to work with.
+
+**Remaining bedroom backlog** (not addressed in this session): ~80% of PV listings still have `bedrooms = 0` because their titles don't mention bedroom count and they have not yet been detail-enriched. Two paths to push this higher: (a) continue scaling detail enrichment (~25% additional unlock per Parser Fix 2 unit-test coverage) — Stage B will now propagate the values automatically; (b) add a `discovery_jobs.id ↔ rental_listings.id` junction so seed-context bedroom_bucket can serve as a floor estimate (small additive schema change, deferred).
