@@ -158,6 +158,36 @@ Composition layer for queued, history-preserving Airbnb/VRBO ingestion: `airbnb-
 
 **Pre-existing issues (not blockers, deferred)**: 2 unmapped neighborhood rows ("Lázaro Cardenas" + empty string) need a one-line alias fix in `rental-normalize.ts`; 2 pre-existing TS7030 errors in `src/routes/ingest.ts` lines 325/488; api-server workflow occasionally fails with EADDRINUSE on port 8080 (stale process — restart fixes).
 
+## STR Comp-Signal Layer (Phase 2c — April 2026)
+
+Read-only normalized merge of three Airbnb sources into one row per listing — no source-table mutation, no new fetches, no schema changes.
+
+**Files**:
+- `lib/db/src/views/airbnb_comp_signal.sql` — single SQL view definition. Two `DISTINCT ON` CTEs pick the latest observation (per listingId) and the latest `parse_status='ok'` detail (per listingId), then LEFT JOIN both onto rental_listings filtered to `source_platform='airbnb'`.
+- `scripts/src/setup-airbnb-comp-signal-view.ts` — idempotent `CREATE OR REPLACE VIEW` applier (`db.execute(sql.raw(ddl))`). Sanity-checks row count after apply.
+- `scripts/src/report-airbnb-comp-signal.ts` — Phase 2c report: per-bucket coverage + avg/median nightly (currency-aware) + 5 sample merged comp rows. Bias: rich-usable first, then detail-enriched, one per bucket.
+
+**Authoritative-source rules** (encoded in the view):
+- Price fields → always from latest observation (`derived_nightly_price`, `currency`, `displayed_total_price`, `stay_length_nights` from `search_seed`).
+- Geography bucket/region → prefer rental_listings (mapped during discovery, stable across re-observations); fall back to observation if master row's bucket is null.
+- Lat/lng → prefer detail (JSON-LD geo precision), fall back to rental_listings.
+- Rating/review_count → prefer detail's `ratingOverall`/`reviewCount` (covers full history) over the card's `displayed_rating` (visible-on-card snapshot only).
+- Title → detail → observation → rental_listings.
+- Capacity/type/imageCount/petsAllowed → detail-only, never inferred.
+- bedrooms/bathrooms/amenities/hostName intentionally NOT exposed — Phase 2b confirmed 0% SSR coverage; exposing them as nulls would invite downstream fabrication.
+
+**Comp-usability flags**:
+- `is_comp_usable_minimal` = bucket + derived_nightly_price + currency + canonical_url all present.
+- `is_comp_usable_rich` = minimal + ≥3 of 7 enrichment dimensions (rating+reviewCount, lat+lng, maxGuests, bedCount, propertyType, imageCount, title).
+
+**Validation snapshot (April 18, 2026)**: 94 Airbnb listings across the 3 PV buckets → 20 minimal-usable (21%) → 5 rich-usable (5%). Detail-signal count (5) matches Phase 2b enrichment OK count exactly. avg nightly (MXN): ZR 2782, Amapas 2471, Centro 2009. Currency 100% MXN — `avg_nightly_usd`/`median_nightly_usd` columns return null until USD-priced observations appear.
+
+**CLI**:
+```
+pnpm --filter @workspace/scripts exec tsx src/setup-airbnb-comp-signal-view.ts
+pnpm --filter @workspace/scripts exec tsx src/report-airbnb-comp-signal.ts
+```
+
 ## Known Fixes & Notes
 
 - **Chart colors**: Recharts `hsl(var(--chart-N))` variables are NOT defined in the design system. All chart strokes/fills must use hardcoded brand hex values: `#00C2A8` (primary teal), `#00D1FF` (accent cyan), `#F59E0B` (amber), `#6366F1` (indigo), `#3B82F6` (blue). Do not use `--chart-N` CSS variables.
