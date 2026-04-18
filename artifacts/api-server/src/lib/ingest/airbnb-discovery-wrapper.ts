@@ -6,11 +6,18 @@
  * helpers (extractSearchCards, normalizeCard, airbnbHttpGet). The existing
  * adapter is not rewritten — only its building blocks are reused.
  *
- * Conservative defaults:
+ * Block-detection contract (revised — card-count-first):
+ *   1. cardCount > 0  → ALWAYS treat as success, regardless of marker hits.
+ *      Airbnb routinely bundles reCAPTCHA Enterprise scripts on real search
+ *      pages, so a literal "captcha" substring on a page that *also* contains
+ *      real listings is not evidence of a block.
+ *   2. cardCount = 0 AND a *specific*, Airbnb-interstitial marker present →
+ *      mark blocked.
+ *   3. cardCount = 0 AND no specific marker → return null. The runner / yield
+ *      tracker will classify as empty_results (parser succeeded, zero cards)
+ *      or parse_fail (parser failed). We do NOT auto-fail on tiny pages or on
+ *      "zero cards + no pagination" heuristics — those produced false blocks.
  *   - One HTTP fetch per call to fetchAirbnbSeedBatch()
- *   - Block detection is aggressive (any 403/429, any captcha marker, any
- *     suspicious near-zero card count → terminationSignal='blocked')
- *   - Caller (the runner) decides whether to call back for another batch
  */
 
 import {
@@ -121,32 +128,30 @@ export function buildAirbnbSearchUrl(seed: DiscoverySeed): string {
 // Block detection
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Specific interstitial / WAF markers. The bare token "captcha" is intentionally
+ * NOT in this list — Airbnb preloads reCAPTCHA Enterprise on every search page
+ * for the booking flow, so it appears in benign script tags. The generic
+ * "are you a human" / "are you human" strings were also too noisy and were
+ * removed; add them back only if confirmed inside an actual Airbnb block page.
+ */
 const BLOCK_MARKERS = [
   "px-captcha",
   "perimeterx",
-  "are you a human",
-  "are you human",
   "pardon our interruption",
-  "captcha",
   "/forbidden",
   "access denied",
 ];
 
 export function detectBlock(html: string, cardCount: number): string | null {
+  // Card-count-first contract: real cards always win over marker noise.
+  if (cardCount > 0) return null;
   const lower = html.toLowerCase();
   for (const m of BLOCK_MARKERS) {
     if (lower.includes(m)) return `marker:${m}`;
   }
-  // Suspiciously small page that doesn't even contain "/rooms/" — fingerprint
-  // for empty/blocked responses.
-  if (html.length < 5_000 && !lower.includes("/rooms/")) {
-    return "tiny-page";
-  }
-  // A search page that returned zero cards AND has no pagination indicator
-  // is likely silently blocked.
-  if (cardCount === 0 && !lower.includes("paginationitem") && !lower.includes("nav-next")) {
-    return "zero-cards";
-  }
+  // No cards AND no specific block marker → not blocked. Caller will
+  // classify as empty_results / parse_fail.
   return null;
 }
 
