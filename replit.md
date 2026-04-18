@@ -144,9 +144,17 @@ Composition layer for queued, history-preserving Airbnb/VRBO ingestion: `airbnb-
 - **Airbnb** → `HTTP 200` with full ~830KB body and correct page title ("Zona Romántica - Vacation Rentals - Emiliano Zapata, Puerto Vallarta") but ZERO `/rooms/` matches. Page is a niobeMinimal SPA shell; listing cards render via client-side GraphQL after JS execution. Static-HTML scraping cannot extract listings from this.
 - 2nd consecutive Airbnb hit from same IP returned 523 bytes (rate-limited within seconds).
 
-**Implication**: `airbnb-search-adapter.ts` and `vrbo-search-adapter.ts` (curl-style HTTP GET → cheerio parse) are structurally insufficient for Phase 2b live runs. Proxy was a necessary precondition but not sufficient. **Next architectural decision required from user**: switch fetch layer to a real headless browser (Playwright/Puppeteer over the same proxy) so we present a genuine browser TLS/HTTP2 fingerprint and can execute the JS that materializes Airbnb's cards.
+**Implication**: `airbnb-search-adapter.ts` and `vrbo-search-adapter.ts` (curl-style HTTP GET → cheerio parse) are structurally insufficient for Phase 2b live runs against bare residential IPs. Proxy was a necessary precondition but not sufficient.
 
-**Pipeline atomic accounting verified** under block conditions: jobsAttempted=1, cardsObserved=0, terminationReason='blocked', zero DB writes — runner correctly marks jobs complete-but-blocked and stops the loop.
+**Resolution path chosen (additive, not replacement)**: a third fetch transport — `fetchMode = "unblocker"` — routes through Decodo Site Unblocker (`unblock.decodo.com:60000`), which performs server-side JS rendering, IP rotation, and TLS/header fingerprint spoofing. The residential proxy path (`fetchMode = "proxy"`) and direct fetches (`fetchMode = "direct"`) are kept untouched.
+
+**`http-proxy.ts` extended**: `getProxyAgent(mode)` accepts `"direct" | "proxy" | "unblocker"`. Unblocker mode reads `UNBLOCKER_URL` env var (format `http://USER:PASS@unblock.decodo.com:60000`) and creates an `HttpsProxyAgent` with `rejectUnauthorized: false` (Decodo terminates and re-signs target TLS — `-k` flag in their docs). Default arg keeps legacy behavior. `isProxyConfigured()` and `isUnblockerConfigured()` are cheap probes.
+
+**`fetchMode` is plumbed through** `airbnbHttpGet`/`vrboHttpGet` (back-compat: old `(url, redirects)` signature still accepted) → discovery wrappers → `runDiscoveryLoop` opts → `--fetch-mode=direct|proxy|unblocker` CLI flag in `scripts/src/str-discovery.ts`. CLI auto-resolves: explicit flag wins, else unblocker if `UNBLOCKER_URL` set, else proxy if `PROXY_URL` set, else direct. Aborts cleanly if a mode is requested without its credential.
+
+**Pipeline atomic accounting verified** under block conditions (job 25, residential proxy path): jobsAttempted=1, cardsObserved=0, terminationReason='blocked', zero DB writes — runner correctly marks jobs complete-but-blocked and stops the loop. Same accounting will apply to unblocker mode.
+
+**Pending**: live VRBO + Airbnb micro-test through unblocker, gated on user subscribing to Decodo Site Unblocker and providing the `UNBLOCKER_URL` secret (format `http://USER:PASS@unblock.decodo.com:60000`).
 
 **Pre-existing issues (not blockers, deferred)**: 2 unmapped neighborhood rows ("Lázaro Cardenas" + empty string) need a one-line alias fix in `rental-normalize.ts`; 2 pre-existing TS7030 errors in `src/routes/ingest.ts` lines 325/488; api-server workflow occasionally fails with EADDRINUSE on port 8080 (stale process — restart fixes).
 
