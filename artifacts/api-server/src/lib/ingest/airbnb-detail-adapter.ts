@@ -254,6 +254,85 @@ function asArr(x: unknown): unknown[] | null {
   return Array.isArray(x) ? x : null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Bedroom / bathroom fallback extractors.
+//
+// As of late 2025 Airbnb's PDP no longer renders bedrooms/bathrooms inside
+// the SSR HTML — they bind after Apollo hydration. Titles + descriptions
+// almost always restate these counts (e.g. "3BR Ocean View Villa",
+// "three-bedroom, three-bath retreat", "Casa con 4 recámaras y 2 baños").
+// We regex over `${title}\n${description}` as a backstop so the comp engine
+// has the most pricing-relevant attribute populated for every listing where
+// the host bothered to mention it (which is essentially all of them).
+// ─────────────────────────────────────────────────────────────────────────
+
+const WORD_TO_NUM: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5,
+  seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
+};
+
+export function extractBedroomsFromText(text: string): number | null {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+
+  // Studio / efficiency / monoambiente → 0 bedrooms.
+  // Match only when these words refer to the property type, not as
+  // adjacent vocabulary (e.g. "studio apartment", "efficiency unit",
+  // "estudio con cocina"). The regex requires a word boundary on both
+  // sides and is paired with a negative lookahead for the words that
+  // would imply a multi-bedroom property mentioning a "studio" amenity.
+  if (/\b(?:studio|estudio|monoambiente|efficiency)\b/.test(lower) &&
+      !/\b\d+\s*(?:br|bd|bed(?:room)?s?|recámaras?|recamaras?|habitaciones?|dormitorios?)\b/.test(lower)) {
+    return 0;
+  }
+
+  // Numeric forms in EN/ES:
+  //   "3BR", "3 br", "3-bedroom", "3 bedrooms", "3 bd", "3 bed"
+  //   "3 recámaras", "4 habitaciones", "2 dormitorios"
+  const numMatch = lower.match(
+    /\b(\d+)\s*-?\s*(?:br|bd|bed(?:room)?s?|recámaras?|recamaras?|habitaciones?|dormitorios?)\b/
+  );
+  if (numMatch) {
+    const n = parseInt(numMatch[1], 10);
+    if (Number.isFinite(n) && n >= 0 && n <= 20) return n;
+  }
+
+  // Word forms: "two-bedroom", "three bedrooms", "tres recámaras"
+  const wordMatch = lower.match(
+    /\b(one|two|three|four|five|six|seven|eight|nine|ten|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)[\s-]+(?:bedroom|bed|recámara|recamara|habitación|habitacion|dormitorio)s?\b/
+  );
+  if (wordMatch) return WORD_TO_NUM[wordMatch[1]] ?? null;
+
+  return null;
+}
+
+export function extractBathroomsFromText(text: string): number | null {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+
+  // Numeric forms (allow .5 for half baths):
+  //   "3-bath", "3 baths", "3 bathrooms", "2.5 baths", "3 baños", "2 banos"
+  //   We deliberately exclude bare "ba" because it collides too often with
+  //   product-noise like "BAJA", "ba.", room codes etc.
+  const numMatch = lower.match(
+    /\b(\d+(?:\.5)?)\s*-?\s*(?:baths?|bathrooms?|baños?|banos?)\b/
+  );
+  if (numMatch) {
+    const n = parseFloat(numMatch[1]);
+    if (Number.isFinite(n) && n >= 0 && n <= 20) return n;
+  }
+
+  // Word forms: "two-bath", "three bathrooms", "dos baños"
+  const wordMatch = lower.match(
+    /\b(one|two|three|four|five|six|uno|dos|tres|cuatro|cinco|seis)[\s-]+(?:bathroom|bath|baño|bano)s?\b/
+  );
+  if (wordMatch) return WORD_TO_NUM[wordMatch[1]] ?? null;
+
+  return null;
+}
+
 /**
  * Main entry point — pure function from rendered HTML to the parsed
  * structure. Always returns; never throws.
@@ -364,6 +443,19 @@ export function parseAirbnbDetailHtml(html: string): AirbnbDetailParse {
     }
   }
 
+  // ── 2.5. Fallback extraction from title + description ────────────────
+  // Airbnb removed bedrooms/bathrooms from the initial SSR HTML in late 2025
+  // — they only appear after Apollo hydration. As a backstop we regex the
+  // title + description, which reliably state these counts (e.g. "Las Brisas
+  // 3BR Ocean View", "three-bedroom, three-bath retreat", "Casa con 4
+  // recámaras"). Studio detection maps to bedrooms = 0.
+  if (out.bedrooms === null) {
+    out.bedrooms = extractBedroomsFromText(`${out.title ?? ""}\n${out.description ?? ""}`);
+  }
+  if (out.bathrooms === null) {
+    out.bathrooms = extractBathroomsFromText(`${out.title ?? ""}\n${out.description ?? ""}`);
+  }
+
   // ── 3. Status classification ──────────────────────────────────────────
   // "parse_fail" = no usable structured data at all
   // "ok" = at least title + (lat OR maxGuests OR rating)
@@ -376,8 +468,8 @@ export function parseAirbnbDetailHtml(html: string): AirbnbDetailParse {
   else parseStatus = "partial";
 
   // Note absences explicitly so reviewers can scan parse_errors.
-  if (out.bedrooms === null) errors.push("bedrooms: not in SSR HTML at this render depth");
-  if (out.bathrooms === null) errors.push("bathrooms: not in SSR HTML at this render depth");
+  if (out.bedrooms === null) errors.push("bedrooms: not in SSR HTML AND no fallback signal in title/description");
+  if (out.bathrooms === null) errors.push("bathrooms: not in SSR HTML AND no fallback signal in title/description");
   if (out.amenities === null) errors.push("amenities: not in SSR HTML at this render depth");
   if (out.hostName === null) errors.push("hostName: not in SSR HTML at this render depth");
 
