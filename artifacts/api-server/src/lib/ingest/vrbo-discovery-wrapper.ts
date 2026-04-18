@@ -83,11 +83,16 @@ export function buildVrboSearchUrl(seed: DiscoverySeed): string {
 // Block detection (VRBO-specific)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * VRBO-specific markers. `captcha-delivery` is the DataDome challenge host that
+ * VRBO uses; we keep it because DataDome on VRBO is a confirmed real block (per
+ * the prior browser-mode test). Card-count-first contract still applies: if
+ * the page returned listing IDs, it's a success even if a tracker mentions
+ * captcha somewhere in the HTML.
+ */
 const BLOCK_MARKERS = [
   "px-captcha",
   "perimeterx",
-  "are you a human",
-  "are you human",
   "pardon our interruption",
   "captcha-delivery",
   "/forbidden",
@@ -96,14 +101,14 @@ const BLOCK_MARKERS = [
 ];
 
 export function detectVrboBlock(html: string, idCount: number): string | null {
+  // Card-count-first: real listing IDs always win over marker noise.
+  if (idCount > 0) return null;
   const lower = html.toLowerCase();
   for (const m of BLOCK_MARKERS) {
     if (lower.includes(m)) return `marker:${m}`;
   }
-  if (html.length < 5_000 && idCount === 0) return "tiny-page";
-  // Pure zero IDs on a normal-size response is suspicious but not always a
-  // block (could just mean the filters returned nothing). Don't auto-fail
-  // here — runner records cardsObserved=0 and lets the yield-tracker decide.
+  // No IDs AND no specific marker → not blocked. The runner records
+  // cardsObserved=0 and the yield-tracker classifies as empty_results.
   return null;
 }
 
