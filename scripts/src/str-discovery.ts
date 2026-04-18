@@ -56,6 +56,8 @@ interface CliArgs {
   maxResultsPerJob: number;
   maxDurationMs: number;
   fetchMode: FetchMode | null;
+  bedroom: string | null;
+  window: string | null;
   help: boolean;
 }
 
@@ -71,6 +73,8 @@ function parseArgs(argv: string[]): CliArgs {
     maxResultsPerJob: 10,
     maxDurationMs: 5 * 60 * 1000,
     fetchMode: null,
+    bedroom: null,
+    window: null,
     help: false,
   };
 
@@ -101,6 +105,10 @@ function parseArgs(argv: string[]): CliArgs {
     } else if (a.startsWith("--max-duration-sec=")) {
       args.maxDurationMs =
         parseInt(a.slice("--max-duration-sec=".length), 10) * 1000;
+    } else if (a.startsWith("--bedroom=")) {
+      args.bedroom = a.slice("--bedroom=".length);
+    } else if (a.startsWith("--window=")) {
+      args.window = a.slice("--window=".length);
     } else if (a.startsWith("--fetch-mode=")) {
       const v = a.slice("--fetch-mode=".length) as FetchMode;
       if (v !== "direct" && v !== "proxy" && v !== "unblocker" && v !== "browser") {
@@ -300,6 +308,8 @@ async function main(): Promise<void> {
       parentRegion:
         args.region && args.region !== "all" ? args.region : undefined,
       neighborhood: args.neighborhoods[0],
+      bedroom: args.bedroom ?? undefined,
+      window: args.window ?? undefined,
       fetchMode: effectiveFetchMode,
     });
     console.log("\n── Run Report ──────────────────────────────────────────");

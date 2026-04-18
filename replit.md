@@ -323,3 +323,42 @@ Scaled the Airbnb comp inventory from 94 listings (3 buckets) to **447 listings 
 **Known data hygiene**:
 - Region-casing inconsistency persists in `discovery_jobs.parent_region_bucket`: 25 legacy rows have `Puerto Vallarta` (Title Case), all 1,728 new rows have `puerto_vallarta` (snake_case). Doesn't affect the comp-signal view (which keys off rental_listings, not jobs) but downstream report queries should normalize via `lower()` and accept both spellings. Same fixed alias-pair as called out in Phase 2b notes; not corrected in this session.
 - 1 rental_listings row has NULL `normalized_neighborhood_bucket` (pre-existing; same Lázaro Cárdenas / empty-string class flagged in Phase 2b).
+
+## Phase 2d-ext — Full PV Coverage by Unit Type + Long Calendar (April 2026)
+
+Extension of Phase 2d to cover **all unit types in Puerto Vallarta** by neighborhood and characteristics, plus deeper calendar horizons. Pivot was driven by user request after the Phase 2d ceiling (~500 listings) under the original seed defaults.
+
+**Code changes** (TS-only — no schema migration; `discovery_jobs.bedroom_bucket` and `checkin_window` are already `text`):
+- `seed-generator.ts`: `CheckinWindow` type now includes `+90` and `+180`; `WINDOW_WEIGHT` extended (6→1 priority decay); `DEFAULT_BEDROOM_BUCKETS` now `[studio,1,2,3,4plus]` (was `[1,2,3]`); `DEFAULT_CHECKIN_WINDOWS` now 6 values (was 4). Per-bucket cross-product: 108 → **270 seeds/bucket**.
+- `airbnb-discovery-wrapper.ts`: `computeStayDates()` adds `+90` and `+180` branches.
+- `discovery-queue.ts` + `runner.ts` + `str-discovery.ts`: new optional `--bedroom=` and `--window=` CLI filters, threaded into `claimNext()` SQL. Lets the operator target high-upside seed dimensions (studio, 4plus, +180) without waiting for the priority queue to drain bed=1/2/3 combos that mostly return overlapping listings.
+
+**Re-seed**: PV-only (`--seed-only --source=airbnb --region=puerto_vallarta`) → **1,503 new seeds inserted** (927 dedup'd against existing pending). Each of the 9 PV buckets now has 270 pending jobs evenly distributed across all bedroom × window combinations.
+
+**Wave 5 results** — 9 invocations / 27 jobs targeting newly-unlocked dimensions on the most-saturated PV buckets:
+| Wave | Bucket | Filter | New |
+|---|---|---|---|
+| 5.01 | Zona Romántica | (default, bed=1/2/3 next_weekend) | 2 |
+| 5.02 | Zona Romántica | `--bedroom=studio` | 5 |
+| 5.03 | Zona Romántica | `--bedroom=4plus` | **9** |
+| 5.04 | Amapas | `--bedroom=4plus` | 5 |
+| 5.05 | Centro | `--bedroom=4plus` | 5 |
+| 5.06 | Hotel Zone | `--bedroom=studio` | 1 |
+| 5.07 | Marina Vallarta | `--bedroom=4plus` | **9** |
+| 5.08 | 5 de Diciembre | `--bedroom=4plus` | 3 |
+| 5.09 | Zona Romántica | `--window=+180` (Oct 2026) | **22** |
+| **Total** | | | **61** |
+
+**Findings**:
+- **`--window=+180` is the highest-yield dimension by far**: 7-9 net-new per job in ZR, vs 1-3 for any bedroom-only filter on the same bucket. Deep-future calendars surface listings whose near-term calendars are fully booked — a category the original 4-window seed set was structurally blind to.
+- **`--bedroom=4plus` is reliably 3-5× richer than bed=1/2/3** in mature buckets: the large-property inventory (3+BR luxury condos in ZR/Marina, villas in Amapas) is materially distinct from the studio/1BR pool that dominates default search.
+- **`--bedroom=studio`** yields are bucket-specific: strong in ZR (5/3 jobs) where studios are common, weak in Hotel Zone (1/3 jobs) where most stock is hotel-style 1BR condos that already showed up in bed=1 searches.
+- **0 blocks, 0 errors** across all 9 invocations — Decodo browser-mode remains fully reliable.
+
+**Inventory delta** (Phase 2d → Phase 2d-ext):
+- PV Airbnb: **229 → 290 listings** (+61, +27%)
+- All Airbnb (PV + RN): 447 → **508 listings**
+- Top PV buckets now: Zona Romántica 83 · Marina Vallarta 48 · Amapas 35 · Centro 30 · 5 de Diciembre 28 · Mismaloya 25 · Versalles 23 · Hotel Zone 14 · Old Town 4
+- **Comp-signal usability** (PV only): ZR 43 rich + 22 min-only · Marina 38 rich + 9 min · 5 de Diciembre 25 rich + 3 min · Versalles 21 rich + 2 min · Mismaloya 20 rich + 5 min · Hotel Zone 13 rich + 1 min · Centro 11 rich + 14 min · Amapas 8 rich + 21 min · Old Town 4 rich. Comp signal coverage now spans **all 9 PV buckets** at meaningful depth.
+
+**Operational note**: With the new defaults in place, future `--seed-only` invocations on RN will also expand to 270 seeds/bucket, but RN was not re-seeded in this session per the user's PV-focused brief. Re-running `--seed-only --source=airbnb --region=riviera_nayarit` would idempotently add ~1,134 RN seeds for parity. The new `--bedroom=` and `--window=` CLI filters are reusable for future targeted refresh sessions on either region.
