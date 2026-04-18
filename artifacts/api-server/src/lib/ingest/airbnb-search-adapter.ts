@@ -23,6 +23,7 @@ import zlib from "zlib";
 import type { IncomingMessage } from "http";
 import type { NormalizedRentalListing } from "./types.js";
 import { normalizeNeighborhood } from "../rental-normalize.js";
+import { getProxyAgent } from "./http-proxy.js";
 
 export const SOURCE = "airbnb" as const;
 
@@ -51,18 +52,19 @@ export function airbnbHttpGet(url: string, redirects = 0): Promise<string> {
   return get(url, redirects);
 }
 
-function get(url: string, redirects = 0): Promise<string> {
+async function get(url: string, redirects = 0): Promise<string> {
+  if (redirects > 5) throw new Error("Too many redirects");
+  const parsed = new URL(url);
+  const mod = parsed.protocol === "https:" ? https : http;
+  const proxyAgent = await getProxyAgent();
   return new Promise((resolve, reject) => {
-    if (redirects > 5) return reject(new Error("Too many redirects"));
-    const parsed = new URL(url);
-    const mod = parsed.protocol === "https:" ? https : http;
-
     const req = (mod as typeof https).request(
       {
         hostname: parsed.hostname,
         path: parsed.pathname + parsed.search,
         method: "GET",
         headers: { ...BROWSER_HEADERS, Host: parsed.hostname },
+        ...(proxyAgent ? { agent: proxyAgent } : {}),
       },
       (res: IncomingMessage) => {
         const encoding = (res.headers["content-encoding"] ?? "") as string;

@@ -16,10 +16,12 @@
     "cors": "^2",
     "drizzle-orm": "catalog:",
     "express": "^5",
+    "https-proxy-agent": "^9.0.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.4",
     "pino": "^9",
     "pino-http": "^10",
+    "socks-proxy-agent": "^10.0.0",
     "zod": "catalog:"
   },
   "devDependencies": {
