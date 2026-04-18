@@ -137,20 +137,26 @@ export async function enrichOneAirbnbListing(
   url: string,
   opts: EnrichOpts = {}
 ): Promise<EnrichResult> {
-  const timeoutMs = opts.timeoutMs ?? 25_000;
+  const timeoutMs = opts.timeoutMs ?? 30_000;
   const hardCapMs = opts.hardCapMs ?? 70_000;
 
   // Pass 1
+  // Wait for EITHER the JSON-LD bootstrapper OR the Apollo deferred-state
+  // script ("data-deferred-state-0" is the post-hydration boundary). Either
+  // anchor is sufficient for the parser to extract usable structured data —
+  // requiring both was over-restrictive and contributed to PARSE_FAIL on
+  // pages where one anchor lands well after the other. networkidle is
+  // racing alongside it inside fetchWithBrowser; fallbackOnTimeout returns
+  // whatever HTML loaded so far if neither selector resolves.
+  const HYDRATION_SELECTOR =
+    'script[type="application/ld+json"], script[id^="data-deferred-state"]';
   let html: string;
   const t0 = Date.now();
   try {
     html = await withHardCap(
       fetchWithBrowser(url, {
         timeoutMs,
-        // Wait for the JSON-LD bootstrapper — its presence implies the SSR
-        // payload is in the DOM. networkidle is racing alongside it inside
-        // fetchWithBrowser.
-        waitForSelector: 'script[type="application/ld+json"]',
+        waitForSelector: HYDRATION_SELECTOR,
         fallbackOnTimeout: true,
       }),
       timeoutMs + 8_000,
@@ -171,7 +177,7 @@ export async function enrichOneAirbnbListing(
       html = await withHardCap(
         fetchWithBrowser(url, {
           timeoutMs: Math.min(timeoutMs, remaining - 4_000),
-          waitForSelector: 'script[type="application/ld+json"]',
+          waitForSelector: HYDRATION_SELECTOR,
           fallbackOnTimeout: true,
         }),
         remaining - 2_000,
