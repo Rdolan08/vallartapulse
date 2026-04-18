@@ -100,6 +100,10 @@ export async function runDiscoveryLoop(
   const filter: ClaimFilter = {};
   if (opts.source) filter.source = opts.source;
   if (opts.parentRegion) filter.parentRegion = opts.parentRegion;
+  // Push neighborhood into the SQL claim so we never claim then release a
+  // higher-priority job from a different bucket. The post-claim defensive
+  // check below stays as belt-and-suspenders.
+  if (opts.neighborhood) filter.neighborhood = opts.neighborhood;
 
   while (report.jobsAttempted < opts.maxJobs) {
     if (Date.now() - t0 >= opts.maxDurationMs) {
