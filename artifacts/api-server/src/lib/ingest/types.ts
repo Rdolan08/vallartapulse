@@ -23,6 +23,7 @@ export interface NormalizedRentalListing {
 
   title?: string;
   neighborhood?: string;
+  neighborhood_normalized?: string;
   building_name?: string;
   cross_streets?: string;
 
