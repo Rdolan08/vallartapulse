@@ -35,8 +35,9 @@ import {
   reclaimStaleInProgress,
 } from "../../artifacts/api-server/src/lib/ingest/discovery-queue.js";
 import { runBackfill } from "../../artifacts/api-server/src/lib/ingest/backfill.js";
+import { runDiscoveryLoop } from "../../artifacts/api-server/src/lib/ingest/runner.js";
 
-type Mode = "seed-only" | "resume" | "backfill" | "default";
+type Mode = "seed-only" | "resume" | "backfill" | "run" | "default";
 
 interface CliArgs {
   mode: Mode;
@@ -45,6 +46,9 @@ interface CliArgs {
   region: RegionFilter | null;
   neighborhoods: string[];
   maxSeeds: number | null;
+  maxJobs: number;
+  maxResultsPerJob: number;
+  maxDurationMs: number;
   help: boolean;
 }
 
@@ -56,6 +60,9 @@ function parseArgs(argv: string[]): CliArgs {
     region: null,
     neighborhoods: [],
     maxSeeds: null,
+    maxJobs: 1,
+    maxResultsPerJob: 10,
+    maxDurationMs: 5 * 60 * 1000,
     help: false,
   };
 
@@ -65,6 +72,7 @@ function parseArgs(argv: string[]): CliArgs {
     else if (a === "--seed-only") args.mode = "seed-only";
     else if (a === "--resume") args.mode = "resume";
     else if (a === "--backfill") args.mode = "backfill";
+    else if (a === "--run") args.mode = "run";
     else if (a.startsWith("--source=")) {
       const v = a.slice("--source=".length);
       args.source = v === "all" ? ALL_SOURCES : (v.split(",") as Source[]);
@@ -75,6 +83,16 @@ function parseArgs(argv: string[]): CliArgs {
       args.neighborhoods.push(a.slice("--neighborhood=".length));
     } else if (a.startsWith("--max-seeds=")) {
       args.maxSeeds = parseInt(a.slice("--max-seeds=".length), 10);
+    } else if (a.startsWith("--max-jobs=")) {
+      args.maxJobs = parseInt(a.slice("--max-jobs=".length), 10);
+    } else if (a.startsWith("--max-results-per-job=")) {
+      args.maxResultsPerJob = parseInt(
+        a.slice("--max-results-per-job=".length),
+        10
+      );
+    } else if (a.startsWith("--max-duration-sec=")) {
+      args.maxDurationMs =
+        parseInt(a.slice("--max-duration-sec=".length), 10) * 1000;
     } else {
       console.warn(`[str-discovery] Ignoring unknown argument: ${a}`);
     }
@@ -176,6 +194,51 @@ async function main(): Promise<void> {
     console.log(
       `\n[str-discovery] insertSeeds → attempted=${result.attempted} inserted=${result.inserted} skipped=${result.skipped}`
     );
+    return;
+  }
+
+  if (args.mode === "run") {
+    if (args.dryRun) {
+      console.log("[str-discovery] --dry-run incompatible with --run; aborting.");
+      return;
+    }
+    if (!args.source || args.source.length !== 1 || args.source[0] !== "airbnb") {
+      console.log(
+        "[str-discovery] Phase 2b first-run scope requires --source=airbnb (only). Aborting."
+      );
+      return;
+    }
+    if (args.neighborhoods.length !== 1) {
+      console.log(
+        "[str-discovery] Phase 2b first-run scope requires exactly one --neighborhood. Aborting."
+      );
+      return;
+    }
+    const dbUrl = process.env.DATABASE_URL ?? "";
+    if (
+      process.env.RAILWAY_DATABASE_URL &&
+      dbUrl === process.env.RAILWAY_DATABASE_URL
+    ) {
+      console.log(
+        "[str-discovery] DATABASE_URL points at Railway prod — Phase 2b runs are local-only by policy. Aborting."
+      );
+      return;
+    }
+
+    console.log(
+      `\n[str-discovery] LIVE RUN — source=${args.source[0]} neighborhood="${args.neighborhoods[0]}" maxJobs=${args.maxJobs} maxResultsPerJob=${args.maxResultsPerJob} maxDurationSec=${Math.round(args.maxDurationMs / 1000)}`
+    );
+    const report = await runDiscoveryLoop({
+      maxJobs: args.maxJobs,
+      maxDurationMs: args.maxDurationMs,
+      maxResultsPerJob: args.maxResultsPerJob,
+      source: args.source[0],
+      parentRegion:
+        args.region && args.region !== "all" ? args.region : undefined,
+      neighborhood: args.neighborhoods[0],
+    });
+    console.log("\n── Run Report ──────────────────────────────────────────");
+    console.log(JSON.stringify(report, null, 2));
     return;
   }
 
