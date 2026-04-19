@@ -131,6 +131,20 @@ PYEOF
 - **Workflow files**: require `workflow` scope — PAT has this, integration token does NOT
 - **Safety filter**: bash commands containing `git commit/push/pull` strings are blocked even inside heredocs; write file content with the `write` tool first, then reference the file in the script
 
+## Production Hosting (do NOT ask again)
+
+- **Frontend (SPA)**: Vercel — `https://www.vallartapulse.com`
+- **API server**: Railway — `https://the-data-store-production.up.railway.app`
+  - The DNS `api.vallartapulse.com` mentioned in `MIGRATION.md` is aspirational only. It does NOT resolve. Always use the Railway URL.
+- **Database**: Railway PostgreSQL, accessed via `RAILWAY_DATABASE_URL` env var in production; local dev uses `DATABASE_URL` from Replit.
+- **Vercel `/api/*` rewrite** (in `vercel.json`) proxies SPA-relative `/api/*` calls to the Railway origin. Hardcoded fallback also lives in `artifacts/pv-datastore/src/lib/api-base.ts` so a missing `VITE_API_URL` env var can't reintroduce the 404.
+
+## Recurring Pitfalls — read before changing anything
+
+- **Missing Airbnb GraphQL adapters**: `artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts` imports `./airbnb-graphql-pricing-adapter.js` and `./airbnb-graphql-quote-adapter.js`. Those files are stubs that throw at runtime (full implementation never landed). DO NOT delete the stubs or the Railway build breaks. If you implement the real adapters, replace the stub bodies — don't rename the files.
+- **Vercel proxy regression**: any time someone touches `vercel.json` or `api-base.ts`, the pricing tool can silently start serving HTML 404 to JSON callers. The hardening in commit `99e8d5f` (HTML-response guard in `apiFetch`, daily smoke workflow `pricing-tool-smoke.yml`, `/api/health/pricing-tool` endpoint) is the safety net. Don't remove it.
+- **Project-task popups**: when a task agent finishes it auto-proposes follow-up tasks, which spam the user with approval popups. Default mode going forward: edit `main` directly and push, no project tasks unless the user explicitly asks. Reject any auto-proposed follow-ups on sight.
+
 ## Known Fixes & Notes
 
 - **Chart colors**: Recharts `hsl(var(--chart-N))` variables are NOT defined in the design system. All chart strokes/fills must use hardcoded brand hex values: `#00C2A8` (primary teal), `#00D1FF` (accent cyan), `#F59E0B` (amber), `#6366F1` (indigo), `#3B82F6` (blue). Do not use `--chart-N` CSS variables.
