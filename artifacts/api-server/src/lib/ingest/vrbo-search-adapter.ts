@@ -11,10 +11,7 @@
  *  3. Return deduplicated listing URLs ready for fetchVrboListing().
  */
 
-import https from "https";
-import http from "http";
-import zlib from "zlib";
-import type { IncomingMessage } from "http";
+import { fetch as undiciFetch, ProxyAgent } from "undici";
 
 const BROWSER_HEADERS: Record<string, string> = {
   "User-Agent":
@@ -37,50 +34,37 @@ const BROWSER_HEADERS: Record<string, string> = {
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 
-function get(url: string, redirects = 0): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (redirects > 5) return reject(new Error("Too many redirects"));
-    const parsed = new URL(url);
-    const mod = parsed.protocol === "https:" ? https : http;
+// Routes through PROXY_URL (Decodo residential) when set — VRBO returns a
+// "Bot or Not?" 429 challenge to datacenter IPs (Railway, GitHub Actions),
+// so direct fetches yield zero listings. Falls back to direct fetch when
+// PROXY_URL is unset (local dev). Uses undici for native gzip/brotli
+// decompression and automatic redirect following.
+async function get(url: string): Promise<string> {
+  const proxyUrl = process.env.PROXY_URL;
+  const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
 
-    const req = (mod as typeof https).request(
-      {
-        hostname: parsed.hostname,
-        path: parsed.pathname + parsed.search,
-        method: "GET",
-        headers: { ...BROWSER_HEADERS, Host: parsed.hostname },
-      },
-      (res: IncomingMessage) => {
-        const encoding = (res.headers["content-encoding"] ?? "") as string;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25_000);
 
-        if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          return resolve(get(new URL(res.headers.location, url).toString(), redirects + 1));
-        }
-        if (res.statusCode === 403 || res.statusCode === 429) {
-          return reject(new Error(`HTTP ${res.statusCode} (rate-limited)`));
-        }
-        if (res.statusCode && res.statusCode >= 400) {
-          return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-        }
+  try {
+    const res = await undiciFetch(url, {
+      method: "GET",
+      headers: BROWSER_HEADERS,
+      redirect: "follow",
+      signal: controller.signal,
+      ...(dispatcher ? { dispatcher } : {}),
+    });
 
-        const chunks: Buffer[] = [];
-        res.on("data", (c: Buffer) => chunks.push(c));
-        res.on("end", () => {
-          const buf = Buffer.concat(chunks);
-          try {
-            if (encoding.includes("br")) return resolve(zlib.brotliDecompressSync(buf).toString("utf-8"));
-            if (encoding.includes("gzip")) return resolve(zlib.gunzipSync(buf).toString("utf-8"));
-            if (encoding.includes("deflate")) return resolve(zlib.inflateSync(buf).toString("utf-8"));
-          } catch {}
-          resolve(buf.toString("utf-8"));
-        });
-        res.on("error", reject);
-      },
-    );
-    req.on("error", reject);
-    req.setTimeout(25_000, () => { req.destroy(new Error("Timeout")); });
-    req.end();
-  });
+    if (res.status === 403 || res.status === 429) {
+      throw new Error(`HTTP ${res.status} (rate-limited)`);
+    }
+    if (res.status >= 400) {
+      throw new Error(`HTTP ${res.status} for ${url}`);
+    }
+    return await res.text();
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // ── Listing ID extraction ─────────────────────────────────────────────────────
