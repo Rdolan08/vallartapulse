@@ -1,0 +1,153 @@
+Implement a tiered refresh + checkpoint system for rental data ingestion, optimized for Puerto Vallarta seasonality and cost control. This must be enforced at the code level (no optional modes).
+
+SOURCES
+
+1) PVRPV
+- Always fetch full 365-day calendar per listing
+- No checkpointing
+- This is the baseline dataset for seasonality + gap fill
+
+2) Airbnb
+- Use checkpoint-based fetching ONLY (never full sweep)
+- Approx ~30–40 checkpoint dates per listing
+- Total daily fetch target: ~4,000–5,000 max
+
+3) Vacation Vallarta (VV)
+- Keep current 3 seasonal brackets
+- No changes needed
+
+---
+
+AIRBNB CHECKPOINT GENERATION
+
+Create a reusable function that dynamically generates checkpoint dates:
+
+Include:
+- Rolling weekends: next 12 weeks (Fri + Sat nights)
+- Current month + next month coverage
+- Major holidays:
+  - Dec 24, Dec 27, Dec 31, Jan 2
+- Major PV events (year-aware):
+  - Semana Santa
+  - Beef Dip
+  - Pride
+- Monthly anchors:
+  - 1–2 midweek dates per month across the year
+
+Target output:
+~30–40 dates consistently
+
+---
+
+PRIORITY TIERS (CRITICAL)
+
+Each checkpoint must have metadata:
+
+- priority_tier (1–4)
+- refresh_interval_hours
+- last_fetched_at
+- days_out
+- is_weekend
+- is_event
+- season (high / shoulder / low)
+
+---
+
+REFRESH LOGIC
+
+Tier 1 (highest priority)
+- days_out <= 45
+- OR event within 90 days
+- OR weekend within 60 days
+- Refresh: every 24 hours
+
+Tier 2
+- 45–120 days out during high season (Nov–Apr)
+- Major holidays/events outside Tier 1
+- Refresh: every 2–3 days
+
+Tier 3
+- 120+ days out
+- Non-event weekdays
+- Rainy season (Jun–Sep) long-range dates
+- Refresh: every 7–14 days
+
+Tier 4
+- All other dates
+- Fetch ONLY on demand (no scheduled refresh)
+
+---
+
+SEASONAL LOGIC (PUERTO VALLARTA)
+
+Define:
+- High season: Nov–Apr
+- Shoulder: May, Oct
+- Low (rainy): Jun–Sep
+
+Behavior:
+- In low season, deprioritize long-range refresh
+- Focus heavily on 0–45 day window
+- Keep anchors but refresh less frequently
+
+---
+
+FETCH GUARDRAIL
+
+Hard cap:
+- If daily Airbnb fetches > 5,000 → stop execution + log error
+
+---
+
+CACHING
+
+- Cache by (listing_id, check_in, check_out)
+- TTL: 24–48 hours
+- Skip fetch if still valid
+
+---
+
+ON-DEMAND FETCH SUPPORT
+
+System must support:
+- Fetching arbitrary dates when requested
+- Storing results in same structure
+- Reusing cached data if available
+
+---
+
+DATA MODEL REQUIREMENTS
+
+Each record must store:
+
+- listing_id
+- date (or check_in/check_out)
+- price
+- source (airbnb / pvrpv / vv)
+- fetched_at
+- priority_tier (if applicable)
+- event_tag (optional)
+
+---
+
+SCHEDULER
+
+Daily job order:
+1) PVRPV full refresh
+2) Airbnb checkpoint refresh (priority-based, not full set)
+3) VV refresh
+
+Scheduler should:
+- Select only checkpoints due for refresh
+- Not blindly re-fetch all checkpoints daily
+
+---
+
+OBJECTIVE
+
+- Maintain high accuracy for next 0–60 days
+- Preserve seasonal pricing curve
+- Minimize unnecessary API/scrape cost
+- Ensure system scales predictably
+
+Do not implement a full-calendar Airbnb mode under any condition.
