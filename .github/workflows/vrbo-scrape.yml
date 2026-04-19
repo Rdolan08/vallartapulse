@@ -53,6 +53,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Install Playwright browsers
+        run: pnpm --filter @workspace/scripts exec playwright install --with-deps chromium
+
       - name: Run VRBO discovery + refresh against prod DB
         env:
           DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}

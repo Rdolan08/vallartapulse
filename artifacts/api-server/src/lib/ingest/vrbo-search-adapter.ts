@@ -11,60 +11,27 @@
  *  3. Return deduplicated listing URLs ready for fetchVrboListing().
  */
 
-import { fetch as undiciFetch, ProxyAgent } from "undici";
-
-const BROWSER_HEADERS: Record<string, string> = {
-  "User-Agent":
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  Accept:
-    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-  "Accept-Language": "en-US,en;q=0.9",
-  "Accept-Encoding": "gzip, deflate, br",
-  "Cache-Control": "no-cache",
-  "Pragma": "no-cache",
-  "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-  "Sec-Ch-Ua-Mobile": "?0",
-  "Sec-Ch-Ua-Platform": '"macOS"',
-  "Sec-Fetch-Dest": "document",
-  "Sec-Fetch-Mode": "navigate",
-  "Sec-Fetch-Site": "none",
-  "Sec-Fetch-User": "?1",
-  "Upgrade-Insecure-Requests": "1",
-};
+import { fetchWithBrowser } from "./browser-fetch.js";
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 
-// Routes through PROXY_URL (Decodo residential) when set — VRBO returns a
-// "Bot or Not?" 429 challenge to datacenter IPs (Railway, GitHub Actions),
-// so direct fetches yield zero listings. Falls back to direct fetch when
-// PROXY_URL is unset (local dev). Uses undici for native gzip/brotli
-// decompression and automatic redirect following.
+// VRBO's PerimeterX/HUMAN bot challenge ("Bot or Not?") returns HTTP 429 to
+// raw HTTP fetches — including those through residential proxies — because
+// the TLS/HTTP2 fingerprint and missing JS execution give them away. A real
+// Chromium instance (browser-fetch.ts) presents an authentic fingerprint,
+// executes the client-side JS, and returns the fully-rendered search page.
+// PROXY_URL (Decodo residential) is plumbed in at the browser level by
+// browser-fetch when the env var is set.
 async function get(url: string): Promise<string> {
-  const proxyUrl = process.env.PROXY_URL;
-  const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25_000);
-
-  try {
-    const res = await undiciFetch(url, {
-      method: "GET",
-      headers: BROWSER_HEADERS,
-      redirect: "follow",
-      signal: controller.signal,
-      ...(dispatcher ? { dispatcher } : {}),
-    });
-
-    if (res.status === 403 || res.status === 429) {
-      throw new Error(`HTTP ${res.status} (rate-limited)`);
-    }
-    if (res.status >= 400) {
-      throw new Error(`HTTP ${res.status} for ${url}`);
-    }
-    return await res.text();
-  } finally {
-    clearTimeout(timeout);
-  }
+  // Wait for the listing-card area to render. VRBO uses a couple of selectors
+  // depending on A/B variant — race them so we return as soon as anything
+  // listing-shaped appears, but fall back to whatever HTML is loaded if
+  // neither selector ever fires.
+  return fetchWithBrowser(url, {
+    timeoutMs: 30_000,
+    waitForSelector: '[data-stid="property-listing"], a[href*="/12"], a[href^="/"][href*="ha"]',
+    fallbackOnTimeout: true,
+  });
 }
 
 // ── Listing ID extraction ─────────────────────────────────────────────────────
