@@ -8,8 +8,9 @@
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push": "drizzle-kit push --config ./drizzle.config.ts && pnpm --filter @workspace/scripts run db:apply-views",
+    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts && pnpm --filter @workspace/scripts run db:apply-views",
+    "push-only": "drizzle-kit push --config ./drizzle.config.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
