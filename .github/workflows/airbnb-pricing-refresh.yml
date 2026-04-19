@@ -1,0 +1,111 @@
+name: Airbnb Pricing Refresh (daily)
+
+# Triggers the per-night Airbnb pricing pipeline ("path 2" in
+# docs/data-feeding.md): the API server fetches each listing's
+# PdpAvailabilityCalendar GraphQL response through the residential proxy,
+# expands it into ~30–40 quote rows per listing via airbnb-checkpoints,
+# and inserts them into listing_price_quotes.
+#
+# All work runs on Railway via /api/ingest/airbnb-pricing-refresh — the
+# residential proxy URL and Playwright (used for the one-time persisted-
+# query SHA discovery) live there, not in GitHub Actions.
+#
+# Schedule rationale:
+#   - 07:20 UTC sits 10 min after airbnb-calendar-scrape.yml (07:10) so
+#     the availability feed has finished writing before the pricing feed
+#     starts. They write to different tables, but staggering keeps the
+#     proxy / DB load curve flat.
+#
+# Required GitHub repository secrets:
+#   RAILWAY_API_URL          e.g. https://api.vallartapulse.com (no trailing slash)
+#   INTERNAL_TRIGGER_TOKEN   same value as the Railway env var of the same name
+
+on:
+  schedule:
+    - cron: "20 7 * * *"   # daily 07:20 UTC
+  workflow_dispatch:
+    inputs:
+      max_listings:
+        description: "Cap per call (1-500). Default 50 = the daily budget."
+        required: false
+        default: "50"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: airbnb-pricing-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Verify required secrets
+        run: |
+          : "${RAILWAY_API_URL:?RAILWAY_API_URL secret is missing}"
+          : "${INTERNAL_TRIGGER_TOKEN:?INTERNAL_TRIGGER_TOKEN secret is missing}"
+        env:
+          RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
+          INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
+
+      - name: Refresh Airbnb pricing (stale-first)
+        env:
+          RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
+          INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
+          MAX_LISTINGS: ${{ inputs.max_listings || '50' }}
+        run: |
+          set -euo pipefail
+          echo "POST $RAILWAY_API_URL/api/ingest/airbnb-pricing-refresh max=$MAX_LISTINGS"
+          curl --fail-with-body --show-error --silent --max-time 3000 \
+            -X POST "$RAILWAY_API_URL/api/ingest/airbnb-pricing-refresh" \
+            -H "Content-Type: application/json" \
+            -H "X-Internal-Token: $INTERNAL_TRIGGER_TOKEN" \
+            -d "{\"maxListings\":$MAX_LISTINGS}" \
+            | tee /tmp/pricing.json
+          echo ""
+          jq '.summary' /tmp/pricing.json || true
+
+          # ── Pass/fail signal ────────────────────────────────────────
+          # The runner returns summary.alertLevel ∈ {"ok","warn","fail"}.
+          # We mirror that into the GH Actions step output (and a job
+          # summary line) so the failure is loud — instead of silently
+          # green when the API call succeeds but produces 0 quotes.
+          # Response playbook lives at docs/playbooks/airbnb-pricing-dark.md.
+          LEVEL=$(jq -r '.summary.alertLevel // "unknown"' /tmp/pricing.json)
+          REASON=$(jq -r '.summary.alertReason // ""' /tmp/pricing.json)
+          ATTEMPTED=$(jq -r '.summary.attempted // 0' /tmp/pricing.json)
+          OK=$(jq -r '.summary.ok // 0' /tmp/pricing.json)
+          QUOTES=$(jq -r '.summary.totalQuotesWritten // 0' /tmp/pricing.json)
+          REDISCOVERIES=$(jq -r '.summary.shaRediscoveriesDuringRun // 0' /tmp/pricing.json)
+
+          {
+            echo "## Airbnb pricing refresh"
+            echo ""
+            echo "- Verdict: **${LEVEL}**${REASON:+ — ${REASON}}"
+            echo "- Listings attempted: ${ATTEMPTED} (ok=${OK})"
+            echo "- Quotes written: ${QUOTES}"
+            echo "- SHA rediscoveries during run: ${REDISCOVERIES}"
+            echo ""
+            if [ "$LEVEL" = "fail" ]; then
+              echo "**Response playbook:** docs/playbooks/airbnb-pricing-dark.md"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          case "$LEVEL" in
+            ok)
+              echo "PASS — Airbnb pricing healthy (ok=$OK/$ATTEMPTED, quotes=$QUOTES)"
+              ;;
+            warn)
+              echo "::warning title=Airbnb pricing degraded::${REASON}"
+              ;;
+            fail)
+              echo "::error title=Airbnb pricing has gone dark::${REASON}"
+              echo "See docs/playbooks/airbnb-pricing-dark.md"
+              exit 1
+              ;;
+            *)
+              echo "::warning title=Airbnb pricing::summary.alertLevel missing from response"
+              ;;
+          esac

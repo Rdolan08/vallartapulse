@@ -105,6 +105,80 @@ GROUP BY rl.source_platform
 ORDER BY rl.source_platform;
 
 \echo
+\echo === listing_price_quotes: Airbnb pricing pipeline freshness ===
+-- Catches the silent-outage scenario described in
+-- docs/playbooks/airbnb-pricing-dark.md: discovery breaks for a few days,
+-- the runner falls back to the hard-coded SHA, and produces 0 quotes for
+-- everyone without anyone noticing. A single number ("listings stale > 14d")
+-- is enough to surface that within one cycle.
+WITH cohort AS (
+  SELECT id
+  FROM rental_listings
+  WHERE source_platform = 'airbnb'
+    AND is_active = true
+    AND external_id IS NOT NULL
+    AND external_id ~ '^[0-9]+$'
+),
+last_q AS (
+  SELECT listing_id, MAX(collected_at) AS last_quoted
+  FROM listing_price_quotes
+  GROUP BY listing_id
+)
+SELECT
+  (SELECT COUNT(*) FROM cohort)                                          AS listings_total,
+  (SELECT COUNT(*) FROM cohort c JOIN last_q q ON q.listing_id = c.id)   AS listings_quoted_ever,
+  (SELECT COUNT(*) FROM cohort c LEFT JOIN last_q q ON q.listing_id = c.id
+   WHERE q.last_quoted IS NULL)                                          AS listings_never_quoted,
+  (SELECT COUNT(*) FROM cohort c LEFT JOIN last_q q ON q.listing_id = c.id
+   WHERE q.last_quoted IS NULL OR q.last_quoted < NOW() - INTERVAL '7 days')
+                                                                         AS listings_stale_gt_7d,
+  (SELECT COUNT(*) FROM cohort c LEFT JOIN last_q q ON q.listing_id = c.id
+   WHERE q.last_quoted IS NULL OR q.last_quoted < NOW() - INTERVAL '14 days')
+                                                                         AS listings_stale_gt_14d,
+  (SELECT MAX(last_quoted) FROM last_q q
+   WHERE q.listing_id IN (SELECT id FROM cohort))                        AS newest_quote;
+
+\echo
+\echo === Airbnb pricing — pass/fail verdict ===
+WITH cohort AS (
+  SELECT id FROM rental_listings
+  WHERE source_platform = 'airbnb' AND is_active = true
+    AND external_id IS NOT NULL AND external_id ~ '^[0-9]+$'
+),
+last_q AS (
+  SELECT listing_id, MAX(collected_at) AS last_quoted
+  FROM listing_price_quotes GROUP BY listing_id
+),
+agg AS (
+  SELECT
+    (SELECT COUNT(*) FROM cohort)                                                AS total,
+    (SELECT COUNT(*) FROM cohort c LEFT JOIN last_q q ON q.listing_id = c.id
+     WHERE q.last_quoted IS NULL OR q.last_quoted < NOW() - INTERVAL '14 days')  AS stale_14d,
+    (SELECT MAX(last_quoted) FROM last_q q
+     WHERE q.listing_id IN (SELECT id FROM cohort))                              AS newest
+)
+SELECT
+  total,
+  stale_14d,
+  newest,
+  CASE
+    WHEN total = 0
+      THEN 'WARN  — empty cohort'
+    WHEN newest IS NULL
+      THEN 'RED   — no quotes EVER (Airbnb pricing has gone dark)'
+    WHEN newest < NOW() - INTERVAL '2 days'
+      THEN 'RED   — newest quote >2d old (Airbnb pricing has gone dark)'
+    WHEN stale_14d * 2 >= total
+      THEN 'RED   — over half the cohort stale >14d'
+    WHEN stale_14d > 0
+      THEN 'AMBER — ' || stale_14d || ' listings stale >14d'
+    WHEN newest < NOW() - INTERVAL '30 hours'
+      THEN 'AMBER — newest quote >30h old'
+    ELSE 'GREEN — fresh'
+  END AS status
+FROM agg;
+
+\echo
 \echo === verdict (simple per-source freshness check) ===
 WITH per_source AS (
   SELECT

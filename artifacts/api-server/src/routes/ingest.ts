@@ -762,9 +762,145 @@ router.post("/ingest/enrich-airbnb-detail", async (req, res) => {
   }
 });
 
-// NOTE: POST /ingest/airbnb-pricing-refresh was REMOVED (2026-04-19).
-// Airbnb path 2 (PdpAvailabilityCalendar GraphQL replay) violated the
-// T013 decision to ship v1 on PVRPV-only nightly pricing. Airbnb prices
-// will arrive later via the Mac mini scraper (see docs/data-feeding.md).
+// ── GET /ingest/airbnb-pricing-freshness ──────────────────────────────────
+//
+// Lightweight freshness probe over listing_price_quotes for the dashboard.
+// Surfaces "Airbnb pricing — N listings stale > 14 days" so a multi-day
+// silent outage (Playwright fingerprint blocked, residential proxy down,
+// fallback SHA quietly returning 0 quotes for everyone) becomes visible
+// within one cycle. No auth: read-only aggregate counts.
+router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      WITH cohort AS (
+        SELECT rl.id
+        FROM rental_listings rl
+        WHERE rl.source_platform = 'airbnb'
+          AND rl.is_active = true
+          AND rl.external_id IS NOT NULL
+          AND rl.external_id ~ '^[0-9]+$'
+      ),
+      last_quote AS (
+        SELECT listing_id, MAX(collected_at) AS last_quoted
+        FROM listing_price_quotes
+        GROUP BY listing_id
+      )
+      SELECT
+        (SELECT COUNT(*) FROM cohort)::int                                     AS listings_total,
+        (SELECT COUNT(*) FROM cohort c JOIN last_quote q ON q.listing_id = c.id)::int
+                                                                               AS listings_quoted_ever,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_quote q ON q.listing_id = c.id
+         WHERE q.last_quoted IS NULL)::int                                     AS listings_never_quoted,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_quote q ON q.listing_id = c.id
+         WHERE q.last_quoted IS NULL OR q.last_quoted < NOW() - INTERVAL '7 days')::int
+                                                                               AS listings_stale_7d,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_quote q ON q.listing_id = c.id
+         WHERE q.last_quoted IS NULL OR q.last_quoted < NOW() - INTERVAL '14 days')::int
+                                                                               AS listings_stale_14d,
+        (SELECT MAX(last_quoted) FROM last_quote q
+         WHERE q.listing_id IN (SELECT id FROM cohort))                        AS newest_quote_at
+    `);
+    const row = (result as unknown as {
+      rows: Array<{
+        listings_total: number;
+        listings_quoted_ever: number;
+        listings_never_quoted: number;
+        listings_stale_7d: number;
+        listings_stale_14d: number;
+        newest_quote_at: string | null;
+      }>;
+    }).rows[0];
+
+    const newestAt = row.newest_quote_at ? new Date(row.newest_quote_at) : null;
+    const ageHours = newestAt
+      ? Math.floor((Date.now() - newestAt.getTime()) / 3_600_000)
+      : null;
+
+    // Same vocabulary as the run summary so the dashboard can colour both
+    // signals consistently.
+    let alertLevel: "ok" | "warn" | "fail" = "ok";
+    let alertReason = "";
+    if (row.listings_total === 0) {
+      alertLevel = "warn";
+      alertReason = "No active Airbnb listings in cohort";
+    } else if (ageHours === null || ageHours > 48) {
+      alertLevel = "fail";
+      alertReason = newestAt
+        ? `Newest quote is ${Math.round(ageHours! / 24)} days old`
+        : "No quotes have ever been collected";
+    } else if (row.listings_stale_14d * 2 >= row.listings_total) {
+      alertLevel = "fail";
+      alertReason = `${row.listings_stale_14d}/${row.listings_total} listings stale >14d`;
+    } else if (row.listings_stale_14d > 0) {
+      alertLevel = "warn";
+      alertReason = `${row.listings_stale_14d} listings stale >14d`;
+    } else if (ageHours > 30) {
+      alertLevel = "warn";
+      alertReason = `Newest quote is ${ageHours}h old`;
+    }
+
+    res.json({
+      source: "airbnb_pricing",
+      listingsTotal: row.listings_total,
+      listingsQuotedEver: row.listings_quoted_ever,
+      listingsNeverQuoted: row.listings_never_quoted,
+      listingsStale7d: row.listings_stale_7d,
+      listingsStale14d: row.listings_stale_14d,
+      newestQuoteAt: newestAt?.toISOString() ?? null,
+      newestQuoteAgeHours: ageHours,
+      alertLevel,
+      alertReason,
+    });
+  } catch (err) {
+    req.log.error({ err }, "ingest/airbnb-pricing-freshness failed");
+    res.status(500).json({ error: "Failed to compute Airbnb pricing freshness" });
+  }
+});
+
+// ── POST /ingest/airbnb-pricing-refresh ───────────────────────────────────
+//
+// Daily Airbnb per-night pricing refresh. Drives the "path 2" pipeline
+// (PdpAvailabilityCalendar GraphQL persisted-query replay through the
+// residential proxy). Picks the stale-first cohort of active Airbnb
+// listings — both legacy 9-digit and post-2022 long-form IDs are eligible
+// here — fetches one calendar per listing, and inserts one quote row per
+// generated checkpoint into listing_price_quotes.
+//
+// Auth: same X-Internal-Token gate as enrich-airbnb-detail.
+const PricingRefreshSchema = z.object({
+  maxListings: z.number().int().positive().max(500).optional().default(50),
+  dryRun: z.boolean().optional().default(false),
+});
+
+router.post("/ingest/airbnb-pricing-refresh", async (req, res) => {
+  const expected = process.env["INTERNAL_TRIGGER_TOKEN"];
+  if (!expected || expected.length === 0) {
+    return res.status(503).json({
+      error: "INTERNAL_TRIGGER_TOKEN not configured on server",
+    });
+  }
+  const provided = req.header("x-internal-token");
+  if (provided !== expected) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const parsed = PricingRefreshSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+  }
+  const { maxListings, dryRun } = parsed.data;
+
+  try {
+    req.log.info({ maxListings, dryRun }, "ingest/airbnb-pricing-refresh: starting");
+    const result = await runAirbnbPricingRefresh({ maxListings, dryRun });
+    res.json({ dryRun, ...result });
+  } catch (err) {
+    req.log.error({ err }, "ingest/airbnb-pricing-refresh failed");
+    res.status(500).json({
+      error: "Airbnb pricing refresh failed",
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
 
 export default router;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGetDataSources, useSyncDataSource } from "@workspace/api-client-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
@@ -18,6 +18,89 @@ function freshnessBadge(lastSyncedAt: string | null | undefined): "fresh" | "sta
   if (isAfter(date, subHours(new Date(), 24))) return "fresh";
   if (isAfter(date, subDays(new Date(), 7))) return "stale";
   return "stale";
+}
+
+interface AirbnbPricingFreshness {
+  source: string;
+  listingsTotal: number;
+  listingsQuotedEver: number;
+  listingsNeverQuoted: number;
+  listingsStale7d: number;
+  listingsStale14d: number;
+  newestQuoteAt: string | null;
+  newestQuoteAgeHours: number | null;
+  alertLevel: "ok" | "warn" | "fail";
+  alertReason: string;
+}
+
+/**
+ * Pipeline-health card for the daily Airbnb pricing refresh. Surfaces
+ * "N listings stale > 14 days" so a multi-day silent outage is visible
+ * within one cycle (see docs/playbooks/airbnb-pricing-dark.md).
+ */
+function PricingPipelineHealth({ t }: { t: (en: string, es: string) => string }) {
+  const [data, setData] = useState<AirbnbPricingFreshness | null>(null);
+  const [errored, setErrored] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(apiUrl("/api/ingest/airbnb-pricing-freshness"))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((j: AirbnbPricingFreshness) => {
+        if (!cancelled) setData(j);
+      })
+      .catch(() => {
+        if (!cancelled) setErrored(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (errored) return null;
+  if (!data) {
+    return <Skeleton className="h-24 rounded-2xl mb-6" />;
+  }
+
+  const tone =
+    data.alertLevel === "fail"
+      ? "bg-destructive/10 border-destructive/40 text-destructive"
+      : data.alertLevel === "warn"
+        ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300"
+        : "bg-primary/5 border-primary/20 text-foreground";
+
+  const Icon =
+    data.alertLevel === "fail"
+      ? AlertCircle
+      : data.alertLevel === "warn"
+        ? AlertCircle
+        : CheckCircle2;
+
+  const headline = t(
+    `Airbnb pricing — ${data.listingsStale14d} listings stale > 14 days`,
+    `Airbnb pricing — ${data.listingsStale14d} anuncios sin actualizar > 14 días`,
+  );
+
+  return (
+    <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3 mb-6 text-sm", tone)}>
+      <Icon className="w-4 h-4 mt-0.5 shrink-0" />
+      <div className="flex-1 space-y-1">
+        <div className="font-medium">{headline}</div>
+        <div className="text-xs opacity-80">
+          {t("Cohort", "Cohorte")}: {data.listingsTotal.toLocaleString()} ·{" "}
+          {t("Ever quoted", "Cotizados alguna vez")}: {data.listingsQuotedEver.toLocaleString()} ·{" "}
+          {t("Never quoted", "Nunca cotizados")}: {data.listingsNeverQuoted.toLocaleString()} ·{" "}
+          {t("Newest quote", "Cotización más reciente")}:{" "}
+          {data.newestQuoteAt
+            ? formatDistanceToNow(new Date(data.newestQuoteAt), { addSuffix: true })
+            : t("never", "nunca")}
+        </div>
+        {data.alertReason && (
+          <div className="text-xs font-medium">{data.alertReason}</div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function Sources() {
@@ -121,6 +204,9 @@ export default function Sources() {
           </Button>
         </div>
       </div>
+
+      {/* ── Pricing pipeline health banner ─────────────────────────── */}
+      <PricingPipelineHealth t={t} />
 
       {/* ── Info banner ─────────────────────────────────────────────── */}
       <div className="flex items-start gap-3 bg-primary/5 border border-primary/15 rounded-xl px-4 py-3 mb-8 text-sm text-muted-foreground">

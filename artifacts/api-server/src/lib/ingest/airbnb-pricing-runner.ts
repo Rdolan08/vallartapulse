@@ -103,6 +103,21 @@ export interface AirbnbPricingRunSummary {
   quoteShaSource: "cache" | "discovered" | "fallback";
   shaRediscoveriesDuringRun: number;
   quoteShaRediscoveriesDuringRun: number;
+  /**
+   * Pass/fail signal for ops monitoring. Computed from the run shape so
+   * GitHub Actions (and the freshness dashboard) can show a clear
+   * thumbs-up / thumbs-down without re-deriving the rules.
+   *
+   *   "fail"  — pipeline is dark (everything failed, no quotes written,
+   *             or the persisted-query SHA rotated more than once in a
+   *             single run, which means rediscovery itself is unstable).
+   *   "warn"  — partial outage (more than half the cohort failed, or no
+   *             listings were processed at all).
+   *   "ok"    — healthy.
+   */
+  alertLevel: "ok" | "warn" | "fail";
+  /** Human-readable reason for the alertLevel (empty when ok). */
+  alertReason: string;
 }
 
 export interface AirbnbPricingRunResult {
@@ -509,11 +524,37 @@ export async function runAirbnbPricingRefresh(
   }
 
   const ok = perListing.filter((p) => p.ok).length;
+  const failed = perListing.length - ok;
+
+  // ── Pass/fail signal ────────────────────────────────────────────────
+  // Order matters: "fail" rules fire first, then "warn", then "ok".
+  let alertLevel: "ok" | "warn" | "fail" = "ok";
+  let alertReason = "";
+  if (perListing.length > 0 && ok === 0) {
+    alertLevel = "fail";
+    alertReason = `All ${perListing.length} listings failed — Airbnb pricing has gone dark`;
+  } else if (perListing.length > 0 && totalQuotes === 0 && !dryRun) {
+    alertLevel = "fail";
+    alertReason = "0 quotes written despite a non-empty cohort";
+  } else if (shaRediscoveries > 1) {
+    alertLevel = "fail";
+    alertReason = `Calendar SHA rediscovered ${shaRediscoveries} times in one run — persisted-query rotation is unstable`;
+  } else if (quoteShaRediscoveries > 1) {
+    alertLevel = "fail";
+    alertReason = `Quote SHA rediscovered ${quoteShaRediscoveries} times in one run — persisted-query rotation is unstable`;
+  } else if (perListing.length === 0) {
+    alertLevel = "warn";
+    alertReason = "No Airbnb listings matched the cohort filter";
+  } else if (failed > 0 && failed * 2 >= perListing.length) {
+    alertLevel = "warn";
+    alertReason = `${failed}/${perListing.length} listings failed (>=50%)`;
+  }
+
   return {
     summary: {
       attempted: perListing.length,
       ok,
-      failed: perListing.length - ok,
+      failed,
       totalQuotesWritten: totalQuotes,
       totalDaysWithPrice,
       totalQuotesEnriched,
@@ -522,6 +563,8 @@ export async function runAirbnbPricingRefresh(
       quoteShaSource: initialQuote.source,
       shaRediscoveriesDuringRun: shaRediscoveries,
       quoteShaRediscoveriesDuringRun: quoteShaRediscoveries,
+      alertLevel,
+      alertReason,
     },
     listings: perListing,
   };
