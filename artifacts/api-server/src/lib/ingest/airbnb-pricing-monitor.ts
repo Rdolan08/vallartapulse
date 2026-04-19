@@ -21,13 +21,66 @@
  * trivial to call from a cron handler or unit-test.
  */
 
+import { desc } from "drizzle-orm";
+import { db } from "@workspace/db";
+import { airbnbPricingRunSummariesTable } from "@workspace/db/schema";
 import type { AirbnbPricingRunSummary } from "./airbnb-pricing-runner.js";
 
 /** A single historical run summary, paired with when it ran. */
 export interface DailyRunRecord {
   /** When the run completed (used for ordering only). */
   ranAt: Date;
+  /**
+   * Which flavour of run produced this record. Canary
+   * (`skipFullQuotes`) runs are included in history for traceability
+   * but their `summary.enrichmentRate` is null by construction, so
+   * `evaluateEnrichmentAlert` filters them out automatically.
+   */
+  runKind: "full" | "canary";
   summary: AirbnbPricingRunSummary;
+}
+
+/**
+ * Load the most recent persisted Airbnb-pricing run summaries and
+ * shape them as `DailyRunRecord[]` ready to feed into
+ * `evaluateEnrichmentAlert`. Newest first.
+ *
+ * The DB row only stores the fields the alert math actually reads;
+ * the rest of `AirbnbPricingRunSummary` is reconstructed with neutral
+ * placeholder values so the type stays satisfied. Callers that need
+ * the original full summary should pull `rawSummaryJson` directly.
+ */
+export async function loadRecentDailyRunRecords(
+  limit = 7,
+): Promise<DailyRunRecord[]> {
+  const rows = await db
+    .select()
+    .from(airbnbPricingRunSummariesTable)
+    .orderBy(desc(airbnbPricingRunSummariesTable.ranAt))
+    .limit(limit);
+
+  return rows.map((s) => ({
+    ranAt: s.ranAt,
+    runKind: s.runKind === "canary" ? "canary" : "full",
+    summary: {
+      attempted: s.listingsAttempted,
+      ok: s.listingsOk,
+      failed: s.listingsFailed,
+      totalQuotesWritten: s.totalQuotesWritten,
+      totalDaysWithPrice: 0,
+      totalQuotesEnriched: s.totalQuotesEnriched,
+      totalQuotesFailed: s.totalQuotesFailed,
+      totalFullyAvailableCheckpoints: s.totalFullyAvailableCheckpoints,
+      totalQuotesEnrichedFullyAvailable: s.quotesEnrichedFullyAvailable,
+      enrichmentRate: s.enrichmentRate,
+      shaSource: "cache",
+      quoteShaSource: "cache",
+      shaRediscoveriesDuringRun: 0,
+      quoteShaRediscoveriesDuringRun: 0,
+      alertLevel: "ok",
+      alertReason: "",
+    },
+  }));
 }
 
 export interface EnrichmentAlertOpts {
@@ -113,6 +166,12 @@ export function evaluateEnrichmentAlert(
 
   const eligible = sorted.filter(
     (r) =>
+      // Canary runs intentionally skip the full-quote step, so their
+      // enrichmentRate is null by construction. Filter on runKind
+      // explicitly (not just enrichmentRate !== null) so a future
+      // change to canary behavior can never accidentally pull them
+      // into the alert math.
+      r.runKind === "full" &&
       r.summary.enrichmentRate !== null &&
       r.summary.totalFullyAvailableCheckpoints >= minDenominator,
   );

@@ -17,10 +17,7 @@
 
 import { Router } from "express";
 import { db } from "@workspace/db";
-import {
-  airbnbPricingRunSummariesTable,
-  rentalListingsTable,
-} from "@workspace/db/schema";
+import { rentalListingsTable } from "@workspace/db/schema";
 import { count, sql, desc, eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { fetchPvrpvListing } from "../lib/ingest/pvrpv-adapter.js";
@@ -42,7 +39,7 @@ import {
 import { runAirbnbPricingRefresh } from "../lib/ingest/airbnb-pricing-runner.js";
 import {
   evaluateEnrichmentAlert,
-  type DailyRunRecord,
+  loadRecentDailyRunRecords,
 } from "../lib/ingest/airbnb-pricing-monitor.js";
 import type { SourceKey } from "../lib/ingest/types.js";
 
@@ -857,34 +854,7 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
     // fully-available enrichment rate has been below the threshold for
     // multiple consecutive runs. When it has, we escalate to "fail" so
     // ops sees a single combined signal.
-    const recentSummaries = await db
-      .select()
-      .from(airbnbPricingRunSummariesTable)
-      .orderBy(desc(airbnbPricingRunSummariesTable.ranAt))
-      .limit(7);
-
-    const dailyRecords: DailyRunRecord[] = recentSummaries.map((s) => ({
-      ranAt: s.ranAt,
-      summary: {
-        attempted: s.listingsAttempted,
-        ok: s.listingsOk,
-        failed: s.listingsFailed,
-        totalQuotesWritten: s.totalQuotesWritten,
-        totalDaysWithPrice: 0,
-        totalQuotesEnriched: s.totalQuotesEnriched,
-        totalQuotesFailed: s.totalQuotesFailed,
-        totalFullyAvailableCheckpoints: s.totalFullyAvailableCheckpoints,
-        totalQuotesEnrichedFullyAvailable: s.quotesEnrichedFullyAvailable,
-        enrichmentRate: s.enrichmentRate,
-        shaSource: "cache",
-        quoteShaSource: "cache",
-        shaRediscoveriesDuringRun: 0,
-        quoteShaRediscoveriesDuringRun: 0,
-        alertLevel: "ok",
-        alertReason: "",
-      },
-    }));
-
+    const dailyRecords = await loadRecentDailyRunRecords(7);
     const parserAlert = evaluateEnrichmentAlert(dailyRecords);
     if (parserAlert.status === "alert") {
       // Parser-keyword regression beats freshness "ok" — owners stop

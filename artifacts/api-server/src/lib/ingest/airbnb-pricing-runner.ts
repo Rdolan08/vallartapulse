@@ -638,14 +638,22 @@ export async function runAirbnbPricingRefresh(
 
   // Persist this run's summary so the freshness/alert endpoint has
   // cross-run history to evaluate the enrichment-rate trend against
-  // (see evaluateEnrichmentAlert in airbnb-pricing-monitor.ts). Skipped
-  // on dry runs and on canary (skipFullQuotes) runs — the latter would
-  // otherwise pollute the alert math with rows that intentionally
-  // never enriched anything.
-  if (!dryRun && !skipFullQuotes) {
+  // (see evaluateEnrichmentAlert in airbnb-pricing-monitor.ts).
+  //
+  // Canary (skipFullQuotes) runs are stored too — they're a real
+  // signal that calendar-SHA discovery worked today — but flagged with
+  // runKind="canary" so the alert math can ignore them. Their
+  // `enrichmentRate` is null by construction (no full-quote attempts),
+  // so they would already be filtered out by `evaluateEnrichmentAlert`,
+  // but the explicit kind makes the intent obvious to anyone scanning
+  // the table.
+  //
+  // Dry runs are skipped entirely — they're a test hook, not history.
+  if (!dryRun) {
     try {
       await db.insert(airbnbPricingRunSummariesTable).values({
         ranAt: new Date(),
+        runKind: skipFullQuotes ? "canary" : "full",
         listingsAttempted: result.summary.attempted,
         listingsOk: result.summary.ok,
         listingsFailed: result.summary.failed,

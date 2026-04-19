@@ -1,11 +1,14 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   serial,
   integer,
   real,
+  text,
   timestamp,
   json,
   index,
+  check,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -27,9 +30,11 @@ import { z } from "zod/v4";
  *   freshness/alerting path notice the parser has gone dark across
  *   multiple consecutive days.
  *
- * Dry-run / canary executions are NOT persisted — they would skew the
- * enrichment-rate signal (canary skips the full-quote step entirely
- * by design).
+ * Canary (skipFullQuotes) runs ARE persisted, but flagged via
+ * `runKind = "canary"` so the alert math can ignore them. They're
+ * still useful as a "did SHA discovery work today" signal even though
+ * they intentionally never enrich anything. Dry runs are not persisted
+ * — they're a test hook, not real history.
  */
 export const airbnbPricingRunSummariesTable = pgTable(
   "airbnb_pricing_run_summaries",
@@ -38,6 +43,17 @@ export const airbnbPricingRunSummariesTable = pgTable(
 
     /** Wall-clock time the run finished. */
     ranAt: timestamp("ran_at").notNull().defaultNow(),
+
+    /**
+     * Which flavour of run produced this row.
+     *   "full"   — normal daily refresh; eligible for the parser-health
+     *              enrichment-rate alert.
+     *   "canary" — a `skipFullQuotes` smoke run that only verifies the
+     *              calendar SHA still works. Persisted for traceability
+     *              but excluded from alert math (its `enrichmentRate`
+     *              is null by construction).
+     */
+    runKind: text("run_kind").notNull().default("full"),
 
     // ── Run shape ────────────────────────────────────────────────────────────
     listingsAttempted: integer("listings_attempted").notNull(),
@@ -82,6 +98,10 @@ export const airbnbPricingRunSummariesTable = pgTable(
   },
   (table) => [
     index("idx_apr_summaries_ran_at").on(table.ranAt),
+    check(
+      "airbnb_pricing_run_summaries_run_kind_check",
+      sql`${table.runKind} IN ('full', 'canary')`,
+    ),
   ],
 );
 
