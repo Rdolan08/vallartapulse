@@ -1,0 +1,51 @@
+name: PVRPV Calendar Scrape (daily)
+
+# Runs scripts/src/calendar-scrape.ts directly against the prod DB to refresh
+# the next-365-days pricing window for every active PVRPV listing
+# (rental_prices_by_date). Same Pattern B rationale as pvrpv-scrape.yml:
+# plain-HTTP source, no anti-bot wall, no need for the Railway proxy infra.
+#
+# Frequency: daily at 07:05 UTC — 5 minutes after pvrpv-scrape.yml so the
+# listing rows the calendar joins against are guaranteed fresh first.
+#
+# Required GitHub repository secrets:
+#   RAILWAY_DATABASE_URL   prod Postgres connection string (already used elsewhere)
+
+on:
+  schedule:
+    - cron: "5 7 * * *"   # daily 07:05 UTC (5 min after pvrpv-scrape.yml)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pvrpv-calendar-scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with: { fetch-depth: 1 }
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with: { version: 9 }
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run PVRPV calendar scraper against prod DB
+        env:
+          DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
+        run: pnpm --filter @workspace/scripts run scrape:calendar

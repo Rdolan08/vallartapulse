@@ -71,6 +71,19 @@ GROUP BY rl.source_platform
 ORDER BY rl.source_platform;
 
 \echo
+\echo === rental_prices_by_date: calendar pricing freshness ===
+SELECT
+  COUNT(*)                                         AS rows,
+  COUNT(DISTINCT listing_id)                       AS listings_covered,
+  MAX(scraped_at)                                  AS newest_scrape,
+  date_trunc('minute',
+    NOW() - MAX(scraped_at))                       AS age_of_newest,
+  COUNT(*) FILTER (
+    WHERE scraped_at < NOW() - INTERVAL '2 days'
+  )                                                AS rows_older_than_2d
+FROM rental_prices_by_date;
+
+\echo
 \echo === verdict (simple per-source freshness check) ===
 WITH per_source AS (
   SELECT
