@@ -8,7 +8,7 @@
 
 import { Router, type IRouter } from "express";
 import { z } from "zod";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { rentalListingsTable, marketEventsTable } from "@workspace/db/schema";
 import {
@@ -19,8 +19,10 @@ import {
   type FinishQuality,
 } from "../lib/comps-engine-v3";
 import { type CompsListingV2, type CompResultV2, type BeachTier } from "../lib/comps-engine-v2";
+import { selectCompPriceSources, type PriceSource } from "../lib/comps-pricing-source";
 import { lookupBuilding } from "../lib/building-lookup";
 import { PV_MONTHLY_FACTORS } from "../lib/pv-seasonality";
+import { recordPricingToolSuccess } from "../lib/pricing-tool-uptime";
 import type { MarketEvent } from "@workspace/db/schema";
 
 const router: IRouter = Router();
@@ -29,27 +31,60 @@ const router: IRouter = Router();
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
+export interface PoolDiagnostics {
+  totalListingsConsidered: number;
+  excludedReasons: {
+    no_priced_observation: number;
+    stale_beyond_60d: number;
+    no_static_fallback: number;
+    missing_required_field: number;
+  };
+  sourceCounts: Record<PriceSource, number>;
+  /** Avg freshness (days) of admitted comps, by source */
+  avgFreshnessDays: Record<PriceSource, number | null>;
+}
+
 let engineCache: {
   engine: CompsEngineV3;
   builtAt: number;
   listingCount: number;
+  diagnostics: PoolDiagnostics;
 } | null = null;
 
-async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: number }> {
+async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: number; diagnostics: PoolDiagnostics }> {
   const now = Date.now();
   if (engineCache && now - engineCache.builtAt < CACHE_TTL_MS) {
-    return { engine: engineCache.engine, listingCount: engineCache.listingCount };
+    return {
+      engine: engineCache.engine,
+      listingCount: engineCache.listingCount,
+      diagnostics: engineCache.diagnostics,
+    };
   }
 
   const rows = await db.select().from(rentalListingsTable);
 
-  const listings: CompsListingV2[] = rows
-    .filter(r =>
-      r.nightlyPriceUsd != null &&
-      r.distanceToBeachM != null &&
-      r.neighborhoodNormalized != null
-    )
-    .map(r => ({
+  // Field-level prerequisites the engine itself requires (independent
+  // of price source).
+  const eligible = rows.filter(r =>
+    r.distanceToBeachM != null &&
+    r.neighborhoodNormalized != null,
+  );
+  const missingRequiredField = rows.length - eligible.length;
+
+  // Comp Model Contract v1 — pick one nightly price per listing
+  // (PVRPV daily preferred, static fallback) with freshness gating.
+  const selection = await selectCompPriceSources(eligible.map(r => r.id));
+
+  const listings: CompsListingV2[] = [];
+  const freshnessAccum: Record<PriceSource, { sum: number; n: number }> = {
+    pvrpv_daily: { sum: 0, n: 0 },
+    static_displayed: { sum: 0, n: 0 },
+  };
+
+  for (const r of eligible) {
+    const chosen = selection.chosen.get(r.id);
+    if (!chosen) continue;
+    listings.push({
       id: r.id,
       externalId: r.externalId ?? String(r.id),
       sourceUrl: r.sourceUrl,
@@ -60,14 +95,38 @@ async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: numbe
       distanceToBeachM: parseFloat(String(r.distanceToBeachM!)),
       amenitiesNormalized: Array.isArray(r.amenitiesNormalized) ? r.amenitiesNormalized : [],
       ratingOverall: r.ratingOverall != null ? parseFloat(String(r.ratingOverall)) : null,
-      nightlyPriceUsd: parseFloat(String(r.nightlyPriceUsd!)),
+      nightlyPriceUsd: chosen.nightlyPriceUsd,
       buildingName: r.buildingName ?? null,
       dataConfidenceScore: parseFloat(String(r.dataConfidenceScore)),
-    }));
+      priceSource: chosen.priceSource,
+      priceObservedAt: chosen.priceObservedAt.toISOString(),
+      priceFreshnessDays: chosen.priceFreshnessDays,
+      priceFreshnessWeight: chosen.priceFreshnessWeight,
+    });
+    freshnessAccum[chosen.priceSource].sum += chosen.priceFreshnessDays;
+    freshnessAccum[chosen.priceSource].n += 1;
+  }
+
+  const diagnostics: PoolDiagnostics = {
+    totalListingsConsidered: rows.length,
+    excludedReasons: {
+      ...selection.excludedReasons,
+      missing_required_field: missingRequiredField,
+    },
+    sourceCounts: selection.sourceCounts,
+    avgFreshnessDays: {
+      pvrpv_daily: freshnessAccum.pvrpv_daily.n > 0
+        ? Math.round(10 * freshnessAccum.pvrpv_daily.sum / freshnessAccum.pvrpv_daily.n) / 10
+        : null,
+      static_displayed: freshnessAccum.static_displayed.n > 0
+        ? Math.round(10 * freshnessAccum.static_displayed.sum / freshnessAccum.static_displayed.n) / 10
+        : null,
+    },
+  };
 
   const engine = new CompsEngineV3(listings);
-  engineCache = { engine, builtAt: now, listingCount: listings.length };
-  return { engine, listingCount: listings.length };
+  engineCache = { engine, builtAt: now, listingCount: listings.length, diagnostics };
+  return { engine, listingCount: listings.length, diagnostics };
 }
 
 // ── Market events cache ───────────────────────────────────────────────────────
@@ -214,8 +273,27 @@ function median(sorted: number[]): number {
   return n % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
+/**
+ * Apply the comp-pool median per-night fee uplift to a base nightly rate.
+ * Shared between the hero "all-in / night" number and the seasonal sweep
+ * so they stay consistent. Returns null for `all_in` when no fee data is
+ * available — UI should fall back to the base.
+ */
+function withFeeUplift(
+  base: number,
+  perNightFeeUsd: number | null,
+): { base: number; all_in: number | null } {
+  return {
+    base,
+    all_in: perNightFeeUsd != null ? Math.round(base + perNightFeeUsd) : null,
+  };
+}
+
 /** Compute seasonal sweep from a non-seasonal base price */
-function computeSeasonalSweep(nonSeasonalBase: number) {
+function computeSeasonalSweep(
+  nonSeasonalBase: number,
+  perNightFeeUsd: number | null,
+) {
   // Representative month multipliers
   const lowMulti      = PV_MONTHLY_FACTORS.find(m => m.month === 9)!.multiplier;  // Sep 0.68
   const shoulderMulti = PV_MONTHLY_FACTORS.find(m => m.month === 10)!.multiplier; // Oct 0.88
@@ -223,10 +301,10 @@ function computeSeasonalSweep(nonSeasonalBase: number) {
   const peakMulti     = PV_MONTHLY_FACTORS.find(m => m.month === 3)!.multiplier;  // Mar 1.20
 
   return {
-    low:      Math.round(nonSeasonalBase * lowMulti),
-    shoulder: Math.round(nonSeasonalBase * shoulderMulti),
-    high:     Math.round(nonSeasonalBase * highMulti),
-    peak:     Math.round(nonSeasonalBase * peakMulti),
+    low:      withFeeUplift(Math.round(nonSeasonalBase * lowMulti),      perNightFeeUsd),
+    shoulder: withFeeUplift(Math.round(nonSeasonalBase * shoulderMulti), perNightFeeUsd),
+    high:     withFeeUplift(Math.round(nonSeasonalBase * highMulti),     perNightFeeUsd),
+    peak:     withFeeUplift(Math.round(nonSeasonalBase * peakMulti),     perNightFeeUsd),
   };
 }
 
@@ -254,7 +332,7 @@ router.post("/rental/comps", async (req, res) => {
   }, "comps v3.1 request");
 
   try {
-    const [{ engine, listingCount }, allEvents] = await Promise.all([
+    const [{ engine, listingCount, diagnostics: poolDiagnostics }, allEvents] = await Promise.all([
       getEngine(),
       getActiveEvents(),
     ]);
@@ -326,14 +404,6 @@ router.post("/rental/comps", async (req, res) => {
       ...buildWarnings(input, poolSize, expandedPool, adjacentNeighborhood, adjacentNeighborhoodsUsed, confidence, result.targetBeachTier),
     ];
 
-    // ── Seasonal sweep ────────────────────────────────────────────────────────
-    const nonSeasonalBase = result.totalAdjustmentMultiplier > 0
-      ? result.recommended / result.seasonalContext.totalMultiplier
-      : result.recommended;
-    const seasonalSweep = confidence !== "guidance_only"
-      ? computeSeasonalSweep(nonSeasonalBase)
-      : null;
-
     // ── Building context from comp set ────────────────────────────────────────
     let buildingContext = null;
     if (resolvedBuildingName) {
@@ -394,24 +464,137 @@ router.post("/rental/comps", async (req, res) => {
     }
 
     // ── Selected comps ────────────────────────────────────────────────────────
-    const selectedComps = comps.slice(0, 10).map((c, i) => ({
-      rank: i + 1,
-      external_id: c.listing.externalId,
-      source_url: c.listing.sourceUrl,
-      neighborhood: c.listing.neighborhoodNormalized,
-      bedrooms: c.listing.bedrooms,
-      bathrooms: c.listing.bathrooms,
-      sqft: c.listing.sqft,
-      distance_to_beach_m: c.listing.distanceToBeachM,
-      beach_tier: c.listing.beachTier,
-      price_tier: c.listing.priceTier,
-      nightly_price_usd: c.listing.nightlyPriceUsd,
-      rating_overall: c.listing.ratingOverall,
-      building_name: c.listing.buildingNameNormalized,
-      score: parseFloat(c.score.toFixed(1)),
-      match_reasons: c.matchReasons,
-      top_drivers: extractTopDrivers(c),
-    }));
+    const topComps = comps.slice(0, 10);
+    const topListingIds = topComps.map(c => c.listing.id);
+
+    // Pull the most recent guest-paid breakdown per listing from
+    // listing_price_quotes. Airbnb listings populate the full set of
+    // fees/taxes/total; PVRPV-only listings have no rows here, so the
+    // map lookup returns undefined and the UI renders "—".
+    const feeRows = topListingIds.length === 0
+      ? []
+      : (await db.execute(sql`
+          SELECT DISTINCT ON (listing_id)
+            listing_id::int                  AS listing_id,
+            nightly_price_usd::float8        AS nightly_price_usd,
+            cleaning_fee_usd::float8         AS cleaning_fee_usd,
+            service_fee_usd::float8          AS service_fee_usd,
+            taxes_usd::float8                AS taxes_usd,
+            total_price_usd::float8          AS total_price_usd,
+            stay_length_nights::int          AS stay_length_nights,
+            currency                         AS currency,
+            collected_at                     AS collected_at
+          FROM listing_price_quotes
+          WHERE listing_id = ANY(${topListingIds})
+            AND availability_status = 'available'
+          ORDER BY listing_id, collected_at DESC
+        `)).rows as Array<{
+          listing_id: number;
+          nightly_price_usd: number | null;
+          cleaning_fee_usd: number | null;
+          service_fee_usd: number | null;
+          taxes_usd: number | null;
+          total_price_usd: number | null;
+          stay_length_nights: number | null;
+          currency: string | null;
+          collected_at: Date;
+        }>;
+
+    const feesByListing = new Map<number, typeof feeRows[number]>();
+    for (const r of feeRows) feesByListing.set(r.listing_id, r);
+
+    // Per-night fees implied by each comp's guest-paid quote, used to derive
+    // a comp-pool median fee uplift for the owner's recommended rate.
+    const compFeesPerNight: number[] = [];
+
+    const selectedComps = topComps.map((c, i) => {
+      const fees = feesByListing.get(c.listing.id);
+
+      // Effective per-night including fees & taxes:
+      //   total_price_usd / stay_length_nights
+      // Falls back to null when total or stay length is missing/zero.
+      let effectivePerNight: number | null = null;
+      if (
+        fees &&
+        fees.total_price_usd != null &&
+        fees.stay_length_nights != null &&
+        fees.stay_length_nights > 0
+      ) {
+        effectivePerNight = fees.total_price_usd / fees.stay_length_nights;
+        if (fees.nightly_price_usd != null) {
+          const perNightFees = effectivePerNight - fees.nightly_price_usd;
+          if (Number.isFinite(perNightFees) && perNightFees >= 0) {
+            compFeesPerNight.push(perNightFees);
+          }
+        }
+      }
+
+      return {
+        rank: i + 1,
+        external_id: c.listing.externalId,
+        source_url: c.listing.sourceUrl,
+        neighborhood: c.listing.neighborhoodNormalized,
+        bedrooms: c.listing.bedrooms,
+        bathrooms: c.listing.bathrooms,
+        sqft: c.listing.sqft,
+        distance_to_beach_m: c.listing.distanceToBeachM,
+        beach_tier: c.listing.beachTier,
+        price_tier: c.listing.priceTier,
+        nightly_price_usd: c.listing.nightlyPriceUsd,
+        rating_overall: c.listing.ratingOverall,
+        building_name: c.listing.buildingNameNormalized,
+        score: parseFloat(c.score.toFixed(1)),
+        match_reasons: c.matchReasons,
+        top_drivers: extractTopDrivers(c),
+        // Effective per-night incl. fees & taxes (total / stay_length_nights).
+        // Null when no guest-paid quote with usable totals exists — the UI
+        // should fall back to nightly_price_usd in that case.
+        effective_per_night_usd: effectivePerNight != null
+          ? Math.round(effectivePerNight)
+          : null,
+        // Guest-paid breakdown (from latest available listing_price_quote).
+        // Null = no quote on file for this listing (e.g. PVRPV-only comps).
+        // Treat 0 as a real zero (no fee charged) — distinct from null.
+        guest_paid: fees
+          ? {
+              nightly_price_usd: fees.nightly_price_usd,
+              cleaning_fee_usd: fees.cleaning_fee_usd,
+              service_fee_usd: fees.service_fee_usd,
+              taxes_usd: fees.taxes_usd,
+              total_price_usd: fees.total_price_usd,
+              stay_length_nights: fees.stay_length_nights,
+              currency: fees.currency ?? "USD",
+              collected_at: fees.collected_at instanceof Date
+                ? fees.collected_at.toISOString()
+                : String(fees.collected_at),
+            }
+          : null,
+      };
+    });
+
+    // Median per-night fees uplift inferred from the comp pool. Used to
+    // estimate what the owner's recommended rate would look like once the
+    // typical cleaning + service + tax load is folded in.
+    const sortedFees = [...compFeesPerNight].sort((a, b) => a - b);
+    const medianFeesPerNight = sortedFees.length > 0 ? median(sortedFees) : null;
+    const poolMedianFeesPerNightUsd = medianFeesPerNight != null
+      ? Math.round(medianFeesPerNight)
+      : null;
+    const recommendedEffectivePerNightUsd =
+      confidence !== "guidance_only" && result.recommended
+        ? withFeeUplift(result.recommended, medianFeesPerNight).all_in
+        : null;
+    const compsWithFeesCount = sortedFees.length;
+
+    // ── Seasonal sweep ────────────────────────────────────────────────────────
+    // Computed after the comp-pool fee uplift so each season can show both
+    // a base and an all-in number using the same fee logic as the hero.
+    const nonSeasonalBase = result.totalAdjustmentMultiplier > 0
+      ? result.recommended / result.seasonalContext.totalMultiplier
+      : result.recommended;
+    const seasonalSweep = confidence !== "guidance_only"
+      ? computeSeasonalSweep(nonSeasonalBase, medianFeesPerNight)
+      : null;
 
     const topDriversOverall = selectedComps.length > 0
       ? Object.entries(
@@ -449,6 +632,11 @@ router.post("/rental/comps", async (req, res) => {
       source_scope: `Multi-source (PVRPV + Vacation Vallarta + Airbnb + VRBO) — ${input.neighborhood_normalized}`,
       eligible_listing_count: engine.eligibleCount,
       db_listing_count: listingCount,
+      // Comp Model Contract v1 — provenance + freshness diagnostics
+      // for the entire comp pool (not just the matched comps below).
+      // Lets the dashboard surface "X PVRPV daily, Y static fallback,
+      // Z dropped for staleness". See docs/comp-model-contract.md.
+      pool_diagnostics: poolDiagnostics,
       eligibility_status: confidence === "guidance_only" ? "guidance_only" : "eligible",
 
       target_summary: {
@@ -478,6 +666,14 @@ router.post("/rental/comps", async (req, res) => {
       conservative_price: confidence === "guidance_only" ? null : result.conservative,
       recommended_price:  confidence === "guidance_only" ? null : result.recommended,
       stretch_price:      confidence === "guidance_only" ? null : result.stretch,
+
+      // Effective per-night incl. fees & taxes for the recommended rate,
+      // estimated by adding the comp-pool median per-night fee uplift to
+      // the base recommendation. Null when no comps in the pool have a
+      // usable guest-paid quote — UI should fall back to recommended_price.
+      recommended_effective_per_night_usd: recommendedEffectivePerNightUsd,
+      pool_median_fees_per_night_usd:      poolMedianFeesPerNightUsd,
+      pool_fees_sample_size:               compsWithFeesCount,
 
       base_comp_median: result.baseCompMedian,
       building_adjustment_pct: result.buildingAdjustmentPct,
@@ -530,6 +726,12 @@ router.post("/rental/comps", async (req, res) => {
       model_limitations: modelLimitations,
       generated_at: new Date().toISOString(),
     });
+
+    // Pricing-tool uptime probe — record the timestamp of the most recent
+    // successful response so /api/health/pricing-tool can surface it on
+    // the /sources dashboard. Done after `res.json(...)` so a serializer
+    // failure doesn't falsely advance the success marker.
+    recordPricingToolSuccess();
 
   } catch (err) {
     req.log.error({ err }, "Failed to run comps engine");

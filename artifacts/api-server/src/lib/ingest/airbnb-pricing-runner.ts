@@ -31,7 +31,9 @@
 
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
+import { logger } from "../logger.js";
 import {
+  airbnbPricingRunSummariesTable,
   listingPriceQuotesTable,
   type InsertListingPriceQuote,
 } from "@workspace/db/schema";
@@ -42,6 +44,11 @@ import {
   type AirbnbGraphqlCalendarResult,
   type AirbnbGraphqlDay,
 } from "./airbnb-graphql-pricing-adapter.js";
+import {
+  fetchAirbnbQuote,
+  getOrDiscoverQuoteSha,
+  type AirbnbQuoteResult,
+} from "./airbnb-graphql-quote-adapter.js";
 import {
   generateCheckpoints,
   type Checkpoint,
@@ -56,6 +63,12 @@ export interface AirbnbPricingRunOpts {
   dryRun?: boolean;
   /** Override "today" for checkpoint generation (test hook). */
   today?: Date;
+  /**
+   * If true, only fetch the calendar (skip the per-checkpoint full-fee
+   * quote calls). Used for canary runs that just want to confirm the
+   * calendar SHA still works. Default false.
+   */
+  skipFullQuotes?: boolean;
 }
 
 export interface AirbnbPricingPerListing {
@@ -65,9 +78,32 @@ export interface AirbnbPricingPerListing {
   daysReturned: number;
   daysWithPrice: number;
   checkpointsAttempted: number;
+  /** Per-checkpoint full-fee quote fetches that returned a usable breakdown. */
+  quotesEnriched: number;
+  /**
+   * Subset of `quotesEnriched` that came from a checkpoint where every
+   * night was both covered and available. This is the numerator paired
+   * with `fullyAvailableCheckpoints` for the enrichment-rate signal —
+   * mixing in enrichments from partially-available checkpoints would
+   * let the ratio exceed 1.0 and hide parser regressions.
+   */
+  quotesEnrichedFullyAvailable: number;
+  /** Per-checkpoint full-fee quote fetches that errored / had no breakdown. */
+  quotesFailed: number;
+  /**
+   * Of the checkpointsAttempted, how many had every night both covered
+   * and available. This is the denominator we expect to enrich — a
+   * "min_stay_violated" or "unavailable" checkpoint can't get a quote
+   * back from Airbnb, so excluding them keeps the enrichment-rate
+   * signal focused on parser health rather than on inventory churn.
+   */
+  fullyAvailableCheckpoints: number;
   quotesWritten: number;
   staleShaRetried: boolean;
+  /** True when the quote-flow SHA had to be re-discovered for this listing. */
+  staleQuoteShaRetried: boolean;
   shaUsed: string | null;
+  quoteShaUsed: string | null;
   error?: string;
 }
 
@@ -77,8 +113,52 @@ export interface AirbnbPricingRunSummary {
   failed: number;
   totalQuotesWritten: number;
   totalDaysWithPrice: number;
+  /** Sum of per-checkpoint quote calls that returned a usable fee breakdown. */
+  totalQuotesEnriched: number;
+  /** Sum of per-checkpoint quote calls that failed / had no breakdown. */
+  totalQuotesFailed: number;
+  /** Sum across listings of fullyAvailableCheckpoints — the enrichment denominator. */
+  totalFullyAvailableCheckpoints: number;
+  /**
+   * Sum across listings of `quotesEnrichedFullyAvailable` — the
+   * enrichment numerator. Always ≤ `totalFullyAvailableCheckpoints`.
+   */
+  totalQuotesEnrichedFullyAvailable: number;
+  /**
+   * Share of fully-available checkpoints that successfully got a fee
+   * breakdown (totalQuotesEnrichedFullyAvailable / totalFullyAvailableCheckpoints).
+   * `null` when the denominator is zero (e.g. canary or all listings
+   * fully booked) so consumers don't divide by zero or treat 0/0 as a
+   * crash signal.
+   *
+   * Tracked because Airbnb periodically renames the price-line titles
+   * the parser keys off ("Cleaning fee" → "Cleaning charge", etc).
+   * When that happens the per-checkpoint quote still returns 200 but
+   * the breakdown columns silently come back null, the runner drops
+   * the row, and owners stop getting fee data without anything else
+   * looking obviously broken. A persistent dip in this rate is the
+   * canary for a parser-keyword update.
+   */
+  enrichmentRate: number | null;
   shaSource: "cache" | "discovered" | "fallback";
+  quoteShaSource: "cache" | "discovered" | "fallback";
   shaRediscoveriesDuringRun: number;
+  quoteShaRediscoveriesDuringRun: number;
+  /**
+   * Pass/fail signal for ops monitoring. Computed from the run shape so
+   * GitHub Actions (and the freshness dashboard) can show a clear
+   * thumbs-up / thumbs-down without re-deriving the rules.
+   *
+   *   "fail"  — pipeline is dark (everything failed, no quotes written,
+   *             or the persisted-query SHA rotated more than once in a
+   *             single run, which means rediscovery itself is unstable).
+   *   "warn"  — partial outage (more than half the cohort failed, or no
+   *             listings were processed at all).
+   *   "ok"    — healthy.
+   */
+  alertLevel: "ok" | "warn" | "fail";
+  /** Human-readable reason for the alertLevel (empty when ok). */
+  alertReason: string;
 }
 
 export interface AirbnbPricingRunResult {
@@ -165,15 +245,26 @@ function pricesForStay(
   return { perNight, nightsCovered, allAvailable, anyAvailable };
 }
 
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+interface CheckpointRow {
+  row: InsertListingPriceQuote;
+  checkpoint: Checkpoint;
+  /** True when every night in the stay window was both covered and available. */
+  fullyAvailable: boolean;
+}
+
 function buildQuoteRows(
   listingId: number,
   result: AirbnbGraphqlCalendarResult,
   collectedAt: Date,
   today: Date,
-): InsertListingPriceQuote[] {
+): CheckpointRow[] {
   const checkpoints = generateCheckpoints({ today });
   const index = buildDayIndex(result.days);
-  const out: InsertListingPriceQuote[] = [];
+  const out: CheckpointRow[] = [];
 
   for (const cp of checkpoints) {
     const { perNight, nightsCovered, allAvailable, anyAvailable } = pricesForStay(cp, index);
@@ -196,7 +287,9 @@ function buildQuoteRows(
         ? "min_stay_violated" // partial-availability stays = booked across part of the window
         : "unavailable";
 
-    out.push({
+    const fullyAvailable = allAvailable && nightsCovered === cp.stayNights;
+
+    const row: InsertListingPriceQuote = {
       listingId,
       collectedAt,
       checkinDate: cp.checkin,
@@ -221,9 +314,70 @@ function buildQuoteRows(
         stayNights: cp.stayNights,
         perNightPricesUsd: perNight,
       },
-    });
+    };
+    out.push({ row, checkpoint: cp, fullyAvailable });
   }
   return out;
+}
+
+/**
+ * Mutate `row` in place with the fee breakdown from a successful
+ * full-quote fetch. Subtotal is preferred over the calendar-derived
+ * sum when the quote endpoint reports an explicit accommodation total
+ * (it accounts for length-of-stay discounts the calendar misses).
+ *
+ * Once a quote returns ANY usable component (any of cleaning, service,
+ * taxes, or total), missing sibling fee components are defaulted to
+ * 0. Reasoning: Airbnb omits a price item when the host hasn't set a
+ * fee at all (e.g. no cleaning fee on a long-term rental), so an
+ * absent line item legitimately means $0 — and writing 0 keeps the
+ * column non-null per the comp-comparison contract.
+ */
+function applyQuoteToRow(row: InsertListingPriceQuote, q: AirbnbQuoteResult): void {
+  row.cleaningFeeUsd = q.cleaningFeeUsd ?? 0;
+  row.serviceFeeUsd = q.serviceFeeUsd ?? 0;
+  row.taxesUsd = q.taxesUsd ?? 0;
+  // If the quote endpoint didn't surface an explicit total but DID give
+  // us the components, synthesize one so total_price_usd is also never
+  // null on enriched rows.
+  if (q.totalPriceUsd !== null) {
+    row.totalPriceUsd = q.totalPriceUsd;
+  } else {
+    const subtotalForTotal =
+      q.accommodationUsd !== null ? q.accommodationUsd : (row.subtotalUsd ?? 0);
+    row.totalPriceUsd = round2(
+      subtotalForTotal +
+        (q.cleaningFeeUsd ?? 0) +
+        (q.serviceFeeUsd ?? 0) +
+        (q.taxesUsd ?? 0),
+    );
+  }
+  if (q.accommodationUsd !== null) {
+    row.subtotalUsd = q.accommodationUsd;
+    if (typeof row.stayLengthNights === "number" && row.stayLengthNights > 0) {
+      row.nightlyPriceUsd = q.accommodationUsd / row.stayLengthNights;
+    }
+  }
+  if (q.currency && q.currency !== row.currency) row.currency = q.currency;
+
+  // Append the quote breakdown to the raw_quote_json blob without
+  // dropping the calendar context already there.
+  const existing = (row.rawQuoteJson ?? {}) as Record<string, unknown>;
+  row.rawQuoteJson = {
+    ...existing,
+    fullQuote: {
+      source: "airbnb_graphql_StaysPdpReservationFlow",
+      shaUsed: q.shaUsed,
+      available: q.available,
+      accommodationUsd: q.accommodationUsd,
+      cleaningFeeUsd: q.cleaningFeeUsd,
+      serviceFeeUsd: q.serviceFeeUsd,
+      taxesUsd: q.taxesUsd,
+      totalPriceUsd: q.totalPriceUsd,
+      currency: q.currency,
+      errors: q.errors,
+    },
+  };
 }
 
 async function insertQuotes(rows: InsertListingPriceQuote[]): Promise<number> {
@@ -252,17 +406,30 @@ export async function runAirbnbPricingRefresh(
   const maxListings = opts.maxListings ?? 50;
   const dryRun = opts.dryRun ?? false;
   const today = opts.today ?? new Date();
+  const skipFullQuotes = opts.skipFullQuotes ?? false;
 
   const listings = await loadStaleFirstListings(maxListings);
 
-  // Discover the SHA up front so all listings share one cache hit.
+  // Discover the calendar SHA up front so all listings share one cache hit.
   const initial = await getOrDiscoverSha();
   let currentSha = initial.sha;
   let shaRediscoveries = 0;
 
+  // Same up-front discovery for the reservation-flow (full-quote) SHA.
+  // When `skipFullQuotes` is true we don't even pay the cache read.
+  const initialQuote = skipFullQuotes
+    ? { sha: "", source: "cache" as const }
+    : await getOrDiscoverQuoteSha();
+  let currentQuoteSha = initialQuote.sha;
+  let quoteShaRediscoveries = 0;
+
   const perListing: AirbnbPricingPerListing[] = [];
   let totalQuotes = 0;
   let totalDaysWithPrice = 0;
+  let totalQuotesEnriched = 0;
+  let totalQuotesEnrichedFullyAvailable = 0;
+  let totalQuotesFailed = 0;
+  let totalFullyAvailableCheckpoints = 0;
 
   for (const l of listings) {
     const stat: AirbnbPricingPerListing = {
@@ -272,9 +439,15 @@ export async function runAirbnbPricingRefresh(
       daysReturned: 0,
       daysWithPrice: 0,
       checkpointsAttempted: 0,
+      quotesEnriched: 0,
+      quotesEnrichedFullyAvailable: 0,
+      quotesFailed: 0,
+      fullyAvailableCheckpoints: 0,
       quotesWritten: 0,
       staleShaRetried: false,
+      staleQuoteShaRetried: false,
       shaUsed: currentSha,
+      quoteShaUsed: skipFullQuotes ? null : currentQuoteSha,
     };
     try {
       let result = await fetchAirbnbCalendarGraphql(l.externalId, currentSha, { today });
@@ -299,8 +472,95 @@ export async function runAirbnbPricingRefresh(
         continue;
       }
 
-      const rows = buildQuoteRows(l.id, result, new Date(), today);
-      stat.checkpointsAttempted = rows.length;
+      const checkpointRows = buildQuoteRows(l.id, result, new Date(), today);
+      stat.checkpointsAttempted = checkpointRows.length;
+      stat.fullyAvailableCheckpoints = checkpointRows.filter(
+        (cr) => cr.fullyAvailable,
+      ).length;
+
+      // Per-checkpoint full-fee quote enrichment. We call the
+      // reservation-flow endpoint for EVERY emitted checkpoint so the
+      // four target columns (cleaning_fee_usd, service_fee_usd,
+      // taxes_usd, total_price_usd) are populated on every Airbnb row
+      // we insert.
+      //
+      // Rows whose quote returns no usable breakdown (network failure,
+      // SHA rotation we couldn't recover from, parser miss) are dropped
+      // entirely rather than written calendar-only — owners need full
+      // numbers to compare to PVRPV, and a half-row would silently
+      // poison those comparisons.
+      const enrichedRows: InsertListingPriceQuote[] = [];
+      if (skipFullQuotes || !currentQuoteSha) {
+        // Canary mode: keep calendar-only rows.
+        for (const cr of checkpointRows) enrichedRows.push(cr.row);
+      } else {
+        for (const cr of checkpointRows) {
+          let q = await fetchAirbnbQuote(
+            l.externalId,
+            currentQuoteSha,
+            {
+              checkin: cr.checkpoint.checkin,
+              checkout: cr.checkpoint.checkout,
+              guestCount: cr.checkpoint.guestCount,
+            },
+          );
+
+          if (q.staleSha) {
+            // Re-discover once per RUN, not per listing — this matches
+            // how the calendar SHA self-heals.
+            stat.staleQuoteShaRetried = true;
+            const fresh = await getOrDiscoverQuoteSha({ forceRediscover: true });
+            currentQuoteSha = fresh.sha;
+            quoteShaRediscoveries++;
+            stat.quoteShaUsed = currentQuoteSha;
+            q = await fetchAirbnbQuote(
+              l.externalId,
+              currentQuoteSha,
+              {
+                checkin: cr.checkpoint.checkin,
+                checkout: cr.checkpoint.checkout,
+                guestCount: cr.checkpoint.guestCount,
+              },
+            );
+          }
+
+          const hasBreakdown =
+            q.totalPriceUsd !== null ||
+            q.cleaningFeeUsd !== null ||
+            q.serviceFeeUsd !== null ||
+            q.taxesUsd !== null ||
+            q.accommodationUsd !== null;
+
+          if (hasBreakdown) {
+            applyQuoteToRow(cr.row, q);
+            // Defensive belt-and-braces: applyQuoteToRow defaults
+            // missing components to 0, but assert here so a future
+            // edit can never silently regress the non-null contract.
+            if (
+              cr.row.cleaningFeeUsd !== null &&
+              cr.row.serviceFeeUsd !== null &&
+              cr.row.taxesUsd !== null &&
+              cr.row.totalPriceUsd !== null
+            ) {
+              enrichedRows.push(cr.row);
+              stat.quotesEnriched++;
+              // Only count enrichments on fully-available checkpoints
+              // toward the rate numerator — that's the universe whose
+              // denominator we tracked above. A successful enrichment
+              // on a partially-available checkpoint is gravy, not
+              // signal.
+              if (cr.fullyAvailable) stat.quotesEnrichedFullyAvailable++;
+            } else {
+              stat.quotesFailed++;
+            }
+          } else {
+            // No usable quote → drop the row rather than write half-data.
+            stat.quotesFailed++;
+          }
+        }
+      }
+
+      const rows = enrichedRows;
       if (!dryRun) {
         stat.quotesWritten = await insertQuotes(rows);
       } else {
@@ -309,6 +569,16 @@ export async function runAirbnbPricingRefresh(
       stat.ok = true;
       totalQuotes += stat.quotesWritten;
       totalDaysWithPrice += stat.daysWithPrice;
+      totalQuotesEnriched += stat.quotesEnriched;
+      totalQuotesFailed += stat.quotesFailed;
+      // Only count the enrichment numerator/denominator when we
+      // actually attempted enrichment — canary mode (skipFullQuotes)
+      // would otherwise look like a 0% enrichment rate and trip the
+      // alert.
+      if (!skipFullQuotes && currentQuoteSha) {
+        totalFullyAvailableCheckpoints += stat.fullyAvailableCheckpoints;
+        totalQuotesEnrichedFullyAvailable += stat.quotesEnrichedFullyAvailable;
+      }
     } catch (e) {
       stat.error = (e as Error).message.slice(0, 200);
     }
@@ -316,17 +586,101 @@ export async function runAirbnbPricingRefresh(
   }
 
   const ok = perListing.filter((p) => p.ok).length;
-  return {
+  const failed = perListing.length - ok;
+
+  // ── Pass/fail signal ────────────────────────────────────────────────
+  // Order matters: "fail" rules fire first, then "warn", then "ok".
+  let alertLevel: "ok" | "warn" | "fail" = "ok";
+  let alertReason = "";
+  if (perListing.length > 0 && ok === 0) {
+    alertLevel = "fail";
+    alertReason = `All ${perListing.length} listings failed — Airbnb pricing has gone dark`;
+  } else if (perListing.length > 0 && totalQuotes === 0 && !dryRun) {
+    alertLevel = "fail";
+    alertReason = "0 quotes written despite a non-empty cohort";
+  } else if (shaRediscoveries > 1) {
+    alertLevel = "fail";
+    alertReason = `Calendar SHA rediscovered ${shaRediscoveries} times in one run — persisted-query rotation is unstable`;
+  } else if (quoteShaRediscoveries > 1) {
+    alertLevel = "fail";
+    alertReason = `Quote SHA rediscovered ${quoteShaRediscoveries} times in one run — persisted-query rotation is unstable`;
+  } else if (perListing.length === 0) {
+    alertLevel = "warn";
+    alertReason = "No Airbnb listings matched the cohort filter";
+  } else if (failed > 0 && failed * 2 >= perListing.length) {
+    alertLevel = "warn";
+    alertReason = `${failed}/${perListing.length} listings failed (>=50%)`;
+  }
+
+  const result: AirbnbPricingRunResult = {
     summary: {
       attempted: perListing.length,
       ok,
-      failed: perListing.length - ok,
+      failed,
       totalQuotesWritten: totalQuotes,
       totalDaysWithPrice,
+      totalQuotesEnriched,
+      totalQuotesFailed,
+      totalFullyAvailableCheckpoints,
+      totalQuotesEnrichedFullyAvailable,
+      enrichmentRate: totalFullyAvailableCheckpoints > 0
+        ? totalQuotesEnrichedFullyAvailable / totalFullyAvailableCheckpoints
+        : null,
       shaSource: initial.source,
+      quoteShaSource: initialQuote.source,
       shaRediscoveriesDuringRun: shaRediscoveries,
+      quoteShaRediscoveriesDuringRun: quoteShaRediscoveries,
+      alertLevel,
+      alertReason,
     },
     listings: perListing,
   };
+
+  // Persist this run's summary so the freshness/alert endpoint has
+  // cross-run history to evaluate the enrichment-rate trend against
+  // (see evaluateEnrichmentAlert in airbnb-pricing-monitor.ts).
+  //
+  // Canary (skipFullQuotes) runs are stored too — they're a real
+  // signal that calendar-SHA discovery worked today — but flagged with
+  // runKind="canary" so the alert math can ignore them. Their
+  // `enrichmentRate` is null by construction (no full-quote attempts),
+  // so they would already be filtered out by `evaluateEnrichmentAlert`,
+  // but the explicit kind makes the intent obvious to anyone scanning
+  // the table.
+  //
+  // Dry runs are skipped entirely — they're a test hook, not history.
+  if (!dryRun) {
+    try {
+      await db.insert(airbnbPricingRunSummariesTable).values({
+        ranAt: new Date(),
+        runKind: skipFullQuotes ? "canary" : "full",
+        listingsAttempted: result.summary.attempted,
+        listingsOk: result.summary.ok,
+        listingsFailed: result.summary.failed,
+        totalQuotesWritten: result.summary.totalQuotesWritten,
+        totalQuotesEnriched: result.summary.totalQuotesEnriched,
+        totalQuotesFailed: result.summary.totalQuotesFailed,
+        totalFullyAvailableCheckpoints:
+          result.summary.totalFullyAvailableCheckpoints,
+        quotesEnrichedFullyAvailable:
+          result.summary.totalQuotesEnrichedFullyAvailable,
+        enrichmentRate: result.summary.enrichmentRate,
+        rawSummaryJson: result.summary as unknown as Record<string, unknown>,
+      });
+    } catch (err) {
+      // Persistence is best-effort: a failure here must not turn a
+      // successful pricing run into a 5xx for the caller. The row is
+      // diagnostic, not authoritative. Log at warn level so silent
+      // history loss is still discoverable in the server logs — the
+      // freshness endpoint depends on this table to detect parser
+      // regressions.
+      logger.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        "airbnb-pricing-runner: failed to persist run summary",
+      );
+    }
+  }
+
+  return result;
 }
 

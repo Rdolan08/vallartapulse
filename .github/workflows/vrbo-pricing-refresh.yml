@@ -1,0 +1,86 @@
+name: VRBO Pricing Refresh (daily)
+
+# Triggers the daily VRBO fee-quote pipeline. VRBO doesn't expose a public
+# calendar feed we can scrape headlessly, so the runner synthesizes one
+# quote row per checkpoint from the listing's already-scraped
+# nightly_price_usd / cleaning_fee_usd plus modeled VRBO traveler service
+# fee (~10%) and Mexico lodging tax (IVA 16% + ISH 3%). This populates the
+# four fee columns so VRBO comps stop rendering "—" in the comp-comparison
+# view alongside Airbnb / PVRPV comps.
+#
+# Schedule: 07:30 UTC, after airbnb-pricing-refresh (07:20) and
+# pvrpv-pricing-refresh (07:25) so the three pricing pipelines stagger
+# their DB load.
+#
+# Required GitHub repository secrets:
+#   RAILWAY_API_URL          e.g. https://api.vallartapulse.com
+#   INTERNAL_TRIGGER_TOKEN   same value as the Railway env var
+
+on:
+  schedule:
+    - cron: "30 7 * * *"
+  workflow_dispatch:
+    inputs:
+      max_listings:
+        description: "Cap per call (1-500). Default 50."
+        required: false
+        default: "50"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vrbo-pricing-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Verify required secrets
+        run: |
+          : "${RAILWAY_API_URL:?RAILWAY_API_URL secret is missing}"
+          : "${INTERNAL_TRIGGER_TOKEN:?INTERNAL_TRIGGER_TOKEN secret is missing}"
+        env:
+          RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
+          INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
+
+      - name: Refresh VRBO pricing (stale-first)
+        env:
+          RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
+          INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
+          MAX_LISTINGS: ${{ inputs.max_listings || '50' }}
+        run: |
+          set -euo pipefail
+          echo "POST $RAILWAY_API_URL/api/ingest/vrbo-pricing-refresh max=$MAX_LISTINGS"
+          curl --fail-with-body --show-error --silent --max-time 600 \
+            -X POST "$RAILWAY_API_URL/api/ingest/vrbo-pricing-refresh" \
+            -H "Content-Type: application/json" \
+            -H "X-Internal-Token: $INTERNAL_TRIGGER_TOKEN" \
+            -d "{\"maxListings\":$MAX_LISTINGS}" \
+            | tee /tmp/pricing.json
+          echo ""
+          jq '.summary' /tmp/pricing.json || true
+
+          LEVEL=$(jq -r '.summary.alertLevel // "unknown"' /tmp/pricing.json)
+          REASON=$(jq -r '.summary.alertReason // ""' /tmp/pricing.json)
+          ATTEMPTED=$(jq -r '.summary.attempted // 0' /tmp/pricing.json)
+          OK=$(jq -r '.summary.ok // 0' /tmp/pricing.json)
+          SKIPPED=$(jq -r '.summary.skippedNoPrice // 0' /tmp/pricing.json)
+          QUOTES=$(jq -r '.summary.totalQuotesWritten // 0' /tmp/pricing.json)
+
+          {
+            echo "## VRBO pricing refresh"
+            echo ""
+            echo "- Verdict: **${LEVEL}**${REASON:+ — ${REASON}}"
+            echo "- Listings attempted: ${ATTEMPTED} (ok=${OK}, skipped_no_price=${SKIPPED})"
+            echo "- Quotes written: ${QUOTES}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          case "$LEVEL" in
+            ok)   echo "PASS — VRBO pricing healthy (ok=$OK/$ATTEMPTED, quotes=$QUOTES)" ;;
+            warn) echo "::warning title=VRBO pricing degraded::${REASON}" ;;
+            fail) echo "::error title=VRBO pricing has gone dark::${REASON}"; exit 1 ;;
+            *)    echo "::warning title=VRBO pricing::summary.alertLevel missing from response" ;;
+          esac

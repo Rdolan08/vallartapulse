@@ -20,6 +20,7 @@
     "prune:airbnb": "tsx ./src/airbnb-prune.ts",
     "db:apply-views": "tsx ./src/setup-airbnb-comp-signal-view.ts",
     "report:airbnb-comp-signal": "tsx ./src/report-airbnb-comp-signal.ts",
+    "report:vv-coverage": "tsx ./src/report-vv-coverage.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "og": "tsx ./src/generate-og.ts"
   },

@@ -10,6 +10,18 @@ name: PVRPV Calendar Scrape (daily)
 #
 # Required GitHub repository secrets:
 #   RAILWAY_DATABASE_URL   prod Postgres connection string (already used elsewhere)
+#
+# Optional GitHub repository secrets (push-alert delivery):
+#   SLACK_WEBHOOK_URL      Slack incoming webhook for the ops channel. When
+#                          set, a "Calendar scrape dark" message is posted on
+#                          fail. When unset, the Slack step is skipped and
+#                          the GitHub-issue alert below is the only channel.
+#
+# Dedupe: a single GitHub issue labelled `calendar-scrape-dark` is reused for
+# the duration of an outage — first failure opens it, subsequent daily
+# failures comment on it (matching the airbnb-pricing-refresh.yml pattern).
+# Because this workflow only runs once per day, that naturally satisfies the
+# "re-alert only every 24h or when the situation changes" requirement.
 
 on:
   schedule:
@@ -18,6 +30,7 @@ on:
 
 permissions:
   contents: read
+  issues: write   # so the on-fail notify step can open / comment on the dedupe issue
 
 concurrency:
   group: pvrpv-calendar-scrape
@@ -27,6 +40,10 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Promoted to job-level so the Slack notify step's `if:` check on
+    # env.SLACK_WEBHOOK_URL is evaluated deterministically.
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -45,7 +62,216 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Run PVRPV calendar scraper against prod DB
+      - name: Run PVRPV + Vacation Vallarta calendar scraper against prod DB
+        id: scrape
         env:
           DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
-        run: pnpm --filter @workspace/scripts run scrape:calendar
+          PIPELINE_SUMMARY_OUT: /tmp/calendar-summary.json
+        run: |
+          set -uo pipefail
+          set +e
+          pnpm --filter @workspace/scripts run scrape:calendar
+          SCRIPT_EXIT=$?
+          set -e
+
+          if [ ! -s /tmp/calendar-summary.json ]; then
+            echo "::error title=Calendar scrape::No summary file produced (script exit=${SCRIPT_EXIT})"
+            # Synthesize a fail verdict so the Slack / GH-issue notify steps
+            # below still fire — a missing summary file IS the outage signal.
+            {
+              echo "level=fail"
+              echo "reason=No PIPELINE_SUMMARY_OUT produced (script exit=${SCRIPT_EXIT})"
+              echo "attempted=0"
+              echo "ok=0"
+              echo "failed=0"
+              echo "rows=0"
+              echo "per_source="
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          jq '.summary' /tmp/calendar-summary.json || true
+
+          # Same pass/fail vocabulary as airbnb-pricing-refresh.yml.
+          LEVEL=$(jq -r '.summary.alertLevel // "unknown"' /tmp/calendar-summary.json)
+          REASON=$(jq -r '.summary.alertReason // ""' /tmp/calendar-summary.json)
+          ATTEMPTED=$(jq -r '.summary.attempted // 0' /tmp/calendar-summary.json)
+          OK=$(jq -r '.summary.ok // 0' /tmp/calendar-summary.json)
+          FAILED=$(jq -r '.summary.failed // 0' /tmp/calendar-summary.json)
+          ROWS=$(jq -r '.summary.rowsWritten // 0' /tmp/calendar-summary.json)
+          # Compact per-source verdicts (single line) for the Slack/issue body.
+          PER_SOURCE=$(jq -r '[.summary.perSource[] | .source + "=" + .alertLevel] | join(", ")' /tmp/calendar-summary.json)
+
+          {
+            echo "## Calendar scrape (PVRPV + Vacation Vallarta)"
+            echo ""
+            echo "- Verdict: **${LEVEL}**${REASON:+ — ${REASON}}"
+            echo "- Listings attempted: ${ATTEMPTED} (ok=${OK}, failed=${FAILED})"
+            echo "- Rows written: ${ROWS}"
+            echo ""
+            echo "### Per-source"
+            echo ""
+            jq -r '.summary.perSource[] | "- **" + .source + "** — " + .alertLevel + (if .alertReason != "" then " — " + .alertReason else "" end) + " (attempted=" + (.attempted|tostring) + ", ok=" + (.ok|tostring) + ", failed=" + (.failed|tostring) + ", rows=" + (.rowsWritten|tostring) + ")"' /tmp/calendar-summary.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Stash the verdict for the notify steps below. We deliberately do
+          # NOT `exit 1` here on fail — that would short-circuit the Slack /
+          # GitHub-issue notify steps. The final "Fail the job" step at the
+          # bottom re-reads $LEVEL and exits non-zero so the run still goes
+          # red on the Actions tab.
+          {
+            echo "level=${LEVEL}"
+            # Slack/issue bodies need REASON on a single line; strip newlines.
+            echo "reason=${REASON//$'\n'/ }"
+            echo "attempted=${ATTEMPTED}"
+            echo "ok=${OK}"
+            echo "failed=${FAILED}"
+            echo "rows=${ROWS}"
+            echo "per_source=${PER_SOURCE}"
+          } >> "$GITHUB_OUTPUT"
+
+          case "$LEVEL" in
+            ok)
+              echo "PASS — calendar scrape healthy (ok=$OK/$ATTEMPTED, rows=$ROWS)"
+              ;;
+            warn)
+              echo "::warning title=Calendar scrape degraded::${REASON}"
+              ;;
+            fail)
+              echo "::error title=Calendar scrape has gone dark::${REASON}"
+              ;;
+            *)
+              echo "::warning title=Calendar scrape::summary.alertLevel missing"
+              ;;
+          esac
+
+      # ── Push notification: Slack ──────────────────────────────────────
+      # Only runs on a `fail` verdict AND only if SLACK_WEBHOOK_URL is set,
+      # so forks / dev repos without the secret stay quiet.
+      - name: Notify Slack on dark scrape
+        if: steps.scrape.outputs.level == 'fail' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          REASON: ${{ steps.scrape.outputs.reason }}
+          ATTEMPTED: ${{ steps.scrape.outputs.attempted }}
+          OK_COUNT: ${{ steps.scrape.outputs.ok }}
+          FAILED_COUNT: ${{ steps.scrape.outputs.failed }}
+          ROWS: ${{ steps.scrape.outputs.rows }}
+          PER_SOURCE: ${{ steps.scrape.outputs.per_source }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg reason "$REASON" \
+            --arg attempted "$ATTEMPTED" \
+            --arg ok "$OK_COUNT" \
+            --arg failed "$FAILED_COUNT" \
+            --arg rows "$ROWS" \
+            --arg per_source "$PER_SOURCE" \
+            --arg run_url "$RUN_URL" \
+            '{
+              text: ("Calendar scrape has gone dark — " + $reason),
+              blocks: [
+                { type: "header",
+                  text: { type: "plain_text", text: ":rotating_light: Calendar scrape has gone dark" } },
+                { type: "section",
+                  text: { type: "mrkdwn",
+                          text: ("*Reason:* " + $reason
+                                 + "\n*Listings:* " + $ok + "/" + $attempted + " ok"
+                                 + "  •  *Failed:* " + $failed
+                                 + "  •  *Rows written:* " + $rows
+                                 + (if $per_source != "" then "\n*Per-source:* " + $per_source else "" end)) } },
+                { type: "actions",
+                  elements: [
+                    { type: "button",
+                      text: { type: "plain_text", text: "View workflow run" },
+                      url: $run_url }
+                  ] }
+              ]
+            }' > /tmp/slack.json
+          curl --fail-with-body --show-error --silent --max-time 30 \
+            -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/slack.json
+
+      # ── Persistent dedupe: GitHub issue ───────────────────────────────
+      # One open issue labelled `calendar-scrape-dark` is reused for the
+      # duration of an outage — first failing run opens it, subsequent
+      # failing runs comment on it (one comment per day), operator closes
+      # it once data is flowing again.
+      - name: Open / update GitHub issue on dark scrape
+        if: steps.scrape.outputs.level == 'fail'
+        uses: actions/github-script@v7
+        env:
+          REASON: ${{ steps.scrape.outputs.reason }}
+          ATTEMPTED: ${{ steps.scrape.outputs.attempted }}
+          OK_COUNT: ${{ steps.scrape.outputs.ok }}
+          FAILED_COUNT: ${{ steps.scrape.outputs.failed }}
+          ROWS: ${{ steps.scrape.outputs.rows }}
+          PER_SOURCE: ${{ steps.scrape.outputs.per_source }}
+        with:
+          script: |
+            const reason = process.env.REASON || '(no reason reported)';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const perSource = process.env.PER_SOURCE || '';
+
+            const stats = [
+              `- Reason: **${reason}**`,
+              `- Listings: ${process.env.OK_COUNT}/${process.env.ATTEMPTED} ok (failed=${process.env.FAILED_COUNT})`,
+              `- Rows written: ${process.env.ROWS}`,
+              perSource ? `- Per-source: ${perSource}` : null,
+              `- Workflow run: ${runUrl}`,
+            ].filter(Boolean).join('\n');
+
+            const comment = [
+              `Calendar scrape failed at ${new Date().toISOString()}.`,
+              ``,
+              stats,
+            ].join('\n');
+
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'calendar-scrape-dark',
+              per_page: 10,
+            });
+
+            if (existing.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing[0].number,
+                body: comment,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Calendar scrape has gone dark',
+                labels: ['calendar-scrape-dark'],
+                body: [
+                  'The daily PVRPV + Vacation Vallarta calendar scrape is failing.',
+                  'The dashboard cards on `/sources` should be RED for the affected',
+                  'source(s), and the freshness check will start failing within 36h.',
+                  '',
+                  'Common causes: source DOM changes, network issues to the source',
+                  'site, or DB connectivity from GitHub Actions. Start by checking',
+                  'the workflow run logs and the per-source verdict above.',
+                  '',
+                  'Close this issue once a successful scrape has occurred.',
+                  '',
+                  '---',
+                  '',
+                  comment,
+                ].join('\n'),
+              });
+            }
+
+      # ── Final gate ────────────────────────────────────────────────────
+      # Now that the notify steps have run, fail the job loudly so the
+      # Actions tab shows red and any cross-workflow gating still works.
+      - name: Fail the job on dark scrape
+        if: steps.scrape.outputs.level == 'fail'
+        run: |
+          echo "Calendar scrape dark — failing job after notifications were sent."
+          exit 1

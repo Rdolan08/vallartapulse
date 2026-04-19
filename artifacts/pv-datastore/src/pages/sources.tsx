@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGetDataSources, useSyncDataSource } from "@workspace/api-client-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { RefreshCw, ExternalLink, Database, Zap, Clock, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { format, formatDistanceToNow, isAfter, subHours, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { apiUrl } from "@/lib/api-base";
+import { apiUrl, apiFetch } from "@/lib/api-base";
 
 function freshnessBadge(lastSyncedAt: string | null | undefined): "fresh" | "stale" | "never" {
   if (!lastSyncedAt) return "never";
@@ -18,6 +18,214 @@ function freshnessBadge(lastSyncedAt: string | null | undefined): "fresh" | "sta
   if (isAfter(date, subHours(new Date(), 24))) return "fresh";
   if (isAfter(date, subDays(new Date(), 7))) return "stale";
   return "stale";
+}
+
+interface PipelineFreshness {
+  alertLevel: "ok" | "warn" | "fail";
+  alertReason: string;
+  listingsTotal?: number;
+  // Airbnb-pricing-only fields (optional on other endpoints):
+  listingsQuotedEver?: number;
+  listingsNeverQuoted?: number;
+  newestQuoteAt?: string | null;
+  // VV-pricing-only:
+  listingsCovered?: number;
+  // VRBO + VV pricing:
+  newestScrapeAt?: string | null;
+  // Common stale-counter (omitted for non-cohort pipelines like pricing-tool):
+  listingsStale14d?: number;
+  // Pricing-tool uptime probe (no cohort, just last successful smoke hit):
+  lastSuccessAt?: string | null;
+}
+
+type PipelineMode = "cohort" | "uptime";
+
+interface PipelineCardConfig {
+  endpoint: string;
+  labelEn: string;
+  labelEs: string;
+  /**
+   * "cohort"  → headline is "{label} — N listings stale > 14 days"
+   *             (Airbnb / VRBO / VV pricing pipelines).
+   * "uptime"  → headline is "{label} — last successful check {ago}"
+   *             (pricing-tool smoke probe; no listing cohort).
+   */
+  mode: PipelineMode;
+  /** Where the "newest" timestamp lives in the response shape (cohort mode). */
+  newestField?: "newestQuoteAt" | "newestScrapeAt";
+  /** Plain noun for the "newest" line (cohort mode). */
+  newestLabelEn?: string;
+  newestLabelEs?: string;
+}
+
+const PIPELINES: PipelineCardConfig[] = [
+  {
+    endpoint: "/api/ingest/airbnb-pricing-freshness",
+    labelEn: "Airbnb pricing",
+    labelEs: "Precios de Airbnb",
+    mode: "cohort",
+    newestField: "newestQuoteAt",
+    newestLabelEn: "Newest quote",
+    newestLabelEs: "Cotización más reciente",
+  },
+  {
+    endpoint: "/api/ingest/pvrpv-pricing-freshness",
+    labelEn: "PVRPV pricing",
+    labelEs: "Precios de PVRPV",
+    newestField: "newestQuoteAt",
+    newestLabelEn: "Newest quote",
+    newestLabelEs: "Cotización más reciente",
+  },
+  {
+    endpoint: "/api/ingest/vrbo-pricing-freshness",
+    labelEn: "VRBO pricing",
+    labelEs: "Precios de VRBO",
+    newestField: "newestQuoteAt",
+    newestLabelEn: "Newest quote",
+    newestLabelEs: "Cotización más reciente",
+  },
+  {
+    endpoint: "/api/ingest/vrbo-scrape-freshness",
+    labelEn: "VRBO scrape",
+    labelEs: "Extracción de VRBO",
+    mode: "cohort",
+    newestField: "newestScrapeAt",
+    newestLabelEn: "Newest scrape",
+    newestLabelEs: "Extracción más reciente",
+  },
+  {
+    endpoint: "/api/ingest/vacation-vallarta-pricing-freshness",
+    labelEn: "Vacation Vallarta pricing",
+    labelEs: "Precios de Vacation Vallarta",
+    mode: "cohort",
+    newestField: "newestScrapeAt",
+    newestLabelEn: "Newest refresh",
+    newestLabelEs: "Actualización más reciente",
+  },
+  {
+    endpoint: "/api/health/pricing-tool",
+    labelEn: "Pricing tool",
+    labelEs: "Herramienta de precios",
+    mode: "uptime",
+  },
+];
+
+/**
+ * Pipeline-health card. Renders one freshness banner driven by a
+ * pipeline-specific freshness endpoint. All endpoints share the same
+ * `alertLevel` / `alertReason` / `listingsTotal` / `listingsStale14d`
+ * vocabulary so a multi-day silent outage in any pricing pipeline is
+ * visible within one cycle.
+ */
+function PipelineHealthCard({
+  cfg,
+  t,
+  lang,
+}: {
+  cfg: PipelineCardConfig;
+  t: (en: string, es: string) => string;
+  lang: "en" | "es";
+}) {
+  const [data, setData] = useState<PipelineFreshness | null>(null);
+  const [errored, setErrored] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<PipelineFreshness>(cfg.endpoint)
+      .then((j) => {
+        if (!cancelled) setData(j);
+      })
+      .catch(() => {
+        if (!cancelled) setErrored(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cfg.endpoint]);
+
+  if (errored) return null;
+  if (!data) {
+    return <Skeleton className="h-20 rounded-xl" />;
+  }
+
+  const tone =
+    data.alertLevel === "fail"
+      ? "bg-destructive/10 border-destructive/40 text-destructive"
+      : data.alertLevel === "warn"
+        ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300"
+        : "bg-primary/5 border-primary/20 text-foreground";
+
+  const Icon = data.alertLevel === "ok" ? CheckCircle2 : AlertCircle;
+  const label = lang === "es" ? cfg.labelEs : cfg.labelEn;
+
+  // ── Headline + last-refresh derived per mode ──────────────────────────────
+  let headline: string;
+  let lastRefreshText: string;
+  let cohortLine: string | null = null;
+
+  if (cfg.mode === "uptime") {
+    const ts = data.lastSuccessAt ?? null;
+    lastRefreshText = ts
+      ? formatDistanceToNow(new Date(ts), { addSuffix: true })
+      : t("never", "nunca");
+    headline = t(
+      `${label} — last successful check ${lastRefreshText}`,
+      `${label} — última verificación exitosa ${lastRefreshText}`,
+    );
+  } else {
+    const newestRaw =
+      (cfg.newestField === "newestQuoteAt" ? data.newestQuoteAt : data.newestScrapeAt) ?? null;
+    lastRefreshText = newestRaw
+      ? formatDistanceToNow(new Date(newestRaw), { addSuffix: true })
+      : t("never", "nunca");
+    const stale = data.listingsStale14d ?? 0;
+    headline = t(
+      `${label} — ${stale} listings stale > 14 days`,
+      `${label} — ${stale} anuncios sin actualizar > 14 días`,
+    );
+    const total = data.listingsTotal ?? 0;
+    cohortLine = `${t("Cohort", "Cohorte")}: ${total.toLocaleString()} · ${
+      lang === "es" ? cfg.newestLabelEs : cfg.newestLabelEn
+    }: ${lastRefreshText}`;
+  }
+
+  return (
+    <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3 text-sm", tone)}>
+      <Icon className="w-4 h-4 mt-0.5 shrink-0" />
+      <div className="flex-1 space-y-1">
+        <div className="font-medium">{headline}</div>
+        <div className="text-xs font-medium flex items-center gap-1.5 opacity-90">
+          <Clock className="w-3 h-3" />
+          {t("Last successful refresh", "Última actualización exitosa")}: {lastRefreshText}
+        </div>
+        {cohortLine && <div className="text-xs opacity-80">{cohortLine}</div>}
+        {data.alertReason && (
+          <div className="text-xs font-medium">{data.alertReason}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Stack of pass/fail banners — one per pricing/calendar pipeline
+ * (Airbnb, VRBO, Vacation Vallarta). Same shape signal across all
+ * three so the dashboard never has a blind spot.
+ */
+function PipelinesHealth({
+  t,
+  lang,
+}: {
+  t: (en: string, es: string) => string;
+  lang: "en" | "es";
+}) {
+  return (
+    <div className="space-y-3 mb-6">
+      {PIPELINES.map((cfg) => (
+        <PipelineHealthCard key={cfg.endpoint} cfg={cfg} t={t} lang={lang} />
+      ))}
+    </div>
+  );
 }
 
 export default function Sources() {
@@ -121,6 +329,9 @@ export default function Sources() {
           </Button>
         </div>
       </div>
+
+      {/* ── Pipeline health banners (Airbnb / VRBO / VV) ───────────── */}
+      <PipelinesHealth t={t} lang={lang as "en" | "es"} />
 
       {/* ── Info banner ─────────────────────────────────────────────── */}
       <div className="flex items-start gap-3 bg-primary/5 border border-primary/15 rounded-xl px-4 py-3 mb-8 text-sm text-muted-foreground">

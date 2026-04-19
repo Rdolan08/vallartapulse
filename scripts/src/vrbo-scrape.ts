@@ -18,11 +18,36 @@
  *   pnpm --filter @workspace/scripts run scrape:vrbo
  */
 
+import { writeFileSync } from "node:fs";
 import { sql, eq } from "drizzle-orm";
 import { db, rentalListingsTable } from "@workspace/db";
 import { fetchVrboListing } from "../../artifacts/api-server/src/lib/ingest/vrbo-adapter.js";
 import { discoverVrboListings } from "../../artifacts/api-server/src/lib/ingest/vrbo-search-adapter.js";
 import { closeBrowser } from "../../artifacts/api-server/src/lib/ingest/browser-fetch.js";
+
+type VrboSummary = {
+  attempted: number;
+  ok: number;
+  failed: number;
+  discovered: number;
+  discoveryErrors: number;
+  alertLevel: "ok" | "warn" | "fail";
+  alertReason: string;
+};
+
+function emitSummary(s: VrboSummary): void {
+  const summary = { source: "vrbo_scrape", ...s };
+  console.log("SUMMARY: " + JSON.stringify(summary));
+  const outPath = process.env.PIPELINE_SUMMARY_OUT;
+  if (outPath) {
+    try {
+      writeFileSync(outPath, JSON.stringify({ summary }, null, 2));
+      console.log(`Wrote summary to ${outPath}`);
+    } catch (e) {
+      console.error(`Failed to write summary to ${outPath}: ${(e as Error).message}`);
+    }
+  }
+}
 
 const SOURCE_PLATFORM = "vrbo";
 const MAX_LISTINGS = 200;
@@ -135,6 +160,17 @@ async function main(): Promise<void> {
 
   if (urls.length === 0) {
     console.log("Nothing to do — no VRBO URLs from discovery or DB.");
+    // Still emit a structured summary so the GH Actions wrapper can light
+    // up a 'warn' verdict instead of failing on a missing summary file.
+    emitSummary({
+      attempted: 0,
+      ok: 0,
+      failed: 0,
+      discovered: discovery.listingUrls.length,
+      discoveryErrors: discovery.errors.length,
+      alertLevel: "warn",
+      alertReason: "No VRBO URLs to process (discovery + DB both empty)",
+    });
     return;
   }
 
@@ -150,7 +186,36 @@ async function main(): Promise<void> {
   }
 
   console.log(`\nDone. refreshed=${ok} failed=${failed} total=${urls.length}`);
-  if (failed > 0) process.exitCode = 1;
+
+  // ── Pass/fail signal (parity with airbnb-pricing-runner) ──────────────────
+  // Same vocabulary so /sources, freshness.sh, and the GH Actions wrapper
+  // can light up consistently when this pipeline goes dark.
+  let alertLevel: "ok" | "warn" | "fail" = "ok";
+  let alertReason = "";
+  const attempted = urls.length;
+  if (attempted === 0) {
+    alertLevel = "warn";
+    alertReason = "No VRBO URLs to process (discovery + DB both empty)";
+  } else if (ok === 0) {
+    alertLevel = "fail";
+    alertReason = `All ${attempted} VRBO listings failed — VRBO scrape has gone dark`;
+  } else if (failed * 2 >= attempted) {
+    alertLevel = "warn";
+    alertReason = `${failed}/${attempted} VRBO listings failed (>=50%)`;
+  }
+
+  emitSummary({
+    attempted,
+    ok,
+    failed,
+    discovered: discovery.listingUrls.length,
+    discoveryErrors: discovery.errors.length,
+    alertLevel,
+    alertReason,
+  });
+
+  if (alertLevel === "fail") process.exitCode = 1;
+  else if (failed > 0) process.exitCode = 0; // partial failure already reflected in summary
 }
 
 main()

@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { apiUrl } from "@/lib/api-base";
+import { apiFetch } from "@/lib/api-base";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -72,11 +72,15 @@ interface PricingLayer {
   note: string;
 }
 
+interface SeasonalSweepEntry {
+  base: number;
+  all_in: number | null;
+}
 interface SeasonalSweep {
-  low: number;
-  shoulder: number;
-  high: number;
-  peak: number;
+  low: SeasonalSweepEntry;
+  shoulder: SeasonalSweepEntry;
+  high: SeasonalSweepEntry;
+  peak: SeasonalSweepEntry;
 }
 
 interface BuildingContext {
@@ -88,6 +92,17 @@ interface BuildingContext {
   range_high: number;
   positioning: "underpriced" | "aligned" | "premium";
   positioning_statement: string;
+}
+
+interface GuestPaidBreakdown {
+  nightly_price_usd: number | null;
+  cleaning_fee_usd: number | null;
+  service_fee_usd: number | null;
+  taxes_usd: number | null;
+  total_price_usd: number | null;
+  stay_length_nights: number | null;
+  currency: string;
+  collected_at: string;
 }
 
 interface CompEntry {
@@ -105,6 +120,8 @@ interface CompEntry {
   building_name: string | null;
   score: number;
   match_reasons: string[];
+  effective_per_night_usd: number | null;
+  guest_paid: GuestPaidBreakdown | null;
 }
 
 interface CompsResult {
@@ -132,6 +149,9 @@ interface CompsResult {
   conservative_price: number;
   recommended_price: number;
   stretch_price: number;
+  recommended_effective_per_night_usd: number | null;
+  pool_median_fees_per_night_usd: number | null;
+  pool_fees_sample_size: number;
   base_comp_median: number;
   building_adjustment_pct: number | null;
   pricing_breakdown: PricingLayer[];
@@ -257,17 +277,6 @@ const CONFIDENCE_CONFIG: Record<string, { label: string; color: string; bg: stri
   low:           { label: "Low Confidence",    color: "#F97316", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.3)" },
   guidance_only: { label: "Guidance Only",     color: "#EF4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)" },
 };
-
-// ── API helpers ────────────────────────────────────────────────────────────────
-
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(apiUrl(path), options);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `API error: HTTP ${res.status}`);
-  }
-  return res.json() as Promise<T>;
-}
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -536,11 +545,8 @@ export default function PricingToolPage() {
   useEffect(() => {
     (async () => {
       try {
-        const bRes = await fetch(apiUrl("/api/rental/buildings"));
-        if (bRes.ok) {
-          const bData = await bRes.json() as { buildings: BuildingEntry[] };
-          setBuildings(bData.buildings ?? []);
-        }
+        const bData = await apiFetch<{ buildings: BuildingEntry[] }>("/api/rental/buildings");
+        setBuildings(bData.buildings ?? []);
       } catch { /* silent */ } finally {
         setLoadingMeta(false);
       }
@@ -1098,11 +1104,35 @@ export default function PricingToolPage() {
                       <span className="text-6xl font-extrabold tracking-tight" style={{ color: "#00C2A8" }}>
                         {compsResult.recommended_price ? formatCurrency(compsResult.recommended_price) : "—"}
                       </span>
-                      <span className="text-lg font-medium text-muted-foreground">/night</span>
+                      <span className="text-lg font-medium text-muted-foreground">
+                        /{t("night base", "noche base")}
+                      </span>
                     </div>
                     <p className="text-xs mt-1.5" style={{ color: "rgba(154,165,177,0.6)" }}>
                       {compsResult.seasonal.display_label}
                     </p>
+                    {compsResult.recommended_price && (
+                      <div className="mt-2.5 inline-flex items-baseline gap-2 px-3 py-1.5 rounded-lg"
+                        style={{ background: "rgba(0,194,168,0.08)", border: "1px solid rgba(0,194,168,0.18)" }}>
+                        <span className="text-[10px] uppercase tracking-widest font-semibold"
+                          style={{ color: "rgba(0,194,168,0.75)" }}>
+                          {t("All-in / night", "Todo incluido / noche")}
+                        </span>
+                        <span className="text-xl font-bold tabular-nums" style={{ color: "#00C2A8" }}>
+                          {compsResult.recommended_effective_per_night_usd != null
+                            ? formatCurrency(compsResult.recommended_effective_per_night_usd)
+                            : formatCurrency(compsResult.recommended_price)}
+                        </span>
+                        <span className="text-[10px]" style={{ color: "rgba(154,165,177,0.55)" }}>
+                          {compsResult.recommended_effective_per_night_usd != null && compsResult.pool_median_fees_per_night_usd != null
+                            ? t(
+                                `incl. ~${formatCurrency(compsResult.pool_median_fees_per_night_usd)} fees/taxes (median of ${compsResult.pool_fees_sample_size} comps)`,
+                                `incl. ~${formatCurrency(compsResult.pool_median_fees_per_night_usd)} cargos/imp. (mediana de ${compsResult.pool_fees_sample_size} comparables)`,
+                              )
+                            : t("no comp fee data — same as base", "sin datos de cargos — igual a base")}
+                        </span>
+                      </div>
+                    )}
                     {compsResult.recommended_price && (
                       <div className="flex items-center gap-5 mt-3">
                         <div>
@@ -1231,7 +1261,7 @@ export default function PricingToolPage() {
                         { key: "high" as const,      label: t("High Season", "Temporada Alta"),    sublabel: "Nov, Jan, Apr",  season: "high"     },
                         { key: "peak" as const,      label: t("Peak Season", "Temporada Pico"),    sublabel: "Feb, Mar, Dec",  season: "peak"     },
                       ].map(({ key, label, sublabel, season }) => {
-                        const price = compsResult.seasonal_sweep![key];
+                        const entry = compsResult.seasonal_sweep![key];
                         const sc = SEASON_COLOR[season];
                         const isCurrent = compsResult.seasonal.season === season;
                         return (
@@ -1247,13 +1277,38 @@ export default function PricingToolPage() {
                             <p className="text-[10px] font-semibold uppercase tracking-wide mb-1"
                               style={{ color: isCurrent ? sc.text : "rgba(154,165,177,0.6)" }}>{label}</p>
                             <p className="text-2xl font-extrabold" style={{ color: isCurrent ? sc.text : "rgba(245,247,250,0.9)" }}>
-                              {formatCurrency(price)}
+                              {formatCurrency(entry.base)}
                             </p>
-                            <p className="text-[10px] mt-1" style={{ color: "rgba(154,165,177,0.45)" }}>{sublabel}</p>
+                            <p className="text-[9px] uppercase tracking-wide mt-0.5" style={{ color: "rgba(154,165,177,0.5)" }}>
+                              {t("base / night", "base / noche")}
+                            </p>
+                            <div className="mt-1.5 px-2 py-0.5 rounded-md" style={{
+                              background: isCurrent ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
+                              border: `1px solid ${isCurrent ? sc.border : "rgba(255,255,255,0.05)"}`,
+                            }}>
+                              <p className="text-sm font-bold tabular-nums" style={{ color: isCurrent ? sc.text : "rgba(245,247,250,0.85)" }}>
+                                {formatCurrency(entry.all_in ?? entry.base)}
+                              </p>
+                              <p className="text-[9px] uppercase tracking-wide" style={{ color: "rgba(154,165,177,0.55)" }}>
+                                {t("all-in / night", "todo incl. / noche")}
+                              </p>
+                            </div>
+                            <p className="text-[10px] mt-1.5" style={{ color: "rgba(154,165,177,0.45)" }}>{sublabel}</p>
                           </div>
                         );
                       })}
                     </div>
+                    <p className="text-[10px] mt-2.5 text-center" style={{ color: "rgba(154,165,177,0.5)" }}>
+                      {compsResult.pool_median_fees_per_night_usd != null
+                        ? t(
+                            `All-in adds ~${formatCurrency(compsResult.pool_median_fees_per_night_usd)}/night in fees & taxes (median of ${compsResult.pool_fees_sample_size} comps)`,
+                            `Todo incl. suma ~${formatCurrency(compsResult.pool_median_fees_per_night_usd)}/noche en cargos e impuestos (mediana de ${compsResult.pool_fees_sample_size} comparables)`,
+                          )
+                        : t(
+                            "No comp fee data available — all-in matches base.",
+                            "Sin datos de cargos comparables — todo incl. igual a base.",
+                          )}
+                    </p>
                     {compsResult.seasonal.event_name && (
                       <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg"
                         style={{ background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)" }}>
@@ -1409,46 +1464,168 @@ export default function PricingToolPage() {
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                         <CardContent className="pt-4">
-                          <div className="space-y-2">
-                            {compsResult.selected_comps.map(c => (
-                              <div key={c.rank} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                                <span className="text-xs font-bold w-5 text-center shrink-0"
-                                  style={{ color: "rgba(154,165,177,0.4)" }}>#{c.rank}</span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-xs text-foreground">{c.bedrooms}BR · {c.bathrooms}BA</span>
-                                    {c.building_name && (
-                                      <span className="text-[10px] px-1.5 py-0.5 rounded"
-                                        style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}>
-                                        {c.building_name}
-                                      </span>
-                                    )}
-                                    {c.rating_overall && (
-                                      <span className="text-[10px]" style={{ color: "rgba(154,165,177,0.5)" }}>
-                                        {c.rating_overall.toFixed(1)} ★
-                                      </span>
+                          {/* Column header — apples-to-apples breakdown */}
+                          <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_repeat(6,minmax(60px,72px))_auto_auto] gap-3 px-3 pb-2 text-[9px] font-semibold uppercase tracking-widest"
+                            style={{ color: "rgba(154,165,177,0.45)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                            <span className="w-5" />
+                            <span>{t("Listing", "Listado")}</span>
+                            <span className="text-right">{t("Nightly", "Por noche")}</span>
+                            <span className="text-right">{t("Cleaning", "Limpieza")}</span>
+                            <span className="text-right">{t("Service", "Servicio")}</span>
+                            <span className="text-right">{t("Taxes", "Impuestos")}</span>
+                            <span className="text-right">{t("Total", "Total")}</span>
+                            <span className="text-right">{t("Eff/Night", "Eff/Noche")}</span>
+                            <span className="text-right">{t("Score", "Puntaje")}</span>
+                            <span />
+                          </div>
+                          <div className="space-y-2 mt-2">
+                            {compsResult.selected_comps.map(c => {
+                              const fmt = (v: number | null | undefined) =>
+                                v == null ? "—" : formatCurrency(v);
+                              const gp = c.guest_paid;
+                              const stayNights = gp?.stay_length_nights ?? null;
+                              return (
+                                <div key={c.rank} className="px-3 py-2.5 rounded-xl"
+                                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                  {/* Desktop: single-row grid */}
+                                  <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_repeat(6,minmax(60px,72px))_auto_auto] gap-3 items-center">
+                                    <span className="text-xs font-bold w-5 text-center"
+                                      style={{ color: "rgba(154,165,177,0.4)" }}>#{c.rank}</span>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-xs text-foreground">{c.bedrooms}BR · {c.bathrooms}BA</span>
+                                        {c.building_name && (
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded"
+                                            style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}>
+                                            {c.building_name}
+                                          </span>
+                                        )}
+                                        {c.rating_overall && (
+                                          <span className="text-[10px]" style={{ color: "rgba(154,165,177,0.5)" }}>
+                                            {c.rating_overall.toFixed(1)} ★
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-[10px] mt-0.5 truncate" style={{ color: "rgba(154,165,177,0.4)" }}>
+                                        {c.neighborhood} · {c.distance_to_beach_m}m · Tier {c.beach_tier}
+                                        {stayNights ? ` · ${stayNights}n quote` : ""}
+                                      </p>
+                                    </div>
+                                    <span className="text-right text-sm font-semibold tabular-nums">
+                                      {formatCurrency(c.nightly_price_usd)}
+                                    </span>
+                                    <span className="text-right text-xs tabular-nums"
+                                      style={{ color: gp?.cleaning_fee_usd == null ? "rgba(154,165,177,0.35)" : "rgba(245,247,250,0.85)" }}>
+                                      {fmt(gp?.cleaning_fee_usd)}
+                                    </span>
+                                    <span className="text-right text-xs tabular-nums"
+                                      style={{ color: gp?.service_fee_usd == null ? "rgba(154,165,177,0.35)" : "rgba(245,247,250,0.85)" }}>
+                                      {fmt(gp?.service_fee_usd)}
+                                    </span>
+                                    <span className="text-right text-xs tabular-nums"
+                                      style={{ color: gp?.taxes_usd == null ? "rgba(154,165,177,0.35)" : "rgba(245,247,250,0.85)" }}>
+                                      {fmt(gp?.taxes_usd)}
+                                    </span>
+                                    <span className="text-right text-sm font-bold tabular-nums"
+                                      style={{ color: gp?.total_price_usd == null ? "rgba(154,165,177,0.35)" : "#00C2A8" }}>
+                                      {fmt(gp?.total_price_usd)}
+                                    </span>
+                                    <span className="text-right text-sm font-semibold tabular-nums"
+                                      style={{ color: c.effective_per_night_usd == null ? "rgba(154,165,177,0.45)" : "rgba(245,247,250,0.95)" }}
+                                      title={c.effective_per_night_usd == null
+                                        ? t("No quote on file — falls back to nightly", "Sin cotización — usa precio por noche")
+                                        : t(`Total ÷ ${stayNights} nights`, `Total ÷ ${stayNights} noches`)}>
+                                      {c.effective_per_night_usd != null
+                                        ? formatCurrency(c.effective_per_night_usd)
+                                        : formatCurrency(c.nightly_price_usd)}
+                                    </span>
+                                    <span className="text-right text-[10px]" style={{ color: "rgba(154,165,177,0.4)" }}>
+                                      {c.score}
+                                    </span>
+                                    {c.source_url ? (
+                                      <a href={c.source_url} target="_blank" rel="noopener noreferrer"
+                                        className="text-muted-foreground hover:text-primary transition-colors">
+                                        <Link2 className="w-3.5 h-3.5" />
+                                      </a>
+                                    ) : <span />}
+                                  </div>
+
+                                  {/* Mobile: stacked layout */}
+                                  <div className="md:hidden">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-bold w-5 text-center shrink-0"
+                                        style={{ color: "rgba(154,165,177,0.4)" }}>#{c.rank}</span>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-xs text-foreground">{c.bedrooms}BR · {c.bathrooms}BA</span>
+                                          {c.building_name && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded"
+                                              style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}>
+                                              {c.building_name}
+                                            </span>
+                                          )}
+                                          {c.rating_overall && (
+                                            <span className="text-[10px]" style={{ color: "rgba(154,165,177,0.5)" }}>
+                                              {c.rating_overall.toFixed(1)} ★
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="text-[10px] mt-0.5" style={{ color: "rgba(154,165,177,0.4)" }}>
+                                          {c.neighborhood} · {c.distance_to_beach_m}m · Tier {c.beach_tier}
+                                        </p>
+                                      </div>
+                                      {c.source_url && (
+                                        <a href={c.source_url} target="_blank" rel="noopener noreferrer"
+                                          className="shrink-0 text-muted-foreground hover:text-primary transition-colors">
+                                          <Link2 className="w-3.5 h-3.5" />
+                                        </a>
+                                      )}
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-1.5 mt-2.5 pt-2.5"
+                                      style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                                      {[
+                                        { label: t("Nightly", "Por noche"), value: formatCurrency(c.nightly_price_usd), accent: false },
+                                        { label: t("Cleaning", "Limpieza"), value: fmt(gp?.cleaning_fee_usd), accent: false, missing: gp?.cleaning_fee_usd == null },
+                                        { label: t("Service", "Servicio"), value: fmt(gp?.service_fee_usd), accent: false, missing: gp?.service_fee_usd == null },
+                                        { label: t("Taxes", "Impuestos"), value: fmt(gp?.taxes_usd), accent: false, missing: gp?.taxes_usd == null },
+                                        { label: t("Total", "Total"), value: fmt(gp?.total_price_usd), accent: true, missing: gp?.total_price_usd == null },
+                                        { label: t("Eff/Night", "Eff/Noche"),
+                                          value: c.effective_per_night_usd != null
+                                            ? formatCurrency(c.effective_per_night_usd)
+                                            : formatCurrency(c.nightly_price_usd),
+                                          accent: true,
+                                          missing: c.effective_per_night_usd == null },
+                                      ].map((cell, idx) => (
+                                        <div key={idx} className="text-center">
+                                          <p className="text-[9px] uppercase tracking-wide"
+                                            style={{ color: "rgba(154,165,177,0.5)" }}>{cell.label}</p>
+                                          <p className="text-[11px] font-semibold tabular-nums mt-0.5"
+                                            style={{
+                                              color: cell.missing
+                                                ? "rgba(154,165,177,0.35)"
+                                                : cell.accent ? "#00C2A8" : "rgba(245,247,250,0.9)",
+                                            }}>
+                                            {cell.value}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {stayNights && (
+                                      <p className="text-[9px] mt-1.5 text-right" style={{ color: "rgba(154,165,177,0.35)" }}>
+                                        {t(`Quote: ${stayNights}-night stay`, `Cotización: ${stayNights} noches`)}
+                                      </p>
                                     )}
                                   </div>
-                                  <p className="text-[10px] mt-0.5" style={{ color: "rgba(154,165,177,0.4)" }}>
-                                    {c.neighborhood} · {c.distance_to_beach_m}m to beach · Tier {c.beach_tier}
-                                  </p>
                                 </div>
-                                <div className="text-right shrink-0">
-                                  <p className="text-sm font-bold">{formatCurrency(c.nightly_price_usd)}</p>
-                                  <p className="text-[10px]" style={{ color: "rgba(154,165,177,0.4)" }}>
-                                    score {c.score}
-                                  </p>
-                                </div>
-                                {c.source_url && (
-                                  <a href={c.source_url} target="_blank" rel="noopener noreferrer"
-                                    className="shrink-0 text-muted-foreground hover:text-primary transition-colors">
-                                    <Link2 className="w-3.5 h-3.5" />
-                                  </a>
-                                )}
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
+                          <p className="text-[10px] mt-3 text-center" style={{ color: "rgba(154,165,177,0.4)" }}>
+                            {t(
+                              "Cleaning, service, taxes, and total reflect the latest guest-paid quote on file. \"—\" means no quote available for that listing yet.",
+                              "Limpieza, servicio, impuestos y total reflejan la última cotización pagada por el huésped. \"—\" significa que aún no hay cotización disponible.",
+                            )}
+                          </p>
                         </CardContent>
                       </motion.div>
                     )}

@@ -1,0 +1,266 @@
+name: Pricing Tool Smoke Test
+
+# End-to-end smoke check for the /pricing-tool page's "Get My Market
+# Price" path. POSTs a minimal valid payload to the **public** SPA URL
+# (https://www.vallartapulse.com/api/rental/comps) — deliberately *not*
+# the Railway origin — so this exercises the full chain that broke twice
+# in production:
+#
+#   user → Vercel SPA host → Vercel /api/* rewrite → Railway API → comps
+#
+# When the rewrite breaks (missing/typo'd VITE_API_URL on Vercel, missing
+# vercel.json /api/:path* rule, etc.) the response is Vercel's HTML 404
+# instead of JSON. This workflow catches that within one cycle and pages
+# via the same Slack + GitHub-issue pattern as airbnb-pricing-refresh.yml.
+#
+# Triggers:
+#   - daily cron (07:30 UTC, 10 min after the Airbnb pricing refresh so
+#     the alert channel isn't doing two pages at once)
+#   - workflow_dispatch (manual re-run after a fix)
+#   - repository_dispatch (Vercel deploy hook → POST event_type:
+#     "vercel-deploy" → run smoke immediately so a bad env var is caught
+#     within minutes of deploy, not the next morning)
+#
+# Required GitHub repository secrets:
+#   (none — the public URL is hit anonymously)
+#
+# Optional GitHub repository secrets:
+#   SLACK_WEBHOOK_URL    Slack incoming webhook for the ops channel.
+#   SMOKE_TARGET_URL     Override the smoke target. Defaults to
+#                        https://www.vallartapulse.com/api/rental/comps.
+#                        Useful for testing against a Vercel preview
+#                        deploy.
+
+on:
+  schedule:
+    - cron: "30 7 * * *"   # daily 07:30 UTC
+  workflow_dispatch:
+  repository_dispatch:
+    types: [vercel-deploy, pricing-tool-smoke]
+
+permissions:
+  contents: read
+  issues: write   # so the on-fail step can open / comment on the dedupe issue
+
+concurrency:
+  group: pricing-tool-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SMOKE_TARGET_URL: ${{ secrets.SMOKE_TARGET_URL || 'https://www.vallartapulse.com/api/rental/comps' }}
+    steps:
+      - name: POST minimal valid payload to /api/rental/comps
+        id: smoke
+        run: |
+          set -euo pipefail
+          echo "POST $SMOKE_TARGET_URL"
+
+          # Minimal payload that satisfies CompsRequestSchema. Picked a
+          # neighborhood that's always populated (Zona Romantica) and a
+          # mid-range bed/bath/distance so the engine can build a pool
+          # under any seasonal load.
+          PAYLOAD='{
+            "neighborhood_normalized": "Zona Romantica",
+            "bedrooms": 2,
+            "bathrooms": 2,
+            "distance_to_beach_m": 300
+          }'
+
+          # -w writes status + content-type on stderr, body to stdout.
+          # --fail-with-body keeps the body on >=400 so we can show it.
+          HTTP_OUT=$(mktemp)
+          HTTP_META=$(mktemp)
+          set +e
+          curl --silent --show-error --max-time 60 \
+            -o "$HTTP_OUT" \
+            -w "status=%{http_code}\ncontent_type=%{content_type}\n" \
+            -X POST "$SMOKE_TARGET_URL" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -d "$PAYLOAD" \
+            > "$HTTP_META"
+          CURL_RC=$?
+          set -e
+
+          STATUS=$(grep '^status=' "$HTTP_META" | cut -d= -f2)
+          CTYPE=$(grep '^content_type=' "$HTTP_META" | cut -d= -f2)
+          echo "HTTP $STATUS  content-type=$CTYPE  curl_rc=$CURL_RC"
+
+          LEVEL="ok"
+          REASON=""
+          RECOMMENDED="null"
+
+          if [ "$CURL_RC" -ne 0 ]; then
+            LEVEL="fail"
+            REASON="curl failed with exit code $CURL_RC against $SMOKE_TARGET_URL"
+          elif [ "$STATUS" != "200" ]; then
+            LEVEL="fail"
+            REASON="Expected HTTP 200 from $SMOKE_TARGET_URL, got $STATUS"
+          elif ! echo "$CTYPE" | grep -qi 'application/json'; then
+            LEVEL="fail"
+            REASON="Expected content-type application/json, got '$CTYPE' — likely Vercel /api/* misroute returning HTML 404"
+          else
+            # Confirm the body is JSON-parseable and contains the
+            # recommended_price field. recommended_price MAY be null
+            # (guidance_only confidence), so we only require the field's
+            # presence — not a specific value.
+            if ! jq -e 'has("recommended_price")' "$HTTP_OUT" > /dev/null; then
+              LEVEL="fail"
+              REASON="Response JSON is missing recommended_price field"
+            else
+              RECOMMENDED=$(jq -r '.recommended_price // "null"' "$HTTP_OUT")
+            fi
+          fi
+
+          {
+            echo "## Pricing tool smoke check"
+            echo ""
+            echo "- Target: \`$SMOKE_TARGET_URL\`"
+            echo "- HTTP status: \`$STATUS\`"
+            echo "- Content-Type: \`$CTYPE\`"
+            echo "- Verdict: **$LEVEL**${REASON:+ — $REASON}"
+            echo "- recommended_price: \`$RECOMMENDED\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$LEVEL" = "fail" ]; then
+            echo "::error title=Pricing tool smoke failed::$REASON"
+            # Show the first 40 lines of the body so an HTML 404 is
+            # obvious in the Actions log.
+            echo "---- response body (first 40 lines) ----"
+            head -n 40 "$HTTP_OUT" || true
+          else
+            echo "PASS — pricing tool reachable (recommended_price=$RECOMMENDED)"
+          fi
+
+          {
+            echo "level=$LEVEL"
+            echo "reason=${REASON//$'\n'/ }"
+            echo "status=$STATUS"
+            echo "ctype=$CTYPE"
+            echo "target=$SMOKE_TARGET_URL"
+            echo "recommended=$RECOMMENDED"
+          } >> "$GITHUB_OUTPUT"
+
+      # ── Push notification: Slack ──────────────────────────────────────
+      - name: Notify Slack on smoke failure
+        if: steps.smoke.outputs.level == 'fail' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          REASON: ${{ steps.smoke.outputs.reason }}
+          STATUS: ${{ steps.smoke.outputs.status }}
+          CTYPE: ${{ steps.smoke.outputs.ctype }}
+          TARGET: ${{ steps.smoke.outputs.target }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg reason "$REASON" \
+            --arg status "$STATUS" \
+            --arg ctype "$CTYPE" \
+            --arg target "$TARGET" \
+            --arg run_url "$RUN_URL" \
+            '{
+              text: ("Pricing tool smoke check failed — " + $reason),
+              blocks: [
+                { type: "header",
+                  text: { type: "plain_text", text: ":rotating_light: Pricing tool is dark" } },
+                { type: "section",
+                  text: { type: "mrkdwn",
+                          text: ("*Reason:* " + $reason
+                                 + "\n*Target:* " + $target
+                                 + "\n*HTTP:* " + $status
+                                 + "  •  *Content-Type:* " + $ctype) } },
+                { type: "actions",
+                  elements: [
+                    { type: "button",
+                      text: { type: "plain_text", text: "View workflow run" },
+                      url: $run_url }
+                  ] }
+              ]
+            }' > /tmp/slack.json
+          curl --fail-with-body --show-error --silent --max-time 30 \
+            -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/slack.json
+
+      # ── Persistent dedupe: GitHub issue ───────────────────────────────
+      # One open issue labelled `pricing-tool-dark` is reused for the
+      # duration of an outage, mirroring the airbnb-pricing-dark pattern.
+      - name: Open / update GitHub issue on smoke failure
+        if: steps.smoke.outputs.level == 'fail'
+        uses: actions/github-script@v7
+        env:
+          REASON: ${{ steps.smoke.outputs.reason }}
+          STATUS: ${{ steps.smoke.outputs.status }}
+          CTYPE: ${{ steps.smoke.outputs.ctype }}
+          TARGET: ${{ steps.smoke.outputs.target }}
+        with:
+          script: |
+            const reason = process.env.REASON || '(no reason reported)';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const stats = [
+              `- Reason: **${reason}**`,
+              `- Target: \`${process.env.TARGET}\``,
+              `- HTTP status: \`${process.env.STATUS}\``,
+              `- Content-Type: \`${process.env.CTYPE}\``,
+              `- Workflow run: ${runUrl}`,
+            ].join('\n');
+
+            const comment = [
+              `Pricing tool smoke check failed at ${new Date().toISOString()}.`,
+              ``,
+              stats,
+            ].join('\n');
+
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'pricing-tool-dark',
+              per_page: 10,
+            });
+
+            if (existing.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing[0].number,
+                body: comment,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Pricing tool is dark',
+                labels: ['pricing-tool-dark'],
+                body: [
+                  'The /pricing-tool "Get My Market Price" path is failing end-to-end.',
+                  'The dashboard tile on `/sources` (driven by',
+                  '`/api/health/pricing-tool`) should also be RED or YELLOW.',
+                  '',
+                  'Most common cause: Vercel `/api/*` rewrite is missing or',
+                  '`VITE_API_URL` got blanked on the production build, so the',
+                  'SPA hits its own host for `/api/...` and Vercel returns its',
+                  'HTML 404 page. Fix in `vercel.json` / Vercel project env vars,',
+                  'redeploy, then re-run this workflow to confirm green.',
+                  '',
+                  'Close this issue once a successful smoke check has occurred.',
+                  '',
+                  '---',
+                  '',
+                  comment,
+                ].join('\n'),
+              });
+            }
+
+      # ── Final gate ────────────────────────────────────────────────────
+      - name: Fail the job on smoke failure
+        if: steps.smoke.outputs.level == 'fail'
+        run: |
+          echo "Pricing tool smoke failed — failing job after notifications were sent."
+          exit 1
