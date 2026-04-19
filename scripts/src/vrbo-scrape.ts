@@ -61,7 +61,11 @@ async function refreshOne(seed: SeedRow): Promise<{ ok: boolean; error?: string 
       .insert(rentalListingsTable)
       .values({
         sourcePlatform: SOURCE_PLATFORM,
-        sourceUrl: listing.source_url || seed.sourceUrl,
+        // Always upsert against the existing seed URL so the row in the DB is
+        // the one that gets refreshed — even if the adapter normalizes the URL
+        // to a different canonical form. Without this, non-canonical legacy
+        // rows would never be updated and would linger as stale duplicates.
+        sourceUrl: seed.sourceUrl,
         externalId: listing.source_listing_id ?? null,
         title: listing.title ?? "VRBO listing",
         neighborhoodRaw: listing.neighborhood ?? "unknown",

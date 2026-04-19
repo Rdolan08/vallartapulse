@@ -28,7 +28,7 @@ on:
         required: false
         default: "all"
         type: choice
-        options: ["all", "vacation_vallarta", "booking_com", "pvrpv"]
+        options: ["all", "vacation_vallarta", "booking_com"]
 
 permissions:
   contents: read
