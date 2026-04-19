@@ -37,6 +37,7 @@ import {
   fetchPvrpvCalendar,
   type PvrpvCalendarResult,
 } from "../../artifacts/api-server/src/lib/ingest/pvrpv-calendar-adapter.js";
+import { runPool } from "./lib/concurrency.js";
 
 const SOURCE_PLATFORM = "pvrpv";
 const CONCURRENCY = parseInt(process.env.CALENDAR_CONCURRENCY ?? "3", 10);
@@ -44,6 +45,10 @@ const MAX_LISTINGS = process.env.CALENDAR_MAX_LISTINGS
   ? parseInt(process.env.CALENDAR_MAX_LISTINGS, 10)
   : null;
 const MIN_DELAY_MS = 250;
+/** Per-listing hard timeout. PVRPV calendar fetches typically complete in <5s; 60s is generous. */
+const HARD_TIMEOUT_MS = 60_000;
+/** Fail the run (exit non-zero) when failure rate exceeds this fraction. */
+const FAILURE_RATE_FAIL_THRESHOLD = 0.5;
 
 interface ListingRow {
   id: number;
@@ -61,10 +66,6 @@ interface PerListingStats {
   daysUnavailable: number;
   rowsWritten: number;
   error?: string;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
 }
 
 async function loadActiveListings(): Promise<ListingRow[]> {
@@ -154,52 +155,71 @@ async function processOne(listing: ListingRow): Promise<PerListingStats> {
   return stats;
 }
 
-async function runPool<T>(items: T[], worker: (t: T) => Promise<void>): Promise<void> {
-  let cursor = 0;
-  const runners = Array.from({ length: Math.min(CONCURRENCY, items.length) }, async () => {
-    while (cursor < items.length) {
-      const idx = cursor++;
-      await worker(items[idx]);
-      await sleep(MIN_DELAY_MS);
-    }
-  });
-  await Promise.all(runners);
-}
-
-async function main(): Promise<void> {
+async function main(): Promise<number> {
   console.log(`[calendar-scrape] start  source=${SOURCE_PLATFORM}  concurrency=${CONCURRENCY}`);
   const all = await loadActiveListings();
   const listings = MAX_LISTINGS ? all.slice(0, MAX_LISTINGS) : all;
   console.log(`[calendar-scrape] loaded  active_pvrpv=${all.length}  processing=${listings.length}`);
 
+  if (listings.length === 0) {
+    console.log("[calendar-scrape] no active listings — nothing to do");
+    return 0;
+  }
+
   const stats: PerListingStats[] = [];
   let done = 0;
-  await runPool(listings, async (l) => {
-    const s = await processOne(l);
-    stats.push(s);
-    done++;
-    const tag = s.ok ? "ok " : "ERR";
-    const url = l.sourceUrl.replace("https://www.pvrpv.com", "");
-    console.log(
-      `[${done}/${listings.length}] ${tag} listing=${l.id}  days=${s.daysReturned}` +
-        `  price=${s.daysWithPrice}  avail=${s.daysAvailable}  unavail=${s.daysUnavailable}` +
-        `  written=${s.rowsWritten}` +
-        (s.error ? `  ERROR=${s.error}` : "") +
-        `  ${url}`,
-    );
-  });
+  await runPool(
+    listings,
+    {
+      concurrency: CONCURRENCY,
+      hardTimeoutMs: HARD_TIMEOUT_MS,
+      delayBetweenMs: MIN_DELAY_MS,
+    },
+    async (l) => {
+      let s: PerListingStats;
+      try {
+        s = await processOne(l);
+      } catch (e) {
+        // Includes RunPoolTimeoutError from the outer kill-switch.
+        s = {
+          listingId: l.id,
+          url: l.sourceUrl,
+          ok: false,
+          daysReturned: 0,
+          daysWithPrice: 0,
+          daysAvailable: 0,
+          daysUnavailable: 0,
+          rowsWritten: 0,
+          error: (e as Error).message.slice(0, 200),
+        };
+      }
+      stats.push(s);
+      done++;
+      const tag = s.ok ? "ok " : "ERR";
+      const url = l.sourceUrl.replace("https://www.pvrpv.com", "");
+      console.log(
+        `[${done}/${listings.length}] ${tag} listing=${l.id}  days=${s.daysReturned}` +
+          `  price=${s.daysWithPrice}  avail=${s.daysAvailable}  unavail=${s.daysUnavailable}` +
+          `  written=${s.rowsWritten}` +
+          (s.error ? `  ERROR=${s.error}` : "") +
+          `  ${url}`,
+      );
+    },
+  );
 
   const ok = stats.filter((s) => s.ok);
   const failed = stats.filter((s) => !s.ok);
   const totalRows = stats.reduce((acc, s) => acc + s.rowsWritten, 0);
   const totalAvail = stats.reduce((acc, s) => acc + s.daysAvailable, 0);
   const totalUnavail = stats.reduce((acc, s) => acc + s.daysUnavailable, 0);
+  const failureRate = stats.length === 0 ? 0 : failed.length / stats.length;
 
   console.log("─".repeat(72));
   console.log(`[calendar-scrape] DONE`);
   console.log(`  listings_processed: ${stats.length}`);
   console.log(`  ok                : ${ok.length}`);
   console.log(`  failed            : ${failed.length}`);
+  console.log(`  failure_rate      : ${(failureRate * 100).toFixed(1)}%`);
   console.log(`  rows_written      : ${totalRows}`);
   console.log(`  days_available    : ${totalAvail}`);
   console.log(`  days_unavailable  : ${totalUnavail}`);
@@ -209,10 +229,24 @@ async function main(): Promise<void> {
       console.log(`    listing=${f.listingId}  url=${f.url}  error=${f.error}`);
     }
   }
+
+  // Cron health: if too many listings failed, the run was effectively useless;
+  // exit non-zero so GitHub Actions / freshness check surfaces it.
+  if (failureRate >= FAILURE_RATE_FAIL_THRESHOLD) {
+    console.error(
+      `[calendar-scrape] FAIL: failure_rate=${(failureRate * 100).toFixed(1)}%` +
+        ` >= threshold=${(FAILURE_RATE_FAIL_THRESHOLD * 100).toFixed(0)}%`,
+    );
+    return 1;
+  }
+  return 0;
 }
 
 main()
-  .then(() => pool.end())
+  .then(async (code) => {
+    await pool.end();
+    if (code !== 0) process.exit(code);
+  })
   .catch(async (e) => {
     console.error("[calendar-scrape] FATAL", e);
     await pool.end();

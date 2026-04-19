@@ -39,6 +39,9 @@ nobody can explain a week later.
 | Vacation Vallarta | A | daily 07:30 UTC | `.github/workflows/sources-sync-refresh.yml` (vacation_vallarta step) | shipped |
 | VRBO — discovery + refresh | B | daily 07:15 UTC | `.github/workflows/vrbo-scrape.yml` — script tries to discover PV listings then upserts the union of (new ∪ existing). **Discovery currently blocked by VRBO's PerimeterX bot challenge** (see vrbo-search-adapter.ts header for tried approaches). Refresh of existing rows works the moment any get seeded. | wired, discovery blocked |
 | OG screenshots | B | every other day 09:00 UTC | `.github/workflows/og-refresh.yml` | shipped |
+| **Rental calendar — PVRPV (full 365-day window)** | B | daily 07:05 UTC *(workflow not yet wired — see follow-ups)* | `pnpm --filter @workspace/scripts run scrape:calendar` → `rental_prices_by_date` | adapter+driver shipped, **manual run only** |
+| **Rental calendar — Airbnb (checkpoint set)** | A *(planned)* | daily | `airbnb-checkpoints.ts` + adapter (TBD) → `listing_price_quotes` | **blocked — see Airbnb pricing pivot below** |
+| **Rental calendar — Vacation Vallarta** | B *(planned)* | daily | `vacation-vallarta-calendar-adapter.ts` → `rental_prices_by_date` | **not built** |
 
 ---
 
@@ -179,10 +182,101 @@ that source is silently failing — check the GitHub Actions run history.
 
 ---
 
-## Out of scope for this task — known follow-ups
+## Rental calendar / dynamic pricing (Path A) — current state
 
-These are documented here so they don't get lost. None of them are blocking
-the freshness contract for the sources we *do* feed today.
+The owner-facing question this layer answers:
+
+> "What should I charge per night for {date} given what comp listings are
+> doing?"
+
+Comp data lands in two tables, both keyed by listing × time:
+
+- **`rental_prices_by_date`** — one row per (listing × calendar date). Used
+  for the always-on, "next-365-days for every listing" coverage. UPSERT
+  pattern, refreshed daily.
+- **`listing_price_quotes`** — one row per (listing × check-in × check-out
+  × `collected_at`). Insert-only, used for full-fee booking quotes
+  (nightly + cleaning + service + tax). Time-series shape so we can study
+  booking-window behavior.
+
+### PVRPV: shipped (manual)
+
+`scripts/src/calendar-scrape.ts` + `pvrpv-calendar-adapter.ts`. One run
+covers all 125 active PVRPV listings × 365 days = ~45,625 rows. Two HTTP
+fetches per listing (rates table + paginated minicalendar pages). No
+proxy required.
+
+**Validated against prod** (April 2026): 125/125 listings ✓, 45,625 rows
+written, zero errors, ~80 seconds wall clock at concurrency 3. Coverage:
+60% available / 40% booked across the year, with realistic seasonality
+(NYE 69% booked 8 months out, Beef Dip 81% booked one year out, May
+~23% booked at six-week lead — exactly the booking patterns owners
+need to plan against).
+
+**Not yet wired to GitHub Actions.** Trivial follow-up — copy
+`.github/workflows/pvrpv-scrape.yml`, swap the script name. Pending
+operator decision on cron offset.
+
+### Airbnb pricing — pivot required
+
+The original spike claimed Airbnb's SSR PDP embeds `priceBreakdown` when
+fetched with `?check_in=&check_out=` — meaning we could get full quote
+data via plain HTML scraping. **That conclusion was wrong.** Verified
+April 2026 against three live listings on multiple date ranges:
+
+- The PDP renders fine (~500KB) and is not delisted.
+- The `data-deferred-state-0` Apollo state contains only request
+  *variables* — no `priceBreakdown`, no `structuredDisplayPrice` (always
+  `null`), no `chargeableAmount`, no `nightlyPrice`, no amount tokens
+  anywhere in the document.
+- Airbnb has shifted pricing to a client-side GraphQL fetch
+  (`PdpAvailabilityCalendar` / `MerlinPriceBreakdown`) issued *after*
+  page load, so the SSR HTML never contains it.
+
+The infrastructure built and ready to plug in once a price feed exists:
+
+- `airbnb-checkpoints.ts` — pure date generator, ~35 checkpoints per
+  listing covering rolling weekends (12 weeks), holidays (Xmas/NYE),
+  year-aware events (Beef Dip, Semana Santa, PV Pride, Easter computed
+  via Anonymous Gregorian algorithm), and monthly mid-week anchors.
+  Tier function stubbed to always return 1 — Phase 2 adds priority
+  tiers without touching the driver.
+- `listing_price_quotes` table schema (already in DB).
+
+Three paths forward, in increasing effort:
+
+1. **Use the legacy `/api/v2/calendar_months` endpoint.** Returns per-day
+   availability + base nightly. No fees breakdown but enough to feed a
+   comp model. May or may not still work without auth — needs a 1-hour
+   spike.
+2. **Replicate the GraphQL `PdpAvailabilityCalendar` call.** Capture the
+   persisted-query SHA hash via Playwright once, replay through Decodo.
+   Rotates periodically (~weeks). 1-2 days of work, fragile.
+3. **Ship without Airbnb-specific quotes.** PVRPV's 125 listings already
+   blanket the high-demand neighborhoods (Zona Romantica 89, Amapas 33,
+   Marina 3) and give us $50-$2,800 nightly spread across the same
+   bedroom counts Airbnb listings come in. The comp model can run on
+   PVRPV alone for v1 and add Airbnb when path 1 or 2 lands.
+
+**Recommendation:** ship v1 on PVRPV-only, spike path 1 in a 1-hour
+window, reassess.
+
+### Airbnb listing universe — partial verify-and-prune
+
+Original spike claimed 76% of `is_active=true` Airbnb rows return the
+2,671-byte delisted template. A re-run via
+`scripts/src/airbnb-prune.ts` against prod checked the first 200 of 507
+active rows: **0 delisted, 0 errors**. Strongly suggests the original
+spike measured something else (possibly a Decodo block masquerading as
+the delisted template, or a different predicate). The remaining 307
+weren't checked because Decodo started intermittently hanging beyond
+the 25s `AbortSignal` timeout, deadlocking workers.
+
+**Driver hardening needed before next run:** wrap each fetch in an
+outer `Promise.race` with a hard kill-switch timer that doesn't rely on
+the proxy/undici respecting the abort signal.
+
+
 
 1. **VRBO discovery (PerimeterX challenge)** — see the header comment in
    `artifacts/api-server/src/lib/ingest/vrbo-search-adapter.ts` for the
