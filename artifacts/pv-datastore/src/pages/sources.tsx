@@ -57,6 +57,22 @@ const PIPELINES: PipelineCardConfig[] = [
     newestLabelEs: "Cotización más reciente",
   },
   {
+    endpoint: "/api/ingest/pvrpv-pricing-freshness",
+    labelEn: "PVRPV pricing",
+    labelEs: "Precios de PVRPV",
+    newestField: "newestQuoteAt",
+    newestLabelEn: "Newest quote",
+    newestLabelEs: "Cotización más reciente",
+  },
+  {
+    endpoint: "/api/ingest/vrbo-pricing-freshness",
+    labelEn: "VRBO pricing",
+    labelEs: "Precios de VRBO",
+    newestField: "newestQuoteAt",
+    newestLabelEn: "Newest quote",
+    newestLabelEs: "Cotización más reciente",
+  },
+  {
     endpoint: "/api/ingest/vrbo-scrape-freshness",
     labelEn: "VRBO scrape",
     labelEs: "Extracción de VRBO",

@@ -897,6 +897,187 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
   }
 });
 
+// ── GET /ingest/pvrpv-pricing-freshness ───────────────────────────────────
+//
+// Pipeline-health probe for the daily PVRPV per-night pricing refresh
+// (lib/ingest/pvrpv-pricing-runner.ts → listing_price_quotes rows for
+// source_platform='pvrpv'). Same shape as airbnb-pricing-freshness so the
+// /sources dashboard can render a consistent banner.
+router.get("/ingest/pvrpv-pricing-freshness", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      WITH cohort AS (
+        SELECT rl.id
+        FROM rental_listings rl
+        WHERE rl.source_platform = 'pvrpv'
+          AND rl.is_active = true
+      ),
+      last_quote AS (
+        SELECT listing_id, MAX(collected_at) AS last_quoted
+        FROM listing_price_quotes
+        GROUP BY listing_id
+      )
+      SELECT
+        (SELECT COUNT(*) FROM cohort)::int                                     AS listings_total,
+        (SELECT COUNT(*) FROM cohort c JOIN last_quote q ON q.listing_id = c.id)::int
+                                                                               AS listings_quoted_ever,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_quote q ON q.listing_id = c.id
+         WHERE q.last_quoted IS NULL)::int                                     AS listings_never_quoted,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_quote q ON q.listing_id = c.id
+         WHERE q.last_quoted IS NULL OR q.last_quoted < NOW() - INTERVAL '7 days')::int
+                                                                               AS listings_stale_7d,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_quote q ON q.listing_id = c.id
+         WHERE q.last_quoted IS NULL OR q.last_quoted < NOW() - INTERVAL '14 days')::int
+                                                                               AS listings_stale_14d,
+        (SELECT MAX(last_quoted) FROM last_quote q
+         WHERE q.listing_id IN (SELECT id FROM cohort))                        AS newest_quote_at
+    `);
+    const row = (result as unknown as {
+      rows: Array<{
+        listings_total: number;
+        listings_quoted_ever: number;
+        listings_never_quoted: number;
+        listings_stale_7d: number;
+        listings_stale_14d: number;
+        newest_quote_at: string | null;
+      }>;
+    }).rows[0];
+
+    const newestAt = row.newest_quote_at ? new Date(row.newest_quote_at) : null;
+    const ageHours = newestAt
+      ? Math.floor((Date.now() - newestAt.getTime()) / 3_600_000)
+      : null;
+
+    let alertLevel: "ok" | "warn" | "fail" = "ok";
+    let alertReason = "";
+    if (row.listings_total === 0) {
+      alertLevel = "warn";
+      alertReason = "No active PVRPV listings in cohort";
+    } else if (ageHours === null || ageHours > 48) {
+      alertLevel = "fail";
+      alertReason = newestAt
+        ? `Newest PVRPV quote is ${Math.round(ageHours! / 24)} days old`
+        : "No PVRPV quotes have ever been collected";
+    } else if (row.listings_stale_14d * 2 >= row.listings_total) {
+      alertLevel = "fail";
+      alertReason = `${row.listings_stale_14d}/${row.listings_total} PVRPV listings stale >14d`;
+    } else if (row.listings_stale_14d > 0) {
+      alertLevel = "warn";
+      alertReason = `${row.listings_stale_14d} PVRPV listings stale >14d`;
+    } else if (ageHours > 36) {
+      alertLevel = "warn";
+      alertReason = `Newest PVRPV quote is ${ageHours}h old`;
+    }
+
+    res.json({
+      source: "pvrpv_pricing",
+      listingsTotal: row.listings_total,
+      listingsQuotedEver: row.listings_quoted_ever,
+      listingsNeverQuoted: row.listings_never_quoted,
+      listingsStale7d: row.listings_stale_7d,
+      listingsStale14d: row.listings_stale_14d,
+      newestQuoteAt: newestAt?.toISOString() ?? null,
+      newestQuoteAgeHours: ageHours,
+      alertLevel,
+      alertReason,
+    });
+  } catch (err) {
+    req.log.error({ err }, "ingest/pvrpv-pricing-freshness failed");
+    res.status(500).json({ error: "Failed to compute PVRPV pricing freshness" });
+  }
+});
+
+// ── GET /ingest/vrbo-pricing-freshness ────────────────────────────────────
+//
+// Pipeline-health probe for the daily VRBO per-night pricing refresh
+// (lib/ingest/vrbo-pricing-runner.ts → listing_price_quotes rows for
+// source_platform='vrbo'). Distinct from /ingest/vrbo-scrape-freshness,
+// which monitors the underlying listing scrape rather than the quote
+// pipeline that feeds the comp-comparison view.
+router.get("/ingest/vrbo-pricing-freshness", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      WITH cohort AS (
+        SELECT rl.id
+        FROM rental_listings rl
+        WHERE rl.source_platform = 'vrbo'
+          AND rl.is_active = true
+      ),
+      last_quote AS (
+        SELECT listing_id, MAX(collected_at) AS last_quoted
+        FROM listing_price_quotes
+        GROUP BY listing_id
+      )
+      SELECT
+        (SELECT COUNT(*) FROM cohort)::int                                     AS listings_total,
+        (SELECT COUNT(*) FROM cohort c JOIN last_quote q ON q.listing_id = c.id)::int
+                                                                               AS listings_quoted_ever,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_quote q ON q.listing_id = c.id
+         WHERE q.last_quoted IS NULL)::int                                     AS listings_never_quoted,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_quote q ON q.listing_id = c.id
+         WHERE q.last_quoted IS NULL OR q.last_quoted < NOW() - INTERVAL '7 days')::int
+                                                                               AS listings_stale_7d,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_quote q ON q.listing_id = c.id
+         WHERE q.last_quoted IS NULL OR q.last_quoted < NOW() - INTERVAL '14 days')::int
+                                                                               AS listings_stale_14d,
+        (SELECT MAX(last_quoted) FROM last_quote q
+         WHERE q.listing_id IN (SELECT id FROM cohort))                        AS newest_quote_at
+    `);
+    const row = (result as unknown as {
+      rows: Array<{
+        listings_total: number;
+        listings_quoted_ever: number;
+        listings_never_quoted: number;
+        listings_stale_7d: number;
+        listings_stale_14d: number;
+        newest_quote_at: string | null;
+      }>;
+    }).rows[0];
+
+    const newestAt = row.newest_quote_at ? new Date(row.newest_quote_at) : null;
+    const ageHours = newestAt
+      ? Math.floor((Date.now() - newestAt.getTime()) / 3_600_000)
+      : null;
+
+    let alertLevel: "ok" | "warn" | "fail" = "ok";
+    let alertReason = "";
+    if (row.listings_total === 0) {
+      alertLevel = "warn";
+      alertReason = "No active VRBO listings in cohort";
+    } else if (ageHours === null || ageHours > 48) {
+      alertLevel = "fail";
+      alertReason = newestAt
+        ? `Newest VRBO quote is ${Math.round(ageHours! / 24)} days old`
+        : "No VRBO quotes have ever been collected";
+    } else if (row.listings_stale_14d * 2 >= row.listings_total) {
+      alertLevel = "fail";
+      alertReason = `${row.listings_stale_14d}/${row.listings_total} VRBO listings stale >14d`;
+    } else if (row.listings_stale_14d > 0) {
+      alertLevel = "warn";
+      alertReason = `${row.listings_stale_14d} VRBO listings stale >14d`;
+    } else if (ageHours > 36) {
+      alertLevel = "warn";
+      alertReason = `Newest VRBO quote is ${ageHours}h old`;
+    }
+
+    res.json({
+      source: "vrbo_pricing",
+      listingsTotal: row.listings_total,
+      listingsQuotedEver: row.listings_quoted_ever,
+      listingsNeverQuoted: row.listings_never_quoted,
+      listingsStale7d: row.listings_stale_7d,
+      listingsStale14d: row.listings_stale_14d,
+      newestQuoteAt: newestAt?.toISOString() ?? null,
+      newestQuoteAgeHours: ageHours,
+      alertLevel,
+      alertReason,
+    });
+  } catch (err) {
+    req.log.error({ err }, "ingest/vrbo-pricing-freshness failed");
+    res.status(500).json({ error: "Failed to compute VRBO pricing freshness" });
+  }
+});
+
 // ── GET /ingest/vrbo-scrape-freshness ─────────────────────────────────────
 //
 // Pipeline-health probe for the daily VRBO listings refresh
