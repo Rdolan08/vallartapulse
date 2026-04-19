@@ -57,13 +57,15 @@ async function loadSeedRows(): Promise<SeedRow[]> {
 async function refreshOne(seed: SeedRow): Promise<{ ok: boolean; error?: string }> {
   try {
     const listing = await fetchVrboListing(seed.sourceUrl);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const values: any = {
+    await db
+      .insert(rentalListingsTable)
+      .values({
         sourcePlatform: SOURCE_PLATFORM,
-        sourceUrl: listing.source_url ?? seed.sourceUrl,
+        sourceUrl: listing.source_url || seed.sourceUrl,
         externalId: listing.source_listing_id ?? null,
         title: listing.title ?? "VRBO listing",
         neighborhoodRaw: listing.neighborhood ?? "unknown",
+        neighborhoodNormalized: listing.neighborhood ?? "unclassified",
         bedrooms: listing.bedrooms ?? 0,
         bathrooms: listing.bathrooms ?? 0,
         maxGuests: listing.max_guests ?? null,
@@ -78,10 +80,7 @@ async function refreshOne(seed: SeedRow): Promise<{ ok: boolean; error?: string 
         nightlyPriceUsd: listing.price_nightly_usd ?? null,
         scrapedAt: new Date(),
         isActive: true,
-    };
-    await db
-      .insert(rentalListingsTable)
-      .values(values)
+      })
       .onConflictDoUpdate({
         target: [rentalListingsTable.sourcePlatform, rentalListingsTable.sourceUrl],
         set: {
