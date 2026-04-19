@@ -37,7 +37,7 @@ nobody can explain a week later.
 | Airbnb — detail refresh (stale >24h) | A | daily 06:00 UTC | same workflow (mode=stale) | shipped |
 | PVRPV | B | daily 07:00 UTC | `.github/workflows/pvrpv-scrape.yml` | shipped |
 | Vacation Vallarta | A | daily 07:30 UTC | `.github/workflows/sources-sync-refresh.yml` (vacation_vallarta step) | wired — surfaces RED in Actions until 0-row bug fixed |
-| VRBO | — | — | adapter exists for single-URL fetch (`fetchVrboListing`) but no batch/discovery driver — needs `scripts/src/vrbo-scrape.ts` before a cron has anything to fire | **not started** |
+| VRBO | B (prod-DB script) | daily 07:15 UTC | refresh-only — `vrbo-scrape.yml` re-fetches every existing VRBO row; **no discovery layer yet** so the cron is a no-op until something seeds VRBO rows into `rental_listings` | **wired (refresh-only)** |
 | Booking.com | A | daily 07:30 UTC | `.github/workflows/sources-sync-refresh.yml` (booking_com step) | wired — surfaces RED until creds set on Railway |
 | OG screenshots | B | every other day 09:00 UTC | `.github/workflows/og-refresh.yml` | shipped |
 
@@ -185,11 +185,11 @@ that source is silently failing — check the GitHub Actions run history.
 These are documented here so they don't get lost. None of them are blocking
 the freshness contract for the sources we *do* feed today.
 
-1. **VRBO** — the existing `vrbo-adapter.ts` only exports
-   `fetchVrboListing(url)` (single URL). Wiring a cron requires building
-   a batch driver under `scripts/src/vrbo-scrape.ts` (analogous to
-   `pvrpv-scrape.ts`) plus a discovery layer to seed it with URLs.
-   Until then VRBO has no surface assignment in the table above.
+1. **VRBO discovery layer** — the daily refresh cron (`vrbo-scrape.yml`)
+   is wired and ready, but it only refreshes existing VRBO seed rows.
+   There is no discovery driver yet to *seed* those rows in the first
+   place. Building one (analogous to the airbnb search/discovery layer)
+   is the next piece of work to make VRBO actually contribute data.
 2. **vacation_vallarta zero-row bug** — the cron is wired into
    `sources-sync-refresh.yml` and surfaces RED in Actions, but the
    adapter still returns 0 rows on Railway prod. Needs a runtime debug
