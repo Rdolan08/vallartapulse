@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { RefreshCw, ExternalLink, Database, Zap, Clock, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { RefreshCw, ExternalLink, Database, Zap, Clock, CheckCircle2, AlertCircle, Info, Activity } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, formatDistanceToNow, isAfter, subHours, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { apiUrl, apiFetch } from "@/lib/api-base";
@@ -56,6 +57,14 @@ interface PipelineCardConfig {
   /** Plain noun for the "newest" line (cohort mode). */
   newestLabelEn?: string;
   newestLabelEs?: string;
+  /**
+   * Override status when the pipeline is intentionally not running (its
+   * scheduler is paused, no adapter exists yet, etc.). When set, the
+   * status light renders yellow with this label regardless of what the
+   * freshness endpoint reports — the underlying alert is still surfaced
+   * in the tooltip so nothing is hidden.
+   */
+  overrideStatus?: { kind: "paused" | "blocked" | "planned"; reasonEn: string; reasonEs: string };
 }
 
 const PIPELINES: PipelineCardConfig[] = [
@@ -67,11 +76,17 @@ const PIPELINES: PipelineCardConfig[] = [
     newestField: "newestQuoteAt",
     newestLabelEn: "Newest quote",
     newestLabelEs: "Cotización más reciente",
+    overrideStatus: {
+      kind: "paused",
+      reasonEn: "GraphQL pricing/quote adapters not yet implemented",
+      reasonEs: "Adaptadores GraphQL de precios/cotización aún no implementados",
+    },
   },
   {
     endpoint: "/api/ingest/pvrpv-pricing-freshness",
     labelEn: "PVRPV pricing",
     labelEs: "Precios de PVRPV",
+    mode: "cohort",
     newestField: "newestQuoteAt",
     newestLabelEn: "Newest quote",
     newestLabelEs: "Cotización más reciente",
@@ -80,9 +95,15 @@ const PIPELINES: PipelineCardConfig[] = [
     endpoint: "/api/ingest/vrbo-pricing-freshness",
     labelEn: "VRBO pricing",
     labelEs: "Precios de VRBO",
+    mode: "cohort",
     newestField: "newestQuoteAt",
     newestLabelEn: "Newest quote",
     newestLabelEs: "Cotización más reciente",
+    overrideStatus: {
+      kind: "paused",
+      reasonEn: "Depends on VRBO discovery (scrape) which is also paused",
+      reasonEs: "Depende del descubrimiento de VRBO (extracción), también pausado",
+    },
   },
   {
     endpoint: "/api/ingest/vrbo-scrape-freshness",
@@ -92,6 +113,11 @@ const PIPELINES: PipelineCardConfig[] = [
     newestField: "newestScrapeAt",
     newestLabelEn: "Newest scrape",
     newestLabelEs: "Extracción más reciente",
+    overrideStatus: {
+      kind: "paused",
+      reasonEn: "Residential proxy cannot defeat VRBO's anti-bot challenge",
+      reasonEs: "El proxy residencial no logra superar el desafío anti-bot de VRBO",
+    },
   },
   {
     endpoint: "/api/ingest/vacation-vallarta-pricing-freshness",
@@ -101,6 +127,11 @@ const PIPELINES: PipelineCardConfig[] = [
     newestField: "newestScrapeAt",
     newestLabelEn: "Newest refresh",
     newestLabelEs: "Actualización más reciente",
+    overrideStatus: {
+      kind: "planned",
+      reasonEn: "Calendar adapter exists; no scheduled job wired yet",
+      reasonEs: "El adaptador de calendario existe; aún no hay tarea programada",
+    },
   },
   {
     endpoint: "/api/health/pricing-tool",
@@ -111,13 +142,18 @@ const PIPELINES: PipelineCardConfig[] = [
 ];
 
 /**
- * Pipeline-health card. Renders one freshness banner driven by a
- * pipeline-specific freshness endpoint. All endpoints share the same
- * `alertLevel` / `alertReason` / `listingsTotal` / `listingsStale14d`
- * vocabulary so a multi-day silent outage in any pricing pipeline is
- * visible within one cycle.
+ * Compact status light for one pipeline. Renders a colored dot + label
+ * inside the consolidated PipelinesHealth tile. Hover reveals the full
+ * detail (status, last refresh, cohort, underlying alert reason) so the
+ * tile stays tiny without hiding any information.
+ *
+ * Color rules:
+ *   - yellow = source intentionally not active (paused / blocked / planned)
+ *   - red    = source IS active and failing (alertLevel=fail)
+ *   - yellow = source IS active and degraded (alertLevel=warn)
+ *   - green  = source IS active and healthy (alertLevel=ok)
  */
-function PipelineHealthCard({
+function PipelineStatusLight({
   cfg,
   t,
   lang,
@@ -143,74 +179,105 @@ function PipelineHealthCard({
     };
   }, [cfg.endpoint]);
 
-  if (errored) return null;
-  if (!data) {
-    return <Skeleton className="h-20 rounded-xl" />;
-  }
-
-  const tone =
-    data.alertLevel === "fail"
-      ? "bg-destructive/10 border-destructive/40 text-destructive"
-      : data.alertLevel === "warn"
-        ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300"
-        : "bg-primary/5 border-primary/20 text-foreground";
-
-  const Icon = data.alertLevel === "ok" ? CheckCircle2 : AlertCircle;
   const label = lang === "es" ? cfg.labelEs : cfg.labelEn;
 
-  // ── Headline + last-refresh derived per mode ──────────────────────────────
-  let headline: string;
-  let lastRefreshText: string;
-  let cohortLine: string | null = null;
+  // ── Color + status pill derivation ──────────────────────────────────────
+  let dotClass = "bg-muted-foreground/40";
+  let statusEn: string;
+  let statusEs: string;
 
-  if (cfg.mode === "uptime") {
-    const ts = data.lastSuccessAt ?? null;
-    lastRefreshText = ts
-      ? formatDistanceToNow(new Date(ts), { addSuffix: true })
-      : t("never", "nunca");
-    headline = t(
-      `${label} — last successful check ${lastRefreshText}`,
-      `${label} — última verificación exitosa ${lastRefreshText}`,
-    );
+  if (cfg.overrideStatus) {
+    dotClass = "bg-amber-500";
+    if (cfg.overrideStatus.kind === "paused") {
+      statusEn = "Paused";
+      statusEs = "Pausado";
+    } else if (cfg.overrideStatus.kind === "blocked") {
+      statusEn = "Blocked";
+      statusEs = "Bloqueado";
+    } else {
+      statusEn = "Planned";
+      statusEs = "Planeado";
+    }
+  } else if (errored || !data) {
+    statusEn = errored ? "Unreachable" : "Loading…";
+    statusEs = errored ? "Inaccesible" : "Cargando…";
+    if (errored) dotClass = "bg-muted-foreground/40";
+  } else if (data.alertLevel === "fail") {
+    dotClass = "bg-red-500";
+    statusEn = "Failing";
+    statusEs = "Fallando";
+  } else if (data.alertLevel === "warn") {
+    dotClass = "bg-amber-500";
+    statusEn = "Degraded";
+    statusEs = "Degradado";
   } else {
-    const newestRaw =
-      (cfg.newestField === "newestQuoteAt" ? data.newestQuoteAt : data.newestScrapeAt) ?? null;
-    lastRefreshText = newestRaw
-      ? formatDistanceToNow(new Date(newestRaw), { addSuffix: true })
-      : t("never", "nunca");
-    const stale = data.listingsStale14d ?? 0;
-    headline = t(
-      `${label} — ${stale} listings stale > 14 days`,
-      `${label} — ${stale} anuncios sin actualizar > 14 días`,
+    dotClass = "bg-emerald-500";
+    statusEn = "Healthy";
+    statusEs = "Sano";
+  }
+
+  // ── Tooltip body — last refresh, cohort, alert reason, override note ────
+  const tooltipLines: string[] = [];
+  tooltipLines.push(`${t("Status", "Estado")}: ${t(statusEn, statusEs)}`);
+
+  if (cfg.overrideStatus) {
+    tooltipLines.push(
+      `${t("Reason", "Motivo")}: ${
+        lang === "es" ? cfg.overrideStatus.reasonEs : cfg.overrideStatus.reasonEn
+      }`,
     );
-    const total = data.listingsTotal ?? 0;
-    cohortLine = `${t("Cohort", "Cohorte")}: ${total.toLocaleString()} · ${
-      lang === "es" ? cfg.newestLabelEs : cfg.newestLabelEn
-    }: ${lastRefreshText}`;
+  }
+
+  if (data) {
+    if (cfg.mode === "uptime") {
+      const ts = data.lastSuccessAt ?? null;
+      tooltipLines.push(
+        `${t("Last successful check", "Última verificación exitosa")}: ${
+          ts ? formatDistanceToNow(new Date(ts), { addSuffix: true }) : t("never", "nunca")
+        }`,
+      );
+    } else {
+      const newestRaw =
+        (cfg.newestField === "newestQuoteAt" ? data.newestQuoteAt : data.newestScrapeAt) ?? null;
+      const newestText = newestRaw
+        ? formatDistanceToNow(new Date(newestRaw), { addSuffix: true })
+        : t("never", "nunca");
+      const total = data.listingsTotal ?? 0;
+      const stale = data.listingsStale14d ?? 0;
+      tooltipLines.push(
+        `${t("Cohort", "Cohorte")}: ${total.toLocaleString()} · ${t("stale > 14d", "sin actualizar > 14d")}: ${stale}`,
+      );
+      tooltipLines.push(
+        `${lang === "es" ? cfg.newestLabelEs : cfg.newestLabelEn}: ${newestText}`,
+      );
+    }
+    if (data.alertReason) {
+      tooltipLines.push(`${t("Underlying", "Subyacente")}: ${data.alertReason}`);
+    }
+  } else if (errored) {
+    tooltipLines.push(t("Freshness endpoint unreachable", "Endpoint de actualidad inaccesible"));
   }
 
   return (
-    <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3 text-sm", tone)}>
-      <Icon className="w-4 h-4 mt-0.5 shrink-0" />
-      <div className="flex-1 space-y-1">
-        <div className="font-medium">{headline}</div>
-        <div className="text-xs font-medium flex items-center gap-1.5 opacity-90">
-          <Clock className="w-3 h-3" />
-          {t("Last successful refresh", "Última actualización exitosa")}: {lastRefreshText}
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center gap-2 text-xs cursor-default">
+          <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", dotClass)} aria-hidden />
+          <span className="font-medium">{label}</span>
         </div>
-        {cohortLine && <div className="text-xs opacity-80">{cohortLine}</div>}
-        {data.alertReason && (
-          <div className="text-xs font-medium">{data.alertReason}</div>
-        )}
-      </div>
-    </div>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs whitespace-pre-line">
+        {tooltipLines.join("\n")}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
 /**
- * Stack of pass/fail banners — one per pricing/calendar pipeline
- * (Airbnb, VRBO, Vacation Vallarta). Same shape signal across all
- * three so the dashboard never has a blind spot.
+ * Compact pipeline-health tile. One line per pipeline (colored dot +
+ * label), hover for details. Replaces the previous stack of full-width
+ * banners — all six pipelines now fit inside a single tile that matches
+ * the visual density of the rest of the page.
  */
 function PipelinesHealth({
   t,
@@ -220,11 +287,19 @@ function PipelinesHealth({
   lang: "en" | "es";
 }) {
   return (
-    <div className="space-y-3 mb-6">
-      {PIPELINES.map((cfg) => (
-        <PipelineHealthCard key={cfg.endpoint} cfg={cfg} t={t} lang={lang} />
-      ))}
-    </div>
+    <TooltipProvider delayDuration={150}>
+      <div className="rounded-xl border border-border/40 bg-card/40 px-4 py-3 mb-6">
+        <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-3">
+          <Activity className="w-3.5 h-3.5" />
+          {t("Pipeline status", "Estado de pipelines")}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2">
+          {PIPELINES.map((cfg) => (
+            <PipelineStatusLight key={cfg.endpoint} cfg={cfg} t={t} lang={lang} />
+          ))}
+        </div>
+      </div>
+    </TooltipProvider>
   );
 }
 
