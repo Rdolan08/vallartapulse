@@ -21,9 +21,9 @@ on:
   workflow_dispatch:
     inputs:
       max_listings:
-        description: "Cap per call (1-500). Default 50."
+        description: "Cap per call (1-500). Default 200."
         required: false
-        default: "50"
+        default: "200"
 
 permissions:
   contents: read
@@ -49,7 +49,7 @@ jobs:
         env:
           RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
           INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
-          MAX_LISTINGS: ${{ inputs.max_listings || '50' }}
+          MAX_LISTINGS: ${{ inputs.max_listings || '200' }}
         run: |
           set -euo pipefail
           echo "POST $RAILWAY_API_URL/api/ingest/pvrpv-pricing-refresh max=$MAX_LISTINGS"
