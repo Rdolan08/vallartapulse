@@ -90,6 +90,17 @@ interface BuildingContext {
   positioning_statement: string;
 }
 
+interface GuestPaidBreakdown {
+  nightly_price_usd: number | null;
+  cleaning_fee_usd: number | null;
+  service_fee_usd: number | null;
+  taxes_usd: number | null;
+  total_price_usd: number | null;
+  stay_length_nights: number | null;
+  currency: string;
+  collected_at: string;
+}
+
 interface CompEntry {
   rank: number;
   external_id: string;
@@ -105,6 +116,7 @@ interface CompEntry {
   building_name: string | null;
   score: number;
   match_reasons: string[];
+  guest_paid: GuestPaidBreakdown | null;
 }
 
 interface CompsResult {
@@ -1409,46 +1421,152 @@ export default function PricingToolPage() {
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                         <CardContent className="pt-4">
-                          <div className="space-y-2">
-                            {compsResult.selected_comps.map(c => (
-                              <div key={c.rank} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                                <span className="text-xs font-bold w-5 text-center shrink-0"
-                                  style={{ color: "rgba(154,165,177,0.4)" }}>#{c.rank}</span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-xs text-foreground">{c.bedrooms}BR · {c.bathrooms}BA</span>
-                                    {c.building_name && (
-                                      <span className="text-[10px] px-1.5 py-0.5 rounded"
-                                        style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}>
-                                        {c.building_name}
-                                      </span>
-                                    )}
-                                    {c.rating_overall && (
-                                      <span className="text-[10px]" style={{ color: "rgba(154,165,177,0.5)" }}>
-                                        {c.rating_overall.toFixed(1)} ★
-                                      </span>
+                          {/* Column header — apples-to-apples breakdown */}
+                          <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_repeat(5,minmax(60px,72px))_auto_auto] gap-3 px-3 pb-2 text-[9px] font-semibold uppercase tracking-widest"
+                            style={{ color: "rgba(154,165,177,0.45)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                            <span className="w-5" />
+                            <span>{t("Listing", "Listado")}</span>
+                            <span className="text-right">{t("Nightly", "Por noche")}</span>
+                            <span className="text-right">{t("Cleaning", "Limpieza")}</span>
+                            <span className="text-right">{t("Service", "Servicio")}</span>
+                            <span className="text-right">{t("Taxes", "Impuestos")}</span>
+                            <span className="text-right">{t("Total", "Total")}</span>
+                            <span className="text-right">{t("Score", "Puntaje")}</span>
+                            <span />
+                          </div>
+                          <div className="space-y-2 mt-2">
+                            {compsResult.selected_comps.map(c => {
+                              const fmt = (v: number | null | undefined) =>
+                                v == null ? "—" : formatCurrency(v);
+                              const gp = c.guest_paid;
+                              const stayNights = gp?.stay_length_nights ?? null;
+                              return (
+                                <div key={c.rank} className="px-3 py-2.5 rounded-xl"
+                                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                  {/* Desktop: single-row grid */}
+                                  <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_repeat(5,minmax(60px,72px))_auto_auto] gap-3 items-center">
+                                    <span className="text-xs font-bold w-5 text-center"
+                                      style={{ color: "rgba(154,165,177,0.4)" }}>#{c.rank}</span>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-xs text-foreground">{c.bedrooms}BR · {c.bathrooms}BA</span>
+                                        {c.building_name && (
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded"
+                                            style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}>
+                                            {c.building_name}
+                                          </span>
+                                        )}
+                                        {c.rating_overall && (
+                                          <span className="text-[10px]" style={{ color: "rgba(154,165,177,0.5)" }}>
+                                            {c.rating_overall.toFixed(1)} ★
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-[10px] mt-0.5 truncate" style={{ color: "rgba(154,165,177,0.4)" }}>
+                                        {c.neighborhood} · {c.distance_to_beach_m}m · Tier {c.beach_tier}
+                                        {stayNights ? ` · ${stayNights}n quote` : ""}
+                                      </p>
+                                    </div>
+                                    <span className="text-right text-sm font-semibold tabular-nums">
+                                      {formatCurrency(c.nightly_price_usd)}
+                                    </span>
+                                    <span className="text-right text-xs tabular-nums"
+                                      style={{ color: gp?.cleaning_fee_usd == null ? "rgba(154,165,177,0.35)" : "rgba(245,247,250,0.85)" }}>
+                                      {fmt(gp?.cleaning_fee_usd)}
+                                    </span>
+                                    <span className="text-right text-xs tabular-nums"
+                                      style={{ color: gp?.service_fee_usd == null ? "rgba(154,165,177,0.35)" : "rgba(245,247,250,0.85)" }}>
+                                      {fmt(gp?.service_fee_usd)}
+                                    </span>
+                                    <span className="text-right text-xs tabular-nums"
+                                      style={{ color: gp?.taxes_usd == null ? "rgba(154,165,177,0.35)" : "rgba(245,247,250,0.85)" }}>
+                                      {fmt(gp?.taxes_usd)}
+                                    </span>
+                                    <span className="text-right text-sm font-bold tabular-nums"
+                                      style={{ color: gp?.total_price_usd == null ? "rgba(154,165,177,0.35)" : "#00C2A8" }}>
+                                      {fmt(gp?.total_price_usd)}
+                                    </span>
+                                    <span className="text-right text-[10px]" style={{ color: "rgba(154,165,177,0.4)" }}>
+                                      {c.score}
+                                    </span>
+                                    {c.source_url ? (
+                                      <a href={c.source_url} target="_blank" rel="noopener noreferrer"
+                                        className="text-muted-foreground hover:text-primary transition-colors">
+                                        <Link2 className="w-3.5 h-3.5" />
+                                      </a>
+                                    ) : <span />}
+                                  </div>
+
+                                  {/* Mobile: stacked layout */}
+                                  <div className="md:hidden">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-bold w-5 text-center shrink-0"
+                                        style={{ color: "rgba(154,165,177,0.4)" }}>#{c.rank}</span>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-xs text-foreground">{c.bedrooms}BR · {c.bathrooms}BA</span>
+                                          {c.building_name && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded"
+                                              style={{ background: "rgba(0,194,168,0.1)", color: "#00C2A8" }}>
+                                              {c.building_name}
+                                            </span>
+                                          )}
+                                          {c.rating_overall && (
+                                            <span className="text-[10px]" style={{ color: "rgba(154,165,177,0.5)" }}>
+                                              {c.rating_overall.toFixed(1)} ★
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="text-[10px] mt-0.5" style={{ color: "rgba(154,165,177,0.4)" }}>
+                                          {c.neighborhood} · {c.distance_to_beach_m}m · Tier {c.beach_tier}
+                                        </p>
+                                      </div>
+                                      {c.source_url && (
+                                        <a href={c.source_url} target="_blank" rel="noopener noreferrer"
+                                          className="shrink-0 text-muted-foreground hover:text-primary transition-colors">
+                                          <Link2 className="w-3.5 h-3.5" />
+                                        </a>
+                                      )}
+                                    </div>
+                                    <div className="grid grid-cols-5 gap-1.5 mt-2.5 pt-2.5"
+                                      style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                                      {[
+                                        { label: t("Nightly", "Por noche"), value: formatCurrency(c.nightly_price_usd), accent: false },
+                                        { label: t("Cleaning", "Limpieza"), value: fmt(gp?.cleaning_fee_usd), accent: false, missing: gp?.cleaning_fee_usd == null },
+                                        { label: t("Service", "Servicio"), value: fmt(gp?.service_fee_usd), accent: false, missing: gp?.service_fee_usd == null },
+                                        { label: t("Taxes", "Impuestos"), value: fmt(gp?.taxes_usd), accent: false, missing: gp?.taxes_usd == null },
+                                        { label: t("Total", "Total"), value: fmt(gp?.total_price_usd), accent: true, missing: gp?.total_price_usd == null },
+                                      ].map((cell, idx) => (
+                                        <div key={idx} className="text-center">
+                                          <p className="text-[9px] uppercase tracking-wide"
+                                            style={{ color: "rgba(154,165,177,0.5)" }}>{cell.label}</p>
+                                          <p className="text-[11px] font-semibold tabular-nums mt-0.5"
+                                            style={{
+                                              color: cell.missing
+                                                ? "rgba(154,165,177,0.35)"
+                                                : cell.accent ? "#00C2A8" : "rgba(245,247,250,0.9)",
+                                            }}>
+                                            {cell.value}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {stayNights && (
+                                      <p className="text-[9px] mt-1.5 text-right" style={{ color: "rgba(154,165,177,0.35)" }}>
+                                        {t(`Quote: ${stayNights}-night stay`, `Cotización: ${stayNights} noches`)}
+                                      </p>
                                     )}
                                   </div>
-                                  <p className="text-[10px] mt-0.5" style={{ color: "rgba(154,165,177,0.4)" }}>
-                                    {c.neighborhood} · {c.distance_to_beach_m}m to beach · Tier {c.beach_tier}
-                                  </p>
                                 </div>
-                                <div className="text-right shrink-0">
-                                  <p className="text-sm font-bold">{formatCurrency(c.nightly_price_usd)}</p>
-                                  <p className="text-[10px]" style={{ color: "rgba(154,165,177,0.4)" }}>
-                                    score {c.score}
-                                  </p>
-                                </div>
-                                {c.source_url && (
-                                  <a href={c.source_url} target="_blank" rel="noopener noreferrer"
-                                    className="shrink-0 text-muted-foreground hover:text-primary transition-colors">
-                                    <Link2 className="w-3.5 h-3.5" />
-                                  </a>
-                                )}
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
+                          <p className="text-[10px] mt-3 text-center" style={{ color: "rgba(154,165,177,0.4)" }}>
+                            {t(
+                              "Cleaning, service, taxes, and total reflect the latest guest-paid quote on file. \"—\" means no quote available for that listing yet.",
+                              "Limpieza, servicio, impuestos y total reflejan la última cotización pagada por el huésped. \"—\" significa que aún no hay cotización disponible.",
+                            )}
+                          </p>
                         </CardContent>
                       </motion.div>
                     )}

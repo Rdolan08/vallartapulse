@@ -8,7 +8,7 @@
 
 import { Router, type IRouter } from "express";
 import { z } from "zod";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { rentalListingsTable, marketEventsTable } from "@workspace/db/schema";
 import {
@@ -452,24 +452,83 @@ router.post("/rental/comps", async (req, res) => {
     }
 
     // ── Selected comps ────────────────────────────────────────────────────────
-    const selectedComps = comps.slice(0, 10).map((c, i) => ({
-      rank: i + 1,
-      external_id: c.listing.externalId,
-      source_url: c.listing.sourceUrl,
-      neighborhood: c.listing.neighborhoodNormalized,
-      bedrooms: c.listing.bedrooms,
-      bathrooms: c.listing.bathrooms,
-      sqft: c.listing.sqft,
-      distance_to_beach_m: c.listing.distanceToBeachM,
-      beach_tier: c.listing.beachTier,
-      price_tier: c.listing.priceTier,
-      nightly_price_usd: c.listing.nightlyPriceUsd,
-      rating_overall: c.listing.ratingOverall,
-      building_name: c.listing.buildingNameNormalized,
-      score: parseFloat(c.score.toFixed(1)),
-      match_reasons: c.matchReasons,
-      top_drivers: extractTopDrivers(c),
-    }));
+    const topComps = comps.slice(0, 10);
+    const topListingIds = topComps.map(c => c.listing.id);
+
+    // Pull the most recent guest-paid breakdown per listing from
+    // listing_price_quotes. Airbnb listings populate the full set of
+    // fees/taxes/total; PVRPV-only listings have no rows here, so the
+    // map lookup returns undefined and the UI renders "—".
+    const feeRows = topListingIds.length === 0
+      ? []
+      : (await db.execute(sql`
+          SELECT DISTINCT ON (listing_id)
+            listing_id::int                  AS listing_id,
+            nightly_price_usd::float8        AS nightly_price_usd,
+            cleaning_fee_usd::float8         AS cleaning_fee_usd,
+            service_fee_usd::float8          AS service_fee_usd,
+            taxes_usd::float8                AS taxes_usd,
+            total_price_usd::float8          AS total_price_usd,
+            stay_length_nights::int          AS stay_length_nights,
+            currency                         AS currency,
+            collected_at                     AS collected_at
+          FROM listing_price_quotes
+          WHERE listing_id = ANY(${topListingIds})
+            AND availability_status = 'available'
+          ORDER BY listing_id, collected_at DESC
+        `)).rows as Array<{
+          listing_id: number;
+          nightly_price_usd: number | null;
+          cleaning_fee_usd: number | null;
+          service_fee_usd: number | null;
+          taxes_usd: number | null;
+          total_price_usd: number | null;
+          stay_length_nights: number | null;
+          currency: string | null;
+          collected_at: Date;
+        }>;
+
+    const feesByListing = new Map<number, typeof feeRows[number]>();
+    for (const r of feeRows) feesByListing.set(r.listing_id, r);
+
+    const selectedComps = topComps.map((c, i) => {
+      const fees = feesByListing.get(c.listing.id);
+      return {
+        rank: i + 1,
+        external_id: c.listing.externalId,
+        source_url: c.listing.sourceUrl,
+        neighborhood: c.listing.neighborhoodNormalized,
+        bedrooms: c.listing.bedrooms,
+        bathrooms: c.listing.bathrooms,
+        sqft: c.listing.sqft,
+        distance_to_beach_m: c.listing.distanceToBeachM,
+        beach_tier: c.listing.beachTier,
+        price_tier: c.listing.priceTier,
+        nightly_price_usd: c.listing.nightlyPriceUsd,
+        rating_overall: c.listing.ratingOverall,
+        building_name: c.listing.buildingNameNormalized,
+        score: parseFloat(c.score.toFixed(1)),
+        match_reasons: c.matchReasons,
+        top_drivers: extractTopDrivers(c),
+        // Guest-paid breakdown (from latest available listing_price_quote).
+        // Null = no quote on file for this listing (e.g. PVRPV-only comps).
+        // Treat 0 as a real zero (no fee charged) — distinct from null.
+        guest_paid: fees
+          ? {
+              nightly_price_usd: fees.nightly_price_usd,
+              cleaning_fee_usd: fees.cleaning_fee_usd,
+              service_fee_usd: fees.service_fee_usd,
+              taxes_usd: fees.taxes_usd,
+              total_price_usd: fees.total_price_usd,
+              stay_length_nights: fees.stay_length_nights,
+              currency: fees.currency ?? "USD",
+              collected_at: fees.collected_at instanceof Date
+                ? fees.collected_at.toISOString()
+                : String(fees.collected_at),
+            }
+          : null,
+      };
+    });
 
     const topDriversOverall = selectedComps.length > 0
       ? Object.entries(
