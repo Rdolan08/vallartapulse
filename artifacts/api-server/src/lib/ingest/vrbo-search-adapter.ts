@@ -15,13 +15,21 @@ import { fetchWithBrowser } from "./browser-fetch.js";
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 
-// VRBO's PerimeterX/HUMAN bot challenge ("Bot or Not?") returns HTTP 429 to
-// raw HTTP fetches — including those through residential proxies — because
-// the TLS/HTTP2 fingerprint and missing JS execution give them away. A real
-// Chromium instance (browser-fetch.ts) presents an authentic fingerprint,
-// executes the client-side JS, and returns the fully-rendered search page.
-// PROXY_URL (Decodo residential) is plumbed in at the browser level by
-// browser-fetch when the env var is set.
+// VRBO sits behind PerimeterX/HUMAN ("Bot or Not?"). Status of approaches
+// tried — KEEP THIS UPDATED so we don't waste cycles re-trying:
+//   ✗ Raw HTTPS (stdlib) from Replit/Railway/GH Actions  → HTTP 429
+//   ✗ undici + ProxyAgent through Decodo residential     → HTTP 429
+//   ✗ Headless Chromium (browser-fetch) direct           → HTTP 429
+//   ✗ Headless Chromium through Decodo residential       → 200 OK BUT the
+//       returned HTML is the PerimeterX challenge page (visible by hrefs
+//       like "/cgp/simple/challenge.*.styles"), not real listings. The
+//       challenge requires solving a JS puzzle + hCaptcha; Playwright
+//       does not auto-solve it.
+//
+// Until we have a working route (Decodo "challenge-solver" add-on, a
+// different residential pool that's clean for VRBO, or an Expedia API
+// affiliate cred), discoverVrboListings() returns []. The script handles
+// that gracefully — the union with existing DB rows still gets refreshed.
 async function get(url: string): Promise<string> {
   // Wait for the listing-card area to render. VRBO uses a couple of selectors
   // depending on A/B variant — race them so we return as soon as anything

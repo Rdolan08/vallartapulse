@@ -37,7 +37,7 @@ nobody can explain a week later.
 | Airbnb — detail refresh (stale >24h) | A | daily 06:00 UTC | same workflow (mode=stale) | shipped |
 | PVRPV | B | daily 07:00 UTC | `.github/workflows/pvrpv-scrape.yml` | shipped |
 | Vacation Vallarta | A | daily 07:30 UTC | `.github/workflows/sources-sync-refresh.yml` (vacation_vallarta step) | shipped |
-| VRBO — discovery + refresh | B | daily 07:15 UTC | `.github/workflows/vrbo-scrape.yml` — script discovers PV listings from VRBO search results, then upserts every URL (new + existing) | shipped |
+| VRBO — discovery + refresh | B | daily 07:15 UTC | `.github/workflows/vrbo-scrape.yml` — script tries to discover PV listings then upserts the union of (new ∪ existing). **Discovery currently blocked by VRBO's PerimeterX bot challenge** (see vrbo-search-adapter.ts header for tried approaches). Refresh of existing rows works the moment any get seeded. | wired, discovery blocked |
 | OG screenshots | B | every other day 09:00 UTC | `.github/workflows/og-refresh.yml` | shipped |
 
 ---
@@ -184,6 +184,16 @@ that source is silently failing — check the GitHub Actions run history.
 These are documented here so they don't get lost. None of them are blocking
 the freshness contract for the sources we *do* feed today.
 
-1. **POI / events / weather data** — these layers don't exist yet on
+1. **VRBO discovery (PerimeterX challenge)** — see the header comment in
+   `artifacts/api-server/src/lib/ingest/vrbo-search-adapter.ts` for the
+   list of approaches already tried (raw HTTP, undici+proxy, headless
+   Chromium direct, headless Chromium through Decodo — last one returns
+   200 OK but with the challenge page, not listings). Unblocking needs
+   either a challenge-solver proxy add-on, a different residential pool
+   that's clean for VRBO, or an Expedia/VRBO API affiliate credential.
+   Until then, the daily cron runs as a no-op when no VRBO seed rows
+   exist; the moment any get seeded (manually or otherwise), the same
+   cron starts refreshing them.
+2. **POI / events / weather data** — these layers don't exist yet on
    the site. When they do, each gets a row in the per-source table and
    a workflow following the five-step recipe above.
