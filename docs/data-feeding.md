@@ -41,7 +41,7 @@ nobody can explain a week later.
 | OG screenshots | B | every other day 09:00 UTC | `.github/workflows/og-refresh.yml` | shipped |
 | **Rental calendar — PVRPV (full 365-day window)** | B | daily 07:05 UTC | `.github/workflows/calendar-scrape.yml` → `pnpm --filter @workspace/scripts run scrape:calendar` → `rental_prices_by_date` | shipped |
 | **Rental calendar — Airbnb (availability, 365-day window)** | B | daily 07:10 UTC | `.github/workflows/airbnb-calendar-scrape.yml` → `rental_prices_by_date` (price=null, availability filled) | shipped — see "Airbnb pricing — pivot resolved" below |
-| **Airbnb per-night pricing (GraphQL replay)** | A | daily 07:20 UTC | `.github/workflows/airbnb-pricing-refresh.yml` → `/api/ingest/airbnb-pricing-refresh` → `listing_price_quotes` | shipped |
+| ~~**Airbnb per-night pricing (GraphQL replay)**~~ | ~~A~~ | ~~daily 07:20 UTC~~ | **REMOVED 2026-04-19** — see "Airbnb pricing — path 2 reverted" below. Airbnb prices arrive later via the Mac mini scraper. | reverted |
 | **Rental calendar — Vacation Vallarta** | B *(planned)* | daily | `vacation-vallarta-calendar-adapter.ts` → `rental_prices_by_date` | **not built** |
 
 ---
@@ -268,12 +268,35 @@ now see Airbnb's demand curve (booking lead-time, holiday compression,
 weekend vs. mid-week occupancy) alongside PVRPV's full price+availability
 data. Per-night dollars wait, but the Airbnb signal is no longer dark.
 
-### Airbnb pricing — path 2 shipped (April 2026)
+### Airbnb pricing — path 2 REVERTED (2026-04-19)
 
-Per-night Airbnb pricing now ships via the `PdpAvailabilityCalendar`
-GraphQL persisted-query call — the same operation the Airbnb PDP
-itself fires after hydration. This closes the "comp listings averaging
-$X/night" gap left by the availability-only feed above.
+> **Decision (T013): v1 ships PVRPV-only nightly pricing.** Airbnb
+> per-night dollars arrive later via the Mac mini residential-IP
+> scraper documented at the bottom of this file (~10-day refresh
+> cycle, not daily). A task agent shipped a GraphQL persisted-query
+> replay during the same window the decision was being made; it has
+> been removed because it (a) directly contradicts the v1 contract,
+> (b) introduces a fragile dependency on Airbnb's persisted-query SHA
+> rotation we're not staffed to monitor, and (c) routes daily volume
+> through the residential proxy budget that the Mac scraper plan
+> already accounts for.
+>
+> **What was removed:** `airbnb-graphql-pricing-adapter.ts`,
+> `airbnb-pricing-runner.ts`, `POST /api/ingest/airbnb-pricing-refresh`,
+> `.github/workflows/airbnb-pricing-refresh.yml`. The Airbnb
+> *availability* dispatcher (Task #10) stays — that's not pricing.
+>
+> Historical context for the path-2 approach is preserved below for
+> reference if the Mac scraper ever fails and we need to reopen the
+> decision.
+
+#### Historical: how path 2 worked when it shipped
+
+Per-night Airbnb pricing was briefly shipped via the
+`PdpAvailabilityCalendar` GraphQL persisted-query call — the same
+operation the Airbnb PDP itself fires after hydration. This closed the
+"comp listings averaging $X/night" gap left by the availability-only
+feed above.
 
 **What shipped:**
 

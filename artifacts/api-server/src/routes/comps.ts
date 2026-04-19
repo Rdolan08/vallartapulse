@@ -19,6 +19,7 @@ import {
   type FinishQuality,
 } from "../lib/comps-engine-v3";
 import { type CompsListingV2, type CompResultV2, type BeachTier } from "../lib/comps-engine-v2";
+import { selectCompPriceSources, type PriceSource } from "../lib/comps-pricing-source";
 import { lookupBuilding } from "../lib/building-lookup";
 import { PV_MONTHLY_FACTORS } from "../lib/pv-seasonality";
 import type { MarketEvent } from "@workspace/db/schema";
@@ -29,27 +30,60 @@ const router: IRouter = Router();
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
+export interface PoolDiagnostics {
+  totalListingsConsidered: number;
+  excludedReasons: {
+    no_priced_observation: number;
+    stale_beyond_60d: number;
+    no_static_fallback: number;
+    missing_required_field: number;
+  };
+  sourceCounts: Record<PriceSource, number>;
+  /** Avg freshness (days) of admitted comps, by source */
+  avgFreshnessDays: Record<PriceSource, number | null>;
+}
+
 let engineCache: {
   engine: CompsEngineV3;
   builtAt: number;
   listingCount: number;
+  diagnostics: PoolDiagnostics;
 } | null = null;
 
-async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: number }> {
+async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: number; diagnostics: PoolDiagnostics }> {
   const now = Date.now();
   if (engineCache && now - engineCache.builtAt < CACHE_TTL_MS) {
-    return { engine: engineCache.engine, listingCount: engineCache.listingCount };
+    return {
+      engine: engineCache.engine,
+      listingCount: engineCache.listingCount,
+      diagnostics: engineCache.diagnostics,
+    };
   }
 
   const rows = await db.select().from(rentalListingsTable);
 
-  const listings: CompsListingV2[] = rows
-    .filter(r =>
-      r.nightlyPriceUsd != null &&
-      r.distanceToBeachM != null &&
-      r.neighborhoodNormalized != null
-    )
-    .map(r => ({
+  // Field-level prerequisites the engine itself requires (independent
+  // of price source).
+  const eligible = rows.filter(r =>
+    r.distanceToBeachM != null &&
+    r.neighborhoodNormalized != null,
+  );
+  const missingRequiredField = rows.length - eligible.length;
+
+  // Comp Model Contract v1 — pick one nightly price per listing
+  // (PVRPV daily preferred, static fallback) with freshness gating.
+  const selection = await selectCompPriceSources(eligible.map(r => r.id));
+
+  const listings: CompsListingV2[] = [];
+  const freshnessAccum: Record<PriceSource, { sum: number; n: number }> = {
+    pvrpv_daily: { sum: 0, n: 0 },
+    static_displayed: { sum: 0, n: 0 },
+  };
+
+  for (const r of eligible) {
+    const chosen = selection.chosen.get(r.id);
+    if (!chosen) continue;
+    listings.push({
       id: r.id,
       externalId: r.externalId ?? String(r.id),
       sourceUrl: r.sourceUrl,
@@ -60,14 +94,38 @@ async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: numbe
       distanceToBeachM: parseFloat(String(r.distanceToBeachM!)),
       amenitiesNormalized: Array.isArray(r.amenitiesNormalized) ? r.amenitiesNormalized : [],
       ratingOverall: r.ratingOverall != null ? parseFloat(String(r.ratingOverall)) : null,
-      nightlyPriceUsd: parseFloat(String(r.nightlyPriceUsd!)),
+      nightlyPriceUsd: chosen.nightlyPriceUsd,
       buildingName: r.buildingName ?? null,
       dataConfidenceScore: parseFloat(String(r.dataConfidenceScore)),
-    }));
+      priceSource: chosen.priceSource,
+      priceObservedAt: chosen.priceObservedAt.toISOString(),
+      priceFreshnessDays: chosen.priceFreshnessDays,
+      priceFreshnessWeight: chosen.priceFreshnessWeight,
+    });
+    freshnessAccum[chosen.priceSource].sum += chosen.priceFreshnessDays;
+    freshnessAccum[chosen.priceSource].n += 1;
+  }
+
+  const diagnostics: PoolDiagnostics = {
+    totalListingsConsidered: rows.length,
+    excludedReasons: {
+      ...selection.excludedReasons,
+      missing_required_field: missingRequiredField,
+    },
+    sourceCounts: selection.sourceCounts,
+    avgFreshnessDays: {
+      pvrpv_daily: freshnessAccum.pvrpv_daily.n > 0
+        ? Math.round(10 * freshnessAccum.pvrpv_daily.sum / freshnessAccum.pvrpv_daily.n) / 10
+        : null,
+      static_displayed: freshnessAccum.static_displayed.n > 0
+        ? Math.round(10 * freshnessAccum.static_displayed.sum / freshnessAccum.static_displayed.n) / 10
+        : null,
+    },
+  };
 
   const engine = new CompsEngineV3(listings);
-  engineCache = { engine, builtAt: now, listingCount: listings.length };
-  return { engine, listingCount: listings.length };
+  engineCache = { engine, builtAt: now, listingCount: listings.length, diagnostics };
+  return { engine, listingCount: listings.length, diagnostics };
 }
 
 // ── Market events cache ───────────────────────────────────────────────────────
@@ -254,7 +312,7 @@ router.post("/rental/comps", async (req, res) => {
   }, "comps v3.1 request");
 
   try {
-    const [{ engine, listingCount }, allEvents] = await Promise.all([
+    const [{ engine, listingCount, diagnostics: poolDiagnostics }, allEvents] = await Promise.all([
       getEngine(),
       getActiveEvents(),
     ]);
@@ -449,6 +507,11 @@ router.post("/rental/comps", async (req, res) => {
       source_scope: `Multi-source (PVRPV + Vacation Vallarta + Airbnb + VRBO) — ${input.neighborhood_normalized}`,
       eligible_listing_count: engine.eligibleCount,
       db_listing_count: listingCount,
+      // Comp Model Contract v1 — provenance + freshness diagnostics
+      // for the entire comp pool (not just the matched comps below).
+      // Lets the dashboard surface "X PVRPV daily, Y static fallback,
+      // Z dropped for staleness". See docs/comp-model-contract.md.
+      pool_diagnostics: poolDiagnostics,
       eligibility_status: confidence === "guidance_only" ? "guidance_only" : "eligible",
 
       target_summary: {
