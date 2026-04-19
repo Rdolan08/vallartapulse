@@ -1,0 +1,53 @@
+name: PVRPV Scrape (daily)
+
+# Runs the existing scripts/src/pvrpv-scrape.ts directly against the prod DB.
+# Why GitHub Actions instead of an in-process scheduler:
+#   - PVRPV is a plain-HTTP site with no anti-bot wall; we don't need the
+#     proxy infra that lives on Railway.
+#   - Keeps the scraper out of the API server's request loop entirely.
+#
+# Frequency: daily at 07:00 UTC. The freshness contract is "no stale data
+# on the site, ever" — daily is the right cadence even though PVRPV listings
+# don't churn fast, because rates and availability do.
+#
+# Required GitHub repository secrets:
+#   RAILWAY_DATABASE_URL   prod Postgres connection string (already used elsewhere)
+
+on:
+  schedule:
+    - cron: "0 7 * * *"   # daily 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pvrpv-scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with: { fetch-depth: 1 }
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with: { version: 9 }
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Run PVRPV scraper against prod DB
+        env:
+          DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
+        run: pnpm --filter @workspace/scripts exec tsx src/pvrpv-scrape.ts
