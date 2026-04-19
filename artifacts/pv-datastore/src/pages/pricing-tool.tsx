@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { apiUrl } from "@/lib/api-base";
+import { apiFetch } from "@/lib/api-base";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -277,17 +277,6 @@ const CONFIDENCE_CONFIG: Record<string, { label: string; color: string; bg: stri
   low:           { label: "Low Confidence",    color: "#F97316", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.3)" },
   guidance_only: { label: "Guidance Only",     color: "#EF4444", bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.3)" },
 };
-
-// ── API helpers ────────────────────────────────────────────────────────────────
-
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(apiUrl(path), options);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { message?: string }).message ?? `API error: HTTP ${res.status}`);
-  }
-  return res.json() as Promise<T>;
-}
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -556,11 +545,8 @@ export default function PricingToolPage() {
   useEffect(() => {
     (async () => {
       try {
-        const bRes = await fetch(apiUrl("/api/rental/buildings"));
-        if (bRes.ok) {
-          const bData = await bRes.json() as { buildings: BuildingEntry[] };
-          setBuildings(bData.buildings ?? []);
-        }
+        const bData = await apiFetch<{ buildings: BuildingEntry[] }>("/api/rental/buildings");
+        setBuildings(bData.buildings ?? []);
       } catch { /* silent */ } finally {
         setLoadingMeta(false);
       }

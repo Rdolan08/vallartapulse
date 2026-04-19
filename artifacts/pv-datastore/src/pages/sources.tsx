@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { RefreshCw, ExternalLink, Database, Zap, Clock, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { format, formatDistanceToNow, isAfter, subHours, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { apiUrl } from "@/lib/api-base";
+import { apiUrl, apiFetch } from "@/lib/api-base";
 
 function freshnessBadge(lastSyncedAt: string | null | undefined): "fresh" | "stale" | "never" {
   if (!lastSyncedAt) return "never";
@@ -23,7 +23,7 @@ function freshnessBadge(lastSyncedAt: string | null | undefined): "fresh" | "sta
 interface PipelineFreshness {
   alertLevel: "ok" | "warn" | "fail";
   alertReason: string;
-  listingsTotal: number;
+  listingsTotal?: number;
   // Airbnb-pricing-only fields (optional on other endpoints):
   listingsQuotedEver?: number;
   listingsNeverQuoted?: number;
@@ -32,19 +32,30 @@ interface PipelineFreshness {
   listingsCovered?: number;
   // VRBO + VV pricing:
   newestScrapeAt?: string | null;
-  // Common:
-  listingsStale14d: number;
+  // Common stale-counter (omitted for non-cohort pipelines like pricing-tool):
+  listingsStale14d?: number;
+  // Pricing-tool uptime probe (no cohort, just last successful smoke hit):
+  lastSuccessAt?: string | null;
 }
+
+type PipelineMode = "cohort" | "uptime";
 
 interface PipelineCardConfig {
   endpoint: string;
   labelEn: string;
   labelEs: string;
-  /** Where the "newest" timestamp lives in the response shape. */
-  newestField: "newestQuoteAt" | "newestScrapeAt";
-  /** Plain noun for the "newest" line. */
-  newestLabelEn: string;
-  newestLabelEs: string;
+  /**
+   * "cohort"  → headline is "{label} — N listings stale > 14 days"
+   *             (Airbnb / VRBO / VV pricing pipelines).
+   * "uptime"  → headline is "{label} — last successful check {ago}"
+   *             (pricing-tool smoke probe; no listing cohort).
+   */
+  mode: PipelineMode;
+  /** Where the "newest" timestamp lives in the response shape (cohort mode). */
+  newestField?: "newestQuoteAt" | "newestScrapeAt";
+  /** Plain noun for the "newest" line (cohort mode). */
+  newestLabelEn?: string;
+  newestLabelEs?: string;
 }
 
 const PIPELINES: PipelineCardConfig[] = [
@@ -52,6 +63,7 @@ const PIPELINES: PipelineCardConfig[] = [
     endpoint: "/api/ingest/airbnb-pricing-freshness",
     labelEn: "Airbnb pricing",
     labelEs: "Precios de Airbnb",
+    mode: "cohort",
     newestField: "newestQuoteAt",
     newestLabelEn: "Newest quote",
     newestLabelEs: "Cotización más reciente",
@@ -76,6 +88,7 @@ const PIPELINES: PipelineCardConfig[] = [
     endpoint: "/api/ingest/vrbo-scrape-freshness",
     labelEn: "VRBO scrape",
     labelEs: "Extracción de VRBO",
+    mode: "cohort",
     newestField: "newestScrapeAt",
     newestLabelEn: "Newest scrape",
     newestLabelEs: "Extracción más reciente",
@@ -84,9 +97,16 @@ const PIPELINES: PipelineCardConfig[] = [
     endpoint: "/api/ingest/vacation-vallarta-pricing-freshness",
     labelEn: "Vacation Vallarta pricing",
     labelEs: "Precios de Vacation Vallarta",
+    mode: "cohort",
     newestField: "newestScrapeAt",
     newestLabelEn: "Newest refresh",
     newestLabelEs: "Actualización más reciente",
+  },
+  {
+    endpoint: "/api/health/pricing-tool",
+    labelEn: "Pricing tool",
+    labelEs: "Herramienta de precios",
+    mode: "uptime",
   },
 ];
 
@@ -111,9 +131,8 @@ function PipelineHealthCard({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(apiUrl(cfg.endpoint))
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((j: PipelineFreshness) => {
+    apiFetch<PipelineFreshness>(cfg.endpoint)
+      .then((j) => {
         if (!cancelled) setData(j);
       })
       .catch(() => {
@@ -138,17 +157,37 @@ function PipelineHealthCard({
 
   const Icon = data.alertLevel === "ok" ? CheckCircle2 : AlertCircle;
   const label = lang === "es" ? cfg.labelEs : cfg.labelEn;
-  const newestRaw =
-    (cfg.newestField === "newestQuoteAt" ? data.newestQuoteAt : data.newestScrapeAt) ?? null;
 
-  const headline = t(
-    `${label} — ${data.listingsStale14d} listings stale > 14 days`,
-    `${label} — ${data.listingsStale14d} anuncios sin actualizar > 14 días`,
-  );
+  // ── Headline + last-refresh derived per mode ──────────────────────────────
+  let headline: string;
+  let lastRefreshText: string;
+  let cohortLine: string | null = null;
 
-  const lastRefreshText = newestRaw
-    ? formatDistanceToNow(new Date(newestRaw), { addSuffix: true })
-    : t("never", "nunca");
+  if (cfg.mode === "uptime") {
+    const ts = data.lastSuccessAt ?? null;
+    lastRefreshText = ts
+      ? formatDistanceToNow(new Date(ts), { addSuffix: true })
+      : t("never", "nunca");
+    headline = t(
+      `${label} — last successful check ${lastRefreshText}`,
+      `${label} — última verificación exitosa ${lastRefreshText}`,
+    );
+  } else {
+    const newestRaw =
+      (cfg.newestField === "newestQuoteAt" ? data.newestQuoteAt : data.newestScrapeAt) ?? null;
+    lastRefreshText = newestRaw
+      ? formatDistanceToNow(new Date(newestRaw), { addSuffix: true })
+      : t("never", "nunca");
+    const stale = data.listingsStale14d ?? 0;
+    headline = t(
+      `${label} — ${stale} listings stale > 14 days`,
+      `${label} — ${stale} anuncios sin actualizar > 14 días`,
+    );
+    const total = data.listingsTotal ?? 0;
+    cohortLine = `${t("Cohort", "Cohorte")}: ${total.toLocaleString()} · ${
+      lang === "es" ? cfg.newestLabelEs : cfg.newestLabelEn
+    }: ${lastRefreshText}`;
+  }
 
   return (
     <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3 text-sm", tone)}>
@@ -159,10 +198,7 @@ function PipelineHealthCard({
           <Clock className="w-3 h-3" />
           {t("Last successful refresh", "Última actualización exitosa")}: {lastRefreshText}
         </div>
-        <div className="text-xs opacity-80">
-          {t("Cohort", "Cohorte")}: {data.listingsTotal.toLocaleString()} ·{" "}
-          {lang === "es" ? cfg.newestLabelEs : cfg.newestLabelEn}: {lastRefreshText}
-        </div>
+        {cohortLine && <div className="text-xs opacity-80">{cohortLine}</div>}
         {data.alertReason && (
           <div className="text-xs font-medium">{data.alertReason}</div>
         )}

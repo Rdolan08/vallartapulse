@@ -22,6 +22,7 @@ import { type CompsListingV2, type CompResultV2, type BeachTier } from "../lib/c
 import { selectCompPriceSources, type PriceSource } from "../lib/comps-pricing-source";
 import { lookupBuilding } from "../lib/building-lookup";
 import { PV_MONTHLY_FACTORS } from "../lib/pv-seasonality";
+import { recordPricingToolSuccess } from "../lib/pricing-tool-uptime";
 import type { MarketEvent } from "@workspace/db/schema";
 
 const router: IRouter = Router();
@@ -725,6 +726,12 @@ router.post("/rental/comps", async (req, res) => {
       model_limitations: modelLimitations,
       generated_at: new Date().toISOString(),
     });
+
+    // Pricing-tool uptime probe — record the timestamp of the most recent
+    // successful response so /api/health/pricing-tool can surface it on
+    // the /sources dashboard. Done after `res.json(...)` so a serializer
+    // failure doesn't falsely advance the success marker.
+    recordPricingToolSuccess();
 
   } catch (err) {
     req.log.error({ err }, "Failed to run comps engine");
