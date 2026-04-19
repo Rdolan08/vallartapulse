@@ -130,17 +130,22 @@ function PipelineHealthCard({
     `${label} — ${data.listingsStale14d} anuncios sin actualizar > 14 días`,
   );
 
+  const lastRefreshText = newestRaw
+    ? formatDistanceToNow(new Date(newestRaw), { addSuffix: true })
+    : t("never", "nunca");
+
   return (
     <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3 text-sm", tone)}>
       <Icon className="w-4 h-4 mt-0.5 shrink-0" />
       <div className="flex-1 space-y-1">
         <div className="font-medium">{headline}</div>
+        <div className="text-xs font-medium flex items-center gap-1.5 opacity-90">
+          <Clock className="w-3 h-3" />
+          {t("Last successful refresh", "Última actualización exitosa")}: {lastRefreshText}
+        </div>
         <div className="text-xs opacity-80">
           {t("Cohort", "Cohorte")}: {data.listingsTotal.toLocaleString()} ·{" "}
-          {lang === "es" ? cfg.newestLabelEs : cfg.newestLabelEn}:{" "}
-          {newestRaw
-            ? formatDistanceToNow(new Date(newestRaw), { addSuffix: true })
-            : t("never", "nunca")}
+          {lang === "es" ? cfg.newestLabelEs : cfg.newestLabelEn}: {lastRefreshText}
         </div>
         {data.alertReason && (
           <div className="text-xs font-medium">{data.alertReason}</div>
