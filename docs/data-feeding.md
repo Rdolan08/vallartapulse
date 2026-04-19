@@ -50,7 +50,7 @@ Set these once under **Settings → Secrets and variables → Actions**:
 | Secret | Used by | Value |
 |---|---|---|
 | `RAILWAY_API_URL` | Pattern A workflows | e.g. `https://api.vallartapulse.com` (no trailing slash) |
-| `INTERNAL_TRIGGER_TOKEN` | Pattern A workflows | same value as the Railway env var of the same name |
+| `INTERNAL_TRIGGER_TOKEN` | Pattern A workflows (`/ingest/enrich-airbnb-detail`, `/ingest/sync/:source`, `/ingest/sync-all`) | same value as the Railway env var of the same name |
 | `RAILWAY_DATABASE_URL` | Pattern B workflows | prod Postgres connection string |
 
 The matching Railway env vars (`INTERNAL_TRIGGER_TOKEN`, `PROXY_URL`,
@@ -137,8 +137,31 @@ Refresh → Run workflow** (the `workflow_dispatch` button).
 
 ### Spot-check freshness on prod
 
+**The acceptance query — max scraped_at per source.** The headline question
+"is anything stale?" reduces to "what's the most recent `scraped_at` per
+source, and is it within the freshness window?". Run this after every
+deploy and as the first diagnostic step when something feels stale:
+
 ```sql
--- Per-source: how many rows are >24h stale right now?
+SELECT
+  source_platform,
+  COUNT(*)                                              AS rows,
+  MAX(scraped_at)                                       AS last_scraped,
+  NOW() - MAX(scraped_at)                               AS age,
+  (NOW() - MAX(scraped_at) > INTERVAL '1 day') AS stale
+FROM rental_listings
+GROUP BY source_platform
+ORDER BY source_platform;
+```
+
+A `stale = true` row means that source's cron has not produced a fresh
+write in the last 24h — open the corresponding GitHub Actions run history
+and the Railway logs.
+
+**Per-listing freshness for Airbnb enrichment** (the slower-moving signal —
+how recently each listing's PDP was re-fetched):
+
+```sql
 SELECT
   rl.source_platform,
   COUNT(*)                                                  AS total,
@@ -154,3 +177,30 @@ GROUP BY 1 ORDER BY 1;
 
 If `stale_24h > 0` for more than one daily cycle on any source, the cron for
 that source is silently failing — check the GitHub Actions run history.
+
+---
+
+## Out of scope for this task — known follow-ups
+
+These are documented here so they don't get lost. None of them are blocking
+the freshness contract for the sources we *do* feed today.
+
+1. **VRBO** — the existing `vrbo-adapter.ts` only exports
+   `fetchVrboListing(url)` (single URL). Wiring a cron requires building
+   a batch driver under `scripts/src/vrbo-scrape.ts` (analogous to
+   `pvrpv-scrape.ts`) plus a discovery layer to seed it with URLs.
+   Until then VRBO has no surface assignment in the table above.
+2. **vacation_vallarta zero-row bug** — the cron is wired into
+   `sources-sync-refresh.yml` and surfaces RED in Actions, but the
+   adapter still returns 0 rows on Railway prod. Needs a runtime debug
+   pass: hit `POST /api/ingest/sync/vacation_vallarta` from a Railway
+   shell and inspect logs for which step in `discoverSlugs()` /
+   `scrapeListing()` is failing. Suspected: TLS/SNI mismatch or the
+   Squarespace site refusing the bare-Node UA when fetched from the
+   Railway egress IP.
+3. **booking_com credentials** — operator action only: set the booking
+   API credentials in Railway env vars. The cron will go green
+   automatically once the adapter has what it needs.
+4. **POI / events / weather data** — these layers don't exist yet on
+   the site. When they do, each gets a row in the per-source table and
+   a workflow following the five-step recipe above.

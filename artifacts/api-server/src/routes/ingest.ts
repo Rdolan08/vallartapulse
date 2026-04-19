@@ -607,7 +607,33 @@ router.get("/ingest/sync-status", (_req, res) => {
 // ── POST /ingest/sync-all ─────────────────────────────────────────────────
 // Triggers an immediate refresh of all automated sources in parallel.
 
+/**
+ * Token gate shared by the cron-driven ingest endpoints.
+ *   - Returns null + writes the response when the request is rejected.
+ *   - Returns true when the caller is authenticated.
+ *   - Returns true with a logged warning when INTERNAL_TRIGGER_TOKEN is
+ *     unset (preserves legacy behavior on dev / un-configured environments
+ *     so local curl-based smoke tests still work; prod sets the var).
+ *
+ * Centralized so that adding a new triggerable endpoint can't accidentally
+ * skip the auth check — every cron endpoint should call this as line 1.
+ */
+function requireInternalToken(req: import("express").Request, res: import("express").Response, label: string): boolean {
+  const expected = process.env["INTERNAL_TRIGGER_TOKEN"];
+  if (!expected || expected.length === 0) {
+    req.log.warn({ label }, "ingest endpoint hit with INTERNAL_TRIGGER_TOKEN unset — allowing request (dev-mode behavior)");
+    return true;
+  }
+  const provided = req.header("x-internal-token");
+  if (provided !== expected) {
+    res.status(401).json({ error: "Unauthorized" });
+    return false;
+  }
+  return true;
+}
+
 router.post("/ingest/sync-all", async (req, res) => {
+  if (!requireInternalToken(req, res, "ingest/sync-all")) return;
   req.log.info("ingest/sync-all: starting full sync");
   try {
     const results = await syncAll();
@@ -635,6 +661,7 @@ router.post("/ingest/sync-all", async (req, res) => {
 // Triggers an immediate refresh of a single source.
 
 router.post("/ingest/sync/:source", async (req, res) => {
+  if (!requireInternalToken(req, res, "ingest/sync/:source")) return;
   const source = req.params["source"] as SourceKey;
   req.log.info({ source }, "ingest/sync/:source: triggered");
   try {

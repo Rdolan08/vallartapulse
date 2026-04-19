@@ -13,12 +13,10 @@ name: Misc Sources Sync (daily)
 # others — `continue-on-error: true` plus per-step naming makes failures
 # easy to spot in the Actions UI.
 #
-# Required GitHub repository secret:
-#   RAILWAY_API_URL   e.g. https://api.vallartapulse.com  (no trailing slash)
-#
-# Note: the /api/ingest/sync/:source endpoint is NOT token-protected today
-# (only the enrich-airbnb-detail endpoint is). Hardening that is tracked
-# separately; for now this workflow runs without an auth header.
+# Required GitHub repository secrets:
+#   RAILWAY_API_URL          e.g. https://api.vallartapulse.com  (no trailing slash)
+#   INTERNAL_TRIGGER_TOKEN   same value as the Railway env var of the same name
+#                            (the /api/ingest/sync/:source endpoint requires it)
 
 on:
   schedule:
@@ -46,20 +44,25 @@ jobs:
     steps:
       - name: Verify required secrets
         env:
-          RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
+          RAILWAY_API_URL:        ${{ secrets.RAILWAY_API_URL }}
+          INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
         run: |
           : "${RAILWAY_API_URL:?RAILWAY_API_URL secret is missing}"
+          : "${INTERNAL_TRIGGER_TOKEN:?INTERNAL_TRIGGER_TOKEN secret is missing}"
 
       - name: Refresh vacation_vallarta
         if: ${{ github.event_name == 'schedule' || inputs.source == 'all' || inputs.source == 'vacation_vallarta' }}
         continue-on-error: true
         env:
-          RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
+          RAILWAY_API_URL:        ${{ secrets.RAILWAY_API_URL }}
+          INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
         run: |
           set -euo pipefail
           curl --fail-with-body --show-error --silent --max-time 600 \
             -X POST "$RAILWAY_API_URL/api/ingest/sync/vacation_vallarta" \
-            -H "Content-Type: application/json" -d '{}' \
+            -H "Content-Type: application/json" \
+            -H "X-Internal-Token: $INTERNAL_TRIGGER_TOKEN" \
+            -d '{}' \
             | tee /tmp/vv.json
           echo ""
           jq '{source, ok, count, duration_ms, error, note}' /tmp/vv.json || true
@@ -73,12 +76,15 @@ jobs:
         if: ${{ github.event_name == 'schedule' || inputs.source == 'all' || inputs.source == 'booking_com' }}
         continue-on-error: true
         env:
-          RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
+          RAILWAY_API_URL:        ${{ secrets.RAILWAY_API_URL }}
+          INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
         run: |
           set -euo pipefail
           curl --fail-with-body --show-error --silent --max-time 600 \
             -X POST "$RAILWAY_API_URL/api/ingest/sync/booking_com" \
-            -H "Content-Type: application/json" -d '{}' \
+            -H "Content-Type: application/json" \
+            -H "X-Internal-Token: $INTERNAL_TRIGGER_TOKEN" \
+            -d '{}' \
             | tee /tmp/bk.json
           echo ""
           jq '{source, ok, count, duration_ms, error, note}' /tmp/bk.json || true
