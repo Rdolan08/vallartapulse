@@ -29,18 +29,25 @@
  *   PRUNE_MAX             optional cap (default: all)
  */
 
-import { sql, eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, pool, rentalListingsTable } from "@workspace/db";
 import {
   fetchAirbnbRaw,
   rawFetchLooksUnusable,
 } from "../../artifacts/api-server/src/lib/ingest/raw-fetch.js";
+import { runPool } from "./lib/concurrency.js";
 
 const SOURCE_PLATFORM = "airbnb";
 const CONCURRENCY = parseInt(process.env.PRUNE_CONCURRENCY ?? "4", 10);
 const MAX = process.env.PRUNE_MAX ? parseInt(process.env.PRUNE_MAX, 10) : null;
 const MIN_DELAY_MS = 250;
 const APPLY = process.argv.includes("--apply");
+/**
+ * Hard kill-switch. Decodo will occasionally hang past the inner 25s abort,
+ * deadlocking the worker pool. 40s outer timeout means a hung fetch costs us
+ * one slot for 40s instead of forever.
+ */
+const HARD_TIMEOUT_MS = 40_000;
 
 interface ListingRow {
   id: number;
@@ -55,10 +62,6 @@ interface PerListingResult {
   reason?: string;
   status?: number;
   bytes?: number;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
 }
 
 async function loadActive(): Promise<ListingRow[]> {
@@ -101,18 +104,6 @@ async function checkOne(listing: ListingRow): Promise<PerListingResult> {
   }
 }
 
-async function runPool<T>(items: T[], worker: (t: T) => Promise<void>): Promise<void> {
-  let cursor = 0;
-  const runners = Array.from({ length: Math.min(CONCURRENCY, items.length) }, async () => {
-    while (cursor < items.length) {
-      const idx = cursor++;
-      await worker(items[idx]);
-      await sleep(MIN_DELAY_MS);
-    }
-  });
-  await Promise.all(runners);
-}
-
 async function applyPrune(ids: number[]): Promise<number> {
   if (ids.length === 0) return 0;
   const CHUNK = 500;
@@ -146,19 +137,37 @@ async function main(): Promise<void> {
 
   const results: PerListingResult[] = [];
   let done = 0;
-  await runPool(listings, async (l) => {
-    const r = await checkOne(l);
-    results.push(r);
-    done++;
-    if (done % 25 === 0 || done === listings.length) {
-      const live = results.filter((x) => x.verdict === "live").length;
-      const delisted = results.filter((x) => x.verdict === "delisted").length;
-      const errors = results.filter((x) => x.verdict === "fetch_error").length;
-      console.log(
-        `[${done}/${listings.length}] live=${live}  delisted=${delisted}  errors=${errors}`,
-      );
-    }
-  });
+  await runPool(
+    listings,
+    {
+      concurrency: CONCURRENCY,
+      hardTimeoutMs: HARD_TIMEOUT_MS,
+      delayBetweenMs: MIN_DELAY_MS,
+    },
+    async (l) => {
+      let r: PerListingResult;
+      try {
+        r = await checkOne(l);
+      } catch (e) {
+        // Includes RunPoolTimeoutError when Decodo hangs past abort.
+        r = {
+          listing: l,
+          verdict: "fetch_error",
+          reason: (e as Error).message.slice(0, 160),
+        };
+      }
+      results.push(r);
+      done++;
+      if (done % 25 === 0 || done === listings.length) {
+        const live = results.filter((x) => x.verdict === "live").length;
+        const delisted = results.filter((x) => x.verdict === "delisted").length;
+        const errors = results.filter((x) => x.verdict === "fetch_error").length;
+        console.log(
+          `[${done}/${listings.length}] live=${live}  delisted=${delisted}  errors=${errors}`,
+        );
+      }
+    },
+  );
 
   const live = results.filter((r) => r.verdict === "live");
   const delisted = results.filter((r) => r.verdict === "delisted");
