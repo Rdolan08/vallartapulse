@@ -67,7 +67,8 @@ jobs:
             -d "{\"mode\":\"new\",\"maxListings\":$MAX_LISTINGS}" \
             | tee /tmp/new.json
           echo ""
-          jq '{attempted, enriched, parseFails, blocked, errored, elapsedMs}' /tmp/new.json || true
+          # Endpoint nests counts under `.summary` with snake_case keys.
+          jq '.summary' /tmp/new.json || true
 
       - name: Refresh stale listings (mode=stale, >24h)
         if: ${{ github.event_name == 'schedule' || inputs.mode == 'both' || inputs.mode == 'stale' }}
@@ -85,4 +86,4 @@ jobs:
             -d "{\"mode\":\"stale\",\"staleAfterDays\":1,\"maxListings\":$MAX_LISTINGS}" \
             | tee /tmp/stale.json
           echo ""
-          jq '{attempted, enriched, parseFails, blocked, errored, elapsedMs}' /tmp/stale.json || true
+          jq '.summary' /tmp/stale.json || true
