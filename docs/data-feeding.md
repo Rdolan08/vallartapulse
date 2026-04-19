@@ -36,9 +36,9 @@ nobody can explain a week later.
 | Airbnb — detail enrichment (new) | A | daily 06:00 UTC | `.github/workflows/airbnb-enrich-refresh.yml` (mode=new) | shipped |
 | Airbnb — detail refresh (stale >24h) | A | daily 06:00 UTC | same workflow (mode=stale) | shipped |
 | PVRPV | B | daily 07:00 UTC | `.github/workflows/pvrpv-scrape.yml` | shipped |
-| Vacation Vallarta | B | daily | not yet wired — adapter currently returns 0 rows in prod, needs debug first | **broken** |
-| VRBO | B | weekly | adapter not yet implemented | not started |
-| Booking.com | A | daily | needs API credentials in Railway env | blocked on creds |
+| Vacation Vallarta | A | daily 07:30 UTC | `.github/workflows/sources-sync-refresh.yml` (vacation_vallarta step) | wired — surfaces RED in Actions until 0-row bug fixed |
+| VRBO | — | — | adapter exists for single-URL fetch (`fetchVrboListing`) but no batch/discovery driver — needs `scripts/src/vrbo-scrape.ts` before a cron has anything to fire | **not started** |
+| Booking.com | A | daily 07:30 UTC | `.github/workflows/sources-sync-refresh.yml` (booking_com step) | wired — surfaces RED until creds set on Railway |
 | OG screenshots | B | every other day 09:00 UTC | `.github/workflows/og-refresh.yml` | shipped |
 
 ---
