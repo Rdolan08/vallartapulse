@@ -22,6 +22,7 @@ import { sql, eq } from "drizzle-orm";
 import { db, rentalListingsTable } from "@workspace/db";
 import { fetchVrboListing } from "../../artifacts/api-server/src/lib/ingest/vrbo-adapter.js";
 import { discoverVrboListings } from "../../artifacts/api-server/src/lib/ingest/vrbo-search-adapter.js";
+import { closeBrowser } from "../../artifacts/api-server/src/lib/ingest/browser-fetch.js";
 
 const SOURCE_PLATFORM = "vrbo";
 const MAX_LISTINGS = 200;
@@ -110,6 +111,10 @@ async function main(): Promise<void> {
     console.log(`  (${discovery.errors.length} page error(s) — continuing)`);
     for (const e of discovery.errors.slice(0, 5)) console.log(`     · ${e}`);
   }
+  if (discovery.debugFirstPageHrefs && discovery.debugFirstPageHrefs.length > 0) {
+    console.log("  DEBUG: 0 IDs extracted — sample hrefs from first page:");
+    for (const h of discovery.debugFirstPageHrefs) console.log(`     · ${h}`);
+  }
 
   const existingUrls = await loadExistingUrls();
   console.log(`Existing VRBO rows in DB: ${existingUrls.length}`);
@@ -148,7 +153,13 @@ async function main(): Promise<void> {
   if (failed > 0) process.exitCode = 1;
 }
 
-main().catch((e) => {
-  console.error("vrbo-scrape failed:", e);
-  process.exit(1);
-});
+main()
+  .catch((e) => {
+    console.error("vrbo-scrape failed:", e);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    // browser-fetch caches a Chromium instance — without explicit teardown
+    // the Node process stays alive and the GH workflow times out at 30 min.
+    try { await closeBrowser(); } catch { /* ignore */ }
+  });

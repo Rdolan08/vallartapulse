@@ -38,27 +38,48 @@ async function get(url: string): Promise<string> {
 
 function extractListingIds(html: string): string[] {
   const ids = new Set<string>();
-
-  // Pattern 1: href="/1234567" or href="/1234567ha" (listing detail links)
-  const hrefPattern = /href="\/(\d{5,9})(ha)?(?:[?"/]|$)/g;
   let m: RegExpExecArray | null;
-  while ((m = hrefPattern.exec(html)) !== null) {
+
+  // Modern VRBO uses /en-us/p1234567 or /p1234567ha for listing detail links.
+  // Older HomeAway-era markup uses /1234567ha. Cover all observed shapes.
+  // Match either href= or data-target=/data-href= attributes.
+  const linkPattern =
+    /(?:href|data-(?:target|href))="(?:https?:\/\/(?:www\.)?(?:vrbo|homeaway)\.com)?(?:\/[a-z]{2}-[a-z]{2})?\/p?(\d{6,9})(ha)?(?:[?"/#]|$)/gi;
+  while ((m = linkPattern.exec(html)) !== null) {
     ids.add(m[1] + (m[2] ?? ""));
   }
 
-  // Pattern 2: embedded JSON "listingId":"1234567" or "propertyId":"1234567"
-  const jsonPattern = /"(?:listingId|propertyId|unitId)"\s*:\s*"?(\d{5,9})"?/g;
+  // Embedded JSON: "listingId":"1234567", "propertyId":"1234567",
+  // "unitId":"1234567", "uuid":"1234567" — covers Next.js __NEXT_DATA__
+  // and Apollo cache shapes used by VRBO today.
+  const jsonPattern = /"(?:listingId|propertyId|unitId|listing_id|property_id)"\s*:\s*"?(\d{6,9})"?/g;
   while ((m = jsonPattern.exec(html)) !== null) {
     ids.add(m[1]);
   }
 
-  // Pattern 3: data-target="/1234567" or data-href="/1234567"
-  const dataPattern = /data-(?:target|href)="\/(\d{5,9})(ha)?(?:[?"/]|$)/g;
-  while ((m = dataPattern.exec(html)) !== null) {
-    ids.add(m[1] + (m[2] ?? ""));
-  }
-
   return Array.from(ids);
+}
+
+/**
+ * For debugging when discovery yields zero IDs: scrape the first ~10 unique
+ * href values from the HTML so we can see what shape modern VRBO is using.
+ * Truncated to keep log output sane.
+ */
+export function sampleHrefs(html: string, limit = 12): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const re = /href="([^"]{1,160})"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null && out.length < limit) {
+    const href = m[1];
+    if (seen.has(href)) continue;
+    seen.add(href);
+    // Filter out obvious non-listing chrome (css, js, footer links, etc.)
+    if (/\.(css|js|svg|png|jpg|woff)/i.test(href)) continue;
+    if (/^(mailto:|tel:|#|javascript:)/i.test(href)) continue;
+    out.push(href);
+  }
+  return out;
 }
 
 // ── Search URLs for Puerto Vallarta ───────────────────────────────────────────
@@ -78,6 +99,8 @@ export interface VrboDiscoveryResult {
   listingUrls: string[];
   pagesScraped: number;
   errors: string[];
+  /** Sample hrefs from the first page when zero IDs were extracted — debug aid. */
+  debugFirstPageHrefs?: string[];
 }
 
 export async function discoverVrboListings(opts?: {
@@ -89,12 +112,14 @@ export async function discoverVrboListings(opts?: {
   const allIds = new Set<string>();
   const errors: string[] = [];
   let pagesScraped = 0;
+  let firstHtml: string | null = null;
 
   const urls = PV_SEARCH_URLS.slice(0, maxPages);
 
   for (const searchUrl of urls) {
     try {
       const html = await get(searchUrl);
+      if (firstHtml === null) firstHtml = html;
       const ids = extractListingIds(html);
       ids.forEach(id => allIds.add(id));
       pagesScraped++;
@@ -106,5 +131,9 @@ export async function discoverVrboListings(opts?: {
   }
 
   const listingUrls = Array.from(allIds).map(id => `https://www.vrbo.com/${id}`);
-  return { listingUrls, pagesScraped, errors };
+  const result: VrboDiscoveryResult = { listingUrls, pagesScraped, errors };
+  if (allIds.size === 0 && firstHtml) {
+    result.debugFirstPageHrefs = sampleHrefs(firstHtml);
+  }
+  return result;
 }
