@@ -235,10 +235,14 @@ is dead (404 `route_not_found`), but its surviving sibling
   `for_remarketing`, `for_web_with_date`, `for_mobile_pdp`, with
   `adults` param, etc.). Per-day prices have moved entirely to the
   client-side `PdpAvailabilityCalendar` GraphQL call (path 2).
-- ⚠️ Cap: only Airbnb's pre-2022 numeric IDs (≤ 10 digits) resolve on
-  this endpoint. Of our 504 active Airbnb rows, **163 fit the legacy
-  shape** and get refreshed daily; the 345 long-form-ID rows wait for
-  path 2.
+- ✅ Cap resolved (Oct 2026): the adapter now dispatches by ID length.
+  Pre-2022 short-form IDs (≤ 10 digits) keep using
+  `/api/v2/homes_pdp_availability_calendar`; post-2022 long-form IDs
+  (11+ digits) route to the v3 GraphQL persisted query
+  `/api/v3/PdpAvailabilityCalendar/<sha>`. Same anonymous-no-proxy
+  story, same 365-day shape. All ~504 active Airbnb listings — short
+  and long — refresh daily into `rental_prices_by_date`. Pricing is
+  still null on both surfaces (see "What's still deferred" below).
 
 **What shipped** (Apr 2026):
 

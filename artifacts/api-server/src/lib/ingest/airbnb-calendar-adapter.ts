@@ -12,41 +12,79 @@
  *
  * What it returns:
  *   ✓ Per-day availability for 365 days (available/unavailable, min/max nights).
- *   ✗ Nightly price — Airbnb stripped per-day prices from this endpoint at
- *     some point (the `price` object is always `{}`). Verified across 4
- *     listing IDs and 6 query-format permutations (with_conditions,
- *     for_remarketing, for_web_with_date, for_mobile_pdp, with adults
- *     param, etc.). The non-empty variants either return `2b` empty bodies
- *     or 404. Per-day prices have moved to the client-side
- *     PdpAvailabilityCalendar GraphQL call (path 2 in data-feeding.md),
- *     which requires a rotating persisted-query SHA hash.
+ *   ✗ Nightly price — Airbnb stripped per-day prices from these endpoints at
+ *     some point. The legacy v2 `price` object is always `{}`; the v3
+ *     GraphQL `price.localPriceFormatted` is always `null` for the public
+ *     persisted-query (anonymous, no proxy). Per-day prices remain a
+ *     residential-proxy + dated-quote problem (see `airbnb-checkpoints.ts`
+ *     and `listing_price_quotes`).
+ *
+ * Two routes, dispatched by ID length (October 2026 update):
+ *
+ *   Short-form numeric IDs (≤ 10 digits, pre-2022 listings)
+ *     GET /api/v2/homes_pdp_availability_calendar
+ *     Battle-tested, no proxy, ~1s/listing.
+ *
+ *   Long-form numeric IDs (11-13 digits, post-2022 listings)
+ *     GET /api/v3/PdpAvailabilityCalendar/<sha>
+ *       (Apollo persisted-query GET; same key & UA story as v2)
+ *     The legacy /api/v2/ endpoint silently returns
+ *     `{"calendar_months":[]}` for these — Airbnb only exposes the new
+ *     listings through the GraphQL surface their hydrated PDP uses.
+ *     This is the same surface the deferred pricing work targets, so
+ *     when prices are restored the response shape already carries
+ *     them and we light up automatically.
  *
  * Therefore: this adapter populates `rental_prices_by_date` with
  *   {nightlyPriceUsd: null, availabilityStatus: "available"|"unavailable"}.
  * The comp model still benefits — owner-facing question "what % of
  * comparable Airbnb listings are booked for NYE 2026?" is answerable
- * from availability alone, even without nightly prices. Pricing waits
- * for path 2.
+ * from availability alone, even without nightly prices.
  *
  * Pure parser / single HTTP call. No I/O beyond `fetch`. No DB writes.
- *
- * Endpoint:
- *   GET https://www.airbnb.com/api/v2/homes_pdp_availability_calendar
- *     ?key=<public-web-api-key>
- *     &currency=USD&locale=en
- *     &listing_id=<id>
- *     &month=<starting-month>&year=<starting-year>
- *     &count=<number-of-months>
  *
  * The public web API key is embedded in https://www.airbnb.com/'s SSR
  * payload (`"api_config":{...,"key":"..."}`). It rotates rarely
  * (multi-year cadence — current value matches the one Airbnb shipped
  * publicly for years). We re-discover it on every adapter call so a
  * rotation is self-healing.
+ *
+ * The persisted-query SHA used for the v3 route is, by contrast,
+ * pinned (no auto-rediscovery yet — see `GRAPHQL_PERSISTED_QUERY_SHA`
+ * below). Rotation surfaces as a uniform `400 PersistedQueryNotFound`
+ * per long-form listing, which the daily scrape's failure-rate guard
+ * (`FAILURE_RATE_FAIL_THRESHOLD`) trips on so the rotation is
+ * detected within one run rather than silently degrading coverage.
+ * Refresh by snapshotting a fresh SHA off a hydrated PDP load.
  */
 
 const PUBLIC_HOMEPAGE = "https://www.airbnb.com/";
 const CALENDAR_BASE = "https://www.airbnb.com/api/v2/homes_pdp_availability_calendar";
+const GRAPHQL_BASE = "https://www.airbnb.com/api/v3/PdpAvailabilityCalendar";
+
+/**
+ * Last-known-good Apollo persisted-query SHA for the
+ * `PdpAvailabilityCalendar` GraphQL operation. Verified Oct 2026 against
+ * both short- and long-form numeric IDs: returns 12 calendar months /
+ * 365 days with `available`/`minNights`/`maxNights`. Same `price`
+ * caveat as the v2 endpoint (`localPriceFormatted` is `null` over the
+ * anonymous, no-proxy surface). Hash rotates rarely; if Airbnb rolls
+ * it the v3 path returns `400 PersistedQueryNotFound` and the run
+ * surfaces a uniform error per failing listing rather than corrupting
+ * data — refresh by snapshotting the SHA from a fresh PDP load.
+ */
+const GRAPHQL_PERSISTED_QUERY_SHA =
+  "8f08e03c7bd16fcad3c92a3592c19a8b559a0d0855a84028d1163d4733ed9ade";
+
+/**
+ * Airbnb's pre-2022 numeric IDs are ≤ 10 digits and resolve on the
+ * legacy v2 endpoint. Post-2022 ("long-form") IDs are 11+ digits and
+ * only resolve on the v3 GraphQL surface. We dispatch by length; the
+ * v2 endpoint silently returns an empty `calendar_months` array for
+ * long-form IDs (status 200, body `{"calendar_months":[]}`), so length
+ * is the only practical pre-flight signal.
+ */
+const LEGACY_ID_MAX_LENGTH = 10;
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
@@ -169,6 +207,17 @@ export async function fetchAirbnbCalendar(
 
   const key = opts.apiKey ?? (await discoverAirbnbWebApiKey(timeoutMs));
 
+  // Long-form IDs (post-2022) only resolve on the v3 GraphQL surface; the
+  // legacy v2 endpoint returns 200 / `{"calendar_months":[]}` for them.
+  if (listingExternalId.length > LEGACY_ID_MAX_LENGTH) {
+    return await fetchAirbnbCalendarV3(listingExternalId, {
+      monthsCount,
+      timeoutMs,
+      apiKey: key,
+      today,
+    });
+  }
+
   const url =
     `${CALENDAR_BASE}?key=${encodeURIComponent(key)}` +
     `&currency=USD&locale=en` +
@@ -246,6 +295,184 @@ export async function fetchAirbnbCalendar(
       }
       result.days.push({
         date: d.date,
+        nightlyPriceUsd: priceUsd,
+        availabilityStatus: status,
+        minimumNights: minNights,
+      });
+      result.daysReturned++;
+      if (priceUsd !== null) result.daysWithPrice++;
+      if (status === "available") result.daysAvailable++;
+      else if (status === "unavailable") result.daysUnavailable++;
+    }
+  }
+
+  return result;
+}
+
+interface RawV3Day {
+  calendarDate?: string;
+  available?: boolean;
+  minNights?: number | null;
+  maxNights?: number | null;
+  price?: {
+    localPriceFormatted?: string | number | null;
+    [k: string]: unknown;
+  } | null;
+}
+
+interface RawV3Response {
+  data?: {
+    merlin?: {
+      pdpAvailabilityCalendar?: {
+        calendarMonths?: Array<{ days?: RawV3Day[] }>;
+      };
+    };
+  };
+  errors?: Array<{ message?: string }>;
+  error_code?: number;
+  error_type?: string;
+  error_message?: string;
+}
+
+/**
+ * Fetch the next-12-months availability calendar via Airbnb's v3 GraphQL
+ * `PdpAvailabilityCalendar` operation. Used for long-form numeric IDs
+ * (post-2022 listings) which the legacy v2 endpoint cannot resolve, but
+ * also accepts short-form IDs — the response shape is uniform regardless
+ * of ID length.
+ *
+ * Anonymous (no proxy / no cookies) over the public web API key. Same
+ * `price.localPriceFormatted = null` caveat as v2; lights up
+ * automatically if Airbnb ever exposes prices on this surface.
+ *
+ * Idempotent and side-effect-free. Caller persists. All failures are
+ * collected on `.errors` rather than thrown.
+ */
+export async function fetchAirbnbCalendarV3(
+  listingExternalId: string,
+  opts: FetchAirbnbCalendarOpts = {},
+): Promise<AirbnbCalendarResult> {
+  const monthsCount = opts.monthsCount ?? 12;
+  const timeoutMs = opts.timeoutMs ?? 20_000;
+  const today = opts.today ?? new Date();
+  const month = today.getUTCMonth() + 1;
+  const year = today.getUTCFullYear();
+
+  const errors: string[] = [];
+  const result: AirbnbCalendarResult = {
+    source: "airbnb",
+    listingId: listingExternalId,
+    daysReturned: 0,
+    daysWithPrice: 0,
+    daysAvailable: 0,
+    daysUnavailable: 0,
+    errors,
+    days: [],
+  };
+
+  if (!listingExternalId || !/^\d+$/.test(listingExternalId)) {
+    errors.push(`invalid listing id: ${listingExternalId}`);
+    return result;
+  }
+
+  const key = opts.apiKey ?? (await discoverAirbnbWebApiKey(timeoutMs));
+  const sha = GRAPHQL_PERSISTED_QUERY_SHA;
+
+  const variables = {
+    request: {
+      count: monthsCount,
+      listingId: listingExternalId,
+      month,
+      year,
+    },
+  };
+  const extensions = {
+    persistedQuery: { version: 1, sha256Hash: sha },
+  };
+
+  const url =
+    `${GRAPHQL_BASE}/${sha}` +
+    `?operationName=PdpAvailabilityCalendar` +
+    `&locale=en&currency=USD` +
+    `&variables=${encodeURIComponent(JSON.stringify(variables))}` +
+    `&extensions=${encodeURIComponent(JSON.stringify(extensions))}`;
+
+  let raw: RawV3Response;
+  try {
+    const r = await fetch(url, {
+      headers: {
+        "user-agent": USER_AGENT,
+        "accept": "application/json",
+        "x-airbnb-api-key": key,
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const text = await r.text();
+    if (r.status !== 200) {
+      errors.push(`http ${r.status}: ${text.slice(0, 120)}`);
+      return result;
+    }
+    if (text.length < 10) {
+      errors.push(`empty body (${text.length}b)`);
+      return result;
+    }
+    try {
+      raw = JSON.parse(text) as RawV3Response;
+    } catch (e) {
+      errors.push(`json parse: ${(e as Error).message.slice(0, 120)}`);
+      return result;
+    }
+  } catch (e) {
+    errors.push(`fetch error: ${(e as Error).message.slice(0, 120)}`);
+    return result;
+  }
+
+  // Surface persisted-query rotation explicitly — the v3 surface returns
+  // either a top-level `error_type` or a `data: null` + `errors[]` shape
+  // depending on which Apollo gateway responds.
+  if (raw.error_type || (Array.isArray(raw.errors) && raw.errors.length > 0)) {
+    const msg =
+      raw.error_message ||
+      raw.errors?.map((e) => e.message).filter(Boolean).join("; ") ||
+      raw.error_type ||
+      "graphql error";
+    errors.push(`graphql: ${String(msg).slice(0, 160)}`);
+    return result;
+  }
+
+  const months = raw.data?.merlin?.pdpAvailabilityCalendar?.calendarMonths ?? [];
+  if (months.length === 0) {
+    errors.push("no calendarMonths in response (listing likely delisted or unsupported)");
+    return result;
+  }
+
+  for (const m of months) {
+    const days = Array.isArray(m.days) ? m.days : [];
+    for (const d of days) {
+      if (!d || typeof d.calendarDate !== "string") continue;
+      const status: AirbnbCalendarDay["availabilityStatus"] =
+        d.available === true
+          ? "available"
+          : d.available === false
+            ? "unavailable"
+            : "unknown";
+      const minNights =
+        typeof d.minNights === "number" && Number.isFinite(d.minNights)
+          ? d.minNights
+          : null;
+      // Same auto-fill rule as the v2 path: if Airbnb ever exposes a
+      // numeric price on the anonymous surface we pick it up without a
+      // schema or driver change.
+      let priceUsd: number | null = null;
+      const lpf = d.price?.localPriceFormatted;
+      if (typeof lpf === "number" && Number.isFinite(lpf) && lpf > 0) {
+        priceUsd = lpf;
+      } else if (typeof lpf === "string") {
+        const numeric = parseFloat(lpf.replace(/[^0-9.]/g, ""));
+        if (Number.isFinite(numeric) && numeric > 0) priceUsd = numeric;
+      }
+      result.days.push({
+        date: d.calendarDate,
         nightlyPriceUsd: priceUsd,
         availabilityStatus: status,
         minimumNights: minNights,

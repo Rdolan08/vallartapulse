@@ -90,20 +90,17 @@ async function loadActiveListings(): Promise<ListingRow[]> {
         isNotNull(rentalListingsTable.externalId),
       ),
     );
-  // Filter to numeric external IDs only — that's what the v2 endpoint accepts.
-  // Important cap of this endpoint: the legacy /api/v2/ path only resolves
-  // Airbnb's pre-2022 numeric listing IDs (≤ 10 digits). The post-2022
-  // "long-form" IDs (11–12 digits, ~345 of our 504 active rows as of
-  // April 2026) return an empty calendar_months array on this route.
-  // Filter them out at the source so freshness signals reflect the actual
-  // cohort we can serve, not a 67% baseline failure rate. Long-form IDs
-  // wait for path 2 (PdpAvailabilityCalendar GraphQL replay).
+  // Filter to numeric external IDs only — that's what the calendar
+  // adapters (both v2 legacy and v3 GraphQL) accept. Length is no
+  // longer a gate: the adapter dispatches by ID length internally
+  // (≤ 10 digits → legacy /api/v2/homes_pdp_availability_calendar,
+  // 11+ digits → /api/v3/PdpAvailabilityCalendar GraphQL persisted
+  // query). All ~504 active Airbnb listings now refresh daily.
   const out: ListingRow[] = [];
   for (const r of rows) {
     const ext = r.externalId;
     if (typeof ext !== "string") continue;
     if (!/^\d+$/.test(ext)) continue;
-    if (ext.length > 10) continue;
     out.push({ id: r.id, externalId: ext, sourceUrl: r.sourceUrl, title: r.title });
   }
   return out;
