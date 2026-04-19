@@ -20,33 +20,84 @@ function freshnessBadge(lastSyncedAt: string | null | undefined): "fresh" | "sta
   return "stale";
 }
 
-interface AirbnbPricingFreshness {
-  source: string;
-  listingsTotal: number;
-  listingsQuotedEver: number;
-  listingsNeverQuoted: number;
-  listingsStale7d: number;
-  listingsStale14d: number;
-  newestQuoteAt: string | null;
-  newestQuoteAgeHours: number | null;
+interface PipelineFreshness {
   alertLevel: "ok" | "warn" | "fail";
   alertReason: string;
+  listingsTotal: number;
+  // Airbnb-pricing-only fields (optional on other endpoints):
+  listingsQuotedEver?: number;
+  listingsNeverQuoted?: number;
+  newestQuoteAt?: string | null;
+  // VV-pricing-only:
+  listingsCovered?: number;
+  // VRBO + VV pricing:
+  newestScrapeAt?: string | null;
+  // Common:
+  listingsStale14d: number;
 }
 
+interface PipelineCardConfig {
+  endpoint: string;
+  labelEn: string;
+  labelEs: string;
+  /** Where the "newest" timestamp lives in the response shape. */
+  newestField: "newestQuoteAt" | "newestScrapeAt";
+  /** Plain noun for the "newest" line. */
+  newestLabelEn: string;
+  newestLabelEs: string;
+}
+
+const PIPELINES: PipelineCardConfig[] = [
+  {
+    endpoint: "/api/ingest/airbnb-pricing-freshness",
+    labelEn: "Airbnb pricing",
+    labelEs: "Precios de Airbnb",
+    newestField: "newestQuoteAt",
+    newestLabelEn: "Newest quote",
+    newestLabelEs: "Cotización más reciente",
+  },
+  {
+    endpoint: "/api/ingest/vrbo-scrape-freshness",
+    labelEn: "VRBO scrape",
+    labelEs: "Extracción de VRBO",
+    newestField: "newestScrapeAt",
+    newestLabelEn: "Newest scrape",
+    newestLabelEs: "Extracción más reciente",
+  },
+  {
+    endpoint: "/api/ingest/vacation-vallarta-pricing-freshness",
+    labelEn: "Vacation Vallarta pricing",
+    labelEs: "Precios de Vacation Vallarta",
+    newestField: "newestScrapeAt",
+    newestLabelEn: "Newest refresh",
+    newestLabelEs: "Actualización más reciente",
+  },
+];
+
 /**
- * Pipeline-health card for the daily Airbnb pricing refresh. Surfaces
- * "N listings stale > 14 days" so a multi-day silent outage is visible
- * within one cycle (see docs/playbooks/airbnb-pricing-dark.md).
+ * Pipeline-health card. Renders one freshness banner driven by a
+ * pipeline-specific freshness endpoint. All endpoints share the same
+ * `alertLevel` / `alertReason` / `listingsTotal` / `listingsStale14d`
+ * vocabulary so a multi-day silent outage in any pricing pipeline is
+ * visible within one cycle.
  */
-function PricingPipelineHealth({ t }: { t: (en: string, es: string) => string }) {
-  const [data, setData] = useState<AirbnbPricingFreshness | null>(null);
+function PipelineHealthCard({
+  cfg,
+  t,
+  lang,
+}: {
+  cfg: PipelineCardConfig;
+  t: (en: string, es: string) => string;
+  lang: "en" | "es";
+}) {
+  const [data, setData] = useState<PipelineFreshness | null>(null);
   const [errored, setErrored] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(apiUrl("/api/ingest/airbnb-pricing-freshness"))
+    fetch(apiUrl(cfg.endpoint))
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((j: AirbnbPricingFreshness) => {
+      .then((j: PipelineFreshness) => {
         if (!cancelled) setData(j);
       })
       .catch(() => {
@@ -55,11 +106,11 @@ function PricingPipelineHealth({ t }: { t: (en: string, es: string) => string })
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cfg.endpoint]);
 
   if (errored) return null;
   if (!data) {
-    return <Skeleton className="h-24 rounded-2xl mb-6" />;
+    return <Skeleton className="h-20 rounded-xl" />;
   }
 
   const tone =
@@ -69,36 +120,53 @@ function PricingPipelineHealth({ t }: { t: (en: string, es: string) => string })
         ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300"
         : "bg-primary/5 border-primary/20 text-foreground";
 
-  const Icon =
-    data.alertLevel === "fail"
-      ? AlertCircle
-      : data.alertLevel === "warn"
-        ? AlertCircle
-        : CheckCircle2;
+  const Icon = data.alertLevel === "ok" ? CheckCircle2 : AlertCircle;
+  const label = lang === "es" ? cfg.labelEs : cfg.labelEn;
+  const newestRaw =
+    (cfg.newestField === "newestQuoteAt" ? data.newestQuoteAt : data.newestScrapeAt) ?? null;
 
   const headline = t(
-    `Airbnb pricing — ${data.listingsStale14d} listings stale > 14 days`,
-    `Airbnb pricing — ${data.listingsStale14d} anuncios sin actualizar > 14 días`,
+    `${label} — ${data.listingsStale14d} listings stale > 14 days`,
+    `${label} — ${data.listingsStale14d} anuncios sin actualizar > 14 días`,
   );
 
   return (
-    <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3 mb-6 text-sm", tone)}>
+    <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3 text-sm", tone)}>
       <Icon className="w-4 h-4 mt-0.5 shrink-0" />
       <div className="flex-1 space-y-1">
         <div className="font-medium">{headline}</div>
         <div className="text-xs opacity-80">
           {t("Cohort", "Cohorte")}: {data.listingsTotal.toLocaleString()} ·{" "}
-          {t("Ever quoted", "Cotizados alguna vez")}: {data.listingsQuotedEver.toLocaleString()} ·{" "}
-          {t("Never quoted", "Nunca cotizados")}: {data.listingsNeverQuoted.toLocaleString()} ·{" "}
-          {t("Newest quote", "Cotización más reciente")}:{" "}
-          {data.newestQuoteAt
-            ? formatDistanceToNow(new Date(data.newestQuoteAt), { addSuffix: true })
+          {lang === "es" ? cfg.newestLabelEs : cfg.newestLabelEn}:{" "}
+          {newestRaw
+            ? formatDistanceToNow(new Date(newestRaw), { addSuffix: true })
             : t("never", "nunca")}
         </div>
         {data.alertReason && (
           <div className="text-xs font-medium">{data.alertReason}</div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Stack of pass/fail banners — one per pricing/calendar pipeline
+ * (Airbnb, VRBO, Vacation Vallarta). Same shape signal across all
+ * three so the dashboard never has a blind spot.
+ */
+function PipelinesHealth({
+  t,
+  lang,
+}: {
+  t: (en: string, es: string) => string;
+  lang: "en" | "es";
+}) {
+  return (
+    <div className="space-y-3 mb-6">
+      {PIPELINES.map((cfg) => (
+        <PipelineHealthCard key={cfg.endpoint} cfg={cfg} t={t} lang={lang} />
+      ))}
     </div>
   );
 }
@@ -205,8 +273,8 @@ export default function Sources() {
         </div>
       </div>
 
-      {/* ── Pricing pipeline health banner ─────────────────────────── */}
-      <PricingPipelineHealth t={t} />
+      {/* ── Pipeline health banners (Airbnb / VRBO / VV) ───────────── */}
+      <PipelinesHealth t={t} lang={lang as "en" | "es"} />
 
       {/* ── Info banner ─────────────────────────────────────────────── */}
       <div className="flex items-start gap-3 bg-primary/5 border border-primary/15 rounded-xl px-4 py-3 mb-8 text-sm text-muted-foreground">

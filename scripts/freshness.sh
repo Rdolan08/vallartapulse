@@ -179,6 +179,84 @@ SELECT
 FROM agg;
 
 \echo
+\echo === VRBO scrape pipeline — pass/fail verdict ===
+-- Mirrors the Airbnb pricing verdict but for the daily VRBO listings
+-- refresh (rental_listings rows where source_platform='vrbo'). Catches
+-- the silent-outage case where the scraper keeps running but stops
+-- refreshing rows (anti-bot wall, residential proxy down, etc.).
+WITH cohort AS (
+  SELECT id, scraped_at
+  FROM rental_listings
+  WHERE source_platform = 'vrbo' AND is_active = true
+),
+agg AS (
+  SELECT
+    (SELECT COUNT(*) FROM cohort)                                              AS total,
+    (SELECT COUNT(*) FROM cohort WHERE scraped_at IS NULL
+       OR scraped_at < NOW() - INTERVAL '14 days')                             AS stale_14d,
+    (SELECT MAX(scraped_at) FROM cohort)                                       AS newest
+)
+SELECT
+  total,
+  stale_14d,
+  newest,
+  CASE
+    WHEN total = 0
+      THEN 'WARN  — empty cohort'
+    WHEN newest IS NULL
+      THEN 'RED   — no VRBO listings EVER scraped (VRBO scrape has gone dark)'
+    WHEN newest < NOW() - INTERVAL '2 days'
+      THEN 'RED   — newest VRBO scrape >2d old (VRBO scrape has gone dark)'
+    WHEN stale_14d * 2 >= total
+      THEN 'RED   — over half the cohort stale >14d'
+    WHEN stale_14d > 0
+      THEN 'AMBER — ' || stale_14d || ' VRBO listings stale >14d'
+    WHEN newest < NOW() - INTERVAL '36 hours'
+      THEN 'AMBER — newest VRBO scrape >36h old'
+    ELSE 'GREEN — fresh'
+  END AS status
+FROM agg;
+
+\echo
+\echo === Vacation Vallarta calendar pricing — pass/fail verdict ===
+WITH cohort AS (
+  SELECT id FROM rental_listings
+  WHERE source_platform = 'vacation_vallarta' AND is_active = true
+),
+last_p AS (
+  SELECT listing_id, MAX(scraped_at) AS last_scraped
+  FROM rental_prices_by_date GROUP BY listing_id
+),
+agg AS (
+  SELECT
+    (SELECT COUNT(*) FROM cohort)                                              AS total,
+    (SELECT COUNT(*) FROM cohort c LEFT JOIN last_p q ON q.listing_id = c.id
+     WHERE q.last_scraped IS NULL OR q.last_scraped < NOW() - INTERVAL '14 days') AS stale_14d,
+    (SELECT MAX(last_scraped) FROM last_p q
+     WHERE q.listing_id IN (SELECT id FROM cohort))                            AS newest
+)
+SELECT
+  total,
+  stale_14d,
+  newest,
+  CASE
+    WHEN total = 0
+      THEN 'WARN  — empty cohort'
+    WHEN newest IS NULL
+      THEN 'RED   — no VV calendar prices EVER (VV pricing has gone dark)'
+    WHEN newest < NOW() - INTERVAL '2 days'
+      THEN 'RED   — newest VV refresh >2d old (VV pricing has gone dark)'
+    WHEN stale_14d * 2 >= total
+      THEN 'RED   — over half the cohort stale >14d'
+    WHEN stale_14d > 0
+      THEN 'AMBER — ' || stale_14d || ' VV listings stale >14d'
+    WHEN newest < NOW() - INTERVAL '36 hours'
+      THEN 'AMBER — newest VV refresh >36h old'
+    ELSE 'GREEN — fresh'
+  END AS status
+FROM agg;
+
+\echo
 \echo === verdict (simple per-source freshness check) ===
 WITH per_source AS (
   SELECT
@@ -222,6 +300,17 @@ WITH per_source AS (
   LEFT JOIN rental_prices_by_date rpbd ON rpbd.listing_id = rl.id
   WHERE rl.source_platform IN ('pvrpv', 'vacation_vallarta')
   GROUP BY rl.source_platform
+
+  UNION ALL
+
+  -- VRBO has no rental_prices_by_date entries (we don't scrape its
+  -- per-day calendar); the freshness signal for the VRBO pipeline is
+  -- the most recent rental_listings.scraped_at instead.
+  SELECT
+    'vrbo'                AS source_platform,
+    MAX(scraped_at)       AS newest_scrape
+  FROM rental_listings
+  WHERE source_platform = 'vrbo' AND is_active = true
 )
 SELECT
   source_platform,

@@ -29,6 +29,7 @@
  *   CALENDAR_SOURCES          comma list, default "pvrpv,vacation_vallarta"
  */
 
+import { writeFileSync } from "node:fs";
 import { sql, eq, and, inArray } from "drizzle-orm";
 import {
   db,
@@ -61,6 +62,40 @@ if (SOURCES.length === 0) {
   );
   process.exit(2);
 }
+type SourceSummary = {
+  source: SupportedSource;
+  attempted: number;
+  ok: number;
+  failed: number;
+  rowsWritten: number;
+  alertLevel: "ok" | "warn" | "fail";
+  alertReason: string;
+};
+
+type CalendarSummary = {
+  attempted: number;
+  ok: number;
+  failed: number;
+  rowsWritten: number;
+  alertLevel: "ok" | "warn" | "fail";
+  alertReason: string;
+  perSource: SourceSummary[];
+};
+
+function emitCalendarSummary(s: CalendarSummary): void {
+  const summary = { source: "calendar_scrape", ...s };
+  console.log("SUMMARY: " + JSON.stringify(summary));
+  const outPath = process.env.PIPELINE_SUMMARY_OUT;
+  if (outPath) {
+    try {
+      writeFileSync(outPath, JSON.stringify({ summary }, null, 2));
+      console.log(`Wrote summary to ${outPath}`);
+    } catch (e) {
+      console.error(`Failed to write summary to ${outPath}: ${(e as Error).message}`);
+    }
+  }
+}
+
 /** Per-source default worker-pool size; CALENDAR_CONCURRENCY env overrides for all sources. */
 const DEFAULT_CONCURRENCY: Record<SupportedSource, number> = {
   pvrpv: 3,
@@ -300,6 +335,25 @@ async function main(): Promise<number> {
   console.log(`[calendar-scrape] loaded  active_total=${all.length}`);
   if (all.length === 0) {
     console.log("[calendar-scrape] no active listings — nothing to do");
+    // Emit a structured 'warn' summary so the GH Actions wrapper has a
+    // file to read (parity with airbnb-pricing-runner empty-cohort path).
+    emitCalendarSummary({
+      attempted: 0,
+      ok: 0,
+      failed: 0,
+      rowsWritten: 0,
+      alertLevel: "warn",
+      alertReason: "No active listings in cohort for any configured source",
+      perSource: SOURCES.map((src) => ({
+        source: src,
+        attempted: 0,
+        ok: 0,
+        failed: 0,
+        rowsWritten: 0,
+        alertLevel: "warn" as const,
+        alertReason: `No active ${src} listings in cohort`,
+      })),
+    });
     return 0;
   }
 
@@ -333,12 +387,62 @@ async function main(): Promise<number> {
     }
   }
 
-  // Cron health: if too many listings failed, the run was effectively useless;
-  // exit non-zero so GitHub Actions / freshness check surfaces it.
-  if (failureRate >= FAILURE_RATE_FAIL_THRESHOLD) {
+  // ── Per-source pass/fail signal (parity with airbnb-pricing-runner) ──────
+  // Same vocabulary so /sources, freshness.sh, and the GH Actions wrapper
+  // can light up consistently when one of the calendar pipelines goes dark.
+  const perSource: SourceSummary[] = SOURCES.map((src) => {
+    const subset = stats.filter((s) => s.source === src);
+    const okCount = subset.filter((s) => s.ok).length;
+    const failedCount = subset.length - okCount;
+    const rowsWritten = subset.reduce((a, s) => a + s.rowsWritten, 0);
+    let level: "ok" | "warn" | "fail" = "ok";
+    let reason = "";
+    if (subset.length === 0) {
+      level = "warn";
+      reason = `No active ${src} listings in cohort`;
+    } else if (okCount === 0) {
+      level = "fail";
+      reason = `All ${subset.length} ${src} listings failed — ${src} calendar refresh has gone dark`;
+    } else if (rowsWritten === 0) {
+      level = "fail";
+      reason = `0 rows written for ${src} despite a non-empty cohort`;
+    } else if (failedCount * 2 >= subset.length) {
+      level = "warn";
+      reason = `${failedCount}/${subset.length} ${src} listings failed (>=50%)`;
+    }
+    return {
+      source: src,
+      attempted: subset.length,
+      ok: okCount,
+      failed: failedCount,
+      rowsWritten,
+      alertLevel: level,
+      alertReason: reason,
+    };
+  });
+
+  const worst = perSource.reduce<"ok" | "warn" | "fail">((acc, s) => {
+    if (s.alertLevel === "fail" || acc === "fail") return "fail";
+    if (s.alertLevel === "warn" || acc === "warn") return "warn";
+    return "ok";
+  }, "ok");
+  const worstReason = perSource.find((s) => s.alertLevel === worst && s.alertReason)?.alertReason ?? "";
+
+  emitCalendarSummary({
+    attempted: stats.length,
+    ok: ok.length,
+    failed: failed.length,
+    rowsWritten: totalRows,
+    alertLevel: worst,
+    alertReason: worstReason,
+    perSource,
+  });
+
+  // Cron health: exit non-zero on either the legacy >=50%-overall threshold
+  // OR a per-source "fail" verdict, so the workflow surfaces it.
+  if (worst === "fail" || failureRate >= FAILURE_RATE_FAIL_THRESHOLD) {
     console.error(
-      `[calendar-scrape] FAIL: failure_rate=${(failureRate * 100).toFixed(1)}%` +
-        ` >= threshold=${(FAILURE_RATE_FAIL_THRESHOLD * 100).toFixed(0)}%`,
+      `[calendar-scrape] FAIL: alertLevel=${worst} failure_rate=${(failureRate * 100).toFixed(1)}%`,
     );
     return 1;
   }

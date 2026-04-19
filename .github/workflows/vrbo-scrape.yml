@@ -60,4 +60,52 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
           PROXY_URL:    ${{ secrets.PROXY_URL }}
-        run: pnpm --filter @workspace/scripts exec tsx src/vrbo-scrape.ts
+          PIPELINE_SUMMARY_OUT: /tmp/vrbo-summary.json
+        run: |
+          set -uo pipefail
+          # Don't fail the step on non-zero exit yet — we want to read the
+          # summary file and emit the structured pass/fail signal first.
+          set +e
+          pnpm --filter @workspace/scripts exec tsx src/vrbo-scrape.ts
+          SCRIPT_EXIT=$?
+          set -e
+
+          if [ ! -s /tmp/vrbo-summary.json ]; then
+            echo "::error title=VRBO scrape::No summary file produced (script exit=${SCRIPT_EXIT})"
+            exit 1
+          fi
+
+          jq '.summary' /tmp/vrbo-summary.json || true
+
+          # Same pass/fail vocabulary as airbnb-pricing-refresh.yml so the
+          # GitHub Actions verdict is consistent across all pricing pipelines.
+          LEVEL=$(jq -r '.summary.alertLevel // "unknown"' /tmp/vrbo-summary.json)
+          REASON=$(jq -r '.summary.alertReason // ""' /tmp/vrbo-summary.json)
+          ATTEMPTED=$(jq -r '.summary.attempted // 0' /tmp/vrbo-summary.json)
+          OK=$(jq -r '.summary.ok // 0' /tmp/vrbo-summary.json)
+          FAILED=$(jq -r '.summary.failed // 0' /tmp/vrbo-summary.json)
+          DISCOVERED=$(jq -r '.summary.discovered // 0' /tmp/vrbo-summary.json)
+
+          {
+            echo "## VRBO scrape"
+            echo ""
+            echo "- Verdict: **${LEVEL}**${REASON:+ — ${REASON}}"
+            echo "- URLs discovered: ${DISCOVERED}"
+            echo "- Listings attempted: ${ATTEMPTED} (ok=${OK}, failed=${FAILED})"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          case "$LEVEL" in
+            ok)
+              echo "PASS — VRBO scrape healthy (ok=$OK/$ATTEMPTED)"
+              ;;
+            warn)
+              echo "::warning title=VRBO scrape degraded::${REASON}"
+              ;;
+            fail)
+              echo "::error title=VRBO scrape has gone dark::${REASON}"
+              exit 1
+              ;;
+            *)
+              echo "::warning title=VRBO scrape::summary.alertLevel missing"
+              ;;
+          esac

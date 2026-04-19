@@ -45,7 +45,56 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Run PVRPV calendar scraper against prod DB
+      - name: Run PVRPV + Vacation Vallarta calendar scraper against prod DB
         env:
           DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
-        run: pnpm --filter @workspace/scripts run scrape:calendar
+          PIPELINE_SUMMARY_OUT: /tmp/calendar-summary.json
+        run: |
+          set -uo pipefail
+          set +e
+          pnpm --filter @workspace/scripts run scrape:calendar
+          SCRIPT_EXIT=$?
+          set -e
+
+          if [ ! -s /tmp/calendar-summary.json ]; then
+            echo "::error title=Calendar scrape::No summary file produced (script exit=${SCRIPT_EXIT})"
+            exit 1
+          fi
+
+          jq '.summary' /tmp/calendar-summary.json || true
+
+          # Same pass/fail vocabulary as airbnb-pricing-refresh.yml.
+          LEVEL=$(jq -r '.summary.alertLevel // "unknown"' /tmp/calendar-summary.json)
+          REASON=$(jq -r '.summary.alertReason // ""' /tmp/calendar-summary.json)
+          ATTEMPTED=$(jq -r '.summary.attempted // 0' /tmp/calendar-summary.json)
+          OK=$(jq -r '.summary.ok // 0' /tmp/calendar-summary.json)
+          FAILED=$(jq -r '.summary.failed // 0' /tmp/calendar-summary.json)
+          ROWS=$(jq -r '.summary.rowsWritten // 0' /tmp/calendar-summary.json)
+
+          {
+            echo "## Calendar scrape (PVRPV + Vacation Vallarta)"
+            echo ""
+            echo "- Verdict: **${LEVEL}**${REASON:+ — ${REASON}}"
+            echo "- Listings attempted: ${ATTEMPTED} (ok=${OK}, failed=${FAILED})"
+            echo "- Rows written: ${ROWS}"
+            echo ""
+            echo "### Per-source"
+            echo ""
+            jq -r '.summary.perSource[] | "- **" + .source + "** — " + .alertLevel + (if .alertReason != "" then " — " + .alertReason else "" end) + " (attempted=" + (.attempted|tostring) + ", ok=" + (.ok|tostring) + ", failed=" + (.failed|tostring) + ", rows=" + (.rowsWritten|tostring) + ")"' /tmp/calendar-summary.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          case "$LEVEL" in
+            ok)
+              echo "PASS — calendar scrape healthy (ok=$OK/$ATTEMPTED, rows=$ROWS)"
+              ;;
+            warn)
+              echo "::warning title=Calendar scrape degraded::${REASON}"
+              ;;
+            fail)
+              echo "::error title=Calendar scrape has gone dark::${REASON}"
+              exit 1
+              ;;
+            *)
+              echo "::warning title=Calendar scrape::summary.alertLevel missing"
+              ;;
+          esac

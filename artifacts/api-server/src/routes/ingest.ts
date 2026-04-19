@@ -925,6 +925,167 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
   }
 });
 
+// ── GET /ingest/vrbo-scrape-freshness ─────────────────────────────────────
+//
+// Pipeline-health probe for the daily VRBO listings refresh
+// (scripts/src/vrbo-scrape.ts → rental_listings rows where
+// source_platform='vrbo'). Same shape as airbnb-pricing-freshness so the
+// /sources dashboard can render a consistent banner per pipeline.
+router.get("/ingest/vrbo-scrape-freshness", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      WITH cohort AS (
+        SELECT id, scraped_at
+        FROM rental_listings
+        WHERE source_platform = 'vrbo'
+          AND is_active = true
+      )
+      SELECT
+        (SELECT COUNT(*) FROM cohort)::int                                     AS listings_total,
+        (SELECT COUNT(*) FROM cohort
+         WHERE scraped_at IS NULL OR scraped_at < NOW() - INTERVAL '7 days')::int
+                                                                               AS listings_stale_7d,
+        (SELECT COUNT(*) FROM cohort
+         WHERE scraped_at IS NULL OR scraped_at < NOW() - INTERVAL '14 days')::int
+                                                                               AS listings_stale_14d,
+        (SELECT MAX(scraped_at) FROM cohort)                                   AS newest_scrape_at
+    `);
+    const row = (result as unknown as {
+      rows: Array<{
+        listings_total: number;
+        listings_stale_7d: number;
+        listings_stale_14d: number;
+        newest_scrape_at: string | null;
+      }>;
+    }).rows[0];
+
+    const newestAt = row.newest_scrape_at ? new Date(row.newest_scrape_at) : null;
+    const ageHours = newestAt
+      ? Math.floor((Date.now() - newestAt.getTime()) / 3_600_000)
+      : null;
+
+    let alertLevel: "ok" | "warn" | "fail" = "ok";
+    let alertReason = "";
+    if (row.listings_total === 0) {
+      alertLevel = "warn";
+      alertReason = "No active VRBO listings in cohort";
+    } else if (ageHours === null || ageHours > 48) {
+      alertLevel = "fail";
+      alertReason = newestAt
+        ? `Newest VRBO scrape is ${Math.round(ageHours! / 24)} days old`
+        : "No VRBO listings have ever been scraped";
+    } else if (row.listings_stale_14d * 2 >= row.listings_total) {
+      alertLevel = "fail";
+      alertReason = `${row.listings_stale_14d}/${row.listings_total} VRBO listings stale >14d`;
+    } else if (row.listings_stale_14d > 0) {
+      alertLevel = "warn";
+      alertReason = `${row.listings_stale_14d} VRBO listings stale >14d`;
+    } else if (ageHours > 36) {
+      alertLevel = "warn";
+      alertReason = `Newest VRBO scrape is ${ageHours}h old`;
+    }
+
+    res.json({
+      source: "vrbo_scrape",
+      listingsTotal: row.listings_total,
+      listingsStale7d: row.listings_stale_7d,
+      listingsStale14d: row.listings_stale_14d,
+      newestScrapeAt: newestAt?.toISOString() ?? null,
+      newestScrapeAgeHours: ageHours,
+      alertLevel,
+      alertReason,
+    });
+  } catch (err) {
+    req.log.error({ err }, "ingest/vrbo-scrape-freshness failed");
+    res.status(500).json({ error: "Failed to compute VRBO scrape freshness" });
+  }
+});
+
+// ── GET /ingest/vacation-vallarta-pricing-freshness ───────────────────────
+//
+// Pipeline-health probe for the daily Vacation Vallarta calendar pricing
+// refresh (scripts/src/calendar-scrape.ts → rental_prices_by_date rows
+// joined to rental_listings where source_platform='vacation_vallarta').
+router.get("/ingest/vacation-vallarta-pricing-freshness", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      WITH cohort AS (
+        SELECT id
+        FROM rental_listings
+        WHERE source_platform = 'vacation_vallarta'
+          AND is_active = true
+      ),
+      last_price AS (
+        SELECT listing_id, MAX(scraped_at) AS last_scraped
+        FROM rental_prices_by_date
+        GROUP BY listing_id
+      )
+      SELECT
+        (SELECT COUNT(*) FROM cohort)::int                                     AS listings_total,
+        (SELECT COUNT(*) FROM cohort c JOIN last_price q ON q.listing_id = c.id)::int
+                                                                               AS listings_covered,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_price q ON q.listing_id = c.id
+         WHERE q.last_scraped IS NULL OR q.last_scraped < NOW() - INTERVAL '7 days')::int
+                                                                               AS listings_stale_7d,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_price q ON q.listing_id = c.id
+         WHERE q.last_scraped IS NULL OR q.last_scraped < NOW() - INTERVAL '14 days')::int
+                                                                               AS listings_stale_14d,
+        (SELECT MAX(last_scraped) FROM last_price q
+         WHERE q.listing_id IN (SELECT id FROM cohort))                        AS newest_scrape_at
+    `);
+    const row = (result as unknown as {
+      rows: Array<{
+        listings_total: number;
+        listings_covered: number;
+        listings_stale_7d: number;
+        listings_stale_14d: number;
+        newest_scrape_at: string | null;
+      }>;
+    }).rows[0];
+
+    const newestAt = row.newest_scrape_at ? new Date(row.newest_scrape_at) : null;
+    const ageHours = newestAt
+      ? Math.floor((Date.now() - newestAt.getTime()) / 3_600_000)
+      : null;
+
+    let alertLevel: "ok" | "warn" | "fail" = "ok";
+    let alertReason = "";
+    if (row.listings_total === 0) {
+      alertLevel = "warn";
+      alertReason = "No active Vacation Vallarta listings in cohort";
+    } else if (ageHours === null || ageHours > 48) {
+      alertLevel = "fail";
+      alertReason = newestAt
+        ? `Newest VV calendar refresh is ${Math.round(ageHours! / 24)} days old`
+        : "No Vacation Vallarta calendar pricing has ever been collected";
+    } else if (row.listings_stale_14d * 2 >= row.listings_total) {
+      alertLevel = "fail";
+      alertReason = `${row.listings_stale_14d}/${row.listings_total} VV listings stale >14d`;
+    } else if (row.listings_stale_14d > 0) {
+      alertLevel = "warn";
+      alertReason = `${row.listings_stale_14d} VV listings stale >14d`;
+    } else if (ageHours > 36) {
+      alertLevel = "warn";
+      alertReason = `Newest VV calendar refresh is ${ageHours}h old`;
+    }
+
+    res.json({
+      source: "vacation_vallarta_pricing",
+      listingsTotal: row.listings_total,
+      listingsCovered: row.listings_covered,
+      listingsStale7d: row.listings_stale_7d,
+      listingsStale14d: row.listings_stale_14d,
+      newestScrapeAt: newestAt?.toISOString() ?? null,
+      newestScrapeAgeHours: ageHours,
+      alertLevel,
+      alertReason,
+    });
+  } catch (err) {
+    req.log.error({ err }, "ingest/vacation-vallarta-pricing-freshness failed");
+    res.status(500).json({ error: "Failed to compute VV pricing freshness" });
+  }
+});
+
 // ── POST /ingest/airbnb-pricing-refresh ───────────────────────────────────
 //
 // Daily Airbnb per-night pricing refresh. Drives the "path 2" pipeline
