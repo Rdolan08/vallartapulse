@@ -71,7 +71,7 @@ GROUP BY rl.source_platform
 ORDER BY rl.source_platform;
 
 \echo
-\echo === rental_prices_by_date: calendar pricing freshness ===
+\echo === rental_prices_by_date: calendar pricing freshness (overall) ===
 SELECT
   COUNT(*)                                         AS rows,
   COUNT(DISTINCT listing_id)                       AS listings_covered,
@@ -82,6 +82,27 @@ SELECT
     WHERE scraped_at < NOW() - INTERVAL '2 days'
   )                                                AS rows_older_than_2d
 FROM rental_prices_by_date;
+
+\echo
+\echo === rental_prices_by_date: calendar pricing freshness per source ===
+SELECT
+  rl.source_platform,
+  COUNT(*)                                         AS rows,
+  COUNT(DISTINCT rpbd.listing_id)                  AS listings_covered,
+  MAX(rpbd.scraped_at)                             AS newest_scrape,
+  date_trunc('minute',
+    NOW() - MAX(rpbd.scraped_at))                  AS age_of_newest,
+  CASE
+    WHEN MAX(rpbd.scraped_at) IS NULL                       THEN 'RED   — no rows'
+    WHEN MAX(rpbd.scraped_at) < NOW() - INTERVAL '2 days'   THEN 'RED   — stale (>2d)'
+    WHEN MAX(rpbd.scraped_at) < NOW() - INTERVAL '36 hours' THEN 'AMBER — stale (>36h)'
+    ELSE                                                         'GREEN — fresh'
+  END                                              AS status
+FROM rental_listings rl
+LEFT JOIN rental_prices_by_date rpbd ON rpbd.listing_id = rl.id
+WHERE rl.source_platform IN ('pvrpv', 'vacation_vallarta')
+GROUP BY rl.source_platform
+ORDER BY rl.source_platform;
 
 \echo
 \echo === verdict (simple per-source freshness check) ===
@@ -107,5 +128,49 @@ FROM per_source
 ORDER BY source_platform;
 SQL
 
+echo
+echo "=========================================================="
+echo "  Calendar pricing staleness check (rental_prices_by_date)"
+echo "=========================================================="
+
+# Threshold: 36h, since calendar scrapers run daily via GitHub Actions.
+# Prints one line per stale source, then exits non-zero so this script can
+# be wired into freshness alerting.
+STALE_THRESHOLD="${CALENDAR_STALE_HOURS:-36}"
+
+STALE_REPORT=$(psql "$CONN_URL" -v ON_ERROR_STOP=1 -At -F '|' \
+  -v threshold="${STALE_THRESHOLD}" <<SQL
+WITH per_source AS (
+  SELECT
+    rl.source_platform,
+    MAX(rpbd.scraped_at) AS newest_scrape
+  FROM rental_listings rl
+  LEFT JOIN rental_prices_by_date rpbd ON rpbd.listing_id = rl.id
+  WHERE rl.source_platform IN ('pvrpv', 'vacation_vallarta')
+  GROUP BY rl.source_platform
+)
+SELECT
+  source_platform,
+  COALESCE(newest_scrape::text, 'never'),
+  COALESCE(EXTRACT(EPOCH FROM (NOW() - newest_scrape)) / 3600, 9999)::int AS age_hours
+FROM per_source
+WHERE newest_scrape IS NULL
+   OR newest_scrape < NOW() - (:'threshold' || ' hours')::interval
+ORDER BY source_platform;
+SQL
+)
+
+if [[ -n "$STALE_REPORT" ]]; then
+  echo "STALE: calendar pricing has not refreshed within ${STALE_THRESHOLD}h for:"
+  while IFS='|' read -r src newest age; do
+    [[ -z "$src" ]] && continue
+    echo "  - ${src}: newest_scrape=${newest} (age ~${age}h)"
+  done <<< "$STALE_REPORT"
+  echo
+  echo "Done (with stale sources)."
+  exit 1
+fi
+
+echo "OK: all calendar pricing sources are fresh (within ${STALE_THRESHOLD}h)."
 echo
 echo "Done."
