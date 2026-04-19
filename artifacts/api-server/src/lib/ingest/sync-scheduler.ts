@@ -182,11 +182,10 @@ export async function startScheduler(): Promise<void> {
   schedulerStarted = true;
 
   // Lazy imports to avoid circular deps
-  const [{ fetchAllVacationVallartaListings }, { persistNormalized }, { fetchAllBookingListings }] =
+  const [{ fetchAllVacationVallartaListings }, { persistNormalized }] =
     await Promise.all([
       import("./vacation-vallarta-adapter.js"),
       import("./persist.js"),
-      import("./booking-adapter.js"),
     ]);
 
   // ── Vacation Vallarta (HTML scraper) ─────────────────────────────────────
@@ -204,25 +203,6 @@ export async function startScheduler(): Promise<void> {
         if (r.ok) saved++;
       }
       return { ok: true, count: saved };
-    },
-  );
-
-  // ── Booking.com (API — requires credentials) ─────────────────────────────
-  const bookingIntervalH = envHours("SYNC_INTERVAL_BOOKING_H", 12);
-  registerSource(
-    "booking_com",
-    "Booking.com",
-    bookingIntervalH * 60 * 60 * 1000,
-    ["BOOKING_AFFILIATE_ID", "BOOKING_API_KEY"],
-    async () => {
-      const result = await fetchAllBookingListings();
-      if (!result.ok) return { ok: false, count: 0, error: result.error, note: result.note };
-      let saved = 0;
-      for (const l of result.listings) {
-        const r = await persistNormalized(l);
-        if (r.ok) saved++;
-      }
-      return { ok: true, count: saved, note: result.note };
     },
   );
 

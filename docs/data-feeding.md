@@ -36,9 +36,8 @@ nobody can explain a week later.
 | Airbnb — detail enrichment (new) | A | daily 06:00 UTC | `.github/workflows/airbnb-enrich-refresh.yml` (mode=new) | shipped |
 | Airbnb — detail refresh (stale >24h) | A | daily 06:00 UTC | same workflow (mode=stale) | shipped |
 | PVRPV | B | daily 07:00 UTC | `.github/workflows/pvrpv-scrape.yml` | shipped |
-| Vacation Vallarta | A | daily 07:30 UTC | `.github/workflows/sources-sync-refresh.yml` (vacation_vallarta step) | wired — surfaces RED in Actions until 0-row bug fixed |
-| VRBO | B (prod-DB script) | daily 07:15 UTC | refresh-only — `vrbo-scrape.yml` re-fetches every existing VRBO row; **no discovery layer yet** so the cron is a no-op until something seeds VRBO rows into `rental_listings` | **wired (refresh-only)** |
-| Booking.com | A | daily 07:30 UTC | `.github/workflows/sources-sync-refresh.yml` (booking_com step) | wired — surfaces RED until creds set on Railway |
+| Vacation Vallarta | A | daily 07:30 UTC | `.github/workflows/sources-sync-refresh.yml` (vacation_vallarta step) | shipped |
+| VRBO — discovery + refresh | B | daily 07:15 UTC | `.github/workflows/vrbo-scrape.yml` — script discovers PV listings from VRBO search results, then upserts every URL (new + existing) | shipped |
 | OG screenshots | B | every other day 09:00 UTC | `.github/workflows/og-refresh.yml` | shipped |
 
 ---
@@ -185,22 +184,6 @@ that source is silently failing — check the GitHub Actions run history.
 These are documented here so they don't get lost. None of them are blocking
 the freshness contract for the sources we *do* feed today.
 
-1. **VRBO discovery layer** — the daily refresh cron (`vrbo-scrape.yml`)
-   is wired and ready, but it only refreshes existing VRBO seed rows.
-   There is no discovery driver yet to *seed* those rows in the first
-   place. Building one (analogous to the airbnb search/discovery layer)
-   is the next piece of work to make VRBO actually contribute data.
-2. **vacation_vallarta zero-row bug** — the cron is wired into
-   `sources-sync-refresh.yml` and surfaces RED in Actions, but the
-   adapter still returns 0 rows on Railway prod. Needs a runtime debug
-   pass: hit `POST /api/ingest/sync/vacation_vallarta` from a Railway
-   shell and inspect logs for which step in `discoverSlugs()` /
-   `scrapeListing()` is failing. Suspected: TLS/SNI mismatch or the
-   Squarespace site refusing the bare-Node UA when fetched from the
-   Railway egress IP.
-3. **booking_com credentials** — operator action only: set the booking
-   API credentials in Railway env vars. The cron will go green
-   automatically once the adapter has what it needs.
-4. **POI / events / weather data** — these layers don't exist yet on
+1. **POI / events / weather data** — these layers don't exist yet on
    the site. When they do, each gets a row in the per-source table and
    a workflow following the five-step recipe above.

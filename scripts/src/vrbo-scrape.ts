@@ -1,25 +1,27 @@
 /**
  * vrbo-scrape.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * VRBO listing refresher for VallartaPulse.
+ * VRBO discovery + refresh driver for VallartaPulse.
  *
- * Refresh-only mode: re-fetches every existing rental_listings row whose
- * source_platform='vrbo' and source_url IS NOT NULL, then upserts the
- * fresh data back. There is intentionally no discovery layer here — VRBO
- * does not yet have a search/seed driver, so this script is a no-op
- * cron until something else populates the seed rows. That's the desired
- * behavior: the freshness contract is "if it's on the site, it gets
- * refreshed daily" — and right now there is nothing on the site for VRBO.
+ * Each run:
+ *   1. Discovers VRBO listings on the Puerto Vallarta search-results pages
+ *      via vrbo-search-adapter.discoverVrboListings(). No credentials —
+ *      VRBO serves full HTML to datacenter IPs given browser headers.
+ *   2. Loads every existing rental_listings row with source_platform='vrbo'
+ *      so we re-refresh stale rows that may have dropped out of search.
+ *   3. Takes the union (discovered ∪ existing), capped at MAX_LISTINGS per
+ *      run, and for each URL fetches full detail via fetchVrboListing()
+ *      then upserts on (source_platform, source_url). Inserts new rows,
+ *      updates existing ones — same path either way.
  *
  * Usage:
  *   pnpm --filter @workspace/scripts run scrape:vrbo
- *
- * Limits: hard cap of MAX_LISTINGS per run to bound runtime.
  */
 
-import { sql, and, eq, isNotNull } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { db, rentalListingsTable } from "@workspace/db";
 import { fetchVrboListing } from "../../artifacts/api-server/src/lib/ingest/vrbo-adapter.js";
+import { discoverVrboListings } from "../../artifacts/api-server/src/lib/ingest/vrbo-search-adapter.js";
 
 const SOURCE_PLATFORM = "vrbo";
 const MAX_LISTINGS = 200;
@@ -29,43 +31,27 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-interface SeedRow {
-  id: number;
-  sourceUrl: string;
-}
-
-async function loadSeedRows(): Promise<SeedRow[]> {
+async function loadExistingUrls(): Promise<string[]> {
   const rows = await db
-    .select({
-      id: rentalListingsTable.id,
-      sourceUrl: rentalListingsTable.sourceUrl,
-    })
+    .select({ sourceUrl: rentalListingsTable.sourceUrl })
     .from(rentalListingsTable)
-    .where(
-      and(
-        eq(rentalListingsTable.sourcePlatform, SOURCE_PLATFORM),
-        isNotNull(rentalListingsTable.sourceUrl),
-      ),
-    )
-    .orderBy(rentalListingsTable.scrapedAt)
-    .limit(MAX_LISTINGS);
-
+    .where(eq(rentalListingsTable.sourcePlatform, SOURCE_PLATFORM));
   return rows
-    .filter((r): r is SeedRow => typeof r.sourceUrl === "string" && r.sourceUrl.length > 0);
+    .map((r) => r.sourceUrl)
+    .filter((u): u is string => typeof u === "string" && u.length > 0);
 }
 
-async function refreshOne(seed: SeedRow): Promise<{ ok: boolean; error?: string }> {
+async function refreshOne(url: string): Promise<{ ok: boolean; error?: string }> {
   try {
-    const listing = await fetchVrboListing(seed.sourceUrl);
+    const listing = await fetchVrboListing(url);
     await db
       .insert(rentalListingsTable)
       .values({
         sourcePlatform: SOURCE_PLATFORM,
-        // Always upsert against the existing seed URL so the row in the DB is
-        // the one that gets refreshed — even if the adapter normalizes the URL
-        // to a different canonical form. Without this, non-canonical legacy
-        // rows would never be updated and would linger as stale duplicates.
-        sourceUrl: seed.sourceUrl,
+        // Always upsert against the URL we used to fetch. Even if the adapter
+        // normalizes to a different canonical form, this keeps the row in the
+        // DB the one that gets refreshed — no canonical-vs-legacy duplicates.
+        sourceUrl: url,
         externalId: listing.source_listing_id ?? null,
         title: listing.title ?? "VRBO listing",
         neighborhoodRaw: listing.neighborhood ?? "unknown",
@@ -113,32 +99,52 @@ async function refreshOne(seed: SeedRow): Promise<{ ok: boolean; error?: string 
 
 async function main(): Promise<void> {
   console.log("╔══════════════════════════════════════════════════════════════╗");
-  console.log("║  VRBO Refresher — VallartaPulse                              ║");
+  console.log("║  VRBO Discovery + Refresh — VallartaPulse                    ║");
   console.log("╚══════════════════════════════════════════════════════════════╝");
 
-  const seeds = await loadSeedRows();
-  console.log(`Found ${seeds.length} existing VRBO row(s) to refresh (cap: ${MAX_LISTINGS}).`);
+  console.log("Discovering VRBO listings from Puerto Vallarta search pages…");
+  const discovery = await discoverVrboListings({ delayMs: 2000 });
+  console.log(`  pages scraped: ${discovery.pagesScraped}`);
+  console.log(`  URLs discovered: ${discovery.listingUrls.length}`);
+  if (discovery.errors.length > 0) {
+    console.log(`  (${discovery.errors.length} page error(s) — continuing)`);
+    for (const e of discovery.errors.slice(0, 5)) console.log(`     · ${e}`);
+  }
 
-  if (seeds.length === 0) {
-    console.log("Nothing to do — no VRBO seed rows in rental_listings yet.");
-    console.log("To start feeding VRBO data, populate seed rows first (a discovery");
-    console.log("driver under scripts/src/ is the next piece of work — see");
-    console.log("docs/data-feeding.md → 'Out of scope' section).");
+  const existingUrls = await loadExistingUrls();
+  console.log(`Existing VRBO rows in DB: ${existingUrls.length}`);
+
+  // Union: discovered ∪ existing. Existing rows go first so they're always
+  // refreshed within the cap; newly-discovered URLs fill any remaining slots.
+  const seen = new Set<string>();
+  const orderedUrls: string[] = [];
+  for (const u of existingUrls) {
+    if (!seen.has(u)) { seen.add(u); orderedUrls.push(u); }
+  }
+  for (const u of discovery.listingUrls) {
+    if (!seen.has(u)) { seen.add(u); orderedUrls.push(u); }
+  }
+  const urls = orderedUrls.slice(0, MAX_LISTINGS);
+  const newCount = urls.filter((u) => !existingUrls.includes(u)).length;
+  console.log(`Total to process this run: ${urls.length}  (new: ${newCount}, refresh: ${urls.length - newCount}, cap: ${MAX_LISTINGS})`);
+
+  if (urls.length === 0) {
+    console.log("Nothing to do — no VRBO URLs from discovery or DB.");
     return;
   }
 
   let ok = 0;
   let failed = 0;
-  for (let i = 0; i < seeds.length; i++) {
-    const seed = seeds[i];
-    process.stdout.write(`  [${i + 1}/${seeds.length}] ${seed.sourceUrl} … `);
-    const r = await refreshOne(seed);
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i];
+    process.stdout.write(`  [${i + 1}/${urls.length}] ${url} … `);
+    const r = await refreshOne(url);
     if (r.ok) { ok++; console.log("OK"); }
     else      { failed++; console.log(`FAIL — ${r.error}`); }
-    if (i < seeds.length - 1) await sleep(MIN_DELAY_MS);
+    if (i < urls.length - 1) await sleep(MIN_DELAY_MS);
   }
 
-  console.log(`\nDone. refreshed=${ok} failed=${failed} total=${seeds.length}`);
+  console.log(`\nDone. refreshed=${ok} failed=${failed} total=${urls.length}`);
   if (failed > 0) process.exitCode = 1;
 }
 
