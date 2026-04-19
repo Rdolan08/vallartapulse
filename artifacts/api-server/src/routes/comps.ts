@@ -272,8 +272,27 @@ function median(sorted: number[]): number {
   return n % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
+/**
+ * Apply the comp-pool median per-night fee uplift to a base nightly rate.
+ * Shared between the hero "all-in / night" number and the seasonal sweep
+ * so they stay consistent. Returns null for `all_in` when no fee data is
+ * available — UI should fall back to the base.
+ */
+function withFeeUplift(
+  base: number,
+  perNightFeeUsd: number | null,
+): { base: number; all_in: number | null } {
+  return {
+    base,
+    all_in: perNightFeeUsd != null ? Math.round(base + perNightFeeUsd) : null,
+  };
+}
+
 /** Compute seasonal sweep from a non-seasonal base price */
-function computeSeasonalSweep(nonSeasonalBase: number) {
+function computeSeasonalSweep(
+  nonSeasonalBase: number,
+  perNightFeeUsd: number | null,
+) {
   // Representative month multipliers
   const lowMulti      = PV_MONTHLY_FACTORS.find(m => m.month === 9)!.multiplier;  // Sep 0.68
   const shoulderMulti = PV_MONTHLY_FACTORS.find(m => m.month === 10)!.multiplier; // Oct 0.88
@@ -281,10 +300,10 @@ function computeSeasonalSweep(nonSeasonalBase: number) {
   const peakMulti     = PV_MONTHLY_FACTORS.find(m => m.month === 3)!.multiplier;  // Mar 1.20
 
   return {
-    low:      Math.round(nonSeasonalBase * lowMulti),
-    shoulder: Math.round(nonSeasonalBase * shoulderMulti),
-    high:     Math.round(nonSeasonalBase * highMulti),
-    peak:     Math.round(nonSeasonalBase * peakMulti),
+    low:      withFeeUplift(Math.round(nonSeasonalBase * lowMulti),      perNightFeeUsd),
+    shoulder: withFeeUplift(Math.round(nonSeasonalBase * shoulderMulti), perNightFeeUsd),
+    high:     withFeeUplift(Math.round(nonSeasonalBase * highMulti),     perNightFeeUsd),
+    peak:     withFeeUplift(Math.round(nonSeasonalBase * peakMulti),     perNightFeeUsd),
   };
 }
 
@@ -383,14 +402,6 @@ router.post("/rental/comps", async (req, res) => {
       ...buildingResolutionWarnings,
       ...buildWarnings(input, poolSize, expandedPool, adjacentNeighborhood, adjacentNeighborhoodsUsed, confidence, result.targetBeachTier),
     ];
-
-    // ── Seasonal sweep ────────────────────────────────────────────────────────
-    const nonSeasonalBase = result.totalAdjustmentMultiplier > 0
-      ? result.recommended / result.seasonalContext.totalMultiplier
-      : result.recommended;
-    const seasonalSweep = confidence !== "guidance_only"
-      ? computeSeasonalSweep(nonSeasonalBase)
-      : null;
 
     // ── Building context from comp set ────────────────────────────────────────
     let buildingContext = null;
@@ -569,10 +580,20 @@ router.post("/rental/comps", async (req, res) => {
       ? Math.round(medianFeesPerNight)
       : null;
     const recommendedEffectivePerNightUsd =
-      confidence !== "guidance_only" && result.recommended && medianFeesPerNight != null
-        ? Math.round(result.recommended + medianFeesPerNight)
+      confidence !== "guidance_only" && result.recommended
+        ? withFeeUplift(result.recommended, medianFeesPerNight).all_in
         : null;
     const compsWithFeesCount = sortedFees.length;
+
+    // ── Seasonal sweep ────────────────────────────────────────────────────────
+    // Computed after the comp-pool fee uplift so each season can show both
+    // a base and an all-in number using the same fee logic as the hero.
+    const nonSeasonalBase = result.totalAdjustmentMultiplier > 0
+      ? result.recommended / result.seasonalContext.totalMultiplier
+      : result.recommended;
+    const seasonalSweep = confidence !== "guidance_only"
+      ? computeSeasonalSweep(nonSeasonalBase, medianFeesPerNight)
+      : null;
 
     const topDriversOverall = selectedComps.length > 0
       ? Object.entries(

@@ -72,11 +72,15 @@ interface PricingLayer {
   note: string;
 }
 
+interface SeasonalSweepEntry {
+  base: number;
+  all_in: number | null;
+}
 interface SeasonalSweep {
-  low: number;
-  shoulder: number;
-  high: number;
-  peak: number;
+  low: SeasonalSweepEntry;
+  shoulder: SeasonalSweepEntry;
+  high: SeasonalSweepEntry;
+  peak: SeasonalSweepEntry;
 }
 
 interface BuildingContext {
@@ -1271,7 +1275,7 @@ export default function PricingToolPage() {
                         { key: "high" as const,      label: t("High Season", "Temporada Alta"),    sublabel: "Nov, Jan, Apr",  season: "high"     },
                         { key: "peak" as const,      label: t("Peak Season", "Temporada Pico"),    sublabel: "Feb, Mar, Dec",  season: "peak"     },
                       ].map(({ key, label, sublabel, season }) => {
-                        const price = compsResult.seasonal_sweep![key];
+                        const entry = compsResult.seasonal_sweep![key];
                         const sc = SEASON_COLOR[season];
                         const isCurrent = compsResult.seasonal.season === season;
                         return (
@@ -1287,13 +1291,38 @@ export default function PricingToolPage() {
                             <p className="text-[10px] font-semibold uppercase tracking-wide mb-1"
                               style={{ color: isCurrent ? sc.text : "rgba(154,165,177,0.6)" }}>{label}</p>
                             <p className="text-2xl font-extrabold" style={{ color: isCurrent ? sc.text : "rgba(245,247,250,0.9)" }}>
-                              {formatCurrency(price)}
+                              {formatCurrency(entry.base)}
                             </p>
-                            <p className="text-[10px] mt-1" style={{ color: "rgba(154,165,177,0.45)" }}>{sublabel}</p>
+                            <p className="text-[9px] uppercase tracking-wide mt-0.5" style={{ color: "rgba(154,165,177,0.5)" }}>
+                              {t("base / night", "base / noche")}
+                            </p>
+                            <div className="mt-1.5 px-2 py-0.5 rounded-md" style={{
+                              background: isCurrent ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
+                              border: `1px solid ${isCurrent ? sc.border : "rgba(255,255,255,0.05)"}`,
+                            }}>
+                              <p className="text-sm font-bold tabular-nums" style={{ color: isCurrent ? sc.text : "rgba(245,247,250,0.85)" }}>
+                                {formatCurrency(entry.all_in ?? entry.base)}
+                              </p>
+                              <p className="text-[9px] uppercase tracking-wide" style={{ color: "rgba(154,165,177,0.55)" }}>
+                                {t("all-in / night", "todo incl. / noche")}
+                              </p>
+                            </div>
+                            <p className="text-[10px] mt-1.5" style={{ color: "rgba(154,165,177,0.45)" }}>{sublabel}</p>
                           </div>
                         );
                       })}
                     </div>
+                    <p className="text-[10px] mt-2.5 text-center" style={{ color: "rgba(154,165,177,0.5)" }}>
+                      {compsResult.pool_median_fees_per_night_usd != null
+                        ? t(
+                            `All-in adds ~${formatCurrency(compsResult.pool_median_fees_per_night_usd)}/night in fees & taxes (median of ${compsResult.pool_fees_sample_size} comps)`,
+                            `Todo incl. suma ~${formatCurrency(compsResult.pool_median_fees_per_night_usd)}/noche en cargos e impuestos (mediana de ${compsResult.pool_fees_sample_size} comparables)`,
+                          )
+                        : t(
+                            "No comp fee data available — all-in matches base.",
+                            "Sin datos de cargos comparables — todo incl. igual a base.",
+                          )}
+                    </p>
                     {compsResult.seasonal.event_name && (
                       <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg"
                         style={{ background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)" }}>
