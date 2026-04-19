@@ -37,6 +37,8 @@ import {
   type EnrichResult,
 } from "../lib/ingest/airbnb-detail-runner.js";
 import { runAirbnbPricingRefresh } from "../lib/ingest/airbnb-pricing-runner.js";
+import { runPvrpvPricingRefresh } from "../lib/ingest/pvrpv-pricing-runner.js";
+import { runVrboPricingRefresh } from "../lib/ingest/vrbo-pricing-runner.js";
 import {
   evaluateEnrichmentAlert,
   loadRecentDailyRunRecords,
@@ -1097,6 +1099,96 @@ router.post("/ingest/airbnb-pricing-refresh", async (req, res) => {
     req.log.error({ err }, "ingest/airbnb-pricing-refresh failed");
     res.status(500).json({
       error: "Airbnb pricing refresh failed",
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+// ── POST /ingest/pvrpv-pricing-refresh ────────────────────────────────────
+//
+// Daily PVRPV per-night pricing refresh. Pulls the public calendar for each
+// stale-first PVRPV listing, generates the same checkpoint set as the
+// Airbnb pricing runner, and writes one quote row per fully-available
+// checkpoint into listing_price_quotes — populating the cleaning / service
+// / taxes / total columns the comp-comparison view requires. Cleaning and
+// platform-service fees default to $0 (PVRPV folds both into the nightly
+// rate); taxes are synthesized at the standard Mexico/Jalisco lodging rate
+// (IVA 16% + ISH 3%). Auth: same X-Internal-Token gate.
+const PvrpvPricingRefreshSchema = z.object({
+  maxListings: z.number().int().positive().max(500).optional().default(50),
+  dryRun: z.boolean().optional().default(false),
+});
+
+router.post("/ingest/pvrpv-pricing-refresh", async (req, res) => {
+  const expected = process.env["INTERNAL_TRIGGER_TOKEN"];
+  if (!expected || expected.length === 0) {
+    return res.status(503).json({
+      error: "INTERNAL_TRIGGER_TOKEN not configured on server",
+    });
+  }
+  const provided = req.header("x-internal-token");
+  if (provided !== expected) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const parsed = PvrpvPricingRefreshSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+  }
+  const { maxListings, dryRun } = parsed.data;
+
+  try {
+    req.log.info({ maxListings, dryRun }, "ingest/pvrpv-pricing-refresh: starting");
+    const result = await runPvrpvPricingRefresh({ maxListings, dryRun });
+    res.json({ dryRun, ...result });
+  } catch (err) {
+    req.log.error({ err }, "ingest/pvrpv-pricing-refresh failed");
+    res.status(500).json({
+      error: "PVRPV pricing refresh failed",
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+// ── POST /ingest/vrbo-pricing-refresh ─────────────────────────────────────
+//
+// Daily VRBO fee-quote refresh. VRBO doesn't expose a calendar feed we can
+// scrape headlessly, so each quote is synthesized from the listing's
+// already-scraped nightly_price_usd / cleaning_fee_usd plus the standard
+// VRBO traveler service fee (~10%) and Mexico lodging tax (IVA 16% + ISH 3%).
+// Listings without a published nightly_price_usd are skipped. Same X-
+// Internal-Token gate as the other pricing endpoints.
+const VrboPricingRefreshSchema = z.object({
+  maxListings: z.number().int().positive().max(500).optional().default(50),
+  dryRun: z.boolean().optional().default(false),
+});
+
+router.post("/ingest/vrbo-pricing-refresh", async (req, res) => {
+  const expected = process.env["INTERNAL_TRIGGER_TOKEN"];
+  if (!expected || expected.length === 0) {
+    return res.status(503).json({
+      error: "INTERNAL_TRIGGER_TOKEN not configured on server",
+    });
+  }
+  const provided = req.header("x-internal-token");
+  if (provided !== expected) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const parsed = VrboPricingRefreshSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+  }
+  const { maxListings, dryRun } = parsed.data;
+
+  try {
+    req.log.info({ maxListings, dryRun }, "ingest/vrbo-pricing-refresh: starting");
+    const result = await runVrboPricingRefresh({ maxListings, dryRun });
+    res.json({ dryRun, ...result });
+  } catch (err) {
+    req.log.error({ err }, "ingest/vrbo-pricing-refresh failed");
+    res.status(500).json({
+      error: "VRBO pricing refresh failed",
       message: err instanceof Error ? err.message : String(err),
     });
   }
