@@ -69,17 +69,32 @@ interface PipelineCardConfig {
 
 const PIPELINES: PipelineCardConfig[] = [
   {
+    // Airbnb CALENDAR — availability + nightly_price_usd written to
+    // rental_prices_by_date by the Mac-mini-driven scraper. Operational
+    // (run #2 on 2026-04-19 wrote 59,130 rows for 162/507 listings).
+    // Distinct from the per-night QUOTE pipeline below, which is paused.
+    endpoint: "/api/ingest/airbnb-calendar-freshness",
+    labelEn: "Airbnb calendar",
+    labelEs: "Calendario de Airbnb",
+    mode: "cohort",
+    newestField: "newestScrapeAt",
+    newestLabelEn: "Newest scrape",
+    newestLabelEs: "Extracción más reciente",
+  },
+  {
     endpoint: "/api/ingest/airbnb-pricing-freshness",
-    labelEn: "Airbnb pricing",
-    labelEs: "Precios de Airbnb",
+    labelEn: "Airbnb per-night quotes",
+    labelEs: "Cotizaciones por noche de Airbnb",
     mode: "cohort",
     newestField: "newestQuoteAt",
     newestLabelEn: "Newest quote",
     newestLabelEs: "Cotización más reciente",
     overrideStatus: {
       kind: "paused",
-      reasonEn: "GraphQL pricing/quote adapters not yet implemented",
-      reasonEs: "Adaptadores GraphQL de precios/cotización aún no implementados",
+      reasonEn:
+        "GraphQL quote adapter is a stub. Calendar (availability + price) IS flowing — see 'Airbnb calendar' above.",
+      reasonEs:
+        "El adaptador GraphQL de cotización es un stub. El calendario (disponibilidad + precio) SÍ funciona — ver 'Calendario de Airbnb' arriba.",
     },
   },
   {

@@ -1259,6 +1259,105 @@ router.get("/ingest/vacation-vallarta-pricing-freshness", async (req, res) => {
   }
 });
 
+// ── GET /ingest/airbnb-calendar-freshness ─────────────────────────────────
+//
+// Pipeline-health probe for the daily Airbnb CALENDAR scrape (separate
+// from per-night quote collection — this one is operational and writes
+// to rental_prices_by_date via the Mac mini scraper). Wired to the
+// "Airbnb calendar" tile on /sources.
+//
+// Cohort: active Airbnb listings.
+// Coverage: how many of those listings have any rental_prices_by_date row.
+// Freshness: MAX(scraped_at) across the cohort's rows.
+//
+// Verdict logic (data freshness, not coverage — coverage is reported as
+// detail only because Airbnb's anti-bot rate-limiting caps the daily
+// reachable cohort somewhere around 30-40%, which is intentional, not
+// a bug. A pipeline writing fresh data is healthy even with partial
+// coverage; the tooltip carries the coverage fraction so it's visible):
+//   - fail  : never written / newest > 7 days old
+//   - warn  : newest > 36h (cron skipped a day)
+//   - ok    : newest ≤ 36h
+router.get("/ingest/airbnb-calendar-freshness", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      WITH cohort AS (
+        SELECT rl.id
+        FROM rental_listings rl
+        WHERE rl.source_platform = 'airbnb'
+          AND rl.is_active = true
+      ),
+      last_row AS (
+        SELECT listing_id, MAX(scraped_at) AS last_scraped
+        FROM rental_prices_by_date
+        GROUP BY listing_id
+      )
+      SELECT
+        (SELECT COUNT(*) FROM cohort)::int                                           AS listings_total,
+        (SELECT COUNT(*) FROM cohort c JOIN last_row r ON r.listing_id = c.id)::int  AS listings_with_rows,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_row r ON r.listing_id = c.id
+         WHERE r.last_scraped IS NULL OR r.last_scraped < NOW() - INTERVAL '14 days')::int
+                                                                                     AS listings_stale_14d,
+        (SELECT COUNT(*) FROM rental_prices_by_date rpbd
+         JOIN cohort c ON c.id = rpbd.listing_id)::int                               AS price_rows_total,
+        (SELECT MAX(r.last_scraped) FROM last_row r
+         WHERE r.listing_id IN (SELECT id FROM cohort))                              AS newest_scrape_at
+    `);
+    const row = (result as unknown as {
+      rows: Array<{
+        listings_total: number;
+        listings_with_rows: number;
+        listings_stale_14d: number;
+        price_rows_total: number;
+        newest_scrape_at: string | null;
+      }>;
+    }).rows[0];
+
+    const newestAt = row.newest_scrape_at ? new Date(row.newest_scrape_at) : null;
+    const ageHours = newestAt
+      ? Math.floor((Date.now() - newestAt.getTime()) / 3_600_000)
+      : null;
+    const coveragePct =
+      row.listings_total > 0
+        ? Math.round((row.listings_with_rows / row.listings_total) * 100)
+        : 0;
+
+    let alertLevel: "ok" | "warn" | "fail" = "ok";
+    let alertReason = "";
+    if (row.listings_total === 0) {
+      alertLevel = "warn";
+      alertReason = "No active Airbnb listings in cohort";
+    } else if (ageHours === null) {
+      alertLevel = "fail";
+      alertReason = "No Airbnb calendar rows have ever been written";
+    } else if (ageHours > 168) {
+      alertLevel = "fail";
+      alertReason = `Newest Airbnb calendar scrape is ${Math.round(ageHours / 24)} days old`;
+    } else if (ageHours > 36) {
+      alertLevel = "warn";
+      alertReason = `Newest Airbnb calendar scrape is ${ageHours}h old (cron likely skipped)`;
+    } else {
+      alertReason = `${row.price_rows_total.toLocaleString()} rows · ${row.listings_with_rows}/${row.listings_total} listings (${coveragePct}% coverage)`;
+    }
+
+    res.json({
+      source: "airbnb_calendar",
+      listingsTotal: row.listings_total,
+      listingsCovered: row.listings_with_rows,
+      listingsStale14d: row.listings_stale_14d,
+      priceRowsTotal: row.price_rows_total,
+      coveragePct,
+      newestScrapeAt: newestAt?.toISOString() ?? null,
+      newestScrapeAgeHours: ageHours,
+      alertLevel,
+      alertReason,
+    });
+  } catch (err) {
+    req.log.error({ err }, "ingest/airbnb-calendar-freshness failed");
+    res.status(500).json({ error: "Failed to compute Airbnb calendar freshness" });
+  }
+});
+
 // ── POST /ingest/airbnb-pricing-refresh ───────────────────────────────────
 //
 // Daily Airbnb per-night pricing refresh. Drives the "path 2" pipeline
