@@ -17,13 +17,13 @@
 #   ./scripts/sync-rows.sh \
 #       --table=rental_listings \
 #       --source-platform=airbnb \
-#       [--conflict-cols=source_platform,external_id] \
+#       [--conflict-cols=source_platform,source_url] \
 #       [--update-on-conflict] \
 #       [--limit=10000] \
 #       [--dry-run]
 #
 # Defaults:
-#   --conflict-cols  source_platform,external_id  (matches uq_rental_listings_source_external)
+#   --conflict-cols  source_platform,source_url  (matches idx_rl_source_unique)
 #   on conflict      DO NOTHING                   (--update-on-conflict flips to DO UPDATE SET ...)
 #   --limit          (none — copy everything matching --source-platform)
 #
@@ -37,7 +37,7 @@ set -euo pipefail
 
 TABLE=""
 SRC_PLATFORM=""
-CONFLICT_COLS="source_platform,external_id"
+CONFLICT_COLS="source_platform,source_url"
 UPDATE_ON_CONFLICT=0
 LIMIT=""
 DRY_RUN=0

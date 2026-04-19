@@ -119,7 +119,7 @@ DST_DATABASE_URL="$RAILWAY_DATABASE_URL" \
   --source-platform=airbnb
 ```
 
-Defaults to `INSERT ... ON CONFLICT (source_platform, external_id) DO NOTHING`.
+Defaults to `INSERT ... ON CONFLICT (source_platform, source_url) DO NOTHING`.
 Pass `--update-on-conflict` to overwrite, `--limit=N` to ship a subset, or
 `--dry-run` to verify the plan without touching dst.
 
