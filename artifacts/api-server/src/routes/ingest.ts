@@ -856,15 +856,35 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
     // fully-available enrichment rate has been below the threshold for
     // multiple consecutive runs. When it has, we escalate to "fail" so
     // ops sees a single combined signal.
-    const dailyRecords = await loadRecentDailyRunRecords(7);
-    const parserAlert = evaluateEnrichmentAlert(dailyRecords);
-    if (parserAlert.status === "alert") {
-      // Parser-keyword regression beats freshness "ok" — owners stop
-      // seeing fee data even though quotes are still landing.
-      alertLevel = "fail";
-      alertReason = alertReason
-        ? `${alertReason}; ${parserAlert.reason}`
-        : parserAlert.reason;
+    // The parser-health overlay is an OPTIONAL enrichment. If the
+    // run-summaries table isn't present (e.g. migration hasn't run on
+    // this environment), or the loader fails for any other reason, we
+    // degrade to "insufficient_data" instead of 500-ing the whole
+    // freshness response — losing the Airbnb card entirely is much
+    // worse than losing the parser-health badge on it.
+    let parserAlert: ReturnType<typeof evaluateEnrichmentAlert>;
+    try {
+      const dailyRecords = await loadRecentDailyRunRecords(7);
+      parserAlert = evaluateEnrichmentAlert(dailyRecords);
+      if (parserAlert.status === "alert") {
+        // Parser-keyword regression beats freshness "ok" — owners stop
+        // seeing fee data even though quotes are still landing.
+        alertLevel = "fail";
+        alertReason = alertReason
+          ? `${alertReason}; ${parserAlert.reason}`
+          : parserAlert.reason;
+      }
+    } catch (overlayErr) {
+      req.log.warn(
+        { err: overlayErr },
+        "ingest/airbnb-pricing-freshness: parser-health overlay unavailable, returning freshness without it",
+      );
+      parserAlert = {
+        status: "insufficient_data",
+        reason: "Parser-health overlay unavailable in this environment",
+        evaluatedRuns: [],
+        thresholds: { minRate: 0.5, consecutiveDays: 2, minDenominator: 5 },
+      };
     }
 
     res.json({
