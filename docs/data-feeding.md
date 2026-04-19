@@ -39,7 +39,7 @@ nobody can explain a week later.
 | Vacation Vallarta | A | daily 07:30 UTC | `.github/workflows/sources-sync-refresh.yml` (vacation_vallarta step) | shipped |
 | VRBO — discovery + refresh | B | daily 07:15 UTC | `.github/workflows/vrbo-scrape.yml` — script tries to discover PV listings then upserts the union of (new ∪ existing). **Discovery currently blocked by VRBO's PerimeterX bot challenge** (see vrbo-search-adapter.ts header for tried approaches). Refresh of existing rows works the moment any get seeded. | wired, discovery blocked |
 | OG screenshots | B | every other day 09:00 UTC | `.github/workflows/og-refresh.yml` | shipped |
-| **Rental calendar — PVRPV (full 365-day window)** | B | daily 07:05 UTC *(workflow not yet wired — see follow-ups)* | `pnpm --filter @workspace/scripts run scrape:calendar` → `rental_prices_by_date` | adapter+driver shipped, **manual run only** |
+| **Rental calendar — PVRPV (full 365-day window)** | B | daily 07:05 UTC | `.github/workflows/calendar-scrape.yml` → `pnpm --filter @workspace/scripts run scrape:calendar` → `rental_prices_by_date` | shipped |
 | **Rental calendar — Airbnb (checkpoint set)** | A *(planned)* | daily | `airbnb-checkpoints.ts` + adapter (TBD) → `listing_price_quotes` | **blocked — see Airbnb pricing pivot below** |
 | **Rental calendar — Vacation Vallarta** | B *(planned)* | daily | `vacation-vallarta-calendar-adapter.ts` → `rental_prices_by_date` | **not built** |
 
@@ -199,7 +199,7 @@ Comp data lands in two tables, both keyed by listing × time:
   (nightly + cleaning + service + tax). Time-series shape so we can study
   booking-window behavior.
 
-### PVRPV: shipped (manual)
+### PVRPV: shipped
 
 `scripts/src/calendar-scrape.ts` + `pvrpv-calendar-adapter.ts`. One run
 covers all 125 active PVRPV listings × 365 days = ~45,625 rows. Two HTTP
@@ -213,9 +213,10 @@ written, zero errors, ~80 seconds wall clock at concurrency 3. Coverage:
 ~23% booked at six-week lead — exactly the booking patterns owners
 need to plan against).
 
-**Not yet wired to GitHub Actions.** Trivial follow-up — copy
-`.github/workflows/pvrpv-scrape.yml`, swap the script name. Pending
-operator decision on cron offset.
+**Wired to GitHub Actions** as `.github/workflows/calendar-scrape.yml`,
+running daily at 07:05 UTC (5 minutes after `pvrpv-scrape.yml` so listing
+rows are fresh first). `scripts/freshness.sh` reports
+`MAX(scraped_at)` for `rental_prices_by_date`.
 
 ### Airbnb pricing — pivot required
 
