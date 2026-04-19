@@ -1,4 +1,10 @@
 #!/bin/bash
-set -e
-pnpm install --frozen-lockfile
-pnpm --filter db push
+set -euo pipefail
+
+echo "[post-merge] pnpm install"
+pnpm install --prefer-offline
+
+echo "[post-merge] db push (force, non-interactive) + auto-apply views"
+pnpm --filter @workspace/db run push-force
+
+echo "[post-merge] done"
