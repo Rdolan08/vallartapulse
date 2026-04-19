@@ -326,6 +326,221 @@ function PipelinesHealth({
   );
 }
 
+/**
+ * Data quality panel for `rental_prices_by_date`.
+ *
+ * Surfaces the wholesomeness profile of the underlying price table —
+ * total rows, suspicious-price counts (zero / <$20 / >$5,000), past-
+ * dated rows, and scrape-age — broken out by source platform plus an
+ * ALL row. Backed by `/api/ingest/rental-prices-quality`.
+ *
+ * Footer documents the daily age-based retention sweep so it's
+ * obvious WHY past-date and stale-row counts shouldn't grow without
+ * bound: the sweep deletes them on a 7-day / 90-day cadence,
+ * strictly age-based, never triggered by scrape failure.
+ */
+interface QualityPlatform {
+  sourcePlatform: string;
+  totalRows: number;
+  nullPrice: number;
+  zeroPrice: number;
+  lowPrice: number;
+  plausiblePrice: number;
+  highPrice: number;
+  suspiciousTotal: number;
+  pastDated: number;
+  scraped30dPlus: number;
+  scraped60dPlus: number;
+  scraped90dPlus: number;
+  oldestScrapeAt: string | null;
+  newestScrapeAt: string | null;
+  alertLevel: "ok" | "warn" | "fail";
+}
+
+function DataQualityPanel({
+  t,
+  lang,
+}: {
+  t: (en: string, es: string) => string;
+  lang: "en" | "es";
+}) {
+  const [data, setData] = useState<{ platforms: QualityPlatform[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    apiFetch(apiUrl("/api/ingest/rental-prices-quality"))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((j) => {
+        if (alive) {
+          setData(j);
+          setLoading(false);
+        }
+      })
+      .catch((e: unknown) => {
+        if (alive) {
+          setErr(e instanceof Error ? e.message : String(e));
+          setLoading(false);
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const platforms = data?.platforms ?? [];
+  const all = platforms.find((p) => p.sourcePlatform === "ALL");
+  const perPlatform = platforms.filter((p) => p.sourcePlatform !== "ALL");
+
+  return (
+    <TooltipProvider delayDuration={150}>
+      <div className="rounded-xl border border-border/40 bg-card/40 px-4 py-3 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            <Database className="w-3.5 h-3.5" />
+            {t("Data quality — rental_prices_by_date", "Calidad de datos — rental_prices_by_date")}
+          </div>
+          {all && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className={cn(
+                    "text-[11px] font-medium px-2 py-0.5 rounded-full cursor-help",
+                    all.alertLevel === "ok" && "bg-emerald-500/10 text-emerald-400",
+                    all.alertLevel === "warn" && "bg-amber-500/10 text-amber-400",
+                    all.alertLevel === "fail" && "bg-red-500/10 text-red-400",
+                  )}
+                >
+                  {all.suspiciousTotal === 0
+                    ? t("0 suspicious prices", "0 precios sospechosos")
+                    : t(
+                        `${all.suspiciousTotal.toLocaleString()} suspicious prices`,
+                        `${all.suspiciousTotal.toLocaleString()} precios sospechosos`,
+                      )}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-sm text-xs">
+                {t(
+                  "Suspicious = zero-priced + under $20 + over $5,000. The healthy bucket ($20–$5,000) and null-price (Airbnb's calendar legitimately omits price for many days) are excluded.",
+                  "Sospechoso = precio cero + menos de $20 + más de $5,000. El rango sano ($20–$5,000) y los precios nulos (el calendario de Airbnb omite precio en muchos días, lo cual es legítimo) se excluyen.",
+                )}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+
+        {loading && (
+          <div className="text-xs text-muted-foreground">
+            {t("Loading data quality profile…", "Cargando perfil de calidad…")}
+          </div>
+        )}
+        {err && (
+          <div className="text-xs text-red-400">
+            {t(`Failed to load: ${err}`, `Error al cargar: ${err}`)}
+          </div>
+        )}
+
+        {!loading && !err && perPlatform.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border/30">
+                  <th className="text-left py-1 pr-3 font-medium">{t("Platform", "Plataforma")}</th>
+                  <th className="text-right py-1 px-2 font-medium">{t("Total rows", "Filas totales")}</th>
+                  <th className="text-right py-1 px-2 font-medium">{t("Plausible", "Plausibles")}</th>
+                  <th className="text-right py-1 px-2 font-medium">{t("Null price", "Precio nulo")}</th>
+                  <th className="text-right py-1 px-2 font-medium text-amber-400">{t("Suspicious", "Sospechosos")}</th>
+                  <th className="text-right py-1 px-2 font-medium">{t("Past-dated", "Fecha pasada")}</th>
+                  <th className="text-right py-1 px-2 font-medium">{t(">30d / >60d / >90d", ">30d / >60d / >90d")}</th>
+                  <th className="text-left py-1 pl-2 font-medium">{t("Oldest scrape", "Extracción más antigua")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {perPlatform.map((p) => (
+                  <tr key={p.sourcePlatform} className="border-b border-border/10 last:border-0">
+                    <td className="py-1.5 pr-3 font-mono">{p.sourcePlatform}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums">{p.totalRows.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-emerald-400">{p.plausiblePrice.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{p.nullPrice.toLocaleString()}</td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums font-medium",
+                      p.suspiciousTotal === 0 ? "text-muted-foreground" : "text-red-400",
+                    )}>
+                      {p.suspiciousTotal === 0
+                        ? "0"
+                        : `${p.zeroPrice}/${p.lowPrice}/${p.highPrice}`}
+                    </td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums",
+                      p.pastDated === 0 ? "text-muted-foreground" : "text-amber-400",
+                    )}>
+                      {p.pastDated.toLocaleString()}
+                    </td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums",
+                      p.scraped90dPlus === 0 ? "text-muted-foreground" : "text-red-400",
+                    )}>
+                      {p.scraped30dPlus.toLocaleString()} / {p.scraped60dPlus.toLocaleString()} / {p.scraped90dPlus.toLocaleString()}
+                    </td>
+                    <td className="py-1.5 pl-2 text-muted-foreground">
+                      {p.oldestScrapeAt
+                        ? formatDistanceToNow(new Date(p.oldestScrapeAt), { addSuffix: true })
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+                {all && (
+                  <tr className="border-t-2 border-border/30 font-medium">
+                    <td className="py-1.5 pr-3 font-mono">{all.sourcePlatform}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums">{all.totalRows.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-emerald-400">{all.plausiblePrice.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{all.nullPrice.toLocaleString()}</td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums",
+                      all.suspiciousTotal === 0 ? "text-muted-foreground" : "text-red-400",
+                    )}>
+                      {all.suspiciousTotal === 0
+                        ? "0"
+                        : `${all.zeroPrice}/${all.lowPrice}/${all.highPrice}`}
+                    </td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums",
+                      all.pastDated === 0 ? "text-muted-foreground" : "text-amber-400",
+                    )}>
+                      {all.pastDated.toLocaleString()}
+                    </td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums",
+                      all.scraped90dPlus === 0 ? "text-muted-foreground" : "text-red-400",
+                    )}>
+                      {all.scraped30dPlus.toLocaleString()} / {all.scraped60dPlus.toLocaleString()} / {all.scraped90dPlus.toLocaleString()}
+                    </td>
+                    <td className="py-1.5 pl-2 text-muted-foreground">
+                      {all.oldestScrapeAt
+                        ? formatDistanceToNow(new Date(all.oldestScrapeAt), { addSuffix: true })
+                        : "—"}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="mt-3 pt-2 border-t border-border/20 text-[10px] text-muted-foreground leading-relaxed">
+          <span className="font-semibold uppercase tracking-wider">{t("Retention sweep", "Limpieza de retención")}:</span>{" "}
+          {t(
+            "daily 08:00 UTC — DELETE rows where date < CURRENT_DATE − 7 days OR scraped_at < NOW() − 90 days. Strictly age-based: a failed scrape never triggers a delete; missing replacement data never triggers a delete. Per-rule per-platform delete counts are logged so a quietly-dying source surfaces as a non-zero stale-row count instead of a mysterious row-count drop.",
+            "diaria 08:00 UTC — DELETE filas donde date < CURRENT_DATE − 7 días O scraped_at < NOW() − 90 días. Estrictamente por edad: un scrape fallido nunca dispara un delete; la ausencia de datos de reemplazo nunca dispara un delete. Las cuentas de borrado por regla y por plataforma se registran para que una fuente que muere silenciosamente aparezca como un contador de filas obsoletas distinto de cero, en vez de una caída misteriosa del total.",
+          )}
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+}
+
 export default function Sources() {
   const { t, lang } = useLanguage();
   const { toast } = useToast();
@@ -430,6 +645,8 @@ export default function Sources() {
 
       {/* ── Pipeline health banners (Airbnb / VRBO / VV) ───────────── */}
       <PipelinesHealth t={t} lang={lang as "en" | "es"} />
+
+      <DataQualityPanel t={t} lang={lang as "en" | "es"} />
 
       {/* ── Info banner ─────────────────────────────────────────────── */}
       <div className="flex items-start gap-3 bg-primary/5 border border-primary/15 rounded-xl px-4 py-3 mb-8 text-sm text-muted-foreground">

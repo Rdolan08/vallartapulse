@@ -1,0 +1,106 @@
+name: Rental Prices Retention Sweep (daily)
+
+# Daily age-based purge of `rental_prices_by_date`. Two rules, both
+# strictly age-based:
+#
+#   Rule A — past-date:  DELETE rows WHERE date < CURRENT_DATE - 7 days
+#   Rule B — stale-row:  DELETE rows WHERE scraped_at < NOW() - 90 days
+#
+# Neither rule fires on scrape failure. A failed Monday run leaves last
+# week's data in place — the next sweep won't touch it for another
+# 7 / 90 days. See artifacts/api-server/src/routes/ingest.ts
+# (POST /ingest/rental-prices-retention-sweep) for the full contract.
+#
+# Schedule: 08:00 UTC, after all daily scrapers have finished writing
+# (PVRPV 07:00, Airbnb calendar 07:10, pricing refreshes 07:20+).
+# That ordering means the sweep can purge a row that today's scrape
+# would have refreshed — which is correct: today's row was already
+# UPSERTed an hour ago, so the only rows the sweep can hit are ones
+# nothing has refreshed in 90 days (= dead listing).
+#
+# Per-rule per-platform delete counts are written to the job summary
+# so a quiet die-off is spottable in the Actions tab without checking
+# Railway logs.
+#
+# Required GitHub repository secrets:
+#   RAILWAY_API_URL          e.g. https://api.vallartapulse.com
+#   INTERNAL_TRIGGER_TOKEN   matches the Railway env var of the same name
+
+on:
+  schedule:
+    - cron: "0 8 * * *"     # daily 08:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "If true, count rows that would be deleted but skip the DELETE."
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rental-prices-retention-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify required secrets
+        env:
+          RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
+          INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
+        run: |
+          : "${RAILWAY_API_URL:?RAILWAY_API_URL secret is missing}"
+          : "${INTERNAL_TRIGGER_TOKEN:?INTERNAL_TRIGGER_TOKEN secret is missing}"
+
+      - name: Run retention sweep
+        env:
+          RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
+          INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          echo "POST $RAILWAY_API_URL/api/ingest/rental-prices-retention-sweep dryRun=$DRY_RUN"
+          curl --fail-with-body --show-error --silent --max-time 120 \
+            -X POST "$RAILWAY_API_URL/api/ingest/rental-prices-retention-sweep" \
+            -H "Content-Type: application/json" \
+            -H "X-Internal-Token: $INTERNAL_TRIGGER_TOKEN" \
+            -d "{\"dryRun\":$DRY_RUN}" \
+            | tee /tmp/sweep.json
+
+          PD_DELETED=$(jq -r '.pastDateRule.deleted // 0' /tmp/sweep.json)
+          SS_DELETED=$(jq -r '.staleScrapeRule.deleted // 0' /tmp/sweep.json)
+
+          {
+            echo "## Rental prices retention sweep"
+            echo ""
+            echo "- Past-date rule (\`date < CURRENT_DATE - 7d\`): **${PD_DELETED}** rows deleted"
+            echo "- Stale-row rule (\`scraped_at < NOW() - 90d\`): **${SS_DELETED}** rows deleted"
+            echo ""
+            echo "### Per platform — past-date"
+            echo ""
+            echo "| Platform | Rows |"
+            echo "|---|---:|"
+            jq -r '.pastDateRule.byPlatform[] | "| \(.sourcePlatform) | \(.rows) |"' /tmp/sweep.json || true
+            echo ""
+            echo "### Per platform — stale-row"
+            echo ""
+            echo "| Platform | Rows |"
+            echo "|---|---:|"
+            jq -r '.staleScrapeRule.byPlatform[] | "| \(.sourcePlatform) | \(.rows) |"' /tmp/sweep.json || true
+            echo ""
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "_Dry-run — no rows were actually deleted._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Loud warning if a platform's stale-row count crosses zero —
+          # most days both numbers should be 0 once the table reaches
+          # steady state, so any non-zero stale-row delete is worth a
+          # human eyeball.
+          if [ "$SS_DELETED" -gt 0 ]; then
+            echo "::warning title=Retention sweep removed stale rows::${SS_DELETED} rows had not been refreshed in 90+ days. Check the per-platform breakdown — a sudden non-zero count on a previously-quiet platform usually means its scraper has been silently failing."
+          fi
