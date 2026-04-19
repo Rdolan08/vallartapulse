@@ -45,6 +45,12 @@ export const listingSearchObservationsTable = pgTable(
     titleDisplayed: text("title_displayed"),
     displayedNightlyPrice: real("displayed_nightly_price"),
     displayedTotalPrice: real("displayed_total_price"),
+    /**
+     * Computed nightly rate when the source only exposes a total + night count
+     * (e.g. Airbnb cards). Populated by the search-card normalizer; nullable
+     * because some sources expose nightly directly and don't need derivation.
+     */
+    derivedNightlyPrice: real("derived_nightly_price"),
     currency: text("currency"),
     displayedRating: real("displayed_rating"),
     displayedReviewCount: integer("displayed_review_count"),
