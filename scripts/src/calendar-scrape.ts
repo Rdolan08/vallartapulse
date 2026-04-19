@@ -3,12 +3,14 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Daily forward-window pricing+availability scraper for VallartaPulse.
  *
- * Phase 1 (this file): PVRPV only. Airbnb checkpoints + VV seasonal text
- * land in follow-on tasks (T013, T014).
+ * Sources covered:
+ *   - "pvrpv"             — full calendar grid (rates + minicalendar)
+ *   - "vacation_vallarta" — seasonal text brackets parsed from Squarespace
+ *                           listing pages (no calendar grid → all days emit
+ *                           availabilityStatus = "unknown")
  *
- * For every active PVRPV listing in `rental_listings`, fetches its calendar
- * via fetchPvrpvCalendar (rates table + paginated minicalendar = full
- * 365-day forward window in 2 HTTP fetches), then UPSERTs one row per day
+ * For every active listing in `rental_listings` whose source_platform is one
+ * of the supported sources, fetches its calendar and UPSERTs one row per day
  * into `rental_prices_by_date` keyed on (listing_id, date).
  *
  * Idempotent. Re-running refreshes prices/availability for every covered
@@ -21,11 +23,13 @@
  *
  * Env:
  *   DATABASE_URL              required
- *   CALENDAR_MAX_LISTINGS     optional cap (default: all active PVRPV listings)
- *   CALENDAR_CONCURRENCY      default 3
+ *   CALENDAR_MAX_LISTINGS     optional cap (default: all active listings, applied per source)
+ *   CALENDAR_CONCURRENCY      override worker pool size; defaults differ per
+ *                             source (PVRPV=3, VV=2 — Squarespace is rate-sensitive)
+ *   CALENDAR_SOURCES          comma list, default "pvrpv,vacation_vallarta"
  */
 
-import { sql, eq, and } from "drizzle-orm";
+import { sql, eq, and, inArray } from "drizzle-orm";
 import {
   db,
   pool,
@@ -37,10 +41,34 @@ import {
   fetchPvrpvCalendar,
   type PvrpvCalendarResult,
 } from "../../artifacts/api-server/src/lib/ingest/pvrpv-calendar-adapter.js";
+import {
+  fetchVacationVallartaCalendar,
+  type VvCalendarResult,
+} from "../../artifacts/api-server/src/lib/ingest/vacation-vallarta-calendar-adapter.js";
 import { runPool } from "./lib/concurrency.js";
 
-const SOURCE_PLATFORM = "pvrpv";
-const CONCURRENCY = parseInt(process.env.CALENDAR_CONCURRENCY ?? "3", 10);
+const SUPPORTED_SOURCES = ["pvrpv", "vacation_vallarta"] as const;
+type SupportedSource = (typeof SUPPORTED_SOURCES)[number];
+const RAW_SOURCES =
+  process.env.CALENDAR_SOURCES?.split(",").map((s) => s.trim()).filter(Boolean) ??
+  [...SUPPORTED_SOURCES];
+const SOURCES: SupportedSource[] = RAW_SOURCES.filter((s): s is SupportedSource =>
+  (SUPPORTED_SOURCES as readonly string[]).includes(s),
+);
+if (SOURCES.length === 0) {
+  console.error(
+    `[calendar-scrape] FATAL: CALENDAR_SOURCES="${process.env.CALENDAR_SOURCES ?? ""}" matched none of: ${SUPPORTED_SOURCES.join(", ")}`,
+  );
+  process.exit(2);
+}
+/** Per-source default worker-pool size; CALENDAR_CONCURRENCY env overrides for all sources. */
+const DEFAULT_CONCURRENCY: Record<SupportedSource, number> = {
+  pvrpv: 3,
+  vacation_vallarta: 2,
+};
+const CONCURRENCY_OVERRIDE = process.env.CALENDAR_CONCURRENCY
+  ? parseInt(process.env.CALENDAR_CONCURRENCY, 10)
+  : null;
 const MAX_LISTINGS = process.env.CALENDAR_MAX_LISTINGS
   ? parseInt(process.env.CALENDAR_MAX_LISTINGS, 10)
   : null;
@@ -52,12 +80,15 @@ const FAILURE_RATE_FAIL_THRESHOLD = 0.5;
 
 interface ListingRow {
   id: number;
+  sourcePlatform: SupportedSource;
   sourceUrl: string;
   title: string | null;
+  bedrooms: number | null;
 }
 
 interface PerListingStats {
   listingId: number;
+  source: SupportedSource;
   url: string;
   ok: boolean;
   daysReturned: number;
@@ -68,33 +99,75 @@ interface PerListingStats {
   error?: string;
 }
 
-async function loadActiveListings(): Promise<ListingRow[]> {
+async function loadActiveListings(sources: SupportedSource[]): Promise<ListingRow[]> {
   const rows = await db
     .select({
       id: rentalListingsTable.id,
+      sourcePlatform: rentalListingsTable.sourcePlatform,
       sourceUrl: rentalListingsTable.sourceUrl,
       title: rentalListingsTable.title,
+      bedrooms: rentalListingsTable.bedrooms,
     })
     .from(rentalListingsTable)
     .where(
       and(
-        eq(rentalListingsTable.sourcePlatform, SOURCE_PLATFORM),
+        inArray(rentalListingsTable.sourcePlatform, sources as unknown as string[]),
         eq(rentalListingsTable.isActive, true),
       ),
     );
-  return rows.filter((r) => typeof r.sourceUrl === "string" && r.sourceUrl.length > 0);
+  return rows
+    .filter((r) => typeof r.sourceUrl === "string" && r.sourceUrl.length > 0)
+    .map((r) => ({ ...r, sourcePlatform: r.sourcePlatform as SupportedSource }));
+}
+
+interface UnifiedCalendarDay {
+  date: string;
+  nightlyPriceUsd: number | null;
+  availabilityStatus: string;
+  minimumNights: number | null;
+}
+
+interface UnifiedCalendarResult {
+  days: UnifiedCalendarDay[];
+  daysReturned: number;
+  daysWithPrice: number;
+  daysAvailable: number;
+  daysUnavailable: number;
+  errors: string[];
+}
+
+function unifyPvrpv(r: PvrpvCalendarResult): UnifiedCalendarResult {
+  return {
+    days: r.days,
+    daysReturned: r.daysReturned,
+    daysWithPrice: r.daysWithPrice,
+    daysAvailable: r.daysAvailable,
+    daysUnavailable: r.daysUnavailable,
+    errors: r.errors,
+  };
+}
+
+function unifyVv(r: VvCalendarResult): UnifiedCalendarResult {
+  return {
+    days: r.days,
+    daysReturned: r.daysReturned,
+    daysWithPrice: r.daysWithPrice,
+    daysAvailable: 0,
+    daysUnavailable: 0,
+    errors: r.errors,
+  };
 }
 
 function toInsertRows(
   listingId: number,
-  result: PvrpvCalendarResult,
+  result: UnifiedCalendarResult,
   scrapedAt: Date,
 ): InsertRentalPriceByDate[] {
   return result.days.map((d) => ({
     listingId,
     date: d.date, // YYYY-MM-DD; drizzle `date` accepts string
     nightlyPriceUsd: d.nightlyPriceUsd,
-    availabilityStatus: d.availabilityStatus, // "available" | "unavailable" | "unknown"
+    availabilityStatus: d.availabilityStatus,
     minimumNights: d.minimumNights,
     scrapedAt,
   }));
@@ -128,6 +201,7 @@ async function upsertDays(rows: InsertRentalPriceByDate[]): Promise<number> {
 async function processOne(listing: ListingRow): Promise<PerListingStats> {
   const stats: PerListingStats = {
     listingId: listing.id,
+    source: listing.sourcePlatform,
     url: listing.sourceUrl,
     ok: false,
     daysReturned: 0,
@@ -137,7 +211,17 @@ async function processOne(listing: ListingRow): Promise<PerListingStats> {
     rowsWritten: 0,
   };
   try {
-    const result = await fetchPvrpvCalendar(listing.sourceUrl);
+    let result: UnifiedCalendarResult;
+    if (listing.sourcePlatform === "pvrpv") {
+      result = unifyPvrpv(await fetchPvrpvCalendar(listing.sourceUrl));
+    } else {
+      // vacation_vallarta — pass bedroom count for multi-variant bracket selection
+      result = unifyVv(
+        await fetchVacationVallartaCalendar(listing.sourceUrl, {
+          bedrooms: listing.bedrooms ?? undefined,
+        }),
+      );
+    }
     stats.daysReturned = result.daysReturned;
     stats.daysWithPrice = result.daysWithPrice;
     stats.daysAvailable = result.daysAvailable;
@@ -155,23 +239,21 @@ async function processOne(listing: ListingRow): Promise<PerListingStats> {
   return stats;
 }
 
-async function main(): Promise<number> {
-  console.log(`[calendar-scrape] start  source=${SOURCE_PLATFORM}  concurrency=${CONCURRENCY}`);
-  const all = await loadActiveListings();
-  const listings = MAX_LISTINGS ? all.slice(0, MAX_LISTINGS) : all;
-  console.log(`[calendar-scrape] loaded  active_pvrpv=${all.length}  processing=${listings.length}`);
-
-  if (listings.length === 0) {
-    console.log("[calendar-scrape] no active listings — nothing to do");
-    return 0;
-  }
-
-  const stats: PerListingStats[] = [];
+async function runForSource(
+  source: SupportedSource,
+  listings: ListingRow[],
+  stats: PerListingStats[],
+): Promise<void> {
+  const concurrency = CONCURRENCY_OVERRIDE ?? DEFAULT_CONCURRENCY[source];
+  console.log(
+    `[calendar-scrape] source=${source}  processing=${listings.length}  concurrency=${concurrency}`,
+  );
+  if (listings.length === 0) return;
   let done = 0;
   await runPool(
     listings,
     {
-      concurrency: CONCURRENCY,
+      concurrency,
       hardTimeoutMs: HARD_TIMEOUT_MS,
       delayBetweenMs: MIN_DELAY_MS,
     },
@@ -180,9 +262,9 @@ async function main(): Promise<number> {
       try {
         s = await processOne(l);
       } catch (e) {
-        // Includes RunPoolTimeoutError from the outer kill-switch.
         s = {
           listingId: l.id,
+          source: l.sourcePlatform,
           url: l.sourceUrl,
           ok: false,
           daysReturned: 0,
@@ -196,9 +278,11 @@ async function main(): Promise<number> {
       stats.push(s);
       done++;
       const tag = s.ok ? "ok " : "ERR";
-      const url = l.sourceUrl.replace("https://www.pvrpv.com", "");
+      const url = l.sourceUrl
+        .replace("https://www.pvrpv.com", "")
+        .replace("https://www.vacationvallarta.com", "");
       console.log(
-        `[${done}/${listings.length}] ${tag} listing=${l.id}  days=${s.daysReturned}` +
+        `[${source} ${done}/${listings.length}] ${tag} listing=${l.id}  days=${s.daysReturned}` +
           `  price=${s.daysWithPrice}  avail=${s.daysAvailable}  unavail=${s.daysUnavailable}` +
           `  written=${s.rowsWritten}` +
           (s.error ? `  ERROR=${s.error}` : "") +
@@ -206,6 +290,25 @@ async function main(): Promise<number> {
       );
     },
   );
+}
+
+async function main(): Promise<number> {
+  console.log(
+    `[calendar-scrape] start  sources=${SOURCES.join(",")}  concurrency=${CONCURRENCY_OVERRIDE ?? "per-source"}`,
+  );
+  const all = await loadActiveListings(SOURCES);
+  console.log(`[calendar-scrape] loaded  active_total=${all.length}`);
+  if (all.length === 0) {
+    console.log("[calendar-scrape] no active listings — nothing to do");
+    return 0;
+  }
+
+  const stats: PerListingStats[] = [];
+  for (const src of SOURCES) {
+    const subset = all.filter((r) => r.sourcePlatform === src);
+    const limited = MAX_LISTINGS ? subset.slice(0, MAX_LISTINGS) : subset;
+    await runForSource(src, limited, stats);
+  }
 
   const ok = stats.filter((s) => s.ok);
   const failed = stats.filter((s) => !s.ok);
