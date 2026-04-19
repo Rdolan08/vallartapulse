@@ -481,54 +481,96 @@ export default function Sources() {
 
                 <CardContent className="flex-1">
                   <div className="space-y-0 text-sm">
-                    {/* Last synced */}
-                    <div className="flex justify-between items-center py-2.5 border-b border-border/50">
-                      <span className="text-muted-foreground flex items-center gap-1.5">
-                        <Clock className="w-3 h-3" />
-                        {t("Last Synced", "Última Sincronización")}
-                      </span>
-                      <span className={cn(
-                        "font-medium text-xs flex items-center gap-1.5",
-                        freshness === "fresh" && "text-primary",
-                        freshness === "never" && "text-muted-foreground italic"
-                      )}>
-                        {source.lastSyncedAt
-                          ? formatDistanceToNow(new Date(source.lastSyncedAt), { addSuffix: true })
-                          : t("Never", "Nunca")}
-                      </span>
-                    </div>
+                    {(() => {
+                      // Two card layouts depending on whether the source is
+                      // record-counted (lives in our DB) or a reference link
+                      // (Inmuebles24 / NASA / OSM / Transparencia PV — these
+                      // have recordCount=null in the API response).
+                      const isReference = source.recordCount == null;
+                      const syncedText = source.lastSyncedAt
+                        ? format(new Date(source.lastSyncedAt), "MMM d, yyyy")
+                        : t("Never", "Nunca");
+                      const syncedAgo = source.lastSyncedAt
+                        ? formatDistanceToNow(new Date(source.lastSyncedAt), { addSuffix: true })
+                        : null;
 
-                    {/* Records — show "—" for sources without a backing
-                        table (Inmuebles24, NASA, OSM, Transparencia PV)
-                        instead of a misleading "0". recordCount=null in
-                        the API response signals "no live count available
-                        for this source", per source-sync.recountFromDB. */}
-                    <div className="flex justify-between items-center py-2.5 border-b border-border/50">
-                      <span className="text-muted-foreground flex items-center gap-1.5">
-                        <Database className="w-3 h-3" />
-                        {t("Records", "Registros")}
-                      </span>
-                      <span
-                        className={cn(
-                          "font-medium tabular-nums",
-                          source.recordCount == null && "text-muted-foreground italic",
-                        )}
-                      >
-                        {source.recordCount == null
-                          ? t("not counted", "sin conteo")
-                          : source.recordCount.toLocaleString()}
-                      </span>
-                    </div>
+                      if (isReference) {
+                        // Reference / external-link source: one combined
+                        // "Last verified — Apr 19, 2026" line, plus frequency.
+                        // No Records row (there's nothing to count).
+                        return (
+                          <>
+                            <div className="flex justify-between items-center py-2.5 border-b border-border/50">
+                              <span className="text-muted-foreground flex items-center gap-1.5">
+                                <Clock className="w-3 h-3" />
+                                {t("Last verified", "Última verificación")}
+                              </span>
+                              <span className={cn(
+                                "font-medium text-xs",
+                                freshness === "fresh" && "text-primary",
+                                freshness === "never" && "text-muted-foreground italic",
+                              )}>
+                                {syncedText}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center py-2.5 border-b border-border/50">
+                              <span className="text-muted-foreground flex items-center gap-1.5">
+                                <Database className="w-3 h-3" />
+                                {t("Type", "Tipo")}
+                              </span>
+                              <span className="font-medium text-xs italic text-muted-foreground">
+                                {t("External reference", "Referencia externa")}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center py-2.5">
+                              <span className="text-muted-foreground">
+                                {t("Frequency", "Frecuencia")}
+                              </span>
+                              <span className="font-medium capitalize">
+                                {source.frequency || "Manual"}
+                              </span>
+                            </div>
+                          </>
+                        );
+                      }
 
-                    {/* Frequency */}
-                    <div className="flex justify-between items-center py-2.5">
-                      <span className="text-muted-foreground">
-                        {t("Frequency", "Frecuencia")}
-                      </span>
-                      <span className="font-medium capitalize">
-                        {source.frequency || "Manual"}
-                      </span>
-                    </div>
+                      // Counted source: original 3-row layout (Last Synced
+                      // relative + Records count + Frequency).
+                      return (
+                        <>
+                          <div className="flex justify-between items-center py-2.5 border-b border-border/50">
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <Clock className="w-3 h-3" />
+                              {t("Last Synced", "Última Sincronización")}
+                            </span>
+                            <span className={cn(
+                              "font-medium text-xs flex items-center gap-1.5",
+                              freshness === "fresh" && "text-primary",
+                              freshness === "never" && "text-muted-foreground italic",
+                            )}>
+                              {syncedAgo ?? t("Never", "Nunca")}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center py-2.5 border-b border-border/50">
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <Database className="w-3 h-3" />
+                              {t("Records", "Registros")}
+                            </span>
+                            <span className="font-medium tabular-nums">
+                              {(source.recordCount ?? 0).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center py-2.5">
+                            <span className="text-muted-foreground">
+                              {t("Frequency", "Frecuencia")}
+                            </span>
+                            <span className="font-medium capitalize">
+                              {source.frequency || "Manual"}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </CardContent>
 
