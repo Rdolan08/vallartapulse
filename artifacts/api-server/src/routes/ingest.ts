@@ -36,6 +36,7 @@ import {
   enrichOneAirbnbListing,
   type EnrichResult,
 } from "../lib/ingest/airbnb-detail-runner.js";
+import { runAirbnbPricingRefresh } from "../lib/ingest/airbnb-pricing-runner.js";
 import type { SourceKey } from "../lib/ingest/types.js";
 
 const router = Router();
@@ -757,6 +758,52 @@ router.post("/ingest/enrich-airbnb-detail", async (req, res) => {
     req.log.error({ err }, "ingest/enrich-airbnb-detail failed");
     res.status(500).json({
       error: "Enrichment loop failed",
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+// ── POST /ingest/airbnb-pricing-refresh ───────────────────────────────────
+//
+// Daily Airbnb per-night pricing refresh. Drives the "path 2" pipeline
+// (PdpAvailabilityCalendar GraphQL persisted-query replay through the
+// residential proxy). Picks the stale-first cohort of active Airbnb
+// listings — both legacy 9-digit and post-2022 long-form IDs are eligible
+// here — fetches one calendar per listing, and inserts one quote row per
+// generated checkpoint into listing_price_quotes.
+//
+// Auth: same X-Internal-Token gate as enrich-airbnb-detail.
+const PricingRefreshSchema = z.object({
+  maxListings: z.number().int().positive().max(500).optional().default(50),
+  dryRun: z.boolean().optional().default(false),
+});
+
+router.post("/ingest/airbnb-pricing-refresh", async (req, res) => {
+  const expected = process.env["INTERNAL_TRIGGER_TOKEN"];
+  if (!expected || expected.length === 0) {
+    return res.status(503).json({
+      error: "INTERNAL_TRIGGER_TOKEN not configured on server",
+    });
+  }
+  const provided = req.header("x-internal-token");
+  if (provided !== expected) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const parsed = PricingRefreshSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+  }
+  const { maxListings, dryRun } = parsed.data;
+
+  try {
+    req.log.info({ maxListings, dryRun }, "ingest/airbnb-pricing-refresh: starting");
+    const result = await runAirbnbPricingRefresh({ maxListings, dryRun });
+    res.json({ dryRun, ...result });
+  } catch (err) {
+    req.log.error({ err }, "ingest/airbnb-pricing-refresh failed");
+    res.status(500).json({
+      error: "Airbnb pricing refresh failed",
       message: err instanceof Error ? err.message : String(err),
     });
   }

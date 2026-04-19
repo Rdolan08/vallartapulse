@@ -41,6 +41,7 @@ nobody can explain a week later.
 | OG screenshots | B | every other day 09:00 UTC | `.github/workflows/og-refresh.yml` | shipped |
 | **Rental calendar — PVRPV (full 365-day window)** | B | daily 07:05 UTC | `.github/workflows/calendar-scrape.yml` → `pnpm --filter @workspace/scripts run scrape:calendar` → `rental_prices_by_date` | shipped |
 | **Rental calendar — Airbnb (availability, 365-day window)** | B | daily 07:10 UTC | `.github/workflows/airbnb-calendar-scrape.yml` → `rental_prices_by_date` (price=null, availability filled) | shipped — see "Airbnb pricing — pivot resolved" below |
+| **Airbnb per-night pricing (GraphQL replay)** | A | daily 07:20 UTC | `.github/workflows/airbnb-pricing-refresh.yml` → `/api/ingest/airbnb-pricing-refresh` → `listing_price_quotes` | shipped |
 | **Rental calendar — Vacation Vallarta** | B *(planned)* | daily | `vacation-vallarta-calendar-adapter.ts` → `rental_prices_by_date` | **not built** |
 
 ---
@@ -263,19 +264,67 @@ now see Airbnb's demand curve (booking lead-time, holiday compression,
 weekend vs. mid-week occupancy) alongside PVRPV's full price+availability
 data. Per-night dollars wait, but the Airbnb signal is no longer dark.
 
-**What's still deferred:**
+### Airbnb pricing — path 2 shipped (April 2026)
 
-- `listing_price_quotes` — the full-fee quote table (nightly + cleaning
-  + service + tax) — remains unpopulated for Airbnb. The
-  `airbnb-checkpoints.ts` date generator stays inert until path 2
-  (`PdpAvailabilityCalendar` GraphQL replay through the residential
-  proxy, with a periodically-rotating persisted-query SHA hash) is
-  built. That work is 1–2 days and fragile — left as a follow-up
-  rather than blocking this milestone.
-- The 345 long-form-ID Airbnb rows — same path-2 dependency. The
-  adapter rejects them at the source-listings query (length > 10) so
-  freshness signals reflect the cohort we can actually serve, not a
-  67% baseline failure rate.
+Per-night Airbnb pricing now ships via the `PdpAvailabilityCalendar`
+GraphQL persisted-query call — the same operation the Airbnb PDP
+itself fires after hydration. This closes the "comp listings averaging
+$X/night" gap left by the availability-only feed above.
+
+**What shipped:**
+
+- `airbnb-graphql-pricing-adapter.ts` — pure adapter with two
+  responsibilities:
+  1. **SHA discovery** — launches Playwright once, navigates to a
+     known PDP, intercepts the GraphQL request the page itself fires,
+     and pulls the persisted-query SHA out of the URL. The hash is
+     cached to `/tmp/airbnb-graphql-sha.json` (override via
+     `AIRBNB_GRAPHQL_SHA_CACHE_PATH`) with a 5-day TTL. A hard-coded
+     known-good fallback covers the case where discovery fails AND
+     the cache is empty, so a single Playwright hiccup never kills
+     a daily run.
+  2. **Replay** — every subsequent fetch is a plain HTTP GET via the
+     residential proxy (undici + ProxyAgent — same transport as
+     `raw-fetch.ts`). One call per listing returns 12 months of
+     priced+available days. The adapter recognizes Airbnb's
+     "PersistedQueryNotFound" signal (HTTP 410, or 200 with
+     `errors[].extensions.code === PERSISTED_QUERY_NOT_FOUND`) and
+     surfaces `staleSha: true` so the caller can re-discover and retry.
+- `airbnb-pricing-runner.ts` — orchestrates the daily loop: stale-first
+  cohort across ALL active Airbnb listings (long-form IDs included),
+  one GraphQL fetch per listing, expand into ~30–40 quote rows via
+  `airbnb-checkpoints.ts`, INSERT into `listing_price_quotes`. SHA
+  rotation is handled mid-run: the first listing that returns
+  `staleSha: true` triggers one re-discovery and the fresh hash is
+  used for the remainder of the run.
+- `POST /api/ingest/airbnb-pricing-refresh` — the Pattern A endpoint.
+  Body shape: `{ "maxListings": 50, "dryRun": false }`. Auth via
+  `X-Internal-Token` (same token as the enrich endpoint).
+- `.github/workflows/airbnb-pricing-refresh.yml` — daily 07:20 UTC
+  (10 minutes after the availability scrape so the proxy isn't
+  hammered at the same instant).
+
+**Cohort:** the 50 stale-first active Airbnb listings whose latest
+`listing_price_quotes.collected_at` is oldest, with NULLS-FIRST so
+never-priced listings drain first. With ~507 active rows and a budget
+of 50/day, every listing gets repriced every ~10 days — that's the
+documented freshness contract for this feed.
+
+**Long-form IDs covered:** unlike path 1's `/api/v2/` route (which
+silently returns empty `calendar_months` for IDs > 10 digits and is
+filtered out at source), the GraphQL operation accepts both legacy
+9-digit and post-2022 long-form listing IDs. The runner's cohort
+query intentionally does NOT filter on ID length — the 345 long-form
+rows that path 1 skips are first-class citizens here.
+
+**SHA-rotation operations:** if the daily run starts logging
+`staleShaRetried: true` for many listings AND
+`shaRediscoveriesDuringRun > 1`, that's the signal Airbnb has rotated
+the persisted-query hash and the cache file is dead. The runner
+auto-recovers; no manual intervention required. The Playwright
+discovery itself runs inside the API server process — Playwright's
+Chromium is already launched on Railway via `browser-fetch.ts`, so
+no new infra needed.
 
 ---
 
