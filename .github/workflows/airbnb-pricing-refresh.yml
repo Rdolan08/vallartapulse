@@ -1,4 +1,28 @@
-name: Airbnb Pricing Refresh (daily)
+name: Airbnb Pricing Refresh (PAUSED)
+
+# ─────────────────────────────────────────────────────────────────────────
+# PAUSED 2026-04-19 — Airbnb pricing quote collection is on hold.
+#
+# The /api/ingest/airbnb-pricing-refresh endpoint depends on two adapters
+# that are still compile-only stubs (they throw "not implemented"):
+#   - airbnb-graphql-pricing-adapter.ts
+#   - airbnb-graphql-quote-adapter.ts
+# The endpoint deliberately stays in safe-fail mode (returns 500 with a
+# clear "not implemented" message) until those adapters land. See
+# replit.md ("Airbnb pricing pipeline — PAUSED") for full context and the
+# tracking notes for the real implementation work.
+#
+# What is disabled here:
+#   - The daily cron schedule (commented out below).
+#   - The Slack push notification on `fail`.
+#   - The GitHub-issue dedupe creation/comment on `fail`.
+# What is intentionally NOT disabled:
+#   - workflow_dispatch — kept available for manual smoke-testing once the
+#     adapters land. Triggering it today will fail loudly (curl exit 22)
+#     because the endpoint correctly refuses to run; that is expected and
+#     only happens on explicit manual dispatch.
+#   - The endpoint itself — it stays in safe-fail state on purpose.
+# ─────────────────────────────────────────────────────────────────────────
 
 # Triggers the per-night Airbnb pricing pipeline ("path 2" in
 # docs/data-feeding.md): the API server fetches each listing's
@@ -33,8 +57,10 @@ name: Airbnb Pricing Refresh (daily)
 # "re-alert only every 24h or when the situation changes" requirement.
 
 on:
-  schedule:
-    - cron: "20 7 * * *"   # daily 07:20 UTC
+  # PAUSED — daily cron disabled until the GraphQL pricing/quote adapters
+  # land. Re-enable by uncommenting the schedule block below.
+  # schedule:
+  #   - cron: "20 7 * * *"   # daily 07:20 UTC
   workflow_dispatch:
     inputs:
       max_listings:
@@ -148,9 +174,11 @@ jobs:
       # so forks / dev repos without the secret stay quiet. Body links to
       # the playbook so the on-call has one click to triage.
       - name: Notify Slack on dark pricing
-        # SLACK_WEBHOOK_URL is set at job-level env above so this `if:`
-        # gate evaluates deterministically.
-        if: steps.refresh.outputs.level == 'fail' && env.SLACK_WEBHOOK_URL != ''
+        # PAUSED — disabled while Airbnb pricing pipeline is on hold.
+        # See replit.md ("Airbnb pricing pipeline — PAUSED"). Restore by
+        # changing `if: false` back to the previous gate:
+        #   if: steps.refresh.outputs.level == 'fail' && env.SLACK_WEBHOOK_URL != ''
+        if: false
         env:
           REASON: ${{ steps.refresh.outputs.reason }}
           ATTEMPTED: ${{ steps.refresh.outputs.attempted }}
@@ -207,7 +235,11 @@ jobs:
       # See follow-up task "Auto-close stale-pricing alerts once data is
       # flowing again" for automating that close step.
       - name: Open / update GitHub issue on dark pricing
-        if: steps.refresh.outputs.level == 'fail'
+        # PAUSED — disabled while Airbnb pricing pipeline is on hold.
+        # See replit.md ("Airbnb pricing pipeline — PAUSED"). Restore by
+        # changing `if: false` back to:
+        #   if: steps.refresh.outputs.level == 'fail'
+        if: false
         uses: actions/github-script@v7
         env:
           REASON: ${{ steps.refresh.outputs.reason }}
