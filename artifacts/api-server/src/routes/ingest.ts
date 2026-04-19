@@ -660,7 +660,7 @@ router.post("/ingest/sync/:source", async (req, res) => {
 // the candidate query used by scripts/src/enrich-airbnb-listings.ts: any
 // rental_listings row whose source_platform='airbnb', has a source_url, and
 // has no listing_details row yet, optionally restricted to a set of
-// normalized neighborhood buckets. Hard-capped at maxListings=50 per call.
+// normalized neighborhood buckets. Hard-capped at maxListings=500 per call.
 //
 // The fetch path (browser/raw/hybrid) is dictated by the AIRBNB_DETAIL_FETCH_MODE
 // env var on the server — this endpoint just iterates and reports.
@@ -676,7 +676,7 @@ const DEFAULT_DETAIL_BUCKETS = [
 ];
 
 const EnrichDetailSchema = z.object({
-  maxListings: z.number().int().positive().max(50).optional().default(5),
+  maxListings: z.number().int().positive().max(500).optional().default(5),
   buckets: z.array(z.string().min(1)).optional(),
   dryRun: z.boolean().optional().default(false),
 });
