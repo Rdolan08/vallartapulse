@@ -1,23 +1,23 @@
 name: VRBO Scrape (daily)
 
-# Runs scripts/src/vrbo-scrape.ts directly against the prod DB. This is a
-# REFRESH-ONLY driver: it re-fetches every existing rental_listings row
-# whose source_platform='vrbo' and source_url IS NOT NULL, and upserts the
-# fresh data back. There is intentionally no discovery layer wired here yet —
-# building one is a separate piece of work tracked in
-# docs/data-feeding.md → "Out of scope" section.
+# Runs scripts/src/vrbo-scrape.ts directly against the prod DB. Each run:
+#   1. Discovers VRBO listings from the Puerto Vallarta search-results
+#      pages via vrbo-search-adapter.discoverVrboListings(), routed
+#      through PROXY_URL (Decodo residential) — VRBO returns a
+#      "Bot or Not?" 429 challenge to datacenter IPs.
+#   2. Loads every existing rental_listings row with source_platform='vrbo'.
+#   3. Refreshes the union (discovered ∪ existing) capped at 200/run,
+#      upserting on (source_platform, source_url) — same code path inserts
+#      new and updates existing.
 #
-# That means today this workflow is a no-op (zero VRBO rows in prod), but the
-# plumbing is in place: the moment a VRBO seed row lands in the table, the
-# next daily run picks it up and starts refreshing it. This honors the
-# "no stale data, ever" contract from day one of seed availability — without
-# silently swallowing the gap, since the run logs will say "Found 0 rows".
+# Honors the freshness contract: every URL on the site gets re-fetched daily.
 #
 # Frequency: daily at 07:15 UTC. Sandwiched between pvrpv-scrape (07:00)
 # and sources-sync-refresh (07:30) so we don't stampede the DB.
 #
 # Required GitHub repository secrets:
 #   RAILWAY_DATABASE_URL   prod Postgres connection string
+#   PROXY_URL              Decodo residential proxy URL (same as Railway env)
 
 on:
   schedule:
@@ -53,7 +53,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Run VRBO refresher against prod DB
+      - name: Run VRBO discovery + refresh against prod DB
         env:
           DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
+          PROXY_URL:    ${{ secrets.PROXY_URL }}
         run: pnpm --filter @workspace/scripts exec tsx src/vrbo-scrape.ts
