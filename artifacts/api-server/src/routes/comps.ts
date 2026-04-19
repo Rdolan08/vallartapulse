@@ -485,7 +485,7 @@ router.post("/rental/comps", async (req, res) => {
             currency                         AS currency,
             collected_at                     AS collected_at
           FROM listing_price_quotes
-          WHERE listing_id = ANY(${topListingIds})
+          WHERE listing_id = ANY(${sql.raw(`ARRAY[${topListingIds.map((n) => Number(n)).filter(Number.isFinite).join(",") || "NULL"}]::int[]`)})
             AND availability_status = 'available'
           ORDER BY listing_id, collected_at DESC
         `)).rows as Array<{

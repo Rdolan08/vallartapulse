@@ -124,10 +124,10 @@ export async function selectCompPriceSources(
       AVG(rpbd.nightly_price_usd)::float8 AS avg_price,
       MAX(rpbd.scraped_at)                AS latest_scraped_at
     FROM rental_prices_by_date rpbd
-    WHERE rpbd.listing_id = ANY(${listingIds})
+    WHERE rpbd.listing_id = ANY(${sql.raw(`ARRAY[${listingIds.map((n) => Number(n)).filter(Number.isFinite).join(",") || "NULL"}]::int[]`)})
       AND rpbd.nightly_price_usd IS NOT NULL
-      AND rpbd.date >= (CURRENT_DATE + ${FORWARD_WINDOW_START_DAYS})
-      AND rpbd.date <= (CURRENT_DATE + ${FORWARD_WINDOW_END_DAYS})
+      AND rpbd.date >= (CURRENT_DATE + (${FORWARD_WINDOW_START_DAYS})::int)
+      AND rpbd.date <= (CURRENT_DATE + (${FORWARD_WINDOW_END_DAYS})::int)
     GROUP BY rpbd.listing_id
   `)).rows as unknown as DailyPriceAggRow[];
 
@@ -141,7 +141,7 @@ export async function selectCompPriceSources(
       rl.nightly_price_usd AS nightly_price_usd,
       rl.scraped_at        AS scraped_at
     FROM rental_listings rl
-    WHERE rl.id = ANY(${listingIds})
+    WHERE rl.id = ANY(${sql.raw(`ARRAY[${listingIds.map((n) => Number(n)).filter(Number.isFinite).join(",") || "NULL"}]::int[]`)})
   `)).rows as unknown as StaticListingRow[];
 
   const staticByListing = new Map<number, StaticListingRow>();
