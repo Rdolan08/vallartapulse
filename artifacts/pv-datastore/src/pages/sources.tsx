@@ -498,14 +498,25 @@ export default function Sources() {
                       </span>
                     </div>
 
-                    {/* Records */}
+                    {/* Records — show "—" for sources without a backing
+                        table (Inmuebles24, NASA, OSM, Transparencia PV)
+                        instead of a misleading "0". recordCount=null in
+                        the API response signals "no live count available
+                        for this source", per source-sync.recountFromDB. */}
                     <div className="flex justify-between items-center py-2.5 border-b border-border/50">
                       <span className="text-muted-foreground flex items-center gap-1.5">
                         <Database className="w-3 h-3" />
                         {t("Records", "Registros")}
                       </span>
-                      <span className="font-medium tabular-nums">
-                        {(source.recordCount ?? 0).toLocaleString()}
+                      <span
+                        className={cn(
+                          "font-medium tabular-nums",
+                          source.recordCount == null && "text-muted-foreground italic",
+                        )}
+                      >
+                        {source.recordCount == null
+                          ? t("not counted", "sin conteo")
+                          : source.recordCount.toLocaleString()}
                       </span>
                     </div>
 
