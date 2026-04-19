@@ -42,9 +42,9 @@ on:
   workflow_dispatch:
     inputs:
       max_listings:
-        description: "Cap per call (1-500). Default 50."
+        description: "Cap per call. Default 10000 = process the entire cohort. Set lower only for manual smoke tests."
         required: false
-        default: "50"
+        default: "10000"
 
 permissions:
   contents: read
@@ -70,7 +70,7 @@ jobs:
         env:
           RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
           INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
-          MAX_LISTINGS: ${{ inputs.max_listings || '50' }}
+          MAX_LISTINGS: ${{ inputs.max_listings || '10000' }}
         run: |
           set -euo pipefail
           echo "POST $RAILWAY_API_URL/api/ingest/vrbo-pricing-refresh max=$MAX_LISTINGS"

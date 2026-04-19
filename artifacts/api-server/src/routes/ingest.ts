@@ -629,7 +629,7 @@ const DEFAULT_DETAIL_BUCKETS = [
 ];
 
 const EnrichDetailSchema = z.object({
-  maxListings: z.number().int().positive().max(500).optional().default(5),
+  maxListings: z.number().int().positive().max(10_000).optional().default(5),
   buckets: z.array(z.string().min(1)).optional(),
   dryRun: z.boolean().optional().default(false),
   // "new"   → listings that have NEVER been enriched (LEFT JOIN ... IS NULL).
@@ -1627,7 +1627,7 @@ router.post("/ingest/rental-prices-retention-sweep", async (req, res) => {
 //
 // Auth: same X-Internal-Token gate as enrich-airbnb-detail.
 const PricingRefreshSchema = z.object({
-  maxListings: z.number().int().positive().max(500).optional().default(50),
+  maxListings: z.number().int().positive().max(10_000).optional().default(50),
   dryRun: z.boolean().optional().default(false),
 });
 
@@ -1673,7 +1673,7 @@ router.post("/ingest/airbnb-pricing-refresh", async (req, res) => {
 // rate); taxes are synthesized at the standard Mexico/Jalisco lodging rate
 // (IVA 16% + ISH 3%). Auth: same X-Internal-Token gate.
 const PvrpvPricingRefreshSchema = z.object({
-  maxListings: z.number().int().positive().max(500).optional().default(50),
+  maxListings: z.number().int().positive().max(10_000).optional().default(50),
   dryRun: z.boolean().optional().default(false),
 });
 
@@ -1717,7 +1717,7 @@ router.post("/ingest/pvrpv-pricing-refresh", async (req, res) => {
 // Listings without a published nightly_price_usd are skipped. Same X-
 // Internal-Token gate as the other pricing endpoints.
 const VrboPricingRefreshSchema = z.object({
-  maxListings: z.number().int().positive().max(500).optional().default(50),
+  maxListings: z.number().int().positive().max(10_000).optional().default(50),
   dryRun: z.boolean().optional().default(false),
 });
 
