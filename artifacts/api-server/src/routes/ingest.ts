@@ -17,7 +17,10 @@
 
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { rentalListingsTable } from "@workspace/db/schema";
+import {
+  airbnbPricingRunSummariesTable,
+  rentalListingsTable,
+} from "@workspace/db/schema";
 import { count, sql, desc, eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { fetchPvrpvListing } from "../lib/ingest/pvrpv-adapter.js";
@@ -36,6 +39,11 @@ import {
   enrichOneAirbnbListing,
   type EnrichResult,
 } from "../lib/ingest/airbnb-detail-runner.js";
+import { runAirbnbPricingRefresh } from "../lib/ingest/airbnb-pricing-runner.js";
+import {
+  evaluateEnrichmentAlert,
+  type DailyRunRecord,
+} from "../lib/ingest/airbnb-pricing-monitor.js";
 import type { SourceKey } from "../lib/ingest/types.js";
 
 const router = Router();
@@ -839,6 +847,54 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
       alertReason = `Newest quote is ${ageHours}h old`;
     }
 
+    // ── Parser-health overlay ────────────────────────────────────────────
+    // The age/stale checks above catch a TOTAL pipeline outage (no quotes
+    // landing at all). They miss the failure mode this endpoint cares about
+    // most: Airbnb renames a fee line title, the per-checkpoint quote
+    // returns 200 OK, the runner silently drops the row, and quotes keep
+    // landing — they just have no fee numbers. We pull the last few
+    // persisted run summaries and ask the monitor whether the
+    // fully-available enrichment rate has been below the threshold for
+    // multiple consecutive runs. When it has, we escalate to "fail" so
+    // ops sees a single combined signal.
+    const recentSummaries = await db
+      .select()
+      .from(airbnbPricingRunSummariesTable)
+      .orderBy(desc(airbnbPricingRunSummariesTable.ranAt))
+      .limit(7);
+
+    const dailyRecords: DailyRunRecord[] = recentSummaries.map((s) => ({
+      ranAt: s.ranAt,
+      summary: {
+        attempted: s.listingsAttempted,
+        ok: s.listingsOk,
+        failed: s.listingsFailed,
+        totalQuotesWritten: s.totalQuotesWritten,
+        totalDaysWithPrice: 0,
+        totalQuotesEnriched: s.totalQuotesEnriched,
+        totalQuotesFailed: s.totalQuotesFailed,
+        totalFullyAvailableCheckpoints: s.totalFullyAvailableCheckpoints,
+        totalQuotesEnrichedFullyAvailable: s.quotesEnrichedFullyAvailable,
+        enrichmentRate: s.enrichmentRate,
+        shaSource: "cache",
+        quoteShaSource: "cache",
+        shaRediscoveriesDuringRun: 0,
+        quoteShaRediscoveriesDuringRun: 0,
+        alertLevel: "ok",
+        alertReason: "",
+      },
+    }));
+
+    const parserAlert = evaluateEnrichmentAlert(dailyRecords);
+    if (parserAlert.status === "alert") {
+      // Parser-keyword regression beats freshness "ok" — owners stop
+      // seeing fee data even though quotes are still landing.
+      alertLevel = "fail";
+      alertReason = alertReason
+        ? `${alertReason}; ${parserAlert.reason}`
+        : parserAlert.reason;
+    }
+
     res.json({
       source: "airbnb_pricing",
       listingsTotal: row.listings_total,
@@ -850,6 +906,18 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
       newestQuoteAgeHours: ageHours,
       alertLevel,
       alertReason,
+      parserHealth: {
+        status: parserAlert.status,
+        reason: parserAlert.reason,
+        thresholds: parserAlert.thresholds,
+        evaluatedRuns: parserAlert.evaluatedRuns.map((r) => ({
+          ranAt: r.ranAt.toISOString(),
+          enrichmentRate: r.enrichmentRate,
+          fullyAvailableCheckpoints: r.fullyAvailableCheckpoints,
+          quotesEnriched: r.quotesEnriched,
+          belowThreshold: r.belowThreshold,
+        })),
+      },
     });
   } catch (err) {
     req.log.error({ err }, "ingest/airbnb-pricing-freshness failed");

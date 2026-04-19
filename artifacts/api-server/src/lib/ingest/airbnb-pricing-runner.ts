@@ -31,7 +31,9 @@
 
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
+import { logger } from "../logger.js";
 import {
+  airbnbPricingRunSummariesTable,
   listingPriceQuotesTable,
   type InsertListingPriceQuote,
 } from "@workspace/db/schema";
@@ -78,8 +80,24 @@ export interface AirbnbPricingPerListing {
   checkpointsAttempted: number;
   /** Per-checkpoint full-fee quote fetches that returned a usable breakdown. */
   quotesEnriched: number;
+  /**
+   * Subset of `quotesEnriched` that came from a checkpoint where every
+   * night was both covered and available. This is the numerator paired
+   * with `fullyAvailableCheckpoints` for the enrichment-rate signal —
+   * mixing in enrichments from partially-available checkpoints would
+   * let the ratio exceed 1.0 and hide parser regressions.
+   */
+  quotesEnrichedFullyAvailable: number;
   /** Per-checkpoint full-fee quote fetches that errored / had no breakdown. */
   quotesFailed: number;
+  /**
+   * Of the checkpointsAttempted, how many had every night both covered
+   * and available. This is the denominator we expect to enrich — a
+   * "min_stay_violated" or "unavailable" checkpoint can't get a quote
+   * back from Airbnb, so excluding them keeps the enrichment-rate
+   * signal focused on parser health rather than on inventory churn.
+   */
+  fullyAvailableCheckpoints: number;
   quotesWritten: number;
   staleShaRetried: boolean;
   /** True when the quote-flow SHA had to be re-discovered for this listing. */
@@ -99,6 +117,29 @@ export interface AirbnbPricingRunSummary {
   totalQuotesEnriched: number;
   /** Sum of per-checkpoint quote calls that failed / had no breakdown. */
   totalQuotesFailed: number;
+  /** Sum across listings of fullyAvailableCheckpoints — the enrichment denominator. */
+  totalFullyAvailableCheckpoints: number;
+  /**
+   * Sum across listings of `quotesEnrichedFullyAvailable` — the
+   * enrichment numerator. Always ≤ `totalFullyAvailableCheckpoints`.
+   */
+  totalQuotesEnrichedFullyAvailable: number;
+  /**
+   * Share of fully-available checkpoints that successfully got a fee
+   * breakdown (totalQuotesEnrichedFullyAvailable / totalFullyAvailableCheckpoints).
+   * `null` when the denominator is zero (e.g. canary or all listings
+   * fully booked) so consumers don't divide by zero or treat 0/0 as a
+   * crash signal.
+   *
+   * Tracked because Airbnb periodically renames the price-line titles
+   * the parser keys off ("Cleaning fee" → "Cleaning charge", etc).
+   * When that happens the per-checkpoint quote still returns 200 but
+   * the breakdown columns silently come back null, the runner drops
+   * the row, and owners stop getting fee data without anything else
+   * looking obviously broken. A persistent dip in this rate is the
+   * canary for a parser-keyword update.
+   */
+  enrichmentRate: number | null;
   shaSource: "cache" | "discovered" | "fallback";
   quoteShaSource: "cache" | "discovered" | "fallback";
   shaRediscoveriesDuringRun: number;
@@ -386,7 +427,9 @@ export async function runAirbnbPricingRefresh(
   let totalQuotes = 0;
   let totalDaysWithPrice = 0;
   let totalQuotesEnriched = 0;
+  let totalQuotesEnrichedFullyAvailable = 0;
   let totalQuotesFailed = 0;
+  let totalFullyAvailableCheckpoints = 0;
 
   for (const l of listings) {
     const stat: AirbnbPricingPerListing = {
@@ -397,7 +440,9 @@ export async function runAirbnbPricingRefresh(
       daysWithPrice: 0,
       checkpointsAttempted: 0,
       quotesEnriched: 0,
+      quotesEnrichedFullyAvailable: 0,
       quotesFailed: 0,
+      fullyAvailableCheckpoints: 0,
       quotesWritten: 0,
       staleShaRetried: false,
       staleQuoteShaRetried: false,
@@ -429,6 +474,9 @@ export async function runAirbnbPricingRefresh(
 
       const checkpointRows = buildQuoteRows(l.id, result, new Date(), today);
       stat.checkpointsAttempted = checkpointRows.length;
+      stat.fullyAvailableCheckpoints = checkpointRows.filter(
+        (cr) => cr.fullyAvailable,
+      ).length;
 
       // Per-checkpoint full-fee quote enrichment. We call the
       // reservation-flow endpoint for EVERY emitted checkpoint so the
@@ -496,6 +544,12 @@ export async function runAirbnbPricingRefresh(
             ) {
               enrichedRows.push(cr.row);
               stat.quotesEnriched++;
+              // Only count enrichments on fully-available checkpoints
+              // toward the rate numerator — that's the universe whose
+              // denominator we tracked above. A successful enrichment
+              // on a partially-available checkpoint is gravy, not
+              // signal.
+              if (cr.fullyAvailable) stat.quotesEnrichedFullyAvailable++;
             } else {
               stat.quotesFailed++;
             }
@@ -517,6 +571,14 @@ export async function runAirbnbPricingRefresh(
       totalDaysWithPrice += stat.daysWithPrice;
       totalQuotesEnriched += stat.quotesEnriched;
       totalQuotesFailed += stat.quotesFailed;
+      // Only count the enrichment numerator/denominator when we
+      // actually attempted enrichment — canary mode (skipFullQuotes)
+      // would otherwise look like a 0% enrichment rate and trip the
+      // alert.
+      if (!skipFullQuotes && currentQuoteSha) {
+        totalFullyAvailableCheckpoints += stat.fullyAvailableCheckpoints;
+        totalQuotesEnrichedFullyAvailable += stat.quotesEnrichedFullyAvailable;
+      }
     } catch (e) {
       stat.error = (e as Error).message.slice(0, 200);
     }
@@ -550,7 +612,7 @@ export async function runAirbnbPricingRefresh(
     alertReason = `${failed}/${perListing.length} listings failed (>=50%)`;
   }
 
-  return {
+  const result: AirbnbPricingRunResult = {
     summary: {
       attempted: perListing.length,
       ok,
@@ -559,6 +621,11 @@ export async function runAirbnbPricingRefresh(
       totalDaysWithPrice,
       totalQuotesEnriched,
       totalQuotesFailed,
+      totalFullyAvailableCheckpoints,
+      totalQuotesEnrichedFullyAvailable,
+      enrichmentRate: totalFullyAvailableCheckpoints > 0
+        ? totalQuotesEnrichedFullyAvailable / totalFullyAvailableCheckpoints
+        : null,
       shaSource: initial.source,
       quoteShaSource: initialQuote.source,
       shaRediscoveriesDuringRun: shaRediscoveries,
@@ -568,5 +635,44 @@ export async function runAirbnbPricingRefresh(
     },
     listings: perListing,
   };
+
+  // Persist this run's summary so the freshness/alert endpoint has
+  // cross-run history to evaluate the enrichment-rate trend against
+  // (see evaluateEnrichmentAlert in airbnb-pricing-monitor.ts). Skipped
+  // on dry runs and on canary (skipFullQuotes) runs — the latter would
+  // otherwise pollute the alert math with rows that intentionally
+  // never enriched anything.
+  if (!dryRun && !skipFullQuotes) {
+    try {
+      await db.insert(airbnbPricingRunSummariesTable).values({
+        ranAt: new Date(),
+        listingsAttempted: result.summary.attempted,
+        listingsOk: result.summary.ok,
+        listingsFailed: result.summary.failed,
+        totalQuotesWritten: result.summary.totalQuotesWritten,
+        totalQuotesEnriched: result.summary.totalQuotesEnriched,
+        totalQuotesFailed: result.summary.totalQuotesFailed,
+        totalFullyAvailableCheckpoints:
+          result.summary.totalFullyAvailableCheckpoints,
+        quotesEnrichedFullyAvailable:
+          result.summary.totalQuotesEnrichedFullyAvailable,
+        enrichmentRate: result.summary.enrichmentRate,
+        rawSummaryJson: result.summary as unknown as Record<string, unknown>,
+      });
+    } catch (err) {
+      // Persistence is best-effort: a failure here must not turn a
+      // successful pricing run into a 5xx for the caller. The row is
+      // diagnostic, not authoritative. Log at warn level so silent
+      // history loss is still discoverable in the server logs — the
+      // freshness endpoint depends on this table to detect parser
+      // regressions.
+      logger.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        "airbnb-pricing-runner: failed to persist run summary",
+      );
+    }
+  }
+
+  return result;
 }
 
