@@ -141,8 +141,13 @@ const PIPELINES: PipelineCardConfig[] = [
  * Color rules:
  *   - yellow = source intentionally not active (paused / blocked / planned)
  *   - red    = source IS active and failing (alertLevel=fail)
- *   - yellow = source IS active and degraded (alertLevel=warn)
- *   - green  = source IS active and healthy (alertLevel=ok)
+ *   - yellow = source IS active and meaningfully degraded
+ *             (alertLevel=warn AND fewer than 90% of the cohort is fresh)
+ *   - green  = source IS active and healthy
+ *             (alertLevel=ok, OR alertLevel=warn with >=90% of the cohort
+ *              fresh — e.g. 4/125 stale on PVRPV is 96.8% fresh, which
+ *              still earns a green dot. The "4 stale" detail surfaces in
+ *              the tooltip so nothing is hidden.)
  */
 function PipelineStatusLight({
   cfg,
@@ -197,14 +202,26 @@ function PipelineStatusLight({
     dotClass = "bg-red-500";
     statusEn = "Failing";
     statusEs = "Fallando";
-  } else if (data.alertLevel === "warn") {
-    dotClass = "bg-amber-500";
-    statusEn = "Degraded";
-    statusEs = "Degradado";
   } else {
-    dotClass = "bg-emerald-500";
-    statusEn = "Healthy";
-    statusEs = "Sano";
+    // For cohort-mode pipelines (Airbnb/PVRPV/VRBO/VV pricing & VRBO scrape),
+    // grade against the actual fresh ratio rather than the binary warn/ok
+    // verdict — a tiny tail of stale rows shouldn't flip an otherwise
+    // healthy pipeline to yellow alongside the paused vendors.
+    const total = data.listingsTotal ?? 0;
+    const stale = data.listingsStale14d ?? 0;
+    const freshRatio = total > 0 ? (total - stale) / total : 1;
+    const meaningfullyDegraded =
+      cfg.mode === "cohort" ? data.alertLevel === "warn" && freshRatio < 0.9 : data.alertLevel === "warn";
+
+    if (meaningfullyDegraded) {
+      dotClass = "bg-amber-500";
+      statusEn = "Degraded";
+      statusEs = "Degradado";
+    } else {
+      dotClass = "bg-emerald-500";
+      statusEn = "Healthy";
+      statusEs = "Sano";
+    }
   }
 
   // ── Tooltip body — last refresh, cohort, alert reason, override note ────
