@@ -69,7 +69,7 @@ done
 #   --table:           Postgres unquoted identifier — [a-zA-Z_][a-zA-Z0-9_]*
 #   --source-platform: alphanumeric + underscore + hyphen (matches the
 #                      enum values in source_platform: airbnb, vrbo, pvrpv,
-#                      booking_com, vacation_vallarta, …)
+#                      vacation_vallarta, …)
 if ! [[ "$TABLE" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
   echo "ERROR: --table must be a Postgres identifier (got '$TABLE')" >&2; exit 1
 fi

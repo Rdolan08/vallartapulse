@@ -11,75 +11,34 @@
  *  3. Return deduplicated listing URLs ready for fetchVrboListing().
  */
 
-import https from "https";
-import http from "http";
-import zlib from "zlib";
-import type { IncomingMessage } from "http";
-
-const BROWSER_HEADERS: Record<string, string> = {
-  "User-Agent":
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  Accept:
-    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-  "Accept-Language": "en-US,en;q=0.9",
-  "Accept-Encoding": "gzip, deflate, br",
-  "Cache-Control": "no-cache",
-  "Pragma": "no-cache",
-  "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-  "Sec-Ch-Ua-Mobile": "?0",
-  "Sec-Ch-Ua-Platform": '"macOS"',
-  "Sec-Fetch-Dest": "document",
-  "Sec-Fetch-Mode": "navigate",
-  "Sec-Fetch-Site": "none",
-  "Sec-Fetch-User": "?1",
-  "Upgrade-Insecure-Requests": "1",
-};
+import { fetchWithBrowser } from "./browser-fetch.js";
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 
-function get(url: string, redirects = 0): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (redirects > 5) return reject(new Error("Too many redirects"));
-    const parsed = new URL(url);
-    const mod = parsed.protocol === "https:" ? https : http;
-
-    const req = (mod as typeof https).request(
-      {
-        hostname: parsed.hostname,
-        path: parsed.pathname + parsed.search,
-        method: "GET",
-        headers: { ...BROWSER_HEADERS, Host: parsed.hostname },
-      },
-      (res: IncomingMessage) => {
-        const encoding = (res.headers["content-encoding"] ?? "") as string;
-
-        if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          return resolve(get(new URL(res.headers.location, url).toString(), redirects + 1));
-        }
-        if (res.statusCode === 403 || res.statusCode === 429) {
-          return reject(new Error(`HTTP ${res.statusCode} (rate-limited)`));
-        }
-        if (res.statusCode && res.statusCode >= 400) {
-          return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-        }
-
-        const chunks: Buffer[] = [];
-        res.on("data", (c: Buffer) => chunks.push(c));
-        res.on("end", () => {
-          const buf = Buffer.concat(chunks);
-          try {
-            if (encoding.includes("br")) return resolve(zlib.brotliDecompressSync(buf).toString("utf-8"));
-            if (encoding.includes("gzip")) return resolve(zlib.gunzipSync(buf).toString("utf-8"));
-            if (encoding.includes("deflate")) return resolve(zlib.inflateSync(buf).toString("utf-8"));
-          } catch {}
-          resolve(buf.toString("utf-8"));
-        });
-        res.on("error", reject);
-      },
-    );
-    req.on("error", reject);
-    req.setTimeout(25_000, () => { req.destroy(new Error("Timeout")); });
-    req.end();
+// VRBO sits behind PerimeterX/HUMAN ("Bot or Not?"). Status of approaches
+// tried — KEEP THIS UPDATED so we don't waste cycles re-trying:
+//   ✗ Raw HTTPS (stdlib) from Replit/Railway/GH Actions  → HTTP 429
+//   ✗ undici + ProxyAgent through Decodo residential     → HTTP 429
+//   ✗ Headless Chromium (browser-fetch) direct           → HTTP 429
+//   ✗ Headless Chromium through Decodo residential       → 200 OK BUT the
+//       returned HTML is the PerimeterX challenge page (visible by hrefs
+//       like "/cgp/simple/challenge.*.styles"), not real listings. The
+//       challenge requires solving a JS puzzle + hCaptcha; Playwright
+//       does not auto-solve it.
+//
+// Until we have a working route (Decodo "challenge-solver" add-on, a
+// different residential pool that's clean for VRBO, or an Expedia API
+// affiliate cred), discoverVrboListings() returns []. The script handles
+// that gracefully — the union with existing DB rows still gets refreshed.
+async function get(url: string): Promise<string> {
+  // Wait for the listing-card area to render. VRBO uses a couple of selectors
+  // depending on A/B variant — race them so we return as soon as anything
+  // listing-shaped appears, but fall back to whatever HTML is loaded if
+  // neither selector ever fires.
+  return fetchWithBrowser(url, {
+    timeoutMs: 30_000,
+    waitForSelector: '[data-stid="property-listing"], a[href*="/12"], a[href^="/"][href*="ha"]',
+    fallbackOnTimeout: true,
   });
 }
 
@@ -87,27 +46,48 @@ function get(url: string, redirects = 0): Promise<string> {
 
 function extractListingIds(html: string): string[] {
   const ids = new Set<string>();
-
-  // Pattern 1: href="/1234567" or href="/1234567ha" (listing detail links)
-  const hrefPattern = /href="\/(\d{5,9})(ha)?(?:[?"/]|$)/g;
   let m: RegExpExecArray | null;
-  while ((m = hrefPattern.exec(html)) !== null) {
+
+  // Modern VRBO uses /en-us/p1234567 or /p1234567ha for listing detail links.
+  // Older HomeAway-era markup uses /1234567ha. Cover all observed shapes.
+  // Match either href= or data-target=/data-href= attributes.
+  const linkPattern =
+    /(?:href|data-(?:target|href))="(?:https?:\/\/(?:www\.)?(?:vrbo|homeaway)\.com)?(?:\/[a-z]{2}-[a-z]{2})?\/p?(\d{6,9})(ha)?(?:[?"/#]|$)/gi;
+  while ((m = linkPattern.exec(html)) !== null) {
     ids.add(m[1] + (m[2] ?? ""));
   }
 
-  // Pattern 2: embedded JSON "listingId":"1234567" or "propertyId":"1234567"
-  const jsonPattern = /"(?:listingId|propertyId|unitId)"\s*:\s*"?(\d{5,9})"?/g;
+  // Embedded JSON: "listingId":"1234567", "propertyId":"1234567",
+  // "unitId":"1234567", "uuid":"1234567" — covers Next.js __NEXT_DATA__
+  // and Apollo cache shapes used by VRBO today.
+  const jsonPattern = /"(?:listingId|propertyId|unitId|listing_id|property_id)"\s*:\s*"?(\d{6,9})"?/g;
   while ((m = jsonPattern.exec(html)) !== null) {
     ids.add(m[1]);
   }
 
-  // Pattern 3: data-target="/1234567" or data-href="/1234567"
-  const dataPattern = /data-(?:target|href)="\/(\d{5,9})(ha)?(?:[?"/]|$)/g;
-  while ((m = dataPattern.exec(html)) !== null) {
-    ids.add(m[1] + (m[2] ?? ""));
-  }
-
   return Array.from(ids);
+}
+
+/**
+ * For debugging when discovery yields zero IDs: scrape the first ~10 unique
+ * href values from the HTML so we can see what shape modern VRBO is using.
+ * Truncated to keep log output sane.
+ */
+export function sampleHrefs(html: string, limit = 12): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const re = /href="([^"]{1,160})"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null && out.length < limit) {
+    const href = m[1];
+    if (seen.has(href)) continue;
+    seen.add(href);
+    // Filter out obvious non-listing chrome (css, js, footer links, etc.)
+    if (/\.(css|js|svg|png|jpg|woff)/i.test(href)) continue;
+    if (/^(mailto:|tel:|#|javascript:)/i.test(href)) continue;
+    out.push(href);
+  }
+  return out;
 }
 
 // ── Search URLs for Puerto Vallarta ───────────────────────────────────────────
@@ -127,6 +107,8 @@ export interface VrboDiscoveryResult {
   listingUrls: string[];
   pagesScraped: number;
   errors: string[];
+  /** Sample hrefs from the first page when zero IDs were extracted — debug aid. */
+  debugFirstPageHrefs?: string[];
 }
 
 export async function discoverVrboListings(opts?: {
@@ -138,12 +120,14 @@ export async function discoverVrboListings(opts?: {
   const allIds = new Set<string>();
   const errors: string[] = [];
   let pagesScraped = 0;
+  let firstHtml: string | null = null;
 
   const urls = PV_SEARCH_URLS.slice(0, maxPages);
 
   for (const searchUrl of urls) {
     try {
       const html = await get(searchUrl);
+      if (firstHtml === null) firstHtml = html;
       const ids = extractListingIds(html);
       ids.forEach(id => allIds.add(id));
       pagesScraped++;
@@ -155,5 +139,9 @@ export async function discoverVrboListings(opts?: {
   }
 
   const listingUrls = Array.from(allIds).map(id => `https://www.vrbo.com/${id}`);
-  return { listingUrls, pagesScraped, errors };
+  const result: VrboDiscoveryResult = { listingUrls, pagesScraped, errors };
+  if (allIds.size === 0 && firstHtml) {
+    result.debugFirstPageHrefs = sampleHrefs(firstHtml);
+  }
+  return result;
 }

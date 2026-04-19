@@ -1,17 +1,13 @@
 name: Misc Sources Sync (daily)
 
 # Fans out daily refreshes to every source registered in the API server's
-# in-process sync-scheduler (vacation_vallarta, booking_com, pvrpv-placeholder,
-# …) by hitting POST /api/ingest/sync/:source. The scheduler also fires these
-# in-process on its own intervals — this cron is the *belt* to the scheduler's
-# *suspenders*: it survives Railway restarts and surfaces failure visibly in
-# the Actions run history (which the in-process timer doesn't).
+# in-process sync-scheduler by hitting POST /api/ingest/sync/:source. The
+# scheduler also fires these in-process on its own intervals — this cron is
+# the *belt* to the scheduler's *suspenders*: it survives Railway restarts
+# and surfaces failure visibly in the Actions run history (which the
+# in-process timer doesn't).
 #
 # Honors the freshness contract — daily cadence for every source.
-#
-# A source that fails (missing creds, 0 rows, scraper bug) doesn't block the
-# others — `continue-on-error: true` plus per-step naming makes failures
-# easy to spot in the Actions UI.
 #
 # Required GitHub repository secrets:
 #   RAILWAY_API_URL          e.g. https://api.vallartapulse.com  (no trailing slash)
@@ -28,7 +24,7 @@ on:
         required: false
         default: "all"
         type: choice
-        options: ["all", "vacation_vallarta", "booking_com"]
+        options: ["all", "vacation_vallarta"]
 
 permissions:
   contents: read
@@ -66,30 +62,5 @@ jobs:
             | tee /tmp/vv.json
           echo ""
           jq '{source, ok, count, duration_ms, error, note}' /tmp/vv.json || true
-          # Treat ok=false OR count=0 as a soft failure so it shows up RED in the
-          # Actions run UI even when HTTP returned 200. The vacation_vallarta
-          # adapter is currently producing 0 rows in prod — this surfaces it.
           ok=$(jq -r '.ok'    /tmp/vv.json); count=$(jq -r '.count' /tmp/vv.json)
           if [ "$ok" != "true" ] || [ "$count" = "0" ]; then exit 1; fi
-
-      - name: Refresh booking_com
-        if: ${{ github.event_name == 'schedule' || inputs.source == 'all' || inputs.source == 'booking_com' }}
-        continue-on-error: true
-        env:
-          RAILWAY_API_URL:        ${{ secrets.RAILWAY_API_URL }}
-          INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
-        run: |
-          set -euo pipefail
-          curl --fail-with-body --show-error --silent --max-time 600 \
-            -X POST "$RAILWAY_API_URL/api/ingest/sync/booking_com" \
-            -H "Content-Type: application/json" \
-            -H "X-Internal-Token: $INTERNAL_TRIGGER_TOKEN" \
-            -d '{}' \
-            | tee /tmp/bk.json
-          echo ""
-          jq '{source, ok, count, duration_ms, error, note}' /tmp/bk.json || true
-          # booking_com requires API creds in Railway env vars. Until those are
-          # set, the sync handler will report ok=false with a credentials error;
-          # we let it surface red so the gap stays visible.
-          ok=$(jq -r '.ok' /tmp/bk.json)
-          if [ "$ok" != "true" ]; then exit 1; fi
