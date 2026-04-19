@@ -276,7 +276,288 @@ the 25s `AbortSignal` timeout, deadlocking workers.
 outer `Promise.race` with a hard kill-switch timer that doesn't rely on
 the proxy/undici respecting the abort signal.
 
+---
 
+## Local Mac mini scraper — Airbnb + VRBO ingestion contract
+
+This section is the canonical brief for the local scraper running on
+the user's Mac mini M4 (residential IP, Tailscale-attached). Read it
+end-to-end before writing code; it exists to keep the Mac scraper from
+trampling what's already running on Railway / GitHub Actions.
+
+### Why the Mac at all
+
+Two things only a residential IP can do reliably:
+
+| Job | Why local | Status without it |
+|---|---|---|
+| **Airbnb discovery** (find new listings) | already lives here | working today |
+| **VRBO discovery** | PerimeterX blocks every server-side path tried (raw HTTP, undici+proxy, headless Chromium direct, headless through Decodo) | blocked; site shows no VRBO comps |
+| **Airbnb pricing** | SSR PDP no longer embeds prices; needs post-hydration GraphQL or a real browser | not collected today |
+| **VRBO pricing** | same PerimeterX wall as discovery | not collected today |
+
+Everything else stays where it is. Don't move working pipelines.
+
+### Mac-mini deployment shape
+
+| Concern | Decision |
+|---|---|
+| Host | Mac mini M4, always-on, residential IP |
+| Networking | Tailscale tailnet for ops only (ssh in, tail logs, manual restart). Data flow goes Mac → Railway DB over the public internet via TLS — same as `sync-rows.sh` already does. **Do not** route DB writes over Tailscale; the Railway DB has no tailnet identity and adding one is unnecessary complexity. |
+| Local DB | Postgres on the Mac, schema-only mirror of prod. Holds today's scrape output until `sync-rows.sh` ships it. |
+| Browser | Playwright Chromium with persistent context at `~/.vallartapulse-chromium` so cookies survive across runs (helps with Airbnb's GraphQL session and VRBO's PerimeterX clearance token). |
+| Scheduler | `launchd` (not `cron`). Single LaunchAgent runs the daily driver at 03:00 PT. Logs to `~/vallartapulse-logs/YYYY-MM-DD.log`. |
+| Concurrency | 1–2 browser contexts max. The whole point of the Mac is to look like a human; concurrency 4+ defeats it. |
+
+### Daily budget — 50 listings per vendor
+
+The user's hard cap. Translates directly into a **stale-first rotation
+strategy**: each daily run picks the 50 listings per vendor whose last
+refresh is oldest, refreshes them, and exits.
+
+\`\`\`sql
+-- The "give me today's 50 Airbnb listings" query
+SELECT rl.id, rl.source_url
+FROM rental_listings rl
+LEFT JOIN (
+  SELECT listing_id, MAX(scraped_at) AS last_refresh
+  FROM rental_prices_by_date GROUP BY listing_id
+) p ON p.listing_id = rl.id
+WHERE rl.source_platform = 'airbnb'
+  AND rl.is_active = true
+ORDER BY p.last_refresh ASC NULLS FIRST   -- never-scraped first, then oldest
+LIMIT 50;
+\`\`\`
+
+At 50/day across ~507 active Airbnb listings, **every listing gets
+refreshed every ~10 days**. That's the freshness contract for
+Airbnb pricing under this budget — document it as such, don't pretend
+it's daily. PVRPV (full 125 listings refreshed daily) remains the
+high-frequency comp source; Airbnb is the broader, slower-rotating
+comp source.
+
+VRBO budget = same 50/day cap, applied the same way — once VRBO
+discovery has populated `rental_listings` rows.
+
+### Ownership matrix — who writes what (one writer per cell)
+
+| Table | Cohort | Mac writes | Railway/GHA writes |
+|---|---|---|---|
+| `rental_listings` | NEW rows where `source_platform IN ('airbnb','vrbo')` | ✅ INSERT only, conflict = DO NOTHING | ❌ |
+| `rental_listings` | NEW rows for `pvrpv`, `vacation_vallarta` | ❌ | ✅ |
+| `rental_listings` | `is_active`, `lifecycle_status`, `last_seen_at` for EXISTING rows | ❌ never touch | ✅ (prune; currently paused) |
+| `listing_details` | enrichment fields | ❌ never write | ✅ Pattern A endpoint |
+| `rental_prices_by_date` | rows for Airbnb/VRBO listings | ✅ UPSERT on `(listing_id, date)` | ❌ |
+| `rental_prices_by_date` | rows for PVRPV/VV listings | ❌ | ✅ |
+| `listing_price_quotes` | Airbnb/VRBO checkpoint quotes | ✅ INSERT only (history table — never UPDATE) | ❌ |
+
+**The single hard rule**: for any (table × cohort) cell above, exactly
+one process writes. Two writers = ghost rows nobody can explain a
+week later.
+
+### Outbound shipping — Mac → Railway (the only write path)
+
+**Always** use `scripts/sync-rows.sh`. Never connect ad-hoc psql
+sessions to prod from the Mac. Three commands cover every case:
+
+\`\`\`bash
+# 1) Newly discovered listings (DO NOTHING on conflict)
+SRC_DATABASE_URL=$LOCAL_DATABASE_URL DST_DATABASE_URL=$RAILWAY_DATABASE_URL \\
+  ./scripts/sync-rows.sh --table=rental_listings --source-platform=airbnb
+
+# 2) Daily price/availability rows (UPDATE on conflict — refresh today's row)
+SRC_DATABASE_URL=$LOCAL_DATABASE_URL DST_DATABASE_URL=$RAILWAY_DATABASE_URL \\
+  ./scripts/sync-rows.sh --table=rental_prices_by_date --source-platform=airbnb \\
+    --conflict-cols=listing_id,date --update-on-conflict
+
+# 3) Full-fee quotes (insert-only history; conflict-cols=id is a never-violated key)
+SRC_DATABASE_URL=$LOCAL_DATABASE_URL DST_DATABASE_URL=$RAILWAY_DATABASE_URL \\
+  ./scripts/sync-rows.sh --table=listing_price_quotes --source-platform=airbnb \\
+    --conflict-cols=id
+\`\`\`
+
+If `sync-rows.sh` doesn't yet support filtering the price tables by
+joined `source_platform` (it filters on the table's own column today),
+that's a one-line edit — do **not** invent a parallel shipping path.
+
+### Bootstrap once
+
+\`\`\`bash
+# Schema-only mirror of prod into local
+pg_dump --schema-only "$RAILWAY_DATABASE_URL" | psql "$LOCAL_DATABASE_URL"
+
+# Pull the listing IDs + URLs the scraper needs as input (no other prod data)
+psql "$RAILWAY_DATABASE_URL" -c "\\copy (SELECT id, source_platform, source_url, is_active FROM rental_listings WHERE source_platform IN ('airbnb','vrbo')) TO '/tmp/seed.csv' CSV HEADER"
+psql "$LOCAL_DATABASE_URL"   -c "\\copy rental_listings (id, source_platform, source_url, is_active) FROM '/tmp/seed.csv' CSV HEADER"
+\`\`\`
+
+Refresh the seed weekly so newly-discovered Railway-side listings show
+up in the Mac's rotation.
+
+### Per-source contracts (paste these into ChatGPT)
+
+Each contract = (input cohort, output table, columns with types,
+conflict rule, idempotency, daily budget). Hand ChatGPT **one
+contract at a time**, not the whole doc.
+
+#### Airbnb — discovery
+
+- **Input**: PV neighborhood search URLs (copy the URL list from
+  `artifacts/api-server/src/lib/ingest/airbnb-search-adapter.ts`).
+- **Output table**: `rental_listings`.
+- **Required columns**: `source_platform='airbnb'`, `source_url`
+  (canonical PDP URL: `https://www.airbnb.com/rooms/{id}`, no query
+  params, no trailing slash), `external_id` (Airbnb numeric ID),
+  `title`, `bedrooms`, `bathrooms`, `max_guests`, `latitude`,
+  `longitude`, `normalized_neighborhood_bucket` (use the lookup at
+  `lib/normalize/neighborhoods.ts`), `is_active=true`,
+  `lifecycle_status='active'`, `first_seen_at=now()`,
+  `last_seen_at=now()`, `scraped_at=now()`.
+- **Conflict rule**: `(source_platform, source_url) DO NOTHING` —
+  never overwrite a row Railway has already enriched.
+- **Idempotency**: re-run any time; only newly-found rows land.
+- **Daily budget**: best-effort, no cap — discovery is cheap.
+
+#### Airbnb — pricing (the new gold path)
+
+- **Input cohort**: 50 stale-first listings per the rotation query
+  above.
+- **For each listing, do two things**:
+
+  1. **Full 365-day calendar → `rental_prices_by_date`**, one row per
+     day, UPSERT on `(listing_id, date)`. Source: Airbnb's
+     `PdpAvailabilityCalendar` GraphQL operation (the call the PDP
+     makes after hydration — capture its persisted-query SHA + headers
+     once via Playwright, then replay through `fetch` in the same
+     browser context so cookies are valid). Columns: `listing_id`,
+     `date`, `nightly_price_usd` (base nightly only — calendar
+     GraphQL doesn't include fees), `availability_status`
+     (`available` | `booked` | `blocked` per the GraphQL response),
+     `minimum_nights`, `scraped_at=now()`.
+
+  2. **35 checkpoint quotes → `listing_price_quotes`**, INSERT only.
+     Generate dates via the existing pure function:
+
+     \`\`\`ts
+     import { generateCheckpoints } from
+       "../api-server/src/lib/ingest/airbnb-checkpoints.ts";
+     const cps = generateCheckpoints(); // ~35 dates
+     \`\`\`
+
+     For each checkpoint hit the actual checkout/quote endpoint (not
+     the calendar) so you get the full fee breakdown:
+     `nightly_price_usd`, `subtotal_usd`, `cleaning_fee_usd`,
+     `service_fee_usd`, `taxes_usd`, `total_price_usd`, `guest_count`
+     (always 2 for comp parity), `raw_quote_json` (full payload —
+     keep for parser-repair).
+
+- **Conflict rules**: `rental_prices_by_date` UPDATE on
+  `(listing_id, date)`; `listing_price_quotes` no conflict.
+- **Daily budget**: 50 listings × (365 daily rows + 35 quote rows) =
+  18,250 daily rows + 1,750 quote rows. Manageable single-thread, ~30
+  minutes wall-clock at 1 listing every ~30s.
+
+#### VRBO — discovery
+
+- **Input**: VRBO PV search URLs from
+  `artifacts/api-server/src/lib/ingest/vrbo-search-adapter.ts` (the
+  header comment lists the four already-tried server-side approaches
+  — ignore those; use a real browser locally).
+- **Output table**: `rental_listings` with `source_platform='vrbo'`.
+  Same column shape as Airbnb discovery.
+- **Conflict rule**: same — DO NOTHING.
+- **Daily budget**: best-effort. Expect 50–200 listings total in PV
+  once discovery completes.
+
+#### VRBO — pricing
+
+- **Input cohort**: 50 stale-first VRBO listings (same rotation
+  query, swap `source_platform`).
+- **Output tables**: same two tables, same conflict rules.
+- **Notes**: VRBO calendar/quote shape is documented at
+  `https://www.vrbo.com/{listing_id}/dates`. Capture it once via
+  the Playwright session that solved the discovery PerimeterX
+  challenge, then replay headers in the same context.
+- **Daily budget**: 50 × 365 = 18,250 daily rows + 50 × 35 = 1,750
+  quote rows.
+
+### Conflict avoidance — the "don't break what works" list
+
+These five rules are non-negotiable. ChatGPT will want to "clean up"
+or "normalize" some of them — push back.
+
+1. **Never UPDATE `rental_listings` from the Mac.** Only INSERT new.
+   Specifically: do not touch `is_active`, `lifecycle_status`,
+   `last_seen_at`, `enriched_at`, or anything Railway-side
+   enrichment owns. The Mac is allowed to set these fields **only
+   on first insert**, never on conflict.
+2. **Never write to `listing_details`.** That's Railway's table.
+3. **Never run the prune (`scripts/airbnb-prune.ts`) from the Mac
+   against prod.** Use it locally for a sanity signal if you want;
+   do not pass `--apply` against `RAILWAY_DATABASE_URL`.
+4. **Use the canonical `source_url` shape.** Airbnb:
+   `https://www.airbnb.com/rooms/{id}` (no query params, no trailing
+   slash). VRBO: `https://www.vrbo.com/{id}` (numeric, no slug).
+   The unique index `idx_rl_source_unique` on
+   `(source_platform, source_url)` is how we de-dupe — typos here
+   create ghost listings.
+5. **All timestamps are UTC.** `scraped_at` and `collected_at` should
+   be `new Date().toISOString()` or `now() AT TIME ZONE 'UTC'` —
+   never local Mac/Pacific time.
+
+### ChatGPT prompt skeleton
+
+When asking ChatGPT to write a piece of this, paste **one** contract
+above and frame the prompt as:
+
+> Write a TypeScript module that satisfies this contract. Use Playwright
+> (Chromium) with persistent context at `~/.vallartapulse-chromium` so
+> cookies survive across runs. Output rows by calling
+> `db.insert(table).values(rows).onConflictDoNothing()` (or the conflict
+> rule from the contract). Do not write to any table not listed. Do not
+> modify any column not listed. Treat each listing independently — one
+> bad listing must not abort the run. Log progress every 5 listings.
+> Concurrency = 1. Exit non-zero if failure rate >= 50%.
+
+Then paste the contract block (Input/Output/Conflict rule/Idempotency/
+Budget) verbatim. Don't paste the whole doc.
+
+### What success looks like (acceptance)
+
+After the local scraper has been running daily for ~2 weeks (giving
+the 10-day rotation time to cover the full Airbnb cohort):
+
+\`\`\`sql
+SELECT
+  rl.source_platform,
+  COUNT(DISTINCT rpbd.listing_id) AS listings_with_pricing,
+  COUNT(*)                        AS daily_rows,
+  MAX(rpbd.scraped_at)            AS last_refresh,
+  AVG(NOW() - rpbd.scraped_at)    AS avg_age,
+  PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY NOW() - rpbd.scraped_at) AS p95_age
+FROM rental_prices_by_date rpbd
+JOIN rental_listings rl ON rl.id = rpbd.listing_id
+GROUP BY rl.source_platform
+ORDER BY rl.source_platform;
+\`\`\`
+
+Expectations:
+
+| platform | listings_with_pricing | p95_age |
+|---|---|---|
+| `pvrpv` | ~125 | < 26 hours |
+| `airbnb` | ~507 | < 11 days |
+| `vrbo` | (depends on discovery) | < 11 days |
+
+If `airbnb.p95_age > 11 days` after week 3, the rotation is falling
+behind — bump the daily cap or add a second Mac.
+
+---
+
+## Out of scope for this task — known follow-ups
+
+These are documented here so they don't get lost. None of them are
+blocking the freshness contract for the sources we *do* feed today.
 
 1. **VRBO discovery (PerimeterX challenge)** — see the header comment in
    `artifacts/api-server/src/lib/ingest/vrbo-search-adapter.ts` for the
