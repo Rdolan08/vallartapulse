@@ -116,6 +116,7 @@ interface CompEntry {
   building_name: string | null;
   score: number;
   match_reasons: string[];
+  effective_per_night_usd: number | null;
   guest_paid: GuestPaidBreakdown | null;
 }
 
@@ -144,6 +145,9 @@ interface CompsResult {
   conservative_price: number;
   recommended_price: number;
   stretch_price: number;
+  recommended_effective_per_night_usd: number | null;
+  pool_median_fees_per_night_usd: number | null;
+  pool_fees_sample_size: number;
   base_comp_median: number;
   building_adjustment_pct: number | null;
   pricing_breakdown: PricingLayer[];
@@ -1110,11 +1114,35 @@ export default function PricingToolPage() {
                       <span className="text-6xl font-extrabold tracking-tight" style={{ color: "#00C2A8" }}>
                         {compsResult.recommended_price ? formatCurrency(compsResult.recommended_price) : "—"}
                       </span>
-                      <span className="text-lg font-medium text-muted-foreground">/night</span>
+                      <span className="text-lg font-medium text-muted-foreground">
+                        /{t("night base", "noche base")}
+                      </span>
                     </div>
                     <p className="text-xs mt-1.5" style={{ color: "rgba(154,165,177,0.6)" }}>
                       {compsResult.seasonal.display_label}
                     </p>
+                    {compsResult.recommended_price && (
+                      <div className="mt-2.5 inline-flex items-baseline gap-2 px-3 py-1.5 rounded-lg"
+                        style={{ background: "rgba(0,194,168,0.08)", border: "1px solid rgba(0,194,168,0.18)" }}>
+                        <span className="text-[10px] uppercase tracking-widest font-semibold"
+                          style={{ color: "rgba(0,194,168,0.75)" }}>
+                          {t("All-in / night", "Todo incluido / noche")}
+                        </span>
+                        <span className="text-xl font-bold tabular-nums" style={{ color: "#00C2A8" }}>
+                          {compsResult.recommended_effective_per_night_usd != null
+                            ? formatCurrency(compsResult.recommended_effective_per_night_usd)
+                            : formatCurrency(compsResult.recommended_price)}
+                        </span>
+                        <span className="text-[10px]" style={{ color: "rgba(154,165,177,0.55)" }}>
+                          {compsResult.recommended_effective_per_night_usd != null && compsResult.pool_median_fees_per_night_usd != null
+                            ? t(
+                                `incl. ~${formatCurrency(compsResult.pool_median_fees_per_night_usd)} fees/taxes (median of ${compsResult.pool_fees_sample_size} comps)`,
+                                `incl. ~${formatCurrency(compsResult.pool_median_fees_per_night_usd)} cargos/imp. (mediana de ${compsResult.pool_fees_sample_size} comparables)`,
+                              )
+                            : t("no comp fee data — same as base", "sin datos de cargos — igual a base")}
+                        </span>
+                      </div>
+                    )}
                     {compsResult.recommended_price && (
                       <div className="flex items-center gap-5 mt-3">
                         <div>
@@ -1422,7 +1450,7 @@ export default function PricingToolPage() {
                         exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                         <CardContent className="pt-4">
                           {/* Column header — apples-to-apples breakdown */}
-                          <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_repeat(5,minmax(60px,72px))_auto_auto] gap-3 px-3 pb-2 text-[9px] font-semibold uppercase tracking-widest"
+                          <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_repeat(6,minmax(60px,72px))_auto_auto] gap-3 px-3 pb-2 text-[9px] font-semibold uppercase tracking-widest"
                             style={{ color: "rgba(154,165,177,0.45)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                             <span className="w-5" />
                             <span>{t("Listing", "Listado")}</span>
@@ -1431,6 +1459,7 @@ export default function PricingToolPage() {
                             <span className="text-right">{t("Service", "Servicio")}</span>
                             <span className="text-right">{t("Taxes", "Impuestos")}</span>
                             <span className="text-right">{t("Total", "Total")}</span>
+                            <span className="text-right">{t("Eff/Night", "Eff/Noche")}</span>
                             <span className="text-right">{t("Score", "Puntaje")}</span>
                             <span />
                           </div>
@@ -1444,7 +1473,7 @@ export default function PricingToolPage() {
                                 <div key={c.rank} className="px-3 py-2.5 rounded-xl"
                                   style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
                                   {/* Desktop: single-row grid */}
-                                  <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_repeat(5,minmax(60px,72px))_auto_auto] gap-3 items-center">
+                                  <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_repeat(6,minmax(60px,72px))_auto_auto] gap-3 items-center">
                                     <span className="text-xs font-bold w-5 text-center"
                                       style={{ color: "rgba(154,165,177,0.4)" }}>#{c.rank}</span>
                                     <div className="min-w-0">
@@ -1485,6 +1514,15 @@ export default function PricingToolPage() {
                                     <span className="text-right text-sm font-bold tabular-nums"
                                       style={{ color: gp?.total_price_usd == null ? "rgba(154,165,177,0.35)" : "#00C2A8" }}>
                                       {fmt(gp?.total_price_usd)}
+                                    </span>
+                                    <span className="text-right text-sm font-semibold tabular-nums"
+                                      style={{ color: c.effective_per_night_usd == null ? "rgba(154,165,177,0.45)" : "rgba(245,247,250,0.95)" }}
+                                      title={c.effective_per_night_usd == null
+                                        ? t("No quote on file — falls back to nightly", "Sin cotización — usa precio por noche")
+                                        : t(`Total ÷ ${stayNights} nights`, `Total ÷ ${stayNights} noches`)}>
+                                      {c.effective_per_night_usd != null
+                                        ? formatCurrency(c.effective_per_night_usd)
+                                        : formatCurrency(c.nightly_price_usd)}
                                     </span>
                                     <span className="text-right text-[10px]" style={{ color: "rgba(154,165,177,0.4)" }}>
                                       {c.score}
@@ -1528,7 +1566,7 @@ export default function PricingToolPage() {
                                         </a>
                                       )}
                                     </div>
-                                    <div className="grid grid-cols-5 gap-1.5 mt-2.5 pt-2.5"
+                                    <div className="grid grid-cols-3 gap-1.5 mt-2.5 pt-2.5"
                                       style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                                       {[
                                         { label: t("Nightly", "Por noche"), value: formatCurrency(c.nightly_price_usd), accent: false },
@@ -1536,6 +1574,12 @@ export default function PricingToolPage() {
                                         { label: t("Service", "Servicio"), value: fmt(gp?.service_fee_usd), accent: false, missing: gp?.service_fee_usd == null },
                                         { label: t("Taxes", "Impuestos"), value: fmt(gp?.taxes_usd), accent: false, missing: gp?.taxes_usd == null },
                                         { label: t("Total", "Total"), value: fmt(gp?.total_price_usd), accent: true, missing: gp?.total_price_usd == null },
+                                        { label: t("Eff/Night", "Eff/Noche"),
+                                          value: c.effective_per_night_usd != null
+                                            ? formatCurrency(c.effective_per_night_usd)
+                                            : formatCurrency(c.nightly_price_usd),
+                                          accent: true,
+                                          missing: c.effective_per_night_usd == null },
                                       ].map((cell, idx) => (
                                         <div key={idx} className="text-center">
                                           <p className="text-[9px] uppercase tracking-wide"

@@ -491,8 +491,32 @@ router.post("/rental/comps", async (req, res) => {
     const feesByListing = new Map<number, typeof feeRows[number]>();
     for (const r of feeRows) feesByListing.set(r.listing_id, r);
 
+    // Per-night fees implied by each comp's guest-paid quote, used to derive
+    // a comp-pool median fee uplift for the owner's recommended rate.
+    const compFeesPerNight: number[] = [];
+
     const selectedComps = topComps.map((c, i) => {
       const fees = feesByListing.get(c.listing.id);
+
+      // Effective per-night including fees & taxes:
+      //   total_price_usd / stay_length_nights
+      // Falls back to null when total or stay length is missing/zero.
+      let effectivePerNight: number | null = null;
+      if (
+        fees &&
+        fees.total_price_usd != null &&
+        fees.stay_length_nights != null &&
+        fees.stay_length_nights > 0
+      ) {
+        effectivePerNight = fees.total_price_usd / fees.stay_length_nights;
+        if (fees.nightly_price_usd != null) {
+          const perNightFees = effectivePerNight - fees.nightly_price_usd;
+          if (Number.isFinite(perNightFees) && perNightFees >= 0) {
+            compFeesPerNight.push(perNightFees);
+          }
+        }
+      }
+
       return {
         rank: i + 1,
         external_id: c.listing.externalId,
@@ -510,6 +534,12 @@ router.post("/rental/comps", async (req, res) => {
         score: parseFloat(c.score.toFixed(1)),
         match_reasons: c.matchReasons,
         top_drivers: extractTopDrivers(c),
+        // Effective per-night incl. fees & taxes (total / stay_length_nights).
+        // Null when no guest-paid quote with usable totals exists — the UI
+        // should fall back to nightly_price_usd in that case.
+        effective_per_night_usd: effectivePerNight != null
+          ? Math.round(effectivePerNight)
+          : null,
         // Guest-paid breakdown (from latest available listing_price_quote).
         // Null = no quote on file for this listing (e.g. PVRPV-only comps).
         // Treat 0 as a real zero (no fee charged) — distinct from null.
@@ -529,6 +559,20 @@ router.post("/rental/comps", async (req, res) => {
           : null,
       };
     });
+
+    // Median per-night fees uplift inferred from the comp pool. Used to
+    // estimate what the owner's recommended rate would look like once the
+    // typical cleaning + service + tax load is folded in.
+    const sortedFees = [...compFeesPerNight].sort((a, b) => a - b);
+    const medianFeesPerNight = sortedFees.length > 0 ? median(sortedFees) : null;
+    const poolMedianFeesPerNightUsd = medianFeesPerNight != null
+      ? Math.round(medianFeesPerNight)
+      : null;
+    const recommendedEffectivePerNightUsd =
+      confidence !== "guidance_only" && result.recommended && medianFeesPerNight != null
+        ? Math.round(result.recommended + medianFeesPerNight)
+        : null;
+    const compsWithFeesCount = sortedFees.length;
 
     const topDriversOverall = selectedComps.length > 0
       ? Object.entries(
@@ -600,6 +644,14 @@ router.post("/rental/comps", async (req, res) => {
       conservative_price: confidence === "guidance_only" ? null : result.conservative,
       recommended_price:  confidence === "guidance_only" ? null : result.recommended,
       stretch_price:      confidence === "guidance_only" ? null : result.stretch,
+
+      // Effective per-night incl. fees & taxes for the recommended rate,
+      // estimated by adding the comp-pool median per-night fee uplift to
+      // the base recommendation. Null when no comps in the pool have a
+      // usable guest-paid quote — UI should fall back to recommended_price.
+      recommended_effective_per_night_usd: recommendedEffectivePerNightUsd,
+      pool_median_fees_per_night_usd:      poolMedianFeesPerNightUsd,
+      pool_fees_sample_size:               compsWithFeesCount,
 
       base_comp_median: result.baseCompMedian,
       building_adjustment_pct: result.buildingAdjustmentPct,
