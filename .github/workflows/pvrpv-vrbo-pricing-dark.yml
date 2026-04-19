@@ -1,0 +1,323 @@
+name: PVRPV / VRBO Pricing Dark Alert
+
+# Pages on-call (Slack + dedupe GitHub issue) when either the PVRPV
+# per-night pricing pipeline or the VRBO per-night pricing pipeline
+# stops flowing fresh data into listing_price_quotes.
+#
+# Driven by the freshness endpoints added in Task #32:
+#   - GET /api/ingest/pvrpv-pricing-freshness
+#   - GET /api/ingest/vrbo-pricing-freshness
+# Both return the same shape as airbnb-pricing-freshness:
+#   { source, listingsTotal, listingsQuotedEver, listingsNeverQuoted,
+#     listingsStale7d, listingsStale14d, newestQuoteAt,
+#     newestQuoteAgeHours, alertLevel: ok|warn|fail, alertReason }
+#
+# Policy:
+#   - alertLevel == "fail"  → Slack + open/append the dedupe issue, fail the job.
+#   - alertLevel == "warn"  → log to step summary only (no page).
+#   - alertLevel == "ok"    → if a dedupe issue is open, auto-close it.
+#
+# Each pipeline gets its own dedupe label so a PVRPV outage doesn't
+# muddy a separate VRBO outage.
+#
+# Triggers:
+#   - daily cron (08:15 UTC, ~45 min after pvrpv-pricing-refresh.yml
+#     and vrbo-pricing-refresh.yml typically finish)
+#   - workflow_dispatch (manual re-run after a fix)
+#
+# Required GitHub repository secrets:
+#   (none — endpoints are public on the production API)
+#
+# Optional GitHub repository secrets:
+#   SLACK_WEBHOOK_URL    Slack incoming webhook for ops channel.
+#   FRESHNESS_API_BASE   Override the API base. Defaults to
+#                        https://www.vallartapulse.com/api.
+
+on:
+  schedule:
+    - cron: "15 8 * * *"   # daily 08:15 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: pvrpv-vrbo-pricing-dark
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - source: pvrpv
+            endpoint: pvrpv-pricing-freshness
+            label: pvrpv-pricing-dark
+            display: "PVRPV per-night pricing"
+            refresh_workflow: pvrpv-pricing-refresh.yml
+          - source: vrbo
+            endpoint: vrbo-pricing-freshness
+            label: vrbo-pricing-dark
+            display: "VRBO per-night pricing"
+            refresh_workflow: vrbo-pricing-refresh.yml
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      FRESHNESS_API_BASE: ${{ secrets.FRESHNESS_API_BASE || 'https://www.vallartapulse.com/api' }}
+    steps:
+      - name: Fetch ${{ matrix.display }} freshness
+        id: freshness
+        env:
+          ENDPOINT: ${{ matrix.endpoint }}
+          DISPLAY: ${{ matrix.display }}
+        run: |
+          set -euo pipefail
+          URL="${FRESHNESS_API_BASE}/ingest/${ENDPOINT}"
+          echo "GET $URL"
+
+          BODY=$(mktemp)
+          META=$(mktemp)
+          set +e
+          curl --silent --show-error --max-time 30 \
+            -o "$BODY" \
+            -w "status=%{http_code}\ncontent_type=%{content_type}\n" \
+            -H "Accept: application/json" \
+            "$URL" > "$META"
+          CURL_RC=$?
+          set -e
+
+          STATUS=$(grep '^status=' "$META" | cut -d= -f2)
+          CTYPE=$(grep '^content_type=' "$META" | cut -d= -f2)
+          echo "HTTP $STATUS  content-type=$CTYPE  curl_rc=$CURL_RC"
+
+          LEVEL="fail"
+          REASON=""
+          NEWEST="null"
+          STALE14="null"
+          TOTAL="null"
+
+          if [ "$CURL_RC" -ne 0 ]; then
+            REASON="curl failed with exit code $CURL_RC against $URL"
+          elif [ "$STATUS" != "200" ]; then
+            REASON="Expected HTTP 200 from $URL, got $STATUS"
+          elif ! echo "$CTYPE" | grep -qi 'application/json'; then
+            REASON="Expected content-type application/json, got '$CTYPE' — likely a routing regression"
+          elif ! jq -e 'has("alertLevel")' "$BODY" > /dev/null; then
+            REASON="Response JSON missing alertLevel field"
+          else
+            LEVEL=$(jq -r '.alertLevel' "$BODY")
+            REASON=$(jq -r '.alertReason // ""' "$BODY")
+            NEWEST=$(jq -r '.newestQuoteAt // "null"' "$BODY")
+            STALE14=$(jq -r '.listingsStale14d // "null"' "$BODY")
+            TOTAL=$(jq -r '.listingsTotal // "null"' "$BODY")
+          fi
+
+          {
+            echo "## ${DISPLAY} freshness"
+            echo ""
+            echo "- Endpoint: \`$URL\`"
+            echo "- HTTP: \`$STATUS\` · Content-Type: \`$CTYPE\`"
+            echo "- alertLevel: **$LEVEL**${REASON:+ — $REASON}"
+            echo "- listingsTotal: \`$TOTAL\` · listingsStale14d: \`$STALE14\` · newestQuoteAt: \`$NEWEST\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$LEVEL" = "fail" ]; then
+            echo "::error title=${DISPLAY} is dark::$REASON"
+          elif [ "$LEVEL" = "warn" ]; then
+            echo "::warning title=${DISPLAY} freshness warning::$REASON"
+          else
+            echo "PASS — ${DISPLAY} freshness ok (newest=$NEWEST)"
+          fi
+
+          {
+            echo "level=$LEVEL"
+            echo "reason=${REASON//$'\n'/ }"
+            echo "status=$STATUS"
+            echo "newest=$NEWEST"
+            echo "stale14=$STALE14"
+            echo "total=$TOTAL"
+            echo "url=$URL"
+          } >> "$GITHUB_OUTPUT"
+
+      # ── Slack page on fail ────────────────────────────────────────────
+      - name: Notify Slack on dark pipeline
+        if: steps.freshness.outputs.level == 'fail' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          DISPLAY: ${{ matrix.display }}
+          REASON: ${{ steps.freshness.outputs.reason }}
+          STATUS: ${{ steps.freshness.outputs.status }}
+          NEWEST: ${{ steps.freshness.outputs.newest }}
+          TOTAL: ${{ steps.freshness.outputs.total }}
+          STALE14: ${{ steps.freshness.outputs.stale14 }}
+          URL: ${{ steps.freshness.outputs.url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg display "$DISPLAY" \
+            --arg reason "$REASON" \
+            --arg status "$STATUS" \
+            --arg newest "$NEWEST" \
+            --arg total "$TOTAL" \
+            --arg stale14 "$STALE14" \
+            --arg url "$URL" \
+            --arg run_url "$RUN_URL" \
+            '{
+              text: ($display + " is dark — " + $reason),
+              blocks: [
+                { type: "header",
+                  text: { type: "plain_text", text: (":rotating_light: " + $display + " is dark") } },
+                { type: "section",
+                  text: { type: "mrkdwn",
+                          text: ("*Reason:* " + $reason
+                                 + "\n*Endpoint:* " + $url
+                                 + "\n*HTTP:* " + $status
+                                 + "  •  *Newest quote:* " + $newest
+                                 + "\n*Listings total:* " + $total
+                                 + "  •  *Stale > 14d:* " + $stale14) } },
+                { type: "actions",
+                  elements: [
+                    { type: "button",
+                      text: { type: "plain_text", text: "View workflow run" },
+                      url: $run_url }
+                  ] }
+              ]
+            }' > /tmp/slack.json
+          curl --fail-with-body --show-error --silent --max-time 30 \
+            -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/slack.json
+
+      # ── GitHub issue dedupe on fail ───────────────────────────────────
+      - name: Open / update dedupe issue on dark pipeline
+        if: steps.freshness.outputs.level == 'fail'
+        uses: actions/github-script@v7
+        env:
+          DISPLAY: ${{ matrix.display }}
+          LABEL: ${{ matrix.label }}
+          REFRESH_WORKFLOW: ${{ matrix.refresh_workflow }}
+          REASON: ${{ steps.freshness.outputs.reason }}
+          STATUS: ${{ steps.freshness.outputs.status }}
+          NEWEST: ${{ steps.freshness.outputs.newest }}
+          TOTAL: ${{ steps.freshness.outputs.total }}
+          STALE14: ${{ steps.freshness.outputs.stale14 }}
+          URL: ${{ steps.freshness.outputs.url }}
+        with:
+          script: |
+            const display = process.env.DISPLAY;
+            const label = process.env.LABEL;
+            const refreshWorkflow = process.env.REFRESH_WORKFLOW;
+            const reason = process.env.REASON || '(no reason reported)';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const stats = [
+              `- Reason: **${reason}**`,
+              `- Endpoint: \`${process.env.URL}\``,
+              `- HTTP status: \`${process.env.STATUS}\``,
+              `- Newest quote: \`${process.env.NEWEST}\``,
+              `- Listings total: \`${process.env.TOTAL}\` · stale > 14d: \`${process.env.STALE14}\``,
+              `- Workflow run: ${runUrl}`,
+            ].join('\n');
+
+            const comment = [
+              `${display} freshness check failed at ${new Date().toISOString()}.`,
+              ``,
+              stats,
+            ].join('\n');
+
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: label,
+              per_page: 10,
+            });
+
+            if (existing.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing[0].number,
+                body: comment,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `${display} is dark`,
+                labels: [label],
+                body: [
+                  `The ${display} pipeline has stopped writing fresh quotes.`,
+                  `The dashboard tile on \`/sources\` should also be RED.`,
+                  ``,
+                  `Investigate the upstream refresh workflow:`,
+                  `- \`.github/workflows/${refreshWorkflow}\``,
+                  ``,
+                  `This issue auto-closes on the next successful freshness run.`,
+                  ``,
+                  '---',
+                  ``,
+                  comment,
+                ].join('\n'),
+              });
+            }
+
+      # ── Auto-close dedupe issue on recovery ───────────────────────────
+      - name: Auto-close dedupe issue on success
+        if: steps.freshness.outputs.level == 'ok'
+        uses: actions/github-script@v7
+        env:
+          DISPLAY: ${{ matrix.display }}
+          LABEL: ${{ matrix.label }}
+        with:
+          script: |
+            const display = process.env.DISPLAY;
+            const label = process.env.LABEL;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const { data: openAlerts } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: label,
+              per_page: 50,
+            });
+
+            if (openAlerts.length === 0) {
+              core.info(`No open ${label} issues to close.`);
+              return;
+            }
+
+            const comment = [
+              `${display} freshness check succeeded at ${new Date().toISOString()}.`,
+              `Auto-closing this alert.`,
+              ``,
+              `Cleared by workflow run: ${runUrl}`,
+            ].join('\n');
+
+            for (const issue of openAlerts) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: comment,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'completed',
+              });
+              core.info(`Closed ${label} issue #${issue.number}.`);
+            }
+
+      # ── Final gate: fail the job (per-matrix-leg) on dark pipeline ────
+      - name: Fail the job on dark pipeline
+        if: steps.freshness.outputs.level == 'fail'
+        run: |
+          echo "${{ matrix.display }} is dark — failing job after notifications were sent."
+          exit 1
