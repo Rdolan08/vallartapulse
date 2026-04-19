@@ -679,6 +679,15 @@ const EnrichDetailSchema = z.object({
   maxListings: z.number().int().positive().max(500).optional().default(5),
   buckets: z.array(z.string().min(1)).optional(),
   dryRun: z.boolean().optional().default(false),
+  // "new"   → listings that have NEVER been enriched (LEFT JOIN ... IS NULL).
+  // "stale" → listings whose latest listing_details.enriched_at is older than
+  //           `staleAfterDays` days ago. Used by the daily refresh cron so the
+  //           site never serves data more than ~24h old.
+  mode: z.enum(["new", "stale"]).optional().default("new"),
+  // Only meaningful when mode='stale'. Default 1 day = "refresh anything not
+  // touched in the last 24h". The product-level freshness contract is "no
+  // stale data on the site, ever" — daily cron + this default delivers it.
+  staleAfterDays: z.number().int().positive().max(365).optional().default(1),
 });
 
 router.post("/ingest/enrich-airbnb-detail", async (req, res) => {
@@ -697,27 +706,55 @@ router.post("/ingest/enrich-airbnb-detail", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
   }
-  const { maxListings, dryRun } = parsed.data;
+  const { maxListings, dryRun, mode, staleAfterDays } = parsed.data;
   const buckets = parsed.data.buckets && parsed.data.buckets.length > 0
     ? parsed.data.buckets
     : DEFAULT_DETAIL_BUCKETS;
 
   try {
     const bucketList = sql.join(buckets.map((b) => sql`${b}`), sql`, `);
-    const candidatesRaw = await db.execute(sql`
-      SELECT rl.id,
-             rl.external_id,
-             rl.source_url,
-             rl.normalized_neighborhood_bucket AS bucket
-      FROM rental_listings rl
-      LEFT JOIN listing_details ld ON ld.listing_id = rl.id
-      WHERE rl.source_platform = 'airbnb'
-        AND rl.source_url IS NOT NULL
-        AND ld.id IS NULL
-        AND rl.normalized_neighborhood_bucket IN (${bucketList})
-      ORDER BY rl.id DESC
-      LIMIT ${maxListings}
-    `);
+    // Two cohorts share the endpoint:
+    //   - "new":   listings with NO listing_details row yet. Drains the
+    //              backlog created by discovery.
+    //   - "stale": listings whose latest listing_details.enriched_at is
+    //              older than `staleAfterDays`. Used by the daily refresh
+    //              cron to honor the "no stale data on the site" contract.
+    //              Re-fetches everything (including blocked/delisted stubs)
+    //              so previously-walled or de-listed pages get a fresh
+    //              chance every day.
+    const candidatesRaw = mode === "stale"
+      ? await db.execute(sql`
+          SELECT rl.id,
+                 rl.external_id,
+                 rl.source_url,
+                 rl.normalized_neighborhood_bucket AS bucket
+          FROM rental_listings rl
+          JOIN (
+            SELECT listing_id, MAX(enriched_at) AS last_enriched
+            FROM listing_details
+            GROUP BY listing_id
+          ) ld ON ld.listing_id = rl.id
+          WHERE rl.source_platform = 'airbnb'
+            AND rl.source_url IS NOT NULL
+            AND rl.normalized_neighborhood_bucket IN (${bucketList})
+            AND ld.last_enriched < NOW() - (${staleAfterDays} || ' days')::interval
+          ORDER BY ld.last_enriched ASC
+          LIMIT ${maxListings}
+        `)
+      : await db.execute(sql`
+          SELECT rl.id,
+                 rl.external_id,
+                 rl.source_url,
+                 rl.normalized_neighborhood_bucket AS bucket
+          FROM rental_listings rl
+          LEFT JOIN listing_details ld ON ld.listing_id = rl.id
+          WHERE rl.source_platform = 'airbnb'
+            AND rl.source_url IS NOT NULL
+            AND ld.id IS NULL
+            AND rl.normalized_neighborhood_bucket IN (${bucketList})
+          ORDER BY rl.id DESC
+          LIMIT ${maxListings}
+        `);
     const candidates = (candidatesRaw as unknown as {
       rows: Array<{ id: number; external_id: string | null; source_url: string; bucket: string }>;
     }).rows;

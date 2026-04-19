@@ -1,0 +1,68 @@
+# Template: per-source daily refresh
+# ─────────────────────────────────────────────────────────────────────────────
+# Copy this file to `.github/workflows/<source>-refresh.yml` (drop the
+# `_template-` prefix and `.example` suffix) and fill in the marked spots.
+#
+# Two patterns are shown side by side. Pick ONE and delete the other.
+#
+#   PATTERN A — Trigger Railway endpoint
+#     Use when the work needs proxy/playwright/anything provisioned on Railway.
+#     Examples: airbnb-enrich-refresh.yml.
+#
+#   PATTERN B — Run script directly against prod DB
+#     Use when the source is a plain-HTTP scrape with no anti-bot wall.
+#     Examples: pvrpv-scrape.yml.
+#
+# Decide once, document the choice in docs/data-feeding.md, never mix.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: <SOURCE> Refresh (daily)
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # daily 06:00 UTC — adjust to spread load across sources
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: <source>-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      # ──────────── PATTERN A: trigger Railway endpoint ────────────
+      - name: Trigger Railway refresh
+        env:
+          RAILWAY_API_URL:        ${{ secrets.RAILWAY_API_URL }}
+          INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --show-error --silent --max-time 5400 \
+            -X POST "$RAILWAY_API_URL/api/ingest/<endpoint>" \
+            -H "Content-Type: application/json" \
+            -H "X-Internal-Token: $INTERNAL_TRIGGER_TOKEN" \
+            -d '{"mode":"stale","staleAfterDays":1,"maxListings":500}'
+
+      # ──────────── PATTERN B: run script against prod DB ────────────
+      - name: Checkout
+        uses: actions/checkout@v5
+        with: { fetch-depth: 1 }
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+        with: { version: 9 }
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Run <source> scraper
+        env:
+          DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
+        run: pnpm --filter @workspace/scripts exec tsx src/<source>-scrape.ts
