@@ -139,9 +139,23 @@ PYEOF
 - **Database**: Railway PostgreSQL, accessed via `RAILWAY_DATABASE_URL` env var in production; local dev uses `DATABASE_URL` from Replit.
 - **Vercel `/api/*` rewrite** (in `vercel.json`) proxies SPA-relative `/api/*` calls to the Railway origin. Hardcoded fallback also lives in `artifacts/pv-datastore/src/lib/api-base.ts` so a missing `VITE_API_URL` env var can't reintroduce the 404.
 
+## Airbnb pricing pipeline — PAUSED
+
+As of 2026-04-19, **Airbnb per-night quote collection is on hold**. Reason: `airbnb-graphql-pricing-adapter.ts` and `airbnb-graphql-quote-adapter.ts` are still compile-only stubs that throw "not implemented" at runtime. The full GraphQL replay + persisted-query SHA discovery code never landed.
+
+What's currently in the paused state — **do not "fix" any of these without thinking, they are intentional**:
+
+- `/api/ingest/airbnb-pricing-refresh` returns 500 with `"airbnb-graphql-*-adapter is not implemented in this build"`. **Safe-fail by design.** Do NOT make it return 200 with empty data.
+- `/api/ingest/airbnb-pricing-freshness` returns the real DB freshness numbers — verdict will be `fail` with reason `"No quotes have ever been collected"`. That is the truth. The dashboard card is supposed to be red.
+- `.github/workflows/airbnb-pricing-refresh.yml` daily cron is **commented out** (workflow_dispatch still works for manual smoke tests). Slack notify and GitHub-issue dedupe steps are gated `if: false`. Restoring is a one-line revert in each spot — see the `# PAUSED` comment blocks.
+- The Airbnb cohort (`source_platform='airbnb' AND is_active=true AND external_id ~ '^[0-9]+$'`) is currently 504 listings, all with zero quotes. Comp-tool comparisons against Airbnb listings will show "—" for fee columns until quote collection lands.
+- PVRPV pricing, VRBO pricing, VRBO scrape, calendar scrape, enrich refresh — all UNAFFECTED. Only the Airbnb per-night quote pipeline is paused.
+
+To unpause once the adapters are real: revert the `if: false` gates and the commented-out cron in `airbnb-pricing-refresh.yml`, redeploy Railway, manually dispatch the workflow once with `max_listings=10` to confirm, then let the daily cron resume.
+
 ## Recurring Pitfalls — read before changing anything
 
-- **Missing Airbnb GraphQL adapters**: `artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts` imports `./airbnb-graphql-pricing-adapter.js` and `./airbnb-graphql-quote-adapter.js`. Those files are stubs that throw at runtime (full implementation never landed). DO NOT delete the stubs or the Railway build breaks. If you implement the real adapters, replace the stub bodies — don't rename the files.
+- **Missing Airbnb GraphQL adapters**: `artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts` imports `./airbnb-graphql-pricing-adapter.js` and `./airbnb-graphql-quote-adapter.js`. Those files are stubs that throw at runtime (full implementation never landed). DO NOT delete the stubs or the Railway build breaks. If you implement the real adapters, replace the stub bodies — don't rename the files. See "Airbnb pricing pipeline — PAUSED" above for the full picture.
 - **Vercel proxy regression**: any time someone touches `vercel.json` or `api-base.ts`, the pricing tool can silently start serving HTML 404 to JSON callers. The hardening in commit `99e8d5f` (HTML-response guard in `apiFetch`, daily smoke workflow `pricing-tool-smoke.yml`, `/api/health/pricing-tool` endpoint) is the safety net. Don't remove it.
 - **Project-task popups**: when a task agent finishes it auto-proposes follow-up tasks, which spam the user with approval popups. Default mode going forward: edit `main` directly and push, no project tasks unless the user explicitly asks. Reject any auto-proposed follow-ups on sight.
 
