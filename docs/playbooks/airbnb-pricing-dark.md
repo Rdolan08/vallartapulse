@@ -7,6 +7,16 @@ emits a `::error::` and exits non-zero, **or** the freshness check
 (`scripts/freshness.sh`, dashboard card on `/sources`) shows the
 `Airbnb pricing` pipeline as RED.
 
+On a `fail` verdict the workflow now also pushes notifications:
+
+- **Slack** — if the `SLACK_WEBHOOK_URL` repo secret is configured, a
+  message lands in the ops channel with the `alertReason`, run stats,
+  and one-click links to this playbook and the failing run.
+- **GitHub issue** — a single open issue labelled `airbnb-pricing-dark`
+  is reused for the duration of an outage. The first failure opens it;
+  subsequent daily failures comment on it instead of opening duplicates.
+  Close the issue once a refresh succeeds.
+
 The runner publishes a `summary.alertLevel ∈ {ok, warn, fail}` field —
 `fail` means one of:
 
