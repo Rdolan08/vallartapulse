@@ -40,7 +40,7 @@ nobody can explain a week later.
 | VRBO — discovery + refresh | B | daily 07:15 UTC | `.github/workflows/vrbo-scrape.yml` — script tries to discover PV listings then upserts the union of (new ∪ existing). **Discovery currently blocked by VRBO's PerimeterX bot challenge** (see vrbo-search-adapter.ts header for tried approaches). Refresh of existing rows works the moment any get seeded. | wired, discovery blocked |
 | OG screenshots | B | every other day 09:00 UTC | `.github/workflows/og-refresh.yml` | shipped |
 | **Rental calendar — PVRPV (full 365-day window)** | B | daily 07:05 UTC | `.github/workflows/calendar-scrape.yml` → `pnpm --filter @workspace/scripts run scrape:calendar` → `rental_prices_by_date` | shipped |
-| **Rental calendar — Airbnb (checkpoint set)** | A *(planned)* | daily | `airbnb-checkpoints.ts` + adapter (TBD) → `listing_price_quotes` | **blocked — see Airbnb pricing pivot below** |
+| **Rental calendar — Airbnb (availability, 365-day window)** | B | daily 07:10 UTC | `.github/workflows/airbnb-calendar-scrape.yml` → `rental_prices_by_date` (price=null, availability filled) | shipped — see "Airbnb pricing — pivot resolved" below |
 | **Rental calendar — Vacation Vallarta** | B *(planned)* | daily | `vacation-vallarta-calendar-adapter.ts` → `rental_prices_by_date` | **not built** |
 
 ---
@@ -218,7 +218,69 @@ running daily at 07:05 UTC (5 minutes after `pvrpv-scrape.yml` so listing
 rows are fresh first). `scripts/freshness.sh` reports
 `MAX(scraped_at)` for `rental_prices_by_date`.
 
-### Airbnb pricing — pivot required
+### Airbnb pricing — pivot resolved (April 2026)
+
+**Status: shipped as availability-only feed; full quote prices deferred.**
+
+Re-spike of path 1 (`/api/v2/calendar_months`) confirmed that exact route
+is dead (404 `route_not_found`), but its surviving sibling
+`/api/v2/homes_pdp_availability_calendar` still works:
+
+- ✅ Plain HTTP, **no proxy** — Pattern B fits cleanly.
+- ✅ Returns 365 days of `{available, min_nights, max_nights}` per listing
+  in a single ~1s call.
+- ❌ Per-day **price** is stripped — the `price` object is always `{}`,
+  across every query-format permutation tried (`with_conditions`,
+  `for_remarketing`, `for_web_with_date`, `for_mobile_pdp`, with
+  `adults` param, etc.). Per-day prices have moved entirely to the
+  client-side `PdpAvailabilityCalendar` GraphQL call (path 2).
+- ⚠️ Cap: only Airbnb's pre-2022 numeric IDs (≤ 10 digits) resolve on
+  this endpoint. Of our 504 active Airbnb rows, **163 fit the legacy
+  shape** and get refreshed daily; the 345 long-form-ID rows wait for
+  path 2.
+
+**What shipped** (Apr 2026):
+
+- `airbnb-calendar-adapter.ts` — pure adapter wrapping the legacy
+  endpoint, returns the same `CalendarDay` shape PVRPV uses.
+- `airbnb-calendar-scrape.ts` driver + `scrape:airbnb-calendar` script.
+- `.github/workflows/airbnb-calendar-scrape.yml` — daily 07:10 UTC.
+- Writes one row per (listing × date) into `rental_prices_by_date` with
+  `nightly_price_usd = NULL` and the real `availability_status` /
+  `minimum_nights`. The adapter still inspects `price.local_price`,
+  `price.native_price`, etc. on every day, so if Airbnb ever restores
+  per-day price data the field auto-fills with no schema or driver
+  change.
+- Validated against prod: 15-listing pilot run, 5,475 rows written,
+  3,895 available days / 1,580 unavailable days, 0 failures, ~25s wall
+  clock at concurrency 2. Full 163-listing run estimated <2 min.
+
+**Why this is useful even without prices.** Owner-facing question
+"what % of comparable Airbnb listings are booked for NYE 2026?" is
+answerable from availability alone — `rental_prices_by_date` already
+has `availability_status` as a first-class column. The comp model can
+now see Airbnb's demand curve (booking lead-time, holiday compression,
+weekend vs. mid-week occupancy) alongside PVRPV's full price+availability
+data. Per-night dollars wait, but the Airbnb signal is no longer dark.
+
+**What's still deferred:**
+
+- `listing_price_quotes` — the full-fee quote table (nightly + cleaning
+  + service + tax) — remains unpopulated for Airbnb. The
+  `airbnb-checkpoints.ts` date generator stays inert until path 2
+  (`PdpAvailabilityCalendar` GraphQL replay through the residential
+  proxy, with a periodically-rotating persisted-query SHA hash) is
+  built. That work is 1–2 days and fragile — left as a follow-up
+  rather than blocking this milestone.
+- The 345 long-form-ID Airbnb rows — same path-2 dependency. The
+  adapter rejects them at the source-listings query (length > 10) so
+  freshness signals reflect the cohort we can actually serve, not a
+  67% baseline failure rate.
+
+---
+
+### Airbnb pricing — original pivot context (kept for history)
+
 
 The original spike claimed Airbnb's SSR PDP embeds `priceBreakdown` when
 fetched with `?check_in=&check_out=` — meaning we could get full quote

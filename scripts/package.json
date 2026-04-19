@@ -16,6 +16,7 @@
     "scrape:pvrpv": "tsx ./src/pvrpv-scrape.ts",
     "scrape:vrbo": "tsx ./src/vrbo-scrape.ts",
     "scrape:calendar": "tsx ./src/calendar-scrape.ts",
+    "scrape:airbnb-calendar": "tsx ./src/airbnb-calendar-scrape.ts",
     "prune:airbnb": "tsx ./src/airbnb-prune.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "og": "tsx ./src/generate-og.ts"
