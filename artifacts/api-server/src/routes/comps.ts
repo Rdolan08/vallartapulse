@@ -589,12 +589,36 @@ router.post("/rental/comps", async (req, res) => {
     // ── Seasonal sweep ────────────────────────────────────────────────────────
     // Computed after the comp-pool fee uplift so each season can show both
     // a base and an all-in number using the same fee logic as the hero.
-    const nonSeasonalBase = result.totalAdjustmentMultiplier > 0
-      ? result.recommended / result.seasonalContext.totalMultiplier
-      : result.recommended;
-    const seasonalSweep = confidence !== "guidance_only"
-      ? computeSeasonalSweep(nonSeasonalBase, medianFeesPerNight)
-      : null;
+    // Guard: only compute the sweep when we have a finite, positive base to
+    // multiply against. Otherwise the four cards downstream render "$NaN".
+    const seasonalDivisor = result.seasonalContext.totalMultiplier;
+    const nonSeasonalBase =
+      Number.isFinite(result.totalAdjustmentMultiplier) &&
+      result.totalAdjustmentMultiplier > 0 &&
+      Number.isFinite(seasonalDivisor) &&
+      seasonalDivisor > 0
+        ? result.recommended / seasonalDivisor
+        : result.recommended;
+    const sweepBaseUsable =
+      Number.isFinite(nonSeasonalBase) && nonSeasonalBase > 0;
+    const seasonalSweep =
+      confidence !== "guidance_only" && sweepBaseUsable
+        ? computeSeasonalSweep(nonSeasonalBase, medianFeesPerNight)
+        : null;
+    if (confidence !== "guidance_only" && !sweepBaseUsable) {
+      req.log.warn(
+        {
+          recommended: result.recommended,
+          totalAdjustmentMultiplier: result.totalAdjustmentMultiplier,
+          seasonalDivisor,
+          nonSeasonalBase,
+          neighborhood: input.neighborhood_normalized,
+          bedrooms: input.bedrooms,
+          month: input.month,
+        },
+        "comps: skipping seasonal_sweep — non-finite base would have rendered $NaN",
+      );
+    }
 
     const topDriversOverall = selectedComps.length > 0
       ? Object.entries(
