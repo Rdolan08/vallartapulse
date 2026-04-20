@@ -97,6 +97,22 @@ const ALLOWED_PROPERTY_TOKENS = [
   // narrowing of "apartment" → "/^apartment$/" from silently dropping
   // them.
   "serviced apartment",
+  // "Home" — observed on the Mac mini smoke run as a frequent rejection
+  // (propertyType:"Home"). Comes from og:titles like "Entire home in
+  // Puerto Vallarta · ..." where the parser strips the "Entire" prefix
+  // and stores propertyTypeRaw="home". Airbnb uses this label as the
+  // umbrella whole-unit category in its UI ("Type of place: Entire
+  // home" — see Airbnb's filter chip), so it's the canonical name for
+  // exactly what our discovery URLs are asking for via
+  // room_types[]=Entire+home/apt. Excluded from REJECTED_PROPERTY_TOKENS
+  // checks because no rejected token contains the substring "home"
+  // standalone (treehouse / earthen check on different tokens).
+  "home",
+  // "Studio" — small whole-unit rentals where the og:title is just
+  // "Studio in <neighborhood>" (no Entire prefix because there's no
+  // bedroom to qualify). Legitimate comp pool member; nightly rates
+  // for studios are a real comp signal for 1BR pricing.
+  "studio",
 ] as const;
 
 const REJECTED_PROPERTY_TOKENS = [
