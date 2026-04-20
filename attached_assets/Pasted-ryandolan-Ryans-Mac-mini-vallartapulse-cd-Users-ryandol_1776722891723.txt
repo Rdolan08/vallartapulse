@@ -1,0 +1,132 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd /Users/ryandolan/vallartapulse
+git pull origin main
+git log --oneline -2
+export $(grep -v '^#' .env | xargs)
+export DATABASE_URL="$RAILWAY_DATABASE_URL"
+/opt/homebrew/bin/pnpm exec tsx scripts/src/_probe-bucket.ts zona_romantica__2__200_400
+remote: Enumerating objects: 9, done.
+remote: Counting objects: 100% (9/9), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 5 (delta 3), reused 5 (delta 3), pack-reused 0 (from 0)
+Unpacking objects: 100% (5/5), 4.65 KiB | 951.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+ * branch            main       -> FETCH_HEAD
+   c997533..1944611  main       -> origin/main
+Updating c997533..1944611
+Fast-forward
+ scripts/src/_probe-bucket.ts | 207 ++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 193 insertions(+), 14 deletions(-)
+1944611 (HEAD -> feature/local-mac-scraper, origin/main, origin/HEAD) diagnostic(probe): dump marker counts, capture samples, and shape snippets
+c997533 fix(discovery): extract long-form Airbnb listing IDs + add debug/fail-fast
+(probe target hint: zona_romantica__2__200_400 — using hardcoded URL set)
+
+=== WORKING ===
+URL: https://www.airbnb.com/s/Zona-Romantica--Puerto-Vallarta--Mexico/homes
+status=200 len=810213
+extractCandidateIds: 20 ids, hitsByPattern={"\\/rooms\\/(\\d{7,19})":0,"\"listingId\"\\s*:\\s*\"?(\\d{7,19})\"?":20,"\"listing_id\"\\s*:\\s*\"?(\\d{7,19})\"?":0}
+  first 5 ids: 8114741, 1607404978051056786, 33203298, 718180828094837817, 45897277
+-- substring marker counts --
+{
+  "/rooms/": 0,
+  "\"listingId\"": 20,
+  "\"listing_id\"": 0,
+  "\"stayId\"": 0,
+  "\"sectionId\"": 11,
+  "niobeClientData": 1,
+  "__NEXT_DATA__": 0,
+  "staysSearch": 9,
+  "presentation": 22,
+  "deferredState": 0,
+  "ExploreStayMapInfo": 20,
+  "ExploreStayCard": 0,
+  "captcha": 19,
+  "px-captcha": 0
+}
+-- capture samples (first 3 distinct per pattern) --
+  rooms_url: 0 hits
+  listingId_json: "8114741" (len=7), "1607404978051056786" (len=19), "33203298" (len=8)
+  listing_id_json: 0 hits
+  stayId_json: 0 hits
+  id_long_json: 0 hits
+  encoded_id: "RGVtYW5kU3RheUxpc3Rpbmc6ODExNDc0MQ==" (len=36), "RGVtYW5kU3RheUxpc3Rpbmc6MTYwNzQwNDk3ODA1MTA1Njc4Ng==" (len=52), "RGVtYW5kU3RheUxpc3Rpbmc6MzMyMDMyOTg=" (len=36)
+-- snippets (600 chars around first occurrence) --
+  [listingId] "\"description\":{\"__typename\":\"DemandStayListingDescription\",\"name\":{\"__typename\":\"UGCText\",\"localizedStringWithTranslationPreference\":\"Modern Hideaway with Private Terrace in Old Town\"}},\"wishlistItems\":[],\"nameLocale\":\"en\"}}],\"staysInViewport\":[{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"8114741\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"1607404978051056786\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"33203298\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,"
+  [niobeClientData] "eb/en/frontend/core-guest-loop/apps/core-guest-spa/client.4386b75a78.js\" crossorigin=\"anonymous\"></script><style>#fb_xdm_frame_https{visibility:hidden}</style><div id=\"fb-root\"></div><div id=\"authModals\"></div><script id=\"data-deferred-state-0\" data-deferred-state-0=\"true\" type=\"application/json\">{\"niobeClientData\":[[\"StaysSearch:{\\\"aiSearchEnabled\\\":false,\\\"isLeanTreatment\\\":false,\\\"staysMapSearchRequestV2\\\":{\\\"metadataOnly\\\":false,\\\"rawParams\\\":[{\\\"filterName\\\":\\\"cdnCacheSafe\\\",\\\"filterValues\\\":[\\\"false\\\"]},{\\\"filterName\\\":\\\"query\\\",\\\"filterValues\\\":[\\\"Zona Romantica, Puerto Vallarta, Mexico\\\"]},{\\\"filterN"
+  [staysSearch] "e_treatment\\\",\\\"p2_category_bar_removal_treatment\\\",\\\"selected_filters_2024_treatment\\\",\\\"recommended_filters_2024_treatment_b\\\",\\\"m13_search_input_phase2_treatment\\\",\\\"m13_search_input_services_enabled\\\",\\\"m13_2025_experiences_p2_treatment\\\",\\\"search_input_microflex_separate_checkin_checkout\\\"]},\\\"staysSearchRequest\\\":{\\\"maxMapItems\\\":9999,\\\"metadataOnly\\\":false,\\\"rawParams\\\":[{\\\"filterName\\\":\\\"cdnCacheSafe\\\",\\\"filterValues\\\":[\\\"false\\\"]},{\\\"filterName\\\":\\\"itemsPerGrid\\\",\\\"filterValues\\\":[\\\"18\\\"]},{\\\"filterName\\\":\\\"query\\\",\\\"filterValues\\\":[\\\"Zona Romantica, Puerto Vallarta, Mexico\\\"]},{\\\"filterName\\\":\\"
+  [presentation] "ntent skip-to-content_v2-link\" data-hook=\"skip-to-content\" href=\"#site-content\" tabindex=\"0\">Skip to content<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\" style=\"display:block;fill:none;height:16px;width:16px;stroke:currentColor;stroke-width:4;overflow:visible\" aria-hidden=\"true\" role=\"presentation\" focusable=\"false\"><g fill=\"none\"><path d=\"M28 16H2M17 4l11.3 11.3a1 1 0 0 1 0 1.4L17 28\" /></g></svg></a><span id=\"popups-everywhere-skip-link\"></span></div><div id=\"smart-banner\"></div><noscript><div class=\"alert alert-with-icon alert-error no-js-alert\" data-nosnippet=\"true\"><i class=\"icon alert-"
+  [ExploreStayMapInfo] "titude\":20.6031,\"longitude\":-105.2352}},\"description\":{\"__typename\":\"DemandStayListingDescription\",\"name\":{\"__typename\":\"UGCText\",\"localizedStringWithTranslationPreference\":\"Modern Hideaway with Private Terrace in Old Town\"}},\"wishlistItems\":[],\"nameLocale\":\"en\"}}],\"staysInViewport\":[{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"8114741\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"1607404978051056786\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"33203298\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreS"
+  [deferredState] NOT PRESENT
+
+=== MY_BUCKET ===
+URL: https://www.airbnb.com/s/Zona-Romantica--Puerto-Vallarta--Mexico/homes?min_bedrooms=2&max_bedrooms=2&price_min=200&price_max=400&room_types%5B%5D=Entire+home%2Fapt
+status=200 len=853902
+extractCandidateIds: 20 ids, hitsByPattern={"\\/rooms\\/(\\d{7,19})":0,"\"listingId\"\\s*:\\s*\"?(\\d{7,19})\"?":20,"\"listing_id\"\\s*:\\s*\"?(\\d{7,19})\"?":0}
+  first 5 ids: 45897277, 789061014916904742, 1068311163283227047, 1530037013585048706, 35355266
+-- substring marker counts --
+{
+  "/rooms/": 0,
+  "\"listingId\"": 20,
+  "\"listing_id\"": 0,
+  "\"stayId\"": 0,
+  "\"sectionId\"": 14,
+  "niobeClientData": 1,
+  "__NEXT_DATA__": 0,
+  "staysSearch": 9,
+  "presentation": 22,
+  "deferredState": 0,
+  "ExploreStayMapInfo": 20,
+  "ExploreStayCard": 0,
+  "captcha": 19,
+  "px-captcha": 0
+}
+-- capture samples (first 3 distinct per pattern) --
+  rooms_url: 0 hits
+  listingId_json: "45897277" (len=8), "789061014916904742" (len=18), "1068311163283227047" (len=19)
+  listing_id_json: 0 hits
+  stayId_json: 0 hits
+  id_long_json: 0 hits
+  encoded_id: "RGVtYW5kU3RheUxpc3Rpbmc6NDU4OTcyNzc=" (len=36), "RGVtYW5kU3RheUxpc3Rpbmc6Nzg5MDYxMDE0OTE2OTA0NzQy" (len=48), "RGVtYW5kU3RheUxpc3Rpbmc6MTA2ODMxMTE2MzI4MzIyNzA0Nw==" (len=52)
+-- snippets (600 chars around first occurrence) --
+  [listingId] "019,\"longitude\":-105.23636}},\"description\":{\"__typename\":\"DemandStayListingDescription\",\"name\":{\"__typename\":\"UGCText\",\"localizedStringWithTranslationPreference\":\"Luxurious apartment\"}},\"wishlistItems\":[],\"nameLocale\":\"en\"}}],\"staysInViewport\":[{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"45897277\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"789061014916904742\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"1068311163283227047\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leading"
+  [niobeClientData] "eb/en/frontend/core-guest-loop/apps/core-guest-spa/client.4386b75a78.js\" crossorigin=\"anonymous\"></script><style>#fb_xdm_frame_https{visibility:hidden}</style><div id=\"fb-root\"></div><div id=\"authModals\"></div><script id=\"data-deferred-state-0\" data-deferred-state-0=\"true\" type=\"application/json\">{\"niobeClientData\":[[\"StaysSearch:{\\\"aiSearchEnabled\\\":true,\\\"isLeanTreatment\\\":false,\\\"staysMapSearchRequestV2\\\":{\\\"metadataOnly\\\":false,\\\"rawParams\\\":[{\\\"filterName\\\":\\\"cdnCacheSafe\\\",\\\"filterValues\\\":[\\\"false\\\"]},{\\\"filterName\\\":\\\"maxBedrooms\\\",\\\"filterValues\\\":[\\\"2\\\"]},{\\\"filterName\\\":\\\"minBedrooms\\\",\\\"filterVal"
+  [staysSearch] "tment\\\",\\\"recommended_filters_2024_treatment_b\\\",\\\"m13_search_input_phase2_treatment\\\",\\\"m13_search_input_services_enabled\\\",\\\"m13_2025_experiences_p2_treatment\\\",\\\"search_input_microflex_separate_checkin_checkout\\\",\\\"ai_search_preferences_ios_loggedin_en_us_with_explanation_strong_topicality\\\"]},\\\"staysSearchRequest\\\":{\\\"maxMapItems\\\":9999,\\\"metadataOnly\\\":false,\\\"rawParams\\\":[{\\\"filterName\\\":\\\"cdnCacheSafe\\\",\\\"filterValues\\\":[\\\"false\\\"]},{\\\"filterName\\\":\\\"itemsPerGrid\\\",\\\"filterValues\\\":[\\\"18\\\"]},{\\\"filterName\\\":\\\"maxBedrooms\\\",\\\"filterValues\\\":[\\\"2\\\"]},{\\\"filterName\\\":\\\"minBedrooms\\\",\\\"filterValues\\\":"
+  [presentation] "ntent skip-to-content_v2-link\" data-hook=\"skip-to-content\" href=\"#site-content\" tabindex=\"0\">Skip to content<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\" style=\"display:block;fill:none;height:16px;width:16px;stroke:currentColor;stroke-width:4;overflow:visible\" aria-hidden=\"true\" role=\"presentation\" focusable=\"false\"><g fill=\"none\"><path d=\"M28 16H2M17 4l11.3 11.3a1 1 0 0 1 0 1.4L17 28\" /></g></svg></a><span id=\"popups-everywhere-skip-link\"></span></div><div id=\"smart-banner\"></div><noscript><div class=\"alert alert-with-icon alert-error no-js-alert\" data-nosnippet=\"true\"><i class=\"icon alert-"
+  [ExploreStayMapInfo] "__typename\":\"Coordinate\",\"latitude\":20.6019,\"longitude\":-105.23636}},\"description\":{\"__typename\":\"DemandStayListingDescription\",\"name\":{\"__typename\":\"UGCText\",\"localizedStringWithTranslationPreference\":\"Luxurious apartment\"}},\"wishlistItems\":[],\"nameLocale\":\"en\"}}],\"staysInViewport\":[{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"45897277\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"789061014916904742\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"1068311163283227047\",\"pinState\":\"FULL_PIN\"},{\"__typename"
+  [deferredState] NOT PRESENT
+
+=== ONLY_BR ===
+URL: https://www.airbnb.com/s/Zona-Romantica--Puerto-Vallarta--Mexico/homes?min_bedrooms=2
+status=200 len=815874
+extractCandidateIds: 20 ids, hitsByPattern={"\\/rooms\\/(\\d{7,19})":0,"\"listingId\"\\s*:\\s*\"?(\\d{7,19})\"?":20,"\"listing_id\"\\s*:\\s*\"?(\\d{7,19})\"?":0}
+  first 5 ids: 1196546660180842625, 789061014916904742, 1107297063057228180, 1527723739893425023, 45897277
+-- substring marker counts --
+{
+  "/rooms/": 0,
+  "\"listingId\"": 20,
+  "\"listing_id\"": 0,
+  "\"stayId\"": 0,
+  "\"sectionId\"": 12,
+  "niobeClientData": 1,
+  "__NEXT_DATA__": 0,
+  "staysSearch": 6,
+  "presentation": 22,
+  "deferredState": 0,
+  "ExploreStayMapInfo": 20,
+  "ExploreStayCard": 0,
+  "captcha": 19,
+  "px-captcha": 0
+}
+-- capture samples (first 3 distinct per pattern) --
+  rooms_url: 0 hits
+  listingId_json: "1196546660180842625" (len=19), "789061014916904742" (len=18), "1107297063057228180" (len=19)
+  listing_id_json: 0 hits
+  stayId_json: 0 hits
+  id_long_json: 0 hits
+  encoded_id: "RGVtYW5kU3RheUxpc3Rpbmc6MTE5NjU0NjY2MDE4MDg0MjYyNQ==" (len=52), "RGVtYW5kU3RheUxpc3Rpbmc6Nzg5MDYxMDE0OTE2OTA0NzQy" (len=48), "RGVtYW5kU3RheUxpc3Rpbmc6MTEwNzI5NzA2MzA1NzIyODE4MA==" (len=52)
+-- snippets (600 chars around first occurrence) --
+  [listingId] "\"description\":{\"__typename\":\"DemandStayListingDescription\",\"name\":{\"__typename\":\"UGCText\",\"localizedStringWithTranslationPreference\":\"Unique Luxury Penthouse in Zona Romantica Amapas\"}},\"wishlistItems\":[],\"nameLocale\":\"en\"}}],\"staysInViewport\":[{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"1196546660180842625\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"789061014916904742\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"1107297063057228180\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInf"
+  [niobeClientData] "eb/en/frontend/core-guest-loop/apps/core-guest-spa/client.4386b75a78.js\" crossorigin=\"anonymous\"></script><style>#fb_xdm_frame_https{visibility:hidden}</style><div id=\"fb-root\"></div><div id=\"authModals\"></div><script id=\"data-deferred-state-0\" data-deferred-state-0=\"true\" type=\"application/json\">{\"niobeClientData\":[[\"StaysSearch:{\\\"aiSearchEnabled\\\":true,\\\"isLeanTreatment\\\":false,\\\"staysMapSearchRequestV2\\\":{\\\"metadataOnly\\\":false,\\\"rawParams\\\":[{\\\"filterName\\\":\\\"cdnCacheSafe\\\",\\\"filterValues\\\":[\\\"false\\\"]},{\\\"filterName\\\":\\\"minBedrooms\\\",\\\"filterValues\\\":[\\\"2\\\"]},{\\\"filterName\\\":\\\"query\\\",\\\"filterValues\\\":"
+  [staysSearch] "eatment\\\",\\\"recommended_filters_2024_treatment_b\\\",\\\"m13_search_input_phase2_treatment\\\",\\\"m13_search_input_services_enabled\\\",\\\"m13_2025_experiences_p2_treatment\\\",\\\"search_input_microflex_separate_checkin_checkout\\\",\\\"ai_search_preferences_ios_loggedin_en_us_with_explanation_mild_topicality\\\"]},\\\"staysSearchRequest\\\":{\\\"maxMapItems\\\":9999,\\\"metadataOnly\\\":false,\\\"rawParams\\\":[{\\\"filterName\\\":\\\"cdnCacheSafe\\\",\\\"filterValues\\\":[\\\"false\\\"]},{\\\"filterName\\\":\\\"itemsPerGrid\\\",\\\"filterValues\\\":[\\\"18\\\"]},{\\\"filterName\\\":\\\"minBedrooms\\\",\\\"filterValues\\\":[\\\"2\\\"]},{\\\"filterName\\\":\\\"query\\\",\\\"filterValues\\\":[\\\"Zon"
+  [presentation] "ntent skip-to-content_v2-link\" data-hook=\"skip-to-content\" href=\"#site-content\" tabindex=\"0\">Skip to content<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\" style=\"display:block;fill:none;height:16px;width:16px;stroke:currentColor;stroke-width:4;overflow:visible\" aria-hidden=\"true\" role=\"presentation\" focusable=\"false\"><g fill=\"none\"><path d=\"M28 16H2M17 4l11.3 11.3a1 1 0 0 1 0 1.4L17 28\" /></g></svg></a><span id=\"popups-everywhere-skip-link\"></span></div><div id=\"smart-banner\"></div><noscript><div class=\"alert alert-with-icon alert-error no-js-alert\" data-nosnippet=\"true\"><i class=\"icon alert-"
+  [ExploreStayMapInfo] "titude\":20.5984,\"longitude\":-105.2348}},\"description\":{\"__typename\":\"DemandStayListingDescription\",\"name\":{\"__typename\":\"UGCText\",\"localizedStringWithTranslationPreference\":\"Unique Luxury Penthouse in Zona Romantica Amapas\"}},\"wishlistItems\":[],\"nameLocale\":\"en\"}}],\"staysInViewport\":[{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"1196546660180842625\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"789061014916904742\",\"pinState\":\"FULL_PIN\"},{\"__typename\":\"ExploreStayMapInfo\",\"leadingIcon\":null,\"listingId\":\"1107297063057228180\",\"pinState\":\"FULL_PIN\"},{"
+  [deferredState] NOT PRESENT
