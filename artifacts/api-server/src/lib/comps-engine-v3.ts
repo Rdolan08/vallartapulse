@@ -401,6 +401,16 @@ export class CompsEngineV3 {
     });
 
     // ── 4. Scale conservative / stretch ──────────────────────────────────────
+    // Fail loudly if any layer above produced a non-finite price. Returning
+    // NaN here would propagate all the way to the UI and render "$NaN" cards
+    // (see formatCurrency in pv-datastore/src/lib/utils.ts).
+    if (!Number.isFinite(price) || price <= 0) {
+      throw new Error(
+        `comps-engine-v3: non-finite price after layer stack ` +
+        `(price=${price}, baseCompMedian=${baseCompMedian}, ` +
+        `target=${target.neighborhoodNormalized}/${target.bedrooms}BR)`,
+      );
+    }
     const totalAdjustmentMultiplier = baseCompMedian > 0 ? price / baseCompMedian : 1;
     const recommended  = Math.round(price);
     const conservative = Math.round(v2Conservative * totalAdjustmentMultiplier);
