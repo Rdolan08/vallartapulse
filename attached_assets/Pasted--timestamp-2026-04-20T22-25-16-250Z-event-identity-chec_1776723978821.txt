@@ -1,0 +1,27 @@
+{"timestamp":"2026-04-20T22:25:16.250Z","event":"identity_check_started","bucketId":"zona_romantica__1__100_200","externalId":"49043899"}
+{"timestamp":"2026-04-20T22:25:16.964Z","event":"identity_check_passed","bucketId":"zona_romantica__1__100_200","externalId":"49043899"}
+{"timestamp":"2026-04-20T22:25:17.068Z","event":"listing_inserted","bucketId":"zona_romantica__1__100_200","externalId":"49043899","propertyType":"Condo","dataConfidenceScore":1}
+{"timestamp":"2026-04-20T22:25:22.296Z","event":"identity_check_started","bucketId":"zona_romantica__1__100_200","externalId":"26131918"}
+{"timestamp":"2026-04-20T22:25:22.996Z","event":"identity_check_passed","bucketId":"zona_romantica__1__100_200","externalId":"26131918"}
+{"timestamp":"2026-04-20T22:25:23.102Z","event":"listing_inserted","bucketId":"zona_romantica__1__100_200","externalId":"26131918","propertyType":"Condo","dataConfidenceScore":1}
+{"timestamp":"2026-04-20T22:25:30.318Z","event":"identity_check_started","bucketId":"zona_romantica__1__100_200","externalId":"1387805593158381919"}
+{"timestamp":"2026-04-20T22:25:31.513Z","event":"identity_check_passed","bucketId":"zona_romantica__1__100_200","externalId":"1387805593158381919"}
+{"timestamp":"2026-04-20T22:25:31.616Z","event":"listing_inserted","bucketId":"zona_romantica__1__100_200","externalId":"1387805593158381919","propertyType":"Rental unit","dataConfidenceScore":1}
+{"timestamp":"2026-04-20T22:25:37.306Z","event":"identity_check_started","bucketId":"zona_romantica__1__100_200","externalId":"935531738067251079"}
+{"timestamp":"2026-04-20T22:25:38.211Z","event":"identity_check_passed","bucketId":"zona_romantica__1__100_200","externalId":"935531738067251079"}
+{"timestamp":"2026-04-20T22:25:38.310Z","event":"listing_inserted","bucketId":"zona_romantica__1__100_200","externalId":"935531738067251079","propertyType":"Rental unit","dataConfidenceScore":1}
+{"timestamp":"2026-04-20T22:25:44.165Z","event":"identity_check_started","bucketId":"zona_romantica__1__100_200","externalId":"1196546660180842625"}
+{"timestamp":"2026-04-20T22:25:44.915Z","event":"identity_check_passed","bucketId":"zona_romantica__1__100_200","externalId":"1196546660180842625"}
+{"timestamp":"2026-04-20T22:25:45.015Z","event":"listing_inserted","bucketId":"zona_romantica__1__100_200","externalId":"1196546660180842625","propertyType":"Condo","dataConfidenceScore":1}
+{"timestamp":"2026-04-20T22:25:51.193Z","event":"identity_check_started","bucketId":"zona_romantica__1__100_200","externalId":"50053915"}
+{"timestamp":"2026-04-20T22:25:51.869Z","event":"identity_check_passed","bucketId":"zona_romantica__1__100_200","externalId":"50053915"}
+{"timestamp":"2026-04-20T22:25:51.972Z","event":"listing_inserted","bucketId":"zona_romantica__1__100_200","externalId":"50053915","propertyType":"Condo","dataConfidenceScore":1}
+{"timestamp":"2026-04-20T22:25:58.376Z","event":"identity_check_started","bucketId":"zona_romantica__1__100_200","externalId":"1655094066179295595"}
+{"timestamp":"2026-04-20T22:25:59.550Z","event":"identity_check_passed","bucketId":"zona_romantica__1__100_200","externalId":"1655094066179295595"}
+{"timestamp":"2026-04-20T22:25:59.653Z","event":"listing_inserted","bucketId":"zona_romantica__1__100_200","externalId":"1655094066179295595","propertyType":"Rental unit","dataConfidenceScore":1}
+{"timestamp":"2026-04-20T22:26:05.100Z","event":"identity_check_started","bucketId":"zona_romantica__1__100_200","externalId":"1622127329052231607"}
+{"timestamp":"2026-04-20T22:26:05.882Z","event":"identity_check_passed","bucketId":"zona_romantica__1__100_200","externalId":"1622127329052231607"}
+{"timestamp":"2026-04-20T22:26:05.979Z","event":"listing_inserted","bucketId":"zona_romantica__1__100_200","externalId":"1622127329052231607","propertyType":"Rental unit","dataConfidenceScore":1}
+{"timestamp":"2026-04-20T22:26:12.368Z","event":"identity_check_started","bucketId":"zona_romantica__1__100_200","externalId":"42172666"}
+{"timestamp":"2026-04-20T22:26:13.155Z","event":"identity_check_passed","bucketId":"zona_romantica__1__100_200","externalId":"42172666"}
+{"timestamp":"2026-04-20T22:26:13.252Z","event":"listing_inserted","bucketId":"zona_romantica__1__100_200","externalId":"42172666","propertyType":"Condo","dataConfidenceScore":1}
