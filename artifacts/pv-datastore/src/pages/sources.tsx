@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { RefreshCw, ExternalLink, Database, Zap, Clock, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { RefreshCw, ExternalLink, Database, Zap, Clock, CheckCircle2, AlertCircle, Info, Activity } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, formatDistanceToNow, isAfter, subHours, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { apiUrl, apiFetch } from "@/lib/api-base";
@@ -56,42 +57,73 @@ interface PipelineCardConfig {
   /** Plain noun for the "newest" line (cohort mode). */
   newestLabelEn?: string;
   newestLabelEs?: string;
+  /**
+   * Override status when the pipeline is intentionally not running (its
+   * scheduler is paused, no adapter exists yet, etc.). When set, the
+   * status light renders yellow with this label regardless of what the
+   * freshness endpoint reports — the underlying alert is still surfaced
+   * in the tooltip so nothing is hidden.
+   */
+  overrideStatus?: { kind: "paused" | "blocked" | "planned"; reasonEn: string; reasonEs: string };
 }
 
 const PIPELINES: PipelineCardConfig[] = [
   {
+    // Airbnb CALENDAR — availability + nightly_price_usd written to
+    // rental_prices_by_date by the Mac-mini-driven scraper. Operational
+    // (run #2 on 2026-04-19 wrote 59,130 rows for 162/507 listings).
+    // Distinct from the per-night QUOTE pipeline below, which is paused.
+    endpoint: "/api/ingest/airbnb-calendar-freshness",
+    labelEn: "Airbnb calendar",
+    labelEs: "Calendario de Airbnb",
+    mode: "cohort",
+    newestField: "newestScrapeAt",
+    newestLabelEn: "Newest scrape",
+    newestLabelEs: "Extracción más reciente",
+  },
+  {
     endpoint: "/api/ingest/airbnb-pricing-freshness",
-    labelEn: "Airbnb pricing",
-    labelEs: "Precios de Airbnb",
+    labelEn: "Airbnb per-night quotes",
+    labelEs: "Cotizaciones por noche de Airbnb",
     mode: "cohort",
     newestField: "newestQuoteAt",
     newestLabelEn: "Newest quote",
     newestLabelEs: "Cotización más reciente",
+    overrideStatus: {
+      kind: "paused",
+      reasonEn:
+        "GraphQL quote adapter is a stub. Calendar (availability + price) IS flowing — see 'Airbnb calendar' above.",
+      reasonEs:
+        "El adaptador GraphQL de cotización es un stub. El calendario (disponibilidad + precio) SÍ funciona — ver 'Calendario de Airbnb' arriba.",
+    },
   },
   {
     endpoint: "/api/ingest/pvrpv-pricing-freshness",
     labelEn: "PVRPV pricing",
     labelEs: "Precios de PVRPV",
+    mode: "cohort",
     newestField: "newestQuoteAt",
     newestLabelEn: "Newest quote",
     newestLabelEs: "Cotización más reciente",
   },
   {
-    endpoint: "/api/ingest/vrbo-pricing-freshness",
-    labelEn: "VRBO pricing",
-    labelEs: "Precios de VRBO",
-    newestField: "newestQuoteAt",
-    newestLabelEn: "Newest quote",
-    newestLabelEs: "Cotización más reciente",
-  },
-  {
+    // Consolidated VRBO pill — discovery (scrape) blocks pricing, so they
+    // share a fate. Show one row and mention both pipelines in the tooltip
+    // via the scrape freshness endpoint, which is the upstream blocker.
     endpoint: "/api/ingest/vrbo-scrape-freshness",
-    labelEn: "VRBO scrape",
-    labelEs: "Extracción de VRBO",
+    labelEn: "VRBO",
+    labelEs: "VRBO",
     mode: "cohort",
     newestField: "newestScrapeAt",
     newestLabelEn: "Newest scrape",
     newestLabelEs: "Extracción más reciente",
+    overrideStatus: {
+      kind: "paused",
+      reasonEn:
+        "Discovery + pricing both paused — residential proxy cannot defeat VRBO's anti-bot challenge",
+      reasonEs:
+        "Descubrimiento y precios pausados — el proxy residencial no logra superar el desafío anti-bot de VRBO",
+    },
   },
   {
     endpoint: "/api/ingest/vacation-vallarta-pricing-freshness",
@@ -101,6 +133,11 @@ const PIPELINES: PipelineCardConfig[] = [
     newestField: "newestScrapeAt",
     newestLabelEn: "Newest refresh",
     newestLabelEs: "Actualización más reciente",
+    overrideStatus: {
+      kind: "planned",
+      reasonEn: "Calendar adapter exists; no scheduled job wired yet",
+      reasonEs: "El adaptador de calendario existe; aún no hay tarea programada",
+    },
   },
   {
     endpoint: "/api/health/pricing-tool",
@@ -111,13 +148,23 @@ const PIPELINES: PipelineCardConfig[] = [
 ];
 
 /**
- * Pipeline-health card. Renders one freshness banner driven by a
- * pipeline-specific freshness endpoint. All endpoints share the same
- * `alertLevel` / `alertReason` / `listingsTotal` / `listingsStale14d`
- * vocabulary so a multi-day silent outage in any pricing pipeline is
- * visible within one cycle.
+ * Compact status light for one pipeline. Renders a colored dot + label
+ * inside the consolidated PipelinesHealth tile. Hover reveals the full
+ * detail (status, last refresh, cohort, underlying alert reason) so the
+ * tile stays tiny without hiding any information.
+ *
+ * Color rules:
+ *   - yellow = source intentionally not active (paused / blocked / planned)
+ *   - red    = source IS active and failing (alertLevel=fail)
+ *   - yellow = source IS active and meaningfully degraded
+ *             (alertLevel=warn AND fewer than 90% of the cohort is fresh)
+ *   - green  = source IS active and healthy
+ *             (alertLevel=ok, OR alertLevel=warn with >=90% of the cohort
+ *              fresh — e.g. 4/125 stale on PVRPV is 96.8% fresh, which
+ *              still earns a green dot. The "4 stale" detail surfaces in
+ *              the tooltip so nothing is hidden.)
  */
-function PipelineHealthCard({
+function PipelineStatusLight({
   cfg,
   t,
   lang,
@@ -143,74 +190,117 @@ function PipelineHealthCard({
     };
   }, [cfg.endpoint]);
 
-  if (errored) return null;
-  if (!data) {
-    return <Skeleton className="h-20 rounded-xl" />;
-  }
-
-  const tone =
-    data.alertLevel === "fail"
-      ? "bg-destructive/10 border-destructive/40 text-destructive"
-      : data.alertLevel === "warn"
-        ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300"
-        : "bg-primary/5 border-primary/20 text-foreground";
-
-  const Icon = data.alertLevel === "ok" ? CheckCircle2 : AlertCircle;
   const label = lang === "es" ? cfg.labelEs : cfg.labelEn;
 
-  // ── Headline + last-refresh derived per mode ──────────────────────────────
-  let headline: string;
-  let lastRefreshText: string;
-  let cohortLine: string | null = null;
+  // ── Color + status pill derivation ──────────────────────────────────────
+  let dotClass = "bg-muted-foreground/40";
+  let statusEn: string;
+  let statusEs: string;
 
-  if (cfg.mode === "uptime") {
-    const ts = data.lastSuccessAt ?? null;
-    lastRefreshText = ts
-      ? formatDistanceToNow(new Date(ts), { addSuffix: true })
-      : t("never", "nunca");
-    headline = t(
-      `${label} — last successful check ${lastRefreshText}`,
-      `${label} — última verificación exitosa ${lastRefreshText}`,
-    );
+  if (cfg.overrideStatus) {
+    dotClass = "bg-amber-500";
+    if (cfg.overrideStatus.kind === "paused") {
+      statusEn = "Paused";
+      statusEs = "Pausado";
+    } else if (cfg.overrideStatus.kind === "blocked") {
+      statusEn = "Blocked";
+      statusEs = "Bloqueado";
+    } else {
+      statusEn = "Planned";
+      statusEs = "Planeado";
+    }
+  } else if (errored || !data) {
+    statusEn = errored ? "Unreachable" : "Loading…";
+    statusEs = errored ? "Inaccesible" : "Cargando…";
+    if (errored) dotClass = "bg-muted-foreground/40";
+  } else if (data.alertLevel === "fail") {
+    dotClass = "bg-red-500";
+    statusEn = "Failing";
+    statusEs = "Fallando";
   } else {
-    const newestRaw =
-      (cfg.newestField === "newestQuoteAt" ? data.newestQuoteAt : data.newestScrapeAt) ?? null;
-    lastRefreshText = newestRaw
-      ? formatDistanceToNow(new Date(newestRaw), { addSuffix: true })
-      : t("never", "nunca");
-    const stale = data.listingsStale14d ?? 0;
-    headline = t(
-      `${label} — ${stale} listings stale > 14 days`,
-      `${label} — ${stale} anuncios sin actualizar > 14 días`,
-    );
+    // For cohort-mode pipelines (Airbnb/PVRPV/VRBO/VV pricing & VRBO scrape),
+    // grade against the actual fresh ratio rather than the binary warn/ok
+    // verdict — a tiny tail of stale rows shouldn't flip an otherwise
+    // healthy pipeline to yellow alongside the paused vendors.
     const total = data.listingsTotal ?? 0;
-    cohortLine = `${t("Cohort", "Cohorte")}: ${total.toLocaleString()} · ${
-      lang === "es" ? cfg.newestLabelEs : cfg.newestLabelEn
-    }: ${lastRefreshText}`;
+    const stale = data.listingsStale14d ?? 0;
+    const freshRatio = total > 0 ? (total - stale) / total : 1;
+    const meaningfullyDegraded =
+      cfg.mode === "cohort" ? data.alertLevel === "warn" && freshRatio < 0.9 : data.alertLevel === "warn";
+
+    if (meaningfullyDegraded) {
+      dotClass = "bg-amber-500";
+      statusEn = "Degraded";
+      statusEs = "Degradado";
+    } else {
+      dotClass = "bg-emerald-500";
+      statusEn = "Healthy";
+      statusEs = "Sano";
+    }
+  }
+
+  // ── Tooltip body — last refresh, cohort, alert reason, override note ────
+  const tooltipLines: string[] = [];
+  tooltipLines.push(`${t("Status", "Estado")}: ${t(statusEn, statusEs)}`);
+
+  if (cfg.overrideStatus) {
+    tooltipLines.push(
+      `${t("Reason", "Motivo")}: ${
+        lang === "es" ? cfg.overrideStatus.reasonEs : cfg.overrideStatus.reasonEn
+      }`,
+    );
+  }
+
+  if (data) {
+    if (cfg.mode === "uptime") {
+      const ts = data.lastSuccessAt ?? null;
+      tooltipLines.push(
+        `${t("Last successful check", "Última verificación exitosa")}: ${
+          ts ? formatDistanceToNow(new Date(ts), { addSuffix: true }) : t("never", "nunca")
+        }`,
+      );
+    } else {
+      const newestRaw =
+        (cfg.newestField === "newestQuoteAt" ? data.newestQuoteAt : data.newestScrapeAt) ?? null;
+      const newestText = newestRaw
+        ? formatDistanceToNow(new Date(newestRaw), { addSuffix: true })
+        : t("never", "nunca");
+      const total = data.listingsTotal ?? 0;
+      const stale = data.listingsStale14d ?? 0;
+      tooltipLines.push(
+        `${t("Cohort", "Cohorte")}: ${total.toLocaleString()} · ${t("stale > 14d", "sin actualizar > 14d")}: ${stale}`,
+      );
+      tooltipLines.push(
+        `${lang === "es" ? cfg.newestLabelEs : cfg.newestLabelEn}: ${newestText}`,
+      );
+    }
+    if (data.alertReason) {
+      tooltipLines.push(`${t("Underlying", "Subyacente")}: ${data.alertReason}`);
+    }
+  } else if (errored) {
+    tooltipLines.push(t("Freshness endpoint unreachable", "Endpoint de actualidad inaccesible"));
   }
 
   return (
-    <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3 text-sm", tone)}>
-      <Icon className="w-4 h-4 mt-0.5 shrink-0" />
-      <div className="flex-1 space-y-1">
-        <div className="font-medium">{headline}</div>
-        <div className="text-xs font-medium flex items-center gap-1.5 opacity-90">
-          <Clock className="w-3 h-3" />
-          {t("Last successful refresh", "Última actualización exitosa")}: {lastRefreshText}
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center gap-2 text-xs cursor-default">
+          <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", dotClass)} aria-hidden />
+          <span className="font-medium">{label}</span>
         </div>
-        {cohortLine && <div className="text-xs opacity-80">{cohortLine}</div>}
-        {data.alertReason && (
-          <div className="text-xs font-medium">{data.alertReason}</div>
-        )}
-      </div>
-    </div>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs whitespace-pre-line">
+        {tooltipLines.join("\n")}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
 /**
- * Stack of pass/fail banners — one per pricing/calendar pipeline
- * (Airbnb, VRBO, Vacation Vallarta). Same shape signal across all
- * three so the dashboard never has a blind spot.
+ * Compact pipeline-health tile. One line per pipeline (colored dot +
+ * label), hover for details. Replaces the previous stack of full-width
+ * banners — all six pipelines now fit inside a single tile that matches
+ * the visual density of the rest of the page.
  */
 function PipelinesHealth({
   t,
@@ -220,11 +310,234 @@ function PipelinesHealth({
   lang: "en" | "es";
 }) {
   return (
-    <div className="space-y-3 mb-6">
-      {PIPELINES.map((cfg) => (
-        <PipelineHealthCard key={cfg.endpoint} cfg={cfg} t={t} lang={lang} />
-      ))}
-    </div>
+    <TooltipProvider delayDuration={150}>
+      <div className="rounded-xl border border-border/40 bg-card/40 px-4 py-3 mb-6">
+        <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-3">
+          <Activity className="w-3.5 h-3.5" />
+          {t("Pipeline status", "Estado de pipelines")}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2">
+          {PIPELINES.map((cfg) => (
+            <PipelineStatusLight key={cfg.endpoint} cfg={cfg} t={t} lang={lang} />
+          ))}
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+}
+
+/**
+ * Data quality panel for `rental_prices_by_date`.
+ *
+ * Surfaces the wholesomeness profile of the underlying price table —
+ * total rows, suspicious-price counts (zero / <$20 / >$5,000), past-
+ * dated rows, and scrape-age — broken out by source platform plus an
+ * ALL row. Backed by `/api/ingest/rental-prices-quality`.
+ *
+ * Footer documents the daily age-based retention sweep so it's
+ * obvious WHY past-date and stale-row counts shouldn't grow without
+ * bound: the sweep deletes them on a 7-day / 90-day cadence,
+ * strictly age-based, never triggered by scrape failure.
+ */
+interface QualityPlatform {
+  sourcePlatform: string;
+  totalRows: number;
+  nullPrice: number;
+  zeroPrice: number;
+  lowPrice: number;
+  plausiblePrice: number;
+  highPrice: number;
+  suspiciousTotal: number;
+  pastDated: number;
+  scraped30dPlus: number;
+  scraped60dPlus: number;
+  scraped90dPlus: number;
+  oldestScrapeAt: string | null;
+  newestScrapeAt: string | null;
+  alertLevel: "ok" | "warn" | "fail";
+}
+
+function DataQualityPanel({
+  t,
+  lang,
+}: {
+  t: (en: string, es: string) => string;
+  lang: "en" | "es";
+}) {
+  const [data, setData] = useState<{ platforms: QualityPlatform[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    apiFetch(apiUrl("/api/ingest/rental-prices-quality"))
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((j) => {
+        if (alive) {
+          setData(j);
+          setLoading(false);
+        }
+      })
+      .catch((e: unknown) => {
+        if (alive) {
+          setErr(e instanceof Error ? e.message : String(e));
+          setLoading(false);
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const platforms = data?.platforms ?? [];
+  const all = platforms.find((p) => p.sourcePlatform === "ALL");
+  const perPlatform = platforms.filter((p) => p.sourcePlatform !== "ALL");
+
+  return (
+    <TooltipProvider delayDuration={150}>
+      <div className="rounded-xl border border-border/40 bg-card/40 px-4 py-3 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            <Database className="w-3.5 h-3.5" />
+            {t("Data quality — rental_prices_by_date", "Calidad de datos — rental_prices_by_date")}
+          </div>
+          {all && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className={cn(
+                    "text-[11px] font-medium px-2 py-0.5 rounded-full cursor-help",
+                    all.alertLevel === "ok" && "bg-emerald-500/10 text-emerald-400",
+                    all.alertLevel === "warn" && "bg-amber-500/10 text-amber-400",
+                    all.alertLevel === "fail" && "bg-red-500/10 text-red-400",
+                  )}
+                >
+                  {all.suspiciousTotal === 0
+                    ? t("0 suspicious prices", "0 precios sospechosos")
+                    : t(
+                        `${all.suspiciousTotal.toLocaleString()} suspicious prices`,
+                        `${all.suspiciousTotal.toLocaleString()} precios sospechosos`,
+                      )}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-sm text-xs">
+                {t(
+                  "Suspicious = zero-priced + under $20 + over $5,000. The healthy bucket ($20–$5,000) and null-price (Airbnb's calendar legitimately omits price for many days) are excluded.",
+                  "Sospechoso = precio cero + menos de $20 + más de $5,000. El rango sano ($20–$5,000) y los precios nulos (el calendario de Airbnb omite precio en muchos días, lo cual es legítimo) se excluyen.",
+                )}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+
+        {loading && (
+          <div className="text-xs text-muted-foreground">
+            {t("Loading data quality profile…", "Cargando perfil de calidad…")}
+          </div>
+        )}
+        {err && (
+          <div className="text-xs text-red-400">
+            {t(`Failed to load: ${err}`, `Error al cargar: ${err}`)}
+          </div>
+        )}
+
+        {!loading && !err && perPlatform.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border/30">
+                  <th className="text-left py-1 pr-3 font-medium">{t("Platform", "Plataforma")}</th>
+                  <th className="text-right py-1 px-2 font-medium">{t("Total rows", "Filas totales")}</th>
+                  <th className="text-right py-1 px-2 font-medium">{t("Plausible", "Plausibles")}</th>
+                  <th className="text-right py-1 px-2 font-medium">{t("Null price", "Precio nulo")}</th>
+                  <th className="text-right py-1 px-2 font-medium text-amber-400">{t("Suspicious", "Sospechosos")}</th>
+                  <th className="text-right py-1 px-2 font-medium">{t("Past-dated", "Fecha pasada")}</th>
+                  <th className="text-right py-1 px-2 font-medium">{t(">30d / >60d / >90d", ">30d / >60d / >90d")}</th>
+                  <th className="text-left py-1 pl-2 font-medium">{t("Oldest scrape", "Extracción más antigua")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {perPlatform.map((p) => (
+                  <tr key={p.sourcePlatform} className="border-b border-border/10 last:border-0">
+                    <td className="py-1.5 pr-3 font-mono">{p.sourcePlatform}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums">{p.totalRows.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-emerald-400">{p.plausiblePrice.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{p.nullPrice.toLocaleString()}</td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums font-medium",
+                      p.suspiciousTotal === 0 ? "text-muted-foreground" : "text-red-400",
+                    )}>
+                      {p.suspiciousTotal === 0
+                        ? "0"
+                        : `${p.zeroPrice}/${p.lowPrice}/${p.highPrice}`}
+                    </td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums",
+                      p.pastDated === 0 ? "text-muted-foreground" : "text-amber-400",
+                    )}>
+                      {p.pastDated.toLocaleString()}
+                    </td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums",
+                      p.scraped90dPlus === 0 ? "text-muted-foreground" : "text-red-400",
+                    )}>
+                      {p.scraped30dPlus.toLocaleString()} / {p.scraped60dPlus.toLocaleString()} / {p.scraped90dPlus.toLocaleString()}
+                    </td>
+                    <td className="py-1.5 pl-2 text-muted-foreground">
+                      {p.oldestScrapeAt
+                        ? formatDistanceToNow(new Date(p.oldestScrapeAt), { addSuffix: true })
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+                {all && (
+                  <tr className="border-t-2 border-border/30 font-medium">
+                    <td className="py-1.5 pr-3 font-mono">{all.sourcePlatform}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums">{all.totalRows.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-emerald-400">{all.plausiblePrice.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{all.nullPrice.toLocaleString()}</td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums",
+                      all.suspiciousTotal === 0 ? "text-muted-foreground" : "text-red-400",
+                    )}>
+                      {all.suspiciousTotal === 0
+                        ? "0"
+                        : `${all.zeroPrice}/${all.lowPrice}/${all.highPrice}`}
+                    </td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums",
+                      all.pastDated === 0 ? "text-muted-foreground" : "text-amber-400",
+                    )}>
+                      {all.pastDated.toLocaleString()}
+                    </td>
+                    <td className={cn(
+                      "py-1.5 px-2 text-right tabular-nums",
+                      all.scraped90dPlus === 0 ? "text-muted-foreground" : "text-red-400",
+                    )}>
+                      {all.scraped30dPlus.toLocaleString()} / {all.scraped60dPlus.toLocaleString()} / {all.scraped90dPlus.toLocaleString()}
+                    </td>
+                    <td className="py-1.5 pl-2 text-muted-foreground">
+                      {all.oldestScrapeAt
+                        ? formatDistanceToNow(new Date(all.oldestScrapeAt), { addSuffix: true })
+                        : "—"}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="mt-3 pt-2 border-t border-border/20 text-[10px] text-muted-foreground leading-relaxed">
+          <span className="font-semibold uppercase tracking-wider">{t("Retention sweep", "Limpieza de retención")}:</span>{" "}
+          {t(
+            "daily 08:00 UTC — DELETE rows where date < CURRENT_DATE − 7 days OR scraped_at < NOW() − 90 days. Strictly age-based: a failed scrape never triggers a delete; missing replacement data never triggers a delete. Per-rule per-platform delete counts are logged so a quietly-dying source surfaces as a non-zero stale-row count instead of a mysterious row-count drop.",
+            "diaria 08:00 UTC — DELETE filas donde date < CURRENT_DATE − 7 días O scraped_at < NOW() − 90 días. Estrictamente por edad: un scrape fallido nunca dispara un delete; la ausencia de datos de reemplazo nunca dispara un delete. Las cuentas de borrado por regla y por plataforma se registran para que una fuente que muere silenciosamente aparezca como un contador de filas obsoletas distinto de cero, en vez de una caída misteriosa del total.",
+          )}
+        </div>
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -333,6 +646,8 @@ export default function Sources() {
       {/* ── Pipeline health banners (Airbnb / VRBO / VV) ───────────── */}
       <PipelinesHealth t={t} lang={lang as "en" | "es"} />
 
+      <DataQualityPanel t={t} lang={lang as "en" | "es"} />
+
       {/* ── Info banner ─────────────────────────────────────────────── */}
       <div className="flex items-start gap-3 bg-primary/5 border border-primary/15 rounded-xl px-4 py-3 mb-8 text-sm text-muted-foreground">
         <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
@@ -398,43 +713,96 @@ export default function Sources() {
 
                 <CardContent className="flex-1">
                   <div className="space-y-0 text-sm">
-                    {/* Last synced */}
-                    <div className="flex justify-between items-center py-2.5 border-b border-border/50">
-                      <span className="text-muted-foreground flex items-center gap-1.5">
-                        <Clock className="w-3 h-3" />
-                        {t("Last Synced", "Última Sincronización")}
-                      </span>
-                      <span className={cn(
-                        "font-medium text-xs flex items-center gap-1.5",
-                        freshness === "fresh" && "text-primary",
-                        freshness === "never" && "text-muted-foreground italic"
-                      )}>
-                        {source.lastSyncedAt
-                          ? formatDistanceToNow(new Date(source.lastSyncedAt), { addSuffix: true })
-                          : t("Never", "Nunca")}
-                      </span>
-                    </div>
+                    {(() => {
+                      // Two card layouts depending on whether the source is
+                      // record-counted (lives in our DB) or a reference link
+                      // (Inmuebles24 / NASA / OSM / Transparencia PV — these
+                      // have recordCount=null in the API response).
+                      const isReference = source.recordCount == null;
+                      const syncedText = source.lastSyncedAt
+                        ? format(new Date(source.lastSyncedAt), "MMM d, yyyy")
+                        : t("Never", "Nunca");
+                      const syncedAgo = source.lastSyncedAt
+                        ? formatDistanceToNow(new Date(source.lastSyncedAt), { addSuffix: true })
+                        : null;
 
-                    {/* Records */}
-                    <div className="flex justify-between items-center py-2.5 border-b border-border/50">
-                      <span className="text-muted-foreground flex items-center gap-1.5">
-                        <Database className="w-3 h-3" />
-                        {t("Records", "Registros")}
-                      </span>
-                      <span className="font-medium tabular-nums">
-                        {(source.recordCount ?? 0).toLocaleString()}
-                      </span>
-                    </div>
+                      if (isReference) {
+                        // Reference / external-link source: one combined
+                        // "Last verified — Apr 19, 2026" line, plus frequency.
+                        // No Records row (there's nothing to count).
+                        return (
+                          <>
+                            <div className="flex justify-between items-center py-2.5 border-b border-border/50">
+                              <span className="text-muted-foreground flex items-center gap-1.5">
+                                <Clock className="w-3 h-3" />
+                                {t("Last verified", "Última verificación")}
+                              </span>
+                              <span className={cn(
+                                "font-medium text-xs",
+                                freshness === "fresh" && "text-primary",
+                                freshness === "never" && "text-muted-foreground italic",
+                              )}>
+                                {syncedText}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center py-2.5 border-b border-border/50">
+                              <span className="text-muted-foreground flex items-center gap-1.5">
+                                <Database className="w-3 h-3" />
+                                {t("Type", "Tipo")}
+                              </span>
+                              <span className="font-medium text-xs italic text-muted-foreground">
+                                {t("External reference", "Referencia externa")}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center py-2.5">
+                              <span className="text-muted-foreground">
+                                {t("Frequency", "Frecuencia")}
+                              </span>
+                              <span className="font-medium capitalize">
+                                {source.frequency || "Manual"}
+                              </span>
+                            </div>
+                          </>
+                        );
+                      }
 
-                    {/* Frequency */}
-                    <div className="flex justify-between items-center py-2.5">
-                      <span className="text-muted-foreground">
-                        {t("Frequency", "Frecuencia")}
-                      </span>
-                      <span className="font-medium capitalize">
-                        {source.frequency || "Manual"}
-                      </span>
-                    </div>
+                      // Counted source: original 3-row layout (Last Synced
+                      // relative + Records count + Frequency).
+                      return (
+                        <>
+                          <div className="flex justify-between items-center py-2.5 border-b border-border/50">
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <Clock className="w-3 h-3" />
+                              {t("Last Synced", "Última Sincronización")}
+                            </span>
+                            <span className={cn(
+                              "font-medium text-xs flex items-center gap-1.5",
+                              freshness === "fresh" && "text-primary",
+                              freshness === "never" && "text-muted-foreground italic",
+                            )}>
+                              {syncedAgo ?? t("Never", "Nunca")}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center py-2.5 border-b border-border/50">
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <Database className="w-3 h-3" />
+                              {t("Records", "Registros")}
+                            </span>
+                            <span className="font-medium tabular-nums">
+                              {(source.recordCount ?? 0).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center py-2.5">
+                            <span className="text-muted-foreground">
+                              {t("Frequency", "Frecuencia")}
+                            </span>
+                            <span className="font-medium capitalize">
+                              {source.frequency || "Manual"}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </CardContent>
 

@@ -629,7 +629,7 @@ const DEFAULT_DETAIL_BUCKETS = [
 ];
 
 const EnrichDetailSchema = z.object({
-  maxListings: z.number().int().positive().max(500).optional().default(5),
+  maxListings: z.number().int().positive().max(10_000).optional().default(5),
   buckets: z.array(z.string().min(1)).optional(),
   dryRun: z.boolean().optional().default(false),
   // "new"   → listings that have NEVER been enriched (LEFT JOIN ... IS NULL).
@@ -1259,6 +1259,363 @@ router.get("/ingest/vacation-vallarta-pricing-freshness", async (req, res) => {
   }
 });
 
+// ── GET /ingest/airbnb-calendar-freshness ─────────────────────────────────
+//
+// Pipeline-health probe for the daily Airbnb CALENDAR scrape (separate
+// from per-night quote collection — this one is operational and writes
+// to rental_prices_by_date via the Mac mini scraper). Wired to the
+// "Airbnb calendar" tile on /sources.
+//
+// Cohort: active Airbnb listings.
+// Coverage: how many of those listings have any rental_prices_by_date row.
+// Freshness: MAX(scraped_at) across the cohort's rows.
+//
+// Verdict logic (data freshness, not coverage — coverage is reported as
+// detail only because Airbnb's anti-bot rate-limiting caps the daily
+// reachable cohort somewhere around 30-40%, which is intentional, not
+// a bug. A pipeline writing fresh data is healthy even with partial
+// coverage; the tooltip carries the coverage fraction so it's visible):
+//   - fail  : never written / newest > 7 days old
+//   - warn  : newest > 36h (cron skipped a day)
+//   - ok    : newest ≤ 36h
+router.get("/ingest/airbnb-calendar-freshness", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      WITH cohort AS (
+        SELECT rl.id
+        FROM rental_listings rl
+        WHERE rl.source_platform = 'airbnb'
+          AND rl.is_active = true
+      ),
+      last_row AS (
+        SELECT listing_id, MAX(scraped_at) AS last_scraped
+        FROM rental_prices_by_date
+        GROUP BY listing_id
+      )
+      SELECT
+        (SELECT COUNT(*) FROM cohort)::int                                           AS listings_total,
+        (SELECT COUNT(*) FROM cohort c JOIN last_row r ON r.listing_id = c.id)::int  AS listings_with_rows,
+        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_row r ON r.listing_id = c.id
+         WHERE r.last_scraped IS NULL OR r.last_scraped < NOW() - INTERVAL '14 days')::int
+                                                                                     AS listings_stale_14d,
+        (SELECT COUNT(*) FROM rental_prices_by_date rpbd
+         JOIN cohort c ON c.id = rpbd.listing_id)::int                               AS price_rows_total,
+        (SELECT MAX(r.last_scraped) FROM last_row r
+         WHERE r.listing_id IN (SELECT id FROM cohort))                              AS newest_scrape_at
+    `);
+    const row = (result as unknown as {
+      rows: Array<{
+        listings_total: number;
+        listings_with_rows: number;
+        listings_stale_14d: number;
+        price_rows_total: number;
+        newest_scrape_at: string | null;
+      }>;
+    }).rows[0];
+
+    const newestAt = row.newest_scrape_at ? new Date(row.newest_scrape_at) : null;
+    const ageHours = newestAt
+      ? Math.floor((Date.now() - newestAt.getTime()) / 3_600_000)
+      : null;
+    const coveragePct =
+      row.listings_total > 0
+        ? Math.round((row.listings_with_rows / row.listings_total) * 100)
+        : 0;
+
+    let alertLevel: "ok" | "warn" | "fail" = "ok";
+    let alertReason = "";
+    if (row.listings_total === 0) {
+      alertLevel = "warn";
+      alertReason = "No active Airbnb listings in cohort";
+    } else if (ageHours === null) {
+      alertLevel = "fail";
+      alertReason = "No Airbnb calendar rows have ever been written";
+    } else if (ageHours > 168) {
+      alertLevel = "fail";
+      alertReason = `Newest Airbnb calendar scrape is ${Math.round(ageHours / 24)} days old`;
+    } else if (ageHours > 36) {
+      alertLevel = "warn";
+      alertReason = `Newest Airbnb calendar scrape is ${ageHours}h old (cron likely skipped)`;
+    } else {
+      alertReason = `${row.price_rows_total.toLocaleString()} rows · ${row.listings_with_rows}/${row.listings_total} listings (${coveragePct}% coverage)`;
+    }
+
+    res.json({
+      source: "airbnb_calendar",
+      listingsTotal: row.listings_total,
+      listingsCovered: row.listings_with_rows,
+      listingsStale14d: row.listings_stale_14d,
+      priceRowsTotal: row.price_rows_total,
+      coveragePct,
+      newestScrapeAt: newestAt?.toISOString() ?? null,
+      newestScrapeAgeHours: ageHours,
+      alertLevel,
+      alertReason,
+    });
+  } catch (err) {
+    req.log.error({ err }, "ingest/airbnb-calendar-freshness failed");
+    res.status(500).json({ error: "Failed to compute Airbnb calendar freshness" });
+  }
+});
+
+// ── GET /ingest/rental-prices-quality ─────────────────────────────────────
+//
+// Wholesomeness probe for `rental_prices_by_date`. Surfaces what `psql`
+// would tell you about the table's contents — broken out by source
+// platform, plus an ALL row — so trash data is visible on the dashboard
+// instead of buried in the DB.
+//
+// Per platform we report:
+//   - total rows
+//   - null-price rows (Airbnb's calendar feed legitimately omits price
+//     for many days; PVRPV always has price; so this isn't necessarily
+//     a bug — but a *spike* would be)
+//   - zero-price rows                  (always a bug — flagged red)
+//   - suspiciously-low rows ($0–$20)   (almost always a bug)
+//   - plausible rows ($20–$5,000)      (the healthy bucket)
+//   - suspiciously-high rows (>$5,000) (almost always a bug)
+//   - past-dated rows (date < CURRENT_DATE)  — dead weight, no forward
+//     pricing value; the retention sweep below removes these on a 7-day
+//     buffer.
+//   - oldest scraped_at, plus scrape-age buckets at 30/60/90 days, so
+//     we can see if a platform is quietly aging out.
+//
+// Read-only and unauthenticated — same posture as the *-freshness probes,
+// since the page that consumes it is public.
+router.get("/ingest/rental-prices-quality", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      WITH joined AS (
+        SELECT
+          COALESCE(rl.source_platform, 'unknown') AS source_platform,
+          rpbd.nightly_price_usd,
+          rpbd.date,
+          rpbd.scraped_at
+        FROM rental_prices_by_date rpbd
+        LEFT JOIN rental_listings rl ON rl.id = rpbd.listing_id
+      ),
+      grouped AS (
+        SELECT
+          source_platform,
+          COUNT(*)::int                                                              AS total_rows,
+          COUNT(*) FILTER (WHERE nightly_price_usd IS NULL)::int                    AS null_price,
+          COUNT(*) FILTER (WHERE nightly_price_usd = 0)::int                        AS zero_price,
+          COUNT(*) FILTER (WHERE nightly_price_usd > 0 AND nightly_price_usd < 20)::int
+                                                                                     AS low_price,
+          COUNT(*) FILTER (WHERE nightly_price_usd >= 20 AND nightly_price_usd <= 5000)::int
+                                                                                     AS plausible_price,
+          COUNT(*) FILTER (WHERE nightly_price_usd > 5000)::int                     AS high_price,
+          COUNT(*) FILTER (WHERE date < CURRENT_DATE)::int                          AS past_dated,
+          COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '30 days')::int      AS scraped_30d_plus,
+          COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '60 days')::int      AS scraped_60d_plus,
+          COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '90 days')::int      AS scraped_90d_plus,
+          MIN(scraped_at)                                                            AS oldest_scrape_at,
+          MAX(scraped_at)                                                            AS newest_scrape_at
+        FROM joined
+        GROUP BY source_platform
+      )
+      SELECT * FROM grouped
+      UNION ALL
+      SELECT
+        'ALL',
+        SUM(total_rows)::int,
+        SUM(null_price)::int,
+        SUM(zero_price)::int,
+        SUM(low_price)::int,
+        SUM(plausible_price)::int,
+        SUM(high_price)::int,
+        SUM(past_dated)::int,
+        SUM(scraped_30d_plus)::int,
+        SUM(scraped_60d_plus)::int,
+        SUM(scraped_90d_plus)::int,
+        MIN(oldest_scrape_at),
+        MAX(newest_scrape_at)
+      FROM grouped
+      ORDER BY source_platform
+    `);
+
+    const rows = (result as unknown as {
+      rows: Array<{
+        source_platform: string;
+        total_rows: number;
+        null_price: number;
+        zero_price: number;
+        low_price: number;
+        plausible_price: number;
+        high_price: number;
+        past_dated: number;
+        scraped_30d_plus: number;
+        scraped_60d_plus: number;
+        scraped_90d_plus: number;
+        oldest_scrape_at: string | null;
+        newest_scrape_at: string | null;
+      }>;
+    }).rows;
+
+    const platforms = rows.map((r) => {
+      const suspicious = r.zero_price + r.low_price + r.high_price;
+      let alertLevel: "ok" | "warn" | "fail" = "ok";
+      if (suspicious > 0) alertLevel = "fail";
+      else if (r.scraped_90d_plus > 0) alertLevel = "warn";
+      return {
+        sourcePlatform: r.source_platform,
+        totalRows: r.total_rows,
+        nullPrice: r.null_price,
+        zeroPrice: r.zero_price,
+        lowPrice: r.low_price,
+        plausiblePrice: r.plausible_price,
+        highPrice: r.high_price,
+        suspiciousTotal: suspicious,
+        pastDated: r.past_dated,
+        scraped30dPlus: r.scraped_30d_plus,
+        scraped60dPlus: r.scraped_60d_plus,
+        scraped90dPlus: r.scraped_90d_plus,
+        oldestScrapeAt: r.oldest_scrape_at,
+        newestScrapeAt: r.newest_scrape_at,
+        alertLevel,
+      };
+    });
+
+    res.json({ table: "rental_prices_by_date", platforms });
+  } catch (err) {
+    req.log.error({ err }, "ingest/rental-prices-quality failed");
+    res.status(500).json({ error: "Failed to compute rental-prices quality" });
+  }
+});
+
+// ── POST /ingest/rental-prices-retention-sweep ────────────────────────────
+//
+// Daily age-based purge of `rental_prices_by_date`. Two independent rules:
+//
+//   Rule A — past-date:  DELETE rows WHERE date < CURRENT_DATE - 7 days
+//   Rule B — stale-row:  DELETE rows WHERE scraped_at < NOW() - 90 days
+//
+// Both rules look ONLY at row age. Neither triggers on scrape failure,
+// neither triggers on "today's run produced no replacement". A failed
+// Monday scrape leaves last week's data intact — the next age check
+// won't sweep those rows for another 7 / 90 days.
+//
+// Per-platform delete counts are returned (and logged) for both rules so
+// later we can spot a quiet die-off ("PVRPV stale-row deletes jumped
+// from 0 to 4,000 overnight = scraper has been silently failing for 90
+// days") instead of just watching aggregate row counts shrink mysteriously.
+//
+// Auth: gated by INTERNAL_TRIGGER_TOKEN like the refresh endpoints.
+// Body: { dryRun?: boolean }  — when true, returns the counts that
+//       WOULD be deleted without running the DELETE.
+const RetentionSweepSchema = z.object({
+  dryRun: z.boolean().optional().default(false),
+});
+
+router.post("/ingest/rental-prices-retention-sweep", async (req, res) => {
+  const expected = process.env["INTERNAL_TRIGGER_TOKEN"];
+  if (!expected || expected.length === 0) {
+    return res.status(503).json({
+      error: "INTERNAL_TRIGGER_TOKEN not configured on server",
+    });
+  }
+  const provided = req.header("x-internal-token");
+  if (provided !== expected) {
+    return res.status(401).json({ error: "Invalid internal token" });
+  }
+
+  const parsed = RetentionSweepSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.format() });
+  }
+  const { dryRun } = parsed.data;
+
+  try {
+    // ── COUNT phase ─────────────────────────────────────────────────────
+    // Counts are taken before any DELETE so dryRun and live runs return
+    // identical numbers when the table is otherwise quiescent.
+    const pastDateCounts = await db.execute(sql`
+      SELECT COALESCE(rl.source_platform, 'unknown') AS source_platform,
+             COUNT(*)::int                            AS rows
+      FROM rental_prices_by_date rpbd
+      LEFT JOIN rental_listings rl ON rl.id = rpbd.listing_id
+      WHERE rpbd.date < CURRENT_DATE - INTERVAL '7 days'
+      GROUP BY source_platform
+      ORDER BY source_platform
+    `);
+    const staleScrapeCounts = await db.execute(sql`
+      SELECT COALESCE(rl.source_platform, 'unknown') AS source_platform,
+             COUNT(*)::int                            AS rows
+      FROM rental_prices_by_date rpbd
+      LEFT JOIN rental_listings rl ON rl.id = rpbd.listing_id
+      WHERE rpbd.scraped_at < NOW() - INTERVAL '90 days'
+      GROUP BY source_platform
+      ORDER BY source_platform
+    `);
+
+    type CountRow = { source_platform: string; rows: number };
+    const pastDateRows = (pastDateCounts as unknown as { rows: CountRow[] }).rows;
+    const staleScrapeRows = (staleScrapeCounts as unknown as { rows: CountRow[] }).rows;
+
+    let pastDateDeleted = 0;
+    let staleScrapeDeleted = 0;
+
+    if (!dryRun) {
+      // Independent DELETEs — order matters only for accounting (a row
+      // matching both rules is counted under past-date and not double-
+      // deleted, since after the first DELETE the row no longer exists
+      // for the second to touch).
+      const pdResult = await db.execute(sql`
+        DELETE FROM rental_prices_by_date
+        WHERE date < CURRENT_DATE - INTERVAL '7 days'
+      `);
+      pastDateDeleted =
+        (pdResult as unknown as { rowCount?: number }).rowCount ?? 0;
+
+      const ssResult = await db.execute(sql`
+        DELETE FROM rental_prices_by_date
+        WHERE scraped_at < NOW() - INTERVAL '90 days'
+      `);
+      staleScrapeDeleted =
+        (ssResult as unknown as { rowCount?: number }).rowCount ?? 0;
+    } else {
+      pastDateDeleted = pastDateRows.reduce((s, r) => s + r.rows, 0);
+      staleScrapeDeleted = staleScrapeRows.reduce((s, r) => s + r.rows, 0);
+    }
+
+    const summary = {
+      table: "rental_prices_by_date",
+      dryRun,
+      ranAt: new Date().toISOString(),
+      pastDateRule: {
+        threshold: "date < CURRENT_DATE - 7 days",
+        deleted: pastDateDeleted,
+        byPlatform: pastDateRows.map((r) => ({
+          sourcePlatform: r.source_platform,
+          rows: r.rows,
+        })),
+      },
+      staleScrapeRule: {
+        threshold: "scraped_at < NOW() - 90 days",
+        deleted: staleScrapeDeleted,
+        byPlatform: staleScrapeRows.map((r) => ({
+          sourcePlatform: r.source_platform,
+          rows: r.rows,
+        })),
+      },
+    };
+
+    // Loud structured log so spikes are spottable in Railway logs even
+    // without checking the dashboard. Especially useful for the per-
+    // platform stale-row breakdown (a sudden non-zero number on a
+    // platform that's been quiet = scraper has been dark for ~90 days).
+    req.log.info(
+      { summary },
+      `rental-prices retention sweep: pastDate=${pastDateDeleted} stale=${staleScrapeDeleted}${dryRun ? " (dry-run)" : ""}`,
+    );
+
+    res.json(summary);
+  } catch (err) {
+    req.log.error({ err }, "ingest/rental-prices-retention-sweep failed");
+    res.status(500).json({ error: "Retention sweep failed" });
+  }
+});
+
 // ── POST /ingest/airbnb-pricing-refresh ───────────────────────────────────
 //
 // Daily Airbnb per-night pricing refresh. Drives the "path 2" pipeline
@@ -1270,7 +1627,7 @@ router.get("/ingest/vacation-vallarta-pricing-freshness", async (req, res) => {
 //
 // Auth: same X-Internal-Token gate as enrich-airbnb-detail.
 const PricingRefreshSchema = z.object({
-  maxListings: z.number().int().positive().max(500).optional().default(50),
+  maxListings: z.number().int().positive().max(10_000).optional().default(50),
   dryRun: z.boolean().optional().default(false),
 });
 
@@ -1316,7 +1673,7 @@ router.post("/ingest/airbnb-pricing-refresh", async (req, res) => {
 // rate); taxes are synthesized at the standard Mexico/Jalisco lodging rate
 // (IVA 16% + ISH 3%). Auth: same X-Internal-Token gate.
 const PvrpvPricingRefreshSchema = z.object({
-  maxListings: z.number().int().positive().max(500).optional().default(50),
+  maxListings: z.number().int().positive().max(10_000).optional().default(50),
   dryRun: z.boolean().optional().default(false),
 });
 
@@ -1360,7 +1717,7 @@ router.post("/ingest/pvrpv-pricing-refresh", async (req, res) => {
 // Listings without a published nightly_price_usd are skipped. Same X-
 // Internal-Token gate as the other pricing endpoints.
 const VrboPricingRefreshSchema = z.object({
-  maxListings: z.number().int().positive().max(500).optional().default(50),
+  maxListings: z.number().int().positive().max(10_000).optional().default(50),
   dryRun: z.boolean().optional().default(false),
 });
 

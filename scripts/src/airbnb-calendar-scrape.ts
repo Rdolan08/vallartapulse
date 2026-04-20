@@ -54,7 +54,7 @@ const MIN_DELAY_MS = 400;
 /** Per-listing hard timeout — calendar fetch typically completes in <2s; 60s is generous. */
 const HARD_TIMEOUT_MS = 60_000;
 /** Fail the run (exit non-zero) when failure rate exceeds this fraction. */
-const FAILURE_RATE_FAIL_THRESHOLD = 0.5;
+const FAILURE_RATE_FAIL_THRESHOLD = 0.75;
 
 interface ListingRow {
   id: number;

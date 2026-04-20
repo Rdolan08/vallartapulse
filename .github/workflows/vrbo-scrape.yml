@@ -1,4 +1,25 @@
-name: VRBO Scrape (daily)
+name: VRBO Scrape (PAUSED)
+
+# ─────────────────────────────────────────────────────────────────────────
+# PAUSED 2026-04-19 — VRBO listing discovery is on hold.
+#
+# The Decodo residential proxy has not been able to defeat VRBO's "Bot or
+# Not?" challenge: every daily run discovered 0 listings, so the cohort
+# of rental_listings rows with source_platform='vrbo' has stayed empty.
+# vrbo-pricing-refresh.yml is also paused as a downstream consequence.
+#
+# What is disabled here:
+#   - The daily cron schedule (commented out below).
+#   - The Slack push notification on `fail`.
+#   - The GitHub-issue dedupe creation/comment on `fail`.
+# What is intentionally NOT disabled:
+#   - workflow_dispatch — kept available for manual smoke-testing once a
+#     working anti-bot strategy lands. Triggering it today will exit 1
+#     because every fetch hits the 429 challenge; that is expected and
+#     only happens on explicit manual dispatch.
+#   - The script itself — stays in place and will succeed the moment the
+#     proxy strategy works.
+# ─────────────────────────────────────────────────────────────────────────
 
 # Runs scripts/src/vrbo-scrape.ts directly against the prod DB. Each run:
 #   1. Discovers VRBO listings from the Puerto Vallarta search-results
@@ -32,8 +53,10 @@ name: VRBO Scrape (daily)
 # "re-alert only every 24h or when the situation changes" requirement.
 
 on:
-  schedule:
-    - cron: "15 7 * * *"
+  # PAUSED — daily cron disabled until VRBO discovery is unblocked.
+  # Re-enable by uncommenting the schedule block below.
+  # schedule:
+  #   - cron: "15 7 * * *"
   workflow_dispatch:
 
 permissions:
@@ -156,7 +179,10 @@ jobs:
       # Only runs on a `fail` verdict AND only if SLACK_WEBHOOK_URL is set,
       # so forks / dev repos without the secret stay quiet.
       - name: Notify Slack on dark scrape
-        if: steps.scrape.outputs.level == 'fail' && env.SLACK_WEBHOOK_URL != ''
+        # PAUSED — VRBO scrape is intentionally dark. Re-enable by changing
+        # `if: false` back to:
+        #   if: steps.scrape.outputs.level == 'fail' && env.SLACK_WEBHOOK_URL != ''
+        if: false
         env:
           REASON: ${{ steps.scrape.outputs.reason }}
           ATTEMPTED: ${{ steps.scrape.outputs.attempted }}
@@ -203,7 +229,10 @@ jobs:
       # failing runs comment on it (one comment per day), operator closes
       # it once data is flowing again.
       - name: Open / update GitHub issue on dark scrape
-        if: steps.scrape.outputs.level == 'fail'
+        # PAUSED — VRBO scrape is intentionally dark. Re-enable by changing
+        # `if: false` back to:
+        #   if: steps.scrape.outputs.level == 'fail'
+        if: false
         uses: actions/github-script@v7
         env:
           REASON: ${{ steps.scrape.outputs.reason }}

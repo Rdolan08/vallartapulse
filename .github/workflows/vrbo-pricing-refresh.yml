@@ -1,4 +1,21 @@
-name: VRBO Pricing Refresh (daily)
+name: VRBO Pricing Refresh (PAUSED)
+
+# ─────────────────────────────────────────────────────────────────────────
+# PAUSED 2026-04-19 — VRBO per-night pricing is on hold.
+#
+# Depends on vrbo-scrape.yml producing rental_listings rows with
+# source_platform='vrbo' (cohort is currently 0; that workflow is also
+# PAUSED). Until VRBO discovery is unblocked, this refresh has no
+# listings to quote and just burns CI minutes daily.
+#
+# What is disabled here:
+#   - The daily cron schedule (commented out below).
+# What is intentionally NOT disabled:
+#   - workflow_dispatch — kept available for manual smoke-testing once
+#     vrbo-scrape is unpaused and the cohort is non-zero.
+#   - The endpoint itself — it stays operational; a manual dispatch with
+#     0 listings will simply succeed with `summary.attempted=0`.
+# ─────────────────────────────────────────────────────────────────────────
 
 # Triggers the daily VRBO fee-quote pipeline. VRBO doesn't expose a public
 # calendar feed we can scrape headlessly, so the runner synthesizes one
@@ -17,14 +34,17 @@ name: VRBO Pricing Refresh (daily)
 #   INTERNAL_TRIGGER_TOKEN   same value as the Railway env var
 
 on:
-  schedule:
-    - cron: "30 7 * * *"
+  # PAUSED — daily cron disabled until VRBO discovery (vrbo-scrape.yml)
+  # is unpaused and the cohort is non-zero. Re-enable by uncommenting the
+  # schedule block below.
+  # schedule:
+  #   - cron: "30 7 * * *"
   workflow_dispatch:
     inputs:
       max_listings:
-        description: "Cap per call (1-500). Default 50."
+        description: "Cap per call. Default 10000 = process the entire cohort. Set lower only for manual smoke tests."
         required: false
-        default: "50"
+        default: "10000"
 
 permissions:
   contents: read
@@ -50,7 +70,7 @@ jobs:
         env:
           RAILWAY_API_URL: ${{ secrets.RAILWAY_API_URL }}
           INTERNAL_TRIGGER_TOKEN: ${{ secrets.INTERNAL_TRIGGER_TOKEN }}
-          MAX_LISTINGS: ${{ inputs.max_listings || '50' }}
+          MAX_LISTINGS: ${{ inputs.max_listings || '10000' }}
         run: |
           set -euo pipefail
           echo "POST $RAILWAY_API_URL/api/ingest/vrbo-pricing-refresh max=$MAX_LISTINGS"

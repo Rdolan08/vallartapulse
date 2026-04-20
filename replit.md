@@ -149,9 +149,26 @@ What's currently in the paused state — **do not "fix" any of these without thi
 - `/api/ingest/airbnb-pricing-freshness` returns the real DB freshness numbers — verdict will be `fail` with reason `"No quotes have ever been collected"`. That is the truth. The dashboard card is supposed to be red.
 - `.github/workflows/airbnb-pricing-refresh.yml` daily cron is **commented out** (workflow_dispatch still works for manual smoke tests). Slack notify and GitHub-issue dedupe steps are gated `if: false`. Restoring is a one-line revert in each spot — see the `# PAUSED` comment blocks.
 - The Airbnb cohort (`source_platform='airbnb' AND is_active=true AND external_id ~ '^[0-9]+$'`) is currently 504 listings, all with zero quotes. Comp-tool comparisons against Airbnb listings will show "—" for fee columns until quote collection lands.
-- PVRPV pricing, VRBO pricing, VRBO scrape, calendar scrape, enrich refresh — all UNAFFECTED. Only the Airbnb per-night quote pipeline is paused.
+- PVRPV pricing, PVRPV calendar scrape, Airbnb calendar scrape, enrich refresh — all UNAFFECTED.
 
 To unpause once the adapters are real: revert the `if: false` gates and the commented-out cron in `airbnb-pricing-refresh.yml`, redeploy Railway, manually dispatch the workflow once with `max_listings=10` to confirm, then let the daily cron resume.
+
+## VRBO pipelines — PAUSED
+
+As of 2026-04-19, **both VRBO workflows are on hold**: `vrbo-scrape.yml` (listing discovery) and `vrbo-pricing-refresh.yml` (per-night fee quotes). Reason: the Decodo residential proxy has not been able to defeat VRBO's PerimeterX "Bot or Not?" challenge, so daily discovery runs returned 0 listings every time. Without listings to quote, the pricing pipeline has nothing to do either. See `vrbo-search-adapter.ts` header for tried approaches.
+
+What's currently in the paused state:
+
+- `.github/workflows/vrbo-scrape.yml` — daily cron commented out, Slack notify + GitHub-issue dedupe gated `if: false`. `workflow_dispatch` still works for manual smoke-tests once a working anti-bot strategy lands.
+- `.github/workflows/vrbo-pricing-refresh.yml` — daily cron commented out. No alert steps to gate (this workflow only ever exited 1 on failure; no Slack/issue notify wired). Endpoint stays operational and returns `summary.attempted=0` if dispatched manually with the empty cohort.
+- `/api/ingest/vrbo-pricing-freshness` and `/api/ingest/vrbo-scrape-freshness` continue to return real DB freshness numbers — both report `cohort=0` with `alertLevel=warn`. That is the truth.
+- The Sources page renders both as yellow "Paused" pills in the consolidated pipeline-status tile (see `artifacts/pv-datastore/src/pages/sources.tsx` `PIPELINES` config — each VRBO entry has an `overrideStatus` block).
+
+To unpause once VRBO discovery is unblocked: revert the `if: false` gates and uncommented the cron blocks in both workflow files, then remove the `overrideStatus` blocks from the VRBO entries in `PIPELINES` in `sources.tsx`.
+
+## Vacation Vallarta calendar pricing — PLANNED (not paused, not built)
+
+`vacation-vallarta-calendar-adapter.ts` exists in `artifacts/api-server/src/lib/ingest/` but no GitHub workflow is wired to it. 24 VV listings are seeded in `rental_listings` but `rental_prices_by_date` has zero VV rows. The freshness endpoint reports `alertLevel=fail` ("No Vacation Vallarta calendar pricing has ever been collected") which is also the truth. The Sources page renders this as a yellow "Planned" pill (override in `PIPELINES`). To go live: add a `vacation-vallarta-calendar-scrape.yml` workflow modeled on `airbnb-calendar-scrape.yml`, and remove the `overrideStatus` block from the VV entry in `PIPELINES`.
 
 ## Recurring Pitfalls — read before changing anything
 
