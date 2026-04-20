@@ -41,7 +41,7 @@
  *   DISCOVERY_DRY_RUN=1      skip all DB writes; just log what would happen
  */
 
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import {
   db,
   pool,
