@@ -1,0 +1,23 @@
+The file already does the bucket sweep, pacing, dedupe, identity/detail flow, and bucket logging, but it still needs a few discipline fixes before I’d call it done.  
+
+First priority: change identity from (source_platform, source_url) to (source_platform, external_id). Right now the upsert target is sourcePlatform + sourceUrl, but your brief called for external_id as the platform identity key. That should be a real DB unique constraint and the upsert target should match it. source_url should stay mutable data, not identity.  
+
+Second: remove proxy behavior from this runner. The file still says requests go through PROXY_URL when set and imports fetchAirbnbRaw from the raw-fetch path. Your brief explicitly said no datacenter fallback and same-IP retries only. This runner should ignore PROXY_URL entirely and use the residential Mac mini IP only.  
+
+Third: decide how to persist thin and excluded candidates. The current file rejects thin-data candidates and does not insert them because of schema constraints, and it only partially persists exclusions. That is weaker than your brief, which wanted excluded rows preserved and never deleted. Either relax the schema for discovery-stage rows or create a separate staging/exclusion table.  
+
+Fourth: replace the placeholder confidence score. The file currently inserts active rows with a hardcoded dataConfidenceScore: 0.4. That is fine for bootstrapping, but since you care about quality, replace it with a real discovery-stage score based on field completeness and gate outcomes.  
+
+Fifth: keep the current working scheduler until this new runner is manually validated. The new file says it is designed to coexist with the existing scheduled scrapers, which is the right approach. Run it manually against Railway first, inspect discovery_run_log, verify no duplicate (source_platform, external_id) rows, verify last_seen_at advancement for known rows, and only then swap launchd over.  
+
+So the implementation order I’d use is:
+
+1. Add/verify unique constraint on (source_platform, external_id).
+2. Change upsert target in upsertActiveListing.
+3. Disable proxy use for this runner.
+4. Add persistent handling for thin/excluded candidates.
+5. Replace placeholder confidence scoring.
+6. Manually validate against Railway.
+7. Only then point run-discovery.sh at airbnb-discovery.ts.
+
+If you want, I’ll turn that into a punch-list for Replit with exact file-level changes.

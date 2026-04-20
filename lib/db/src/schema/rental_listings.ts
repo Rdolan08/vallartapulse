@@ -120,6 +120,16 @@ export const rentalListingsTable = pgTable(
     index("idx_rl_price").on(table.nightlyPriceUsd),
     index("idx_rl_active").on(table.isActive),
     uniqueIndex("idx_rl_source_unique").on(table.sourcePlatform, table.sourceUrl),
+    /**
+     * Durable platform identity. The discovery runner uses this as its
+     * ON CONFLICT target so that URL drift (mobile → desktop, query-param
+     * variants, locale redirects) does NOT create duplicate rows for the
+     * same logical Airbnb listing. external_id is nullable for legacy
+     * rows so the index is partial.
+     */
+    uniqueIndex("idx_rl_platform_external_unique")
+      .on(table.sourcePlatform, table.externalId)
+      .where(sql`external_id IS NOT NULL`),
     index("idx_rl_lifecycle").on(table.lifecycleStatus),
     index("idx_rl_identity_key").on(table.identityKey),
     /**

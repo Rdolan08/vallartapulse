@@ -24,9 +24,10 @@
  *      the rejection in discovery_run_log + JSON event stream and skip.
  *   7. Write one row to discovery_run_log per bucket with full counters.
  *
- * Strict TypeScript, no `any`. All requests routed through PROXY_URL when
- * set (Decodo residential), otherwise direct (use only from a residential
- * IP — datacenter direct fetches will all fail the identity check).
+ * Strict TypeScript, no `any`. All requests use the host's residential IP
+ * directly (no proxy). PROXY_URL is intentionally ignored — this runner
+ * MUST be invoked from the residential Mac mini; datacenter direct fetches
+ * will all fail the identity check and trip the preflight.
  *
  * Usage (from Mac mini):
  *   DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts \
@@ -40,17 +41,18 @@
  *   DISCOVERY_DRY_RUN=1      skip all DB writes; just log what would happen
  */
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import {
   db,
   pool,
   rentalListingsTable,
   discoveryRunLogTable,
+  discoveryRejectedCandidatesTable,
 } from "@workspace/db";
 import {
-  fetchAirbnbRaw,
-  rawFetchLooksUnusable,
-} from "../../artifacts/api-server/src/lib/ingest/raw-fetch.js";
+  fetchAirbnbResidential,
+  residentialFetchLooksUnusable,
+} from "./lib/airbnb-residential-fetch.js";
 import { extractSearchCards } from "../../artifacts/api-server/src/lib/ingest/airbnb-search-adapter.js";
 import {
   buildBuckets,
@@ -131,7 +133,7 @@ async function runBucket(bucket: DiscoveryBucket): Promise<BucketCounters> {
   for (let page = 0; page < MAX_PAGES; page++) {
     const url = buildSearchUrl(bucket, page);
     try {
-      const r = await fetchAirbnbRaw(url, { timeoutMs: FETCH_TIMEOUT_MS });
+      const r = await fetchAirbnbResidential(url, { timeoutMs: FETCH_TIMEOUT_MS });
       counters.pagesFetched++;
       if (r.status >= 400) {
         counters.errors.push({ stage: "search_page", page, url, status: r.status });
@@ -280,8 +282,8 @@ async function processCandidate(
   let lastFailReason: string = "no_attempt";
   for (let attempt = 0; attempt < MAX_IDENTITY_RETRIES; attempt++) {
     try {
-      const r = await fetchAirbnbRaw(url, { timeoutMs: FETCH_TIMEOUT_MS });
-      const u = rawFetchLooksUnusable(r.html, r.status);
+      const r = await fetchAirbnbResidential(url, { timeoutMs: FETCH_TIMEOUT_MS });
+      const u = residentialFetchLooksUnusable(r.html, r.status);
       if (u.unusable) {
         lastFailReason = u.reason ?? `unusable status=${r.status}`;
         // Transient (5xx, 429, captcha) → retry. 404/delisted → no retry.
@@ -316,15 +318,24 @@ async function processCandidate(
   }
 
   if (!html) {
-    logEvent({
-      event: "identity_check_failed",
+    const event = {
+      event: "identity_check_failed" as const,
       bucketId: bucket.bucketId,
       externalId,
       reason: lastFailReason,
-    });
+    };
+    logEvent(event);
     counters.errors.push({ stage: "identity", externalId, reason: lastFailReason });
     if (!DRY_RUN) {
-      await upsertExclusion(externalId, url, "identity_failed", null);
+      await upsertRejectedCandidate({
+        externalId,
+        url,
+        bucketId: bucket.bucketId,
+        rejectionReason: "identity_failed",
+        identityCheckStatus: "failed",
+        detail: null,
+        event,
+      });
     }
     return { outcome: "rejected_identity" };
   }
@@ -335,16 +346,25 @@ async function processCandidate(
   // Geographic gate.
   if (detail.latitude !== null && detail.longitude !== null) {
     if (!inMarket(detail.latitude, detail.longitude)) {
-      logEvent({
-        event: "listing_rejected",
+      const event = {
+        event: "listing_rejected" as const,
         bucketId: bucket.bucketId,
         externalId,
         reason: "out_of_market",
         lat: detail.latitude,
         lng: detail.longitude,
-      });
+      };
+      logEvent(event);
       if (!DRY_RUN) {
-        await upsertExclusion(externalId, url, "out_of_market", detail.title);
+        await upsertRejectedCandidate({
+          externalId,
+          url,
+          bucketId: bucket.bucketId,
+          rejectionReason: "out_of_market",
+          identityCheckStatus: "passed",
+          detail,
+          event,
+        });
       }
       return { outcome: "rejected_geo" };
     }
@@ -352,15 +372,24 @@ async function processCandidate(
 
   // Property-type whitelist.
   if (!isAllowedPropertyType(detail.propertyTypeRaw)) {
-    logEvent({
-      event: "listing_rejected",
+    const event = {
+      event: "listing_rejected" as const,
       bucketId: bucket.bucketId,
       externalId,
       reason: "wrong_property_type",
       propertyType: detail.propertyTypeRaw,
-    });
+    };
+    logEvent(event);
     if (!DRY_RUN) {
-      await upsertExclusion(externalId, url, "wrong_property_type", detail.title);
+      await upsertRejectedCandidate({
+        externalId,
+        url,
+        bucketId: bucket.bucketId,
+        rejectionReason: "wrong_property_type",
+        identityCheckStatus: "passed",
+        detail,
+        event,
+      });
     }
     return { outcome: "rejected_property_type" };
   }
@@ -373,8 +402,8 @@ async function processCandidate(
     detail.longitude === null ||
     !detail.title
   ) {
-    logEvent({
-      event: "listing_rejected",
+    const event = {
+      event: "listing_rejected" as const,
       bucketId: bucket.bucketId,
       externalId,
       reason: "thin_data",
@@ -385,14 +414,26 @@ async function processCandidate(
         latitude: detail.latitude === null,
         longitude: detail.longitude === null,
       },
-    });
-    // Do NOT insert — schema requires these as NOT NULL, and a placeholder
-    // record would corrupt downstream comp queries. Audit lives in the run
-    // log + this stdout event.
+    };
+    logEvent(event);
+    // Persist whatever we DID parse to the rejected-candidates audit table
+    // so the rejection is durable (not just in stdout/run-log).
+    if (!DRY_RUN) {
+      await upsertRejectedCandidate({
+        externalId,
+        url,
+        bucketId: bucket.bucketId,
+        rejectionReason: "thin_data",
+        identityCheckStatus: "passed",
+        detail,
+        event,
+      });
+    }
     return { outcome: "rejected_thin_data" };
   }
 
   // Active-cohort insert.
+  const confidence = computeDiscoveryConfidence(detail);
   if (!DRY_RUN) {
     await upsertActiveListing({
       externalId,
@@ -407,6 +448,7 @@ async function processCandidate(
       neighborhoodNormalized: bucket.normalizedNeighborhoodBucket,
       parentRegionBucket: bucket.parentRegionBucket,
       normalizedNeighborhoodBucket: bucket.normalizedNeighborhoodBucket,
+      dataConfidenceScore: confidence,
     });
   }
   logEvent({
@@ -414,8 +456,59 @@ async function processCandidate(
     bucketId: bucket.bucketId,
     externalId,
     propertyType: detail.propertyTypeRaw,
+    dataConfidenceScore: confidence,
   });
   return { outcome: "inserted" };
+}
+
+/**
+ * Discovery-stage confidence score in [0, 1]. Composed from:
+ *   - Identity check passing                (0.20)
+ *   - Geographic gate passing (lat+lng in market) (0.15)
+ *   - Property type extracted               (0.10)
+ *   - Bedrooms parsed                       (0.15)
+ *   - Bathrooms parsed                      (0.10)
+ *   - Title parsed                          (0.10)
+ *   - Neighborhood hint parsed              (0.05)
+ *   - Lat/lng both parsed (geo enrich-ready) (0.15)
+ *
+ * Caller has already enforced the completeness floor, so most discovery
+ * inserts will land in the 0.85–1.0 band. Listings that just barely passed
+ * (no neighborhood hint, weak property type) score lower so downstream
+ * dashboards can still distinguish quality without re-parsing.
+ *
+ * Replaces the previous bootstrap value of 0.4. Bumped up by the richer
+ * detail/calendar/review enrichment passes that run later.
+ */
+function computeDiscoveryConfidence(detail: {
+  title: string | null;
+  propertyTypeRaw: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  neighborhoodHint: string | null;
+}): number {
+  let score = 0;
+  // Identity always passed at this point in the flow.
+  score += 0.20;
+  // Geo gate: present AND in market (the gate would have rejected otherwise,
+  // but be defensive — caller might bypass in future refactors).
+  if (detail.latitude !== null && detail.longitude !== null) {
+    score += 0.15;
+    score += 0.15; // Both coordinates available for downstream enrichment.
+  }
+  if (detail.propertyTypeRaw && detail.propertyTypeRaw.trim().length > 0) {
+    score += 0.10;
+  }
+  if (detail.bedrooms !== null) score += 0.15;
+  if (detail.bathrooms !== null) score += 0.10;
+  if (detail.title && detail.title.trim().length > 0) score += 0.10;
+  if (detail.neighborhoodHint && detail.neighborhoodHint.trim().length > 0) {
+    score += 0.05;
+  }
+  // Numerical safety: clamp to [0, 1].
+  return Math.max(0, Math.min(1, parseFloat(score.toFixed(3))));
 }
 
 function canonicalAirbnbUrl(externalId: string): string {
@@ -439,8 +532,16 @@ interface ActiveListingInput {
   neighborhoodNormalized: string;
   parentRegionBucket: string;
   normalizedNeighborhoodBucket: string;
+  dataConfidenceScore: number;
 }
 
+/**
+ * Upsert an accepted active listing into rental_listings. ON CONFLICT target
+ * is the partial unique index on (source_platform, external_id), NOT
+ * (source_platform, source_url) — so URL drift (mobile/desktop, query-param
+ * variants, locale redirects) collapses to a single row per logical Airbnb
+ * listing rather than producing duplicates.
+ */
 async function upsertActiveListing(input: ActiveListingInput): Promise<void> {
   const now = new Date();
   await db
@@ -457,7 +558,7 @@ async function upsertActiveListing(input: ActiveListingInput): Promise<void> {
       latitude: input.latitude,
       longitude: input.longitude,
       scrapedAt: now,
-      dataConfidenceScore: 0.4, // Search+detail card data; richer enrich runs later.
+      dataConfidenceScore: input.dataConfidenceScore,
       isActive: true,
       firstSeenAt: now,
       lastSeenAt: now,
@@ -473,8 +574,16 @@ async function upsertActiveListing(input: ActiveListingInput): Promise<void> {
       cohortExcludedReason: null,
     })
     .onConflictDoUpdate({
-      target: [rentalListingsTable.sourcePlatform, rentalListingsTable.sourceUrl],
+      // Conflict target is the partial unique index idx_rl_platform_external_unique
+      // on (source_platform, external_id) WHERE external_id IS NOT NULL.
+      // Postgres requires the WHERE predicate be repeated here so the planner
+      // knows which partial index to match. This makes external_id the durable
+      // platform identity — URL drift no longer creates duplicate rows.
+      target: [rentalListingsTable.sourcePlatform, rentalListingsTable.externalId],
+      targetWhere: sql`${rentalListingsTable.externalId} IS NOT NULL`,
       set: {
+        sourceUrl: input.url,
+        externalId: input.externalId,
         title: input.title,
         bedrooms: input.bedrooms,
         bathrooms: input.bathrooms,
@@ -493,47 +602,91 @@ async function upsertActiveListing(input: ActiveListingInput): Promise<void> {
         lifecycleStatus: "active",
         lastSeenAt: now,
         seenCount: sql`COALESCE(${rentalListingsTable.seenCount}, 0) + 1`,
+        // Bump the confidence score only if the new computation is higher.
+        dataConfidenceScore: sql`GREATEST(${rentalListingsTable.dataConfidenceScore}, ${input.dataConfidenceScore})`,
         updatedAt: now,
       },
     });
 }
 
+interface RejectedCandidateInput {
+  externalId: string;
+  url: string;
+  bucketId: string;
+  rejectionReason:
+    | "identity_failed"
+    | "out_of_market"
+    | "wrong_property_type"
+    | "thin_data";
+  identityCheckStatus: "passed" | "failed";
+  detail: {
+    title: string | null;
+    propertyTypeRaw: string | null;
+    bedrooms: number | null;
+    bathrooms: number | null;
+    latitude: number | null;
+    longitude: number | null;
+    neighborhoodHint: string | null;
+  } | null;
+  event: Record<string, unknown>;
+}
+
 /**
- * Insert/update an exclusion record. Only runs when there's enough data to
- * satisfy the NOT NULL columns (bedrooms, bathrooms, etc.) — for thin
- * candidates the audit lives in discovery_run_log only. Currently this means
- * exclusions are rare for "thin_data" but common for "out_of_market" and
- * "wrong_property_type" (where we already parsed enough fields to tell).
- *
- * For identity_failed candidates we don't have ANY parsed detail data, so
- * we only update if the row already exists in the table.
+ * Upsert a rejected candidate into discovery_rejected_candidates. Unlike
+ * the original update-only exclusion path, this ALWAYS persists the
+ * rejection — satisfying the brief's "excluded rows preserved and never
+ * deleted" requirement. Repeated rejections for the same external_id bump
+ * last_seen_at and seen_count rather than creating duplicate audit rows.
  */
-async function upsertExclusion(
-  externalId: string,
-  url: string,
-  reason: "identity_failed" | "out_of_market" | "wrong_property_type",
-  titleHint: string | null
+async function upsertRejectedCandidate(
+  input: RejectedCandidateInput
 ): Promise<void> {
   const now = new Date();
-  // Try update-only first (no insert). If 0 rows updated we just don't
-  // record this exclusion — it's still in the run log.
+  const detail = input.detail;
   await db
-    .update(rentalListingsTable)
-    .set({
-      identityCheckedAt: now,
-      identityCheckStatus: reason === "identity_failed" ? "failed" : "passed",
-      cohortExcludedReason: reason,
-      isActive: false,
-      lifecycleStatus: reason === "identity_failed" ? "delisted" : reason,
-      updatedAt: now,
-      ...(titleHint ? { title: titleHint } : {}),
+    .insert(discoveryRejectedCandidatesTable)
+    .values({
+      sourcePlatform: SOURCE_PLATFORM,
+      externalId: input.externalId,
+      sourceUrl: input.url,
+      rejectionReason: input.rejectionReason,
+      identityCheckStatus: input.identityCheckStatus,
+      parsedTitle: detail?.title ?? null,
+      parsedPropertyType: detail?.propertyTypeRaw ?? null,
+      parsedLatitude: detail?.latitude ?? null,
+      parsedLongitude: detail?.longitude ?? null,
+      parsedBedrooms: detail?.bedrooms ?? null,
+      parsedBathrooms: detail?.bathrooms ?? null,
+      parsedNeighborhoodHint: detail?.neighborhoodHint ?? null,
+      bucketId: input.bucketId,
+      firstSeenAt: now,
+      lastSeenAt: now,
+      seenCount: 1,
+      lastEvent: input.event,
     })
-    .where(
-      and(
-        eq(rentalListingsTable.sourcePlatform, SOURCE_PLATFORM),
-        eq(rentalListingsTable.sourceUrl, url)
-      )
-    );
+    .onConflictDoUpdate({
+      target: [
+        discoveryRejectedCandidatesTable.sourcePlatform,
+        discoveryRejectedCandidatesTable.externalId,
+      ],
+      set: {
+        sourceUrl: input.url,
+        rejectionReason: input.rejectionReason,
+        identityCheckStatus: input.identityCheckStatus,
+        parsedTitle: detail?.title ?? null,
+        parsedPropertyType: detail?.propertyTypeRaw ?? null,
+        parsedLatitude: detail?.latitude ?? null,
+        parsedLongitude: detail?.longitude ?? null,
+        parsedBedrooms: detail?.bedrooms ?? null,
+        parsedBathrooms: detail?.bathrooms ?? null,
+        parsedNeighborhoodHint: detail?.neighborhoodHint ?? null,
+        bucketId: input.bucketId,
+        lastSeenAt: now,
+        seenCount: sql`COALESCE(${discoveryRejectedCandidatesTable.seenCount}, 0) + 1`,
+        lastEvent: input.event,
+        updatedAt: now,
+      },
+    });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -601,18 +754,18 @@ function freshTotals(): RunTotals {
 
 /**
  * Preflight: do one cheap fetch against the airbnb.com root before kicking
- * off 200 buckets. If transport is misconfigured (proxy down, residential
- * IP banned, captcha wall), abort immediately rather than spending an hour
- * silently filling discovery_run_log with zero-result rows. The bucket-level
- * try/catch otherwise swallows transport errors per-page and the only
- * symptom of a broken run is "totals all zero" — which is indistinguishable
- * from a legitimately empty market.
+ * off 200 buckets. If transport is misconfigured (residential IP banned,
+ * captcha wall, no internet), abort immediately rather than spending an
+ * hour silently filling discovery_run_log with zero-result rows. The
+ * bucket-level try/catch otherwise swallows transport errors per-page and
+ * the only symptom of a broken run is "totals all zero" — which is
+ * indistinguishable from a legitimately empty market.
  */
 async function preflight(): Promise<void> {
   const probeUrl = "https://www.airbnb.com/";
   try {
-    const r = await fetchAirbnbRaw(probeUrl, { timeoutMs: FETCH_TIMEOUT_MS });
-    const u = rawFetchLooksUnusable(r.html, r.status);
+    const r = await fetchAirbnbResidential(probeUrl, { timeoutMs: FETCH_TIMEOUT_MS });
+    const u = residentialFetchLooksUnusable(r.html, r.status);
     if (u.unusable) {
       throw new Error(`preflight unusable: ${u.reason ?? `status=${r.status}`}`);
     }
@@ -622,12 +775,12 @@ async function preflight(): Promise<void> {
     logEvent({
       event: "run_finished",
       fatalError: `preflight failed: ${msg}`,
-      proxyConfigured: Boolean(process.env.PROXY_URL),
     });
     throw new Error(
       `Discovery preflight failed (${msg}). ` +
         `Aborting before consuming the bucket budget. ` +
-        `Check PROXY_URL or residential-IP routing.`
+        `This runner uses the host residential IP — verify network ` +
+        `connectivity and that the host is not on a datacenter network.`
     );
   }
 }
@@ -643,7 +796,7 @@ async function main(): Promise<void> {
     totalBuckets: buckets.length,
     dryRun: DRY_RUN,
     pacingMs: { min: MIN_DELAY_MS, max: MAX_DELAY_MS },
-    proxyConfigured: Boolean(process.env.PROXY_URL),
+    transport: "residential-direct",
   });
 
   await preflight();
