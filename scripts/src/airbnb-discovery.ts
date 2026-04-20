@@ -599,6 +599,39 @@ function freshTotals(): RunTotals {
   };
 }
 
+/**
+ * Preflight: do one cheap fetch against the airbnb.com root before kicking
+ * off 200 buckets. If transport is misconfigured (proxy down, residential
+ * IP banned, captcha wall), abort immediately rather than spending an hour
+ * silently filling discovery_run_log with zero-result rows. The bucket-level
+ * try/catch otherwise swallows transport errors per-page and the only
+ * symptom of a broken run is "totals all zero" — which is indistinguishable
+ * from a legitimately empty market.
+ */
+async function preflight(): Promise<void> {
+  const probeUrl = "https://www.airbnb.com/";
+  try {
+    const r = await fetchAirbnbRaw(probeUrl, { timeoutMs: FETCH_TIMEOUT_MS });
+    const u = rawFetchLooksUnusable(r.html, r.status);
+    if (u.unusable) {
+      throw new Error(`preflight unusable: ${u.reason ?? `status=${r.status}`}`);
+    }
+    logEvent({ event: "run_started", preflight: "ok", probeStatus: r.status });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    logEvent({
+      event: "run_finished",
+      fatalError: `preflight failed: ${msg}`,
+      proxyConfigured: Boolean(process.env.PROXY_URL),
+    });
+    throw new Error(
+      `Discovery preflight failed (${msg}). ` +
+        `Aborting before consuming the bucket budget. ` +
+        `Check PROXY_URL or residential-IP routing.`
+    );
+  }
+}
+
 async function main(): Promise<void> {
   const allBuckets = buildBuckets();
   const buckets = MAX_BUCKETS ? allBuckets.slice(0, MAX_BUCKETS) : allBuckets;
@@ -612,6 +645,8 @@ async function main(): Promise<void> {
     pacingMs: { min: MIN_DELAY_MS, max: MAX_DELAY_MS },
     proxyConfigured: Boolean(process.env.PROXY_URL),
   });
+
+  await preflight();
 
   for (const bucket of buckets) {
     const startedAt = new Date();
