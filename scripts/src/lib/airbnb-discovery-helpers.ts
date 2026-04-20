@@ -77,6 +77,26 @@ const ALLOWED_PROPERTY_TOKENS = [
   "guest house",
   "cottage",
   "cabin", // Airbnb sometimes labels small detached units this way
+  // "Rental unit" is Airbnb's default category for whole-unit rentals
+  // that aren't sub-classified as apartment/condo/etc. Empirically it's
+  // the dominant property type on listings created in the last ~year
+  // (78%+ of new admits in the zona_romantica smoke runs were getting
+  // rejected on this token). Allowed because the og:title parser
+  // already strips the "Entire/Private/Shared" prefix before this
+  // gate runs, so a "Rental unit" label here is implicitly a whole-unit.
+  "rental unit",
+  // "Serviced apartment" — DECISION: allow. Airbnb uses this label for
+  // furnished, hotel-adjacent, owner/management-operated whole units that
+  // behave like vacation rentals for pricing purposes (per-night rates,
+  // furnished, instant-bookable, often building-level concierge). They
+  // are legitimate comp pool members for nightly-rate modeling. The
+  // existing "apartment" token already substring-matches this label
+  // (lower.includes("apartment") is true for "serviced apartment"), so
+  // this token is technically redundant — but listing it explicitly
+  // documents the policy decision and prevents an accidental future
+  // narrowing of "apartment" → "/^apartment$/" from silently dropping
+  // them.
+  "serviced apartment",
 ] as const;
 
 const REJECTED_PROPERTY_TOKENS = [
