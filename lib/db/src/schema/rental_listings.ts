@@ -96,6 +96,22 @@ export const rentalListingsTable = pgTable(
     normalizedNeighborhoodBucket: text("normalized_neighborhood_bucket"),
     /** "exact" | "high" | "inferred" | "unknown" */
     neighborhoodMappingConfidence: text("neighborhood_mapping_confidence"),
+
+    // ── Phase 2c: discovery-runner gates (additive, all nullable) ───────────
+    /** Raw Airbnb/VRBO property type token (e.g. "Apartment", "Villa"). */
+    propertyTypeRaw: text("property_type_raw"),
+    /** Lowercased, whitespace-trimmed property type used for whitelist gating. */
+    propertyTypeNormalized: text("property_type_normalized"),
+    /** Most recent identity-probe timestamp (HEAD/GET against canonical URL). */
+    identityCheckedAt: timestamp("identity_checked_at"),
+    /** "passed" | "failed" | null — set by discovery runner. */
+    identityCheckStatus: text("identity_check_status"),
+    /**
+     * "out_of_market" | "wrong_property_type" | "thin_data" | "identity_failed"
+     * | null. Populated when the discovery runner inserts a candidate that fails
+     * one of the active-cohort gates. NULL means the row is in good standing.
+     */
+    cohortExcludedReason: text("cohort_excluded_reason"),
   },
   (table) => [
     index("idx_rl_neighborhood").on(table.neighborhoodNormalized),
@@ -104,6 +120,16 @@ export const rentalListingsTable = pgTable(
     index("idx_rl_price").on(table.nightlyPriceUsd),
     index("idx_rl_active").on(table.isActive),
     uniqueIndex("idx_rl_source_unique").on(table.sourcePlatform, table.sourceUrl),
+    /**
+     * Durable platform identity. The discovery runner uses this as its
+     * ON CONFLICT target so that URL drift (mobile → desktop, query-param
+     * variants, locale redirects) does NOT create duplicate rows for the
+     * same logical Airbnb listing. external_id is nullable for legacy
+     * rows so the index is partial.
+     */
+    uniqueIndex("idx_rl_platform_external_unique")
+      .on(table.sourcePlatform, table.externalId)
+      .where(sql`external_id IS NOT NULL`),
     index("idx_rl_lifecycle").on(table.lifecycleStatus),
     index("idx_rl_identity_key").on(table.identityKey),
     /**

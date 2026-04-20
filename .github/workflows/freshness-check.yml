@@ -18,8 +18,13 @@ name: Calendar Pricing Freshness Check (daily)
 #   RAILWAY_DATABASE_URL   prod Postgres connection string (already used elsewhere)
 
 on:
-  schedule:
-    - cron: "0 8 * * *"   # daily 08:00 UTC, ~50min after calendar scrapers finish
+  # Daily schedule paused per user request 2026-04-20: VRBO has no scraper
+  # yet, and the per-night Airbnb quotes pipeline starts Friday on the Mac
+  # mini. The check trips on both, opening duplicate "freshness-alert"
+  # issues every morning. Re-enable after the discovery + quotes runner
+  # is bedded in and the script distinguishes "stale" from "never scraped."
+  # schedule:
+  #   - cron: "0 8 * * *"   # daily 08:00 UTC, ~50min after calendar scrapers finish
   workflow_dispatch:
 
 permissions:
