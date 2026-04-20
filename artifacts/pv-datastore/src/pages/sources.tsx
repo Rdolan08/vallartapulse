@@ -371,8 +371,7 @@ function DataQualityPanel({
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    apiFetch(apiUrl("/api/ingest/rental-prices-quality"))
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+    apiFetch("/api/ingest/rental-prices-quality")
       .then((j) => {
         if (alive) {
           setData(j);
