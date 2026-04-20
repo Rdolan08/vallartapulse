@@ -15,3 +15,4 @@ export * from "./listing_details";
 export * from "./listing_price_quotes";
 export * from "./listing_review_snapshots";
 export * from "./airbnb_pricing_run_summaries";
+export * from "./discovery_run_log";

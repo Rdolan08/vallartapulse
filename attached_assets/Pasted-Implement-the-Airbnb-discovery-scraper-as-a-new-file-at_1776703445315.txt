@@ -1,0 +1,291 @@
+Implement the Airbnb discovery scraper as a new file at `scripts/src/airbnb-discovery.ts` with strict TypeScript and no `any`. Do not refactor or break the existing API-server entrypoints. Leave `artifacts/api-server/src/lib/ingest/airbnb-search-adapter.ts` in place. If useful, extract shared parsing helpers into a new file and have both the old adapter and the new discovery runner import that helper.
+
+Goal:
+Build a disciplined discovery-stage scraper that runs from the residential Mac mini, reads `process.env.RAILWAY_DATABASE_URL`, and writes directly to Railway Postgres. Prioritize cohort cleanliness over speed. No deletes. No datacenter fallback. No parallelism. Pace requests 5–8 seconds apart. Retry failed requests on the same IP with exponential backoff.
+
+Core behavior:
+1. Sweep the Airbnb market using bucketed search, not one generic PV search.
+2. For each bucket:
+   - fetch up to 5 search pages
+   - extract candidate Airbnb listing IDs + any card metadata available
+   - dedupe candidate IDs both within the bucket and against `rental_listings`
+   - for only unseen candidates, run identity/detail checks
+   - apply quality gates
+   - insert/upsert accepted listings
+   - log a row into `discovery_run_log`
+3. Update `last_seen_at` for every already-known listing seen in any bucket, even if not reinserted.
+4. Never delete listings. Use exclusion flags/reasons.
+
+Bucket model:
+Use the cross-product of:
+- Neighborhoods:
+  - zona_romantica
+  - amapas
+  - conchas_chinas
+  - centro
+  - cinco_de_diciembre
+  - versalles
+  - fluvial
+  - marina_vallarta
+  - nuevo_vallarta
+  - bucerias
+- Bedroom count:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5_plus
+- Price band:
+  - under_100
+  - 100_200
+  - 200_400
+  - 400_plus
+
+Represent buckets as typed objects, not stringly-typed blobs. Each bucket should have:
+- `bucketId`
+- `neighborhoodKey`
+- `bedroomBand`
+- `priceBand`
+- `searchUrl`
+- `parentRegionBucket`
+- `normalizedNeighborhoodBucket`
+
+Create helper functions:
+- `buildBuckets(): DiscoveryBucket[]`
+- `buildSearchUrl(bucket: DiscoveryBucket, page: number): string`
+- `sleep(ms: number): Promise<void>`
+- `backoff(attempt: number): number`
+- `isAllowedPropertyType(raw: string | null): boolean`
+- `inMarket(lat: number, lng: number): boolean`
+- `parseExternalId(sourceListingId: string): string`
+- `logEvent(event: Record<string, unknown>): void`  // JSON.stringify one line
+- `upsertDiscoveryRunLog(...)`
+- `updateLastSeenForExisting(externalIds: string[])`
+
+Database expectations:
+Use the project’s existing DB client/library already in the repo. Do not introduce a second DB access pattern if avoidable.
+
+`rental_listings` should support or be extended to support:
+- `source_platform`
+- `external_id`
+- `source_url`
+- `title`
+- `bedrooms`
+- `bathrooms`
+- `latitude`
+- `longitude`
+- `neighborhood_normalized`
+- `last_seen_at`
+- `created_at`
+- `property_type_raw`
+- `property_type_normalized`
+- `cohort_excluded_reason`
+- `is_active_cohort`
+- `identity_checked_at`
+- `identity_check_status`
+
+If some of those fields do not exist yet, add a migration or minimal schema update and wire them into the ORM model.
+
+Create a unique constraint if not already present:
+- `UNIQUE (source_platform, external_id)`
+
+Upsert rules:
+For accepted listings:
+- `INSERT ... ON CONFLICT (source_platform, external_id) DO UPDATE`
+- update:
+  - `last_seen_at = NOW()`
+  - `title = EXCLUDED.title`
+  - `bedrooms = COALESCE(EXCLUDED.bedrooms, rental_listings.bedrooms)`
+  - `bathrooms = COALESCE(EXCLUDED.bathrooms, rental_listings.bathrooms)`
+  - `latitude = COALESCE(EXCLUDED.latitude, rental_listings.latitude)`
+  - `longitude = COALESCE(EXCLUDED.longitude, rental_listings.longitude)`
+  - `neighborhood_normalized = COALESCE(EXCLUDED.neighborhood_normalized, rental_listings.neighborhood_normalized)`
+  - `property_type_raw = COALESCE(EXCLUDED.property_type_raw, rental_listings.property_type_raw)`
+  - `property_type_normalized = COALESCE(EXCLUDED.property_type_normalized, rental_listings.property_type_normalized)`
+  - `identity_checked_at = NOW()`
+  - `identity_check_status = 'passed'`
+  - `cohort_excluded_reason = NULL`
+  - `is_active_cohort = true`
+- do not delete any rows
+- do not create duplicates ever
+
+For excluded listings:
+- insert or update them too, but with:
+  - `is_active_cohort = false`
+  - `cohort_excluded_reason` set appropriately
+  - still preserve `external_id`, `source_url`, and any useful metadata
+This keeps them visible for audit/reprocessing without polluting the active cohort.
+
+Quality gates before active-cohort insert:
+1. Identity check:
+   - GET `https://www.airbnb.com/rooms/{external_id}`
+   - require HTTP 200
+   - reject 301, 404, challenge pages, rate-limit pages, malformed pages
+   - retry up to 3 times with exponential backoff on transient failures only
+   - no proxy fallback
+   - if identity fails:
+     - mark listing with `identity_check_status = 'failed'`
+     - set `cohort_excluded_reason = 'identity_failed'`
+     - log under `rejected_identity`
+2. Geographic gate:
+   - allowed box:
+     - lat 20.50 to 20.85
+     - lng -105.60 to -105.18
+   - outside box:
+     - `cohort_excluded_reason = 'out_of_market'`
+     - `is_active_cohort = false`
+3. Property-type whitelist:
+   - allow:
+     - Apartment
+     - Condominium
+     - House
+     - Villa
+     - Townhouse
+     - Loft
+     - Bungalow
+     - Guest suite
+   - reject:
+     - Hotel
+     - Hostel
+     - Boat
+     - Camper
+     - Tent
+     - Tipi
+     - Treehouse
+     - Cave
+     - Farm stay
+     - Capsule
+     - Earthen home
+   - rejected rows get:
+     - `cohort_excluded_reason = 'wrong_property_type'`
+     - `is_active_cohort = false`
+4. Minimum field completeness for active cohort:
+   - require:
+     - bedrooms
+     - bathrooms
+     - latitude
+     - longitude
+   - if missing:
+     - do not activate into cohort
+     - set `cohort_excluded_reason = 'thin_data'`
+     - queue for re-fetch on next pass or preserve as inactive record
+
+Search/detail flow:
+- Reuse the current search-page extraction logic where possible.
+- Add a detail fetch/parser for candidate listing pages used only after dedupe and before accept.
+- Detail parser should attempt to extract:
+  - title
+  - bedrooms
+  - bathrooms
+  - latitude
+  - longitude
+  - property type
+  - neighborhood clues
+- Be defensive and typed. No brittle assumptions about one exact JSON path.
+- If detail fetch returns a challenge or non-200, treat as identity failure.
+
+Pacing and retries:
+- No parallelism.
+- Search page fetches: 5–8 seconds apart. Use a randomized interval in that range.
+- Detail/identity fetches: also 5–8 seconds apart.
+- Retries:
+  - up to 3
+  - exponential backoff, e.g. 5s, 10s, 20s plus small jitter
+- Log retry events as JSON lines.
+
+Discovery run logging:
+Create and use a `discovery_run_log` table with at least:
+- `bucket_id text`
+- `source_platform text`
+- `started_at timestamptz`
+- `finished_at timestamptz`
+- `pages_fetched int`
+- `candidate_ids_seen int`
+- `new_inserted int`
+- `rejected_identity int`
+- `rejected_geo int`
+- `rejected_property_type int`
+- `rejected_thin_data int`
+- `errors jsonb`
+- `bucket_query_url text`
+- `duration_ms int`
+- `retry_count int`
+
+Per bucket:
+- write one row at the end
+- collect structured counters during execution
+- store all non-fatal errors in `errors`
+
+Stdout logging:
+Print JSON lines only, one per event, grep-friendly. Example event types:
+- `bucket_started`
+- `search_page_fetched`
+- `candidate_deduped`
+- `identity_retry`
+- `listing_inserted`
+- `listing_updated`
+- `listing_rejected`
+- `bucket_finished`
+Include:
+- `timestamp`
+- `event`
+- `bucketId`
+- `externalId` when relevant
+- `reason` when rejected
+- `attempt` when retrying
+
+Suggested file structure:
+- `scripts/src/airbnb-discovery.ts`                 // main runner
+- `scripts/src/lib/airbnb-discovery-buckets.ts`    // bucket generation + URL builder
+- `scripts/src/lib/airbnb-discovery-helpers.ts`    // pacing, backoff, bbox, property whitelist
+- `scripts/src/lib/airbnb-detail-parser.ts`        // listing page parsing
+- `artifacts/api-server/src/lib/ingest/airbnb-search-shared.ts` // optional shared extraction helper
+Do not break current imports to the old adapter.
+
+Main runner shape:
+- load env
+- connect to DB using `RAILWAY_DATABASE_URL`
+- build all buckets
+- for each bucket:
+  - start timer
+  - fetch up to 5 pages with pacing
+  - parse cards / candidate IDs
+  - dedupe candidates
+  - query DB for existing Airbnb external_ids for this candidate set
+  - update `last_seen_at` for those already known IDs
+  - run detail + identity checks for unseen IDs only
+  - apply gates
+  - insert/update accepted + excluded rows
+  - write `discovery_run_log`
+  - log summary event
+- final stdout summary with:
+  - total buckets run
+  - total candidate IDs seen
+  - total new inserted
+  - total rejected by reason
+  - total duration
+
+Acceptance criteria:
+- one command works from Mac mini:
+  - `pnpm tsx scripts/src/airbnb-discovery.ts`
+- reads `process.env.RAILWAY_DATABASE_URL`
+- no parallelism
+- paces requests 5–8 seconds apart
+- zero duplicate `(source_platform, external_id)` rows ever
+- `last_seen_at` advances for already-known listings seen in buckets
+- inserts excluded listings as inactive with reasons, never deletes
+- bucket log rows written
+- stdout emits one JSON object per line
+- strict TypeScript, no `any`, use `import type`
+
+Also add a versioned design note:
+- `docs/discovery-scraper-brief.md`
+Summarize:
+- bucket strategy
+- gates
+- pacing
+- logging
+- expected daily growth band (50–200 new/day)
+- why residential IP is required
+
+Do not optimize for speed in this PR. Optimize for correctness, idempotency, and observability.

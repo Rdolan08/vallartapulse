@@ -107,7 +107,7 @@ interface SearchCard {
  * Rather than chasing the exact schema, we walk the raw JSON and
  * correlate fields that appear near known listing ID patterns.
  */
-function extractSearchCards(html: string): SearchCard[] {
+export function extractSearchCards(html: string): SearchCard[] {
   const cards: Map<string, SearchCard> = new Map();
 
   // ── Step 1: Extract all /rooms/XXXXXXXX IDs from the page ─────────────────

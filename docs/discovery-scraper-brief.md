@@ -5,6 +5,73 @@
 > scraper. It is written in the second person so it can be pasted directly into
 > a chat without editing.
 
+## Status
+
+**Implemented.** Runner lives at `scripts/src/airbnb-discovery.ts`, helpers
+at `scripts/src/lib/airbnb-discovery-{buckets,helpers}.ts` and
+`scripts/src/lib/airbnb-detail-parser.ts`. Schema additions (5 nullable
+columns on `rental_listings`, new `discovery_run_log` table) applied to
+Railway via raw SQL `ADD COLUMN IF NOT EXISTS` / `CREATE TABLE IF NOT EXISTS`.
+The existing scheduled scraper (Railway + GitHub Actions) is **unchanged**
+and continues to run independently.
+
+## Run command (Mac mini)
+
+```bash
+DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts \
+  exec tsx ./src/airbnb-discovery.ts
+```
+
+Optional environment knobs (defaults in parens):
+
+| Var | Default | Purpose |
+|---|---|---|
+| `DISCOVERY_MAX_BUCKETS` | all 200 | Cap buckets per run |
+| `DISCOVERY_MAX_PAGES`   | 5       | Search pages per bucket |
+| `DISCOVERY_MIN_DELAY_MS` | 5000   | Min pacing between requests |
+| `DISCOVERY_MAX_DELAY_MS` | 8000   | Max pacing between requests |
+| `DISCOVERY_DRY_RUN`     | unset   | `=1` to skip all DB writes |
+| `PROXY_URL`             | unset   | Decodo residential proxy URL (optional from Mac mini — direct residential IP works too) |
+
+## Implementation notes (deviations from the original brief)
+
+1. **Unique constraint.** `rental_listings` already enforces uniqueness on
+   `(source_platform, source_url)`, not `(source_platform, external_id)`.
+   The runner uses the existing constraint for `ON CONFLICT`. `external_id`
+   is still populated for downstream code paths.
+2. **NOT NULL columns block "thin" excluded inserts.** `rental_listings`
+   requires `title`, `neighborhood_raw`, `neighborhood_normalized`,
+   `bedrooms`, `bathrooms`, `scraped_at` as NOT NULL. The runner does
+   **not** insert exclusion records when those fields can't be parsed
+   (rather than fabricating placeholder values that would corrupt comp
+   queries). Such rejections are still fully audited via:
+     - The per-bucket counters in `discovery_run_log`
+     - The structured stdout JSON event stream (`listing_rejected`,
+       `identity_check_failed`)
+3. **"Excluded but parsed" listings ARE inserted/updated.** When the
+   detail parse succeeds enough to satisfy NOT NULL but the listing
+   fails geo or property-type gates, the runner writes/updates the row
+   with `is_active=false`, `lifecycle_status` set to the exclusion
+   reason, and `cohort_excluded_reason` populated.
+4. **No parallelism, runner is serial.** The brief asked for no
+   parallelism; the implementation is a single async loop with
+   randomized 5–8s sleeps between every HTTP request. No worker pool.
+5. **Identity check reuses `rawFetchLooksUnusable`** from the existing
+   `raw-fetch.ts` so the predicate stays aligned with the `airbnb-prune`
+   script and the API-server detail runner.
+
+## Project context
+
+I run **VallartaPulse** — a Puerto Vallarta rental-comp pricing platform. I am
+running a discovery-stage scraper from a residential Mac mini at
+home (residential IP bypasses Airbnb's PerimeterX anti-bot wall that blocks
+datacenter IPs). The scraper writes into a PostgreSQL database hosted on
+Railway, into a table called `rental_listings`.
+
+**Current discovery rate:** ~10 new listings every 2 hours = ~120/day. Cohort
+is currently ~570 active Airbnb listings. Goal is to grow it cleanly, not just
+quickly.
+
 ## Project context
 
 I run **VallartaPulse** — a Puerto Vallarta rental-comp pricing platform. I am
