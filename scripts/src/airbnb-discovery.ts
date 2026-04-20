@@ -39,6 +39,18 @@
  *   DISCOVERY_MIN_DELAY_MS   min between requests (default: 5000)
  *   DISCOVERY_MAX_DELAY_MS   max between requests (default: 8000)
  *   DISCOVERY_DRY_RUN=1      skip all DB writes; just log what would happen
+ *   DISCOVERY_DEBUG=1        first 3 buckets emit a search_page_debug event
+ *                            with status, html length, marker presence,
+ *                            /rooms/ + listingId regex hit counts, and a
+ *                            500-char snippet around the first match. Use
+ *                            this to diagnose "all buckets returning 0"
+ *                            without spending the full IP budget.
+ *   DISCOVERY_BUCKETS        comma-separated bucketIds to restrict to. Lets
+ *                            you smoke-test against a known-good subset:
+ *                              DISCOVERY_BUCKETS=zona_romantica__2__200_400,zona_romantica__2__400_plus
+ *   DISCOVERY_FAIL_FAST_AFTER  abort the run after this many CONSECUTIVE
+ *                              buckets extract 0 cards (default: 5). Set to
+ *                              0 to disable.
  */
 
 import { and, eq, inArray, sql } from "drizzle-orm";
@@ -53,7 +65,7 @@ import {
   fetchAirbnbResidential,
   residentialFetchLooksUnusable,
 } from "./lib/airbnb-residential-fetch.js";
-import { extractSearchCards } from "../../artifacts/api-server/src/lib/ingest/airbnb-search-adapter.js";
+import { extractCandidateIds } from "./lib/airbnb-search-cards-extract.js";
 import {
   buildBuckets,
   buildSearchUrl,
@@ -85,6 +97,18 @@ const MAX_DELAY_MS = process.env.DISCOVERY_MAX_DELAY_MS
   ? Math.max(MIN_DELAY_MS, parseInt(process.env.DISCOVERY_MAX_DELAY_MS, 10))
   : 8_000;
 const DRY_RUN = process.env.DISCOVERY_DRY_RUN === "1";
+const DEBUG = process.env.DISCOVERY_DEBUG === "1";
+const DEBUG_BUCKETS_LIMIT = 3;
+const BUCKETS_FILTER = process.env.DISCOVERY_BUCKETS
+  ? new Set(
+      process.env.DISCOVERY_BUCKETS.split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    )
+  : null;
+const FAIL_FAST_AFTER = process.env.DISCOVERY_FAIL_FAST_AFTER
+  ? Math.max(0, parseInt(process.env.DISCOVERY_FAIL_FAST_AFTER, 10))
+  : 5;
 const FETCH_TIMEOUT_MS = 25_000;
 const MAX_IDENTITY_RETRIES = 3;
 
@@ -124,7 +148,10 @@ function freshCounters(): BucketCounters {
 // Bucket execution
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function runBucket(bucket: DiscoveryBucket): Promise<BucketCounters> {
+async function runBucket(
+  bucket: DiscoveryBucket,
+  bucketIndex: number
+): Promise<BucketCounters> {
   const counters = freshCounters();
   logEvent({ event: "bucket_started", bucketId: bucket.bucketId, searchUrl: bucket.searchUrl });
 
@@ -147,20 +174,62 @@ async function runBucket(bucket: DiscoveryBucket): Promise<BucketCounters> {
         if (r.status === 403 || r.status === 429) break;
         continue;
       }
-      const cards = extractSearchCards(r.html);
+      const extraction = extractCandidateIds(r.html);
       const beforeSize = candidateIds.size;
-      for (const c of cards) candidateIds.add(c.id);
+      for (const id of extraction.ids) candidateIds.add(id);
       const newOnPage = candidateIds.size - beforeSize;
       logEvent({
         event: "search_page_fetched",
         bucketId: bucket.bucketId,
         page,
-        cardsExtracted: cards.length,
+        cardsExtracted: extraction.ids.length,
         newCandidatesOnPage: newOnPage,
+        hitsByPattern: extraction.hitsByPattern,
       });
+      // Debug emission for the first DEBUG_BUCKETS_LIMIT buckets when
+      // DISCOVERY_DEBUG=1. Surfaces transport + parser visibility without
+      // spending the IP budget on the full sweep. Specifically diagnoses
+      // "all buckets returning 0" by exposing whether the page came back
+      // with the right shape (niobeClientData / __NEXT_DATA__) but the
+      // parser missed it, vs. came back stripped/captcha'd.
+      if (DEBUG && bucketIndex < DEBUG_BUCKETS_LIMIT) {
+        const html = r.html;
+        const roomsMatches = html.match(/\/rooms\/(\d{7,12})/g) || [];
+        const listingIdMatches = html.match(/listingId/g) || [];
+        const firstRooms = html.search(/\/rooms\/\d{7,12}/);
+        const firstListingId = html.indexOf("listingId");
+        const anchor = firstRooms !== -1 ? firstRooms : firstListingId;
+        const snippet =
+          anchor !== -1
+            ? html.slice(Math.max(0, anchor - 80), anchor + 420)
+            : html.slice(0, 500);
+        logEvent({
+          event: "search_page_debug",
+          bucketId: bucket.bucketId,
+          bucketIndex,
+          page,
+          finalUrl: url,
+          httpStatus: r.status,
+          htmlLength: html.length,
+          markers: {
+            niobeClientData: html.includes("niobeClientData"),
+            nextData: html.includes("__NEXT_DATA__"),
+            staysSearch: html.includes("StaysSearch"),
+            metaItemListing: html.includes('itemtype="https://schema.org/Product"'),
+            captchaSignal: /perimeterx|px-captcha|are you a robot|unusual traffic/i.test(html),
+          },
+          regexHits: {
+            roomsRegex: roomsMatches.length,
+            roomsRegexUnique: new Set(roomsMatches).size,
+            listingId: listingIdMatches.length,
+          },
+          parserResult: { cardsExtracted: extraction.ids.length, newOnPage },
+          snippetAroundFirstMarker: snippet,
+        });
+      }
       // If page returned 0 NEW candidates and any cards at all, the bucket is
       // probably exhausted — stop early to save the IP budget.
-      if (page > 0 && newOnPage === 0 && cards.length > 0) break;
+      if (page > 0 && newOnPage === 0 && extraction.ids.length > 0) break;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       counters.errors.push({ stage: "search_page", page, url, message: msg });
@@ -181,20 +250,28 @@ async function runBucket(bucket: DiscoveryBucket): Promise<BucketCounters> {
   }
 
   // ── 2. Dedupe against rental_listings ──────────────────────────────────
-  const candidateUrls = Array.from(candidateIds).map(canonicalAirbnbUrl);
+  // Match the upsert identity key — (source_platform, external_id) — so
+  // URL drift doesn't make a known listing look "new" and cost us a wasted
+  // detail fetch + IP request.
+  const candidateIdList = Array.from(candidateIds);
   const existing = DRY_RUN
     ? []
     : await db
-        .select({ id: rentalListingsTable.id, sourceUrl: rentalListingsTable.sourceUrl })
+        .select({
+          id: rentalListingsTable.id,
+          externalId: rentalListingsTable.externalId,
+        })
         .from(rentalListingsTable)
         .where(
           and(
             eq(rentalListingsTable.sourcePlatform, SOURCE_PLATFORM),
-            inArray(rentalListingsTable.sourceUrl, candidateUrls)
+            inArray(rentalListingsTable.externalId, candidateIdList)
           )
         );
 
-  const existingUrls = new Set(existing.map((r) => r.sourceUrl));
+  const existingExternalIds = new Set(
+    existing.map((r) => r.externalId).filter((v): v is string => v !== null)
+  );
   const existingIds = existing.map((r) => r.id);
 
   // Bump last_seen_at on already-known listings touched by this bucket.
@@ -216,15 +293,13 @@ async function runBucket(bucket: DiscoveryBucket): Promise<BucketCounters> {
   }
 
   for (const id of candidateIds) {
-    if (existingUrls.has(canonicalAirbnbUrl(id))) {
+    if (existingExternalIds.has(id)) {
       logEvent({ event: "candidate_deduped", bucketId: bucket.bucketId, externalId: id });
     }
   }
 
   // ── 3. Detail-fetch + gate-check unseen candidates ─────────────────────
-  const unseen = Array.from(candidateIds).filter(
-    (id) => !existingUrls.has(canonicalAirbnbUrl(id))
-  );
+  const unseen = Array.from(candidateIds).filter((id) => !existingExternalIds.has(id));
 
   for (const externalId of unseen) {
     await sleep(randomDelayMs(MIN_DELAY_MS, MAX_DELAY_MS));
@@ -787,25 +862,44 @@ async function preflight(): Promise<void> {
 
 async function main(): Promise<void> {
   const allBuckets = buildBuckets();
-  const buckets = MAX_BUCKETS ? allBuckets.slice(0, MAX_BUCKETS) : allBuckets;
+  // Apply BUCKETS_FILTER first so MAX_BUCKETS clips the FILTERED list, not
+  // the full 200. Lets ops do "DISCOVERY_BUCKETS=foo,bar DISCOVERY_MAX_BUCKETS=2"
+  // to smoke-test a known-good subset without touching the rest.
+  let buckets = BUCKETS_FILTER
+    ? allBuckets.filter((b) => BUCKETS_FILTER.has(b.bucketId))
+    : allBuckets;
+  if (BUCKETS_FILTER && buckets.length === 0) {
+    throw new Error(
+      `DISCOVERY_BUCKETS filtered to zero buckets. Requested IDs: ` +
+        `${[...BUCKETS_FILTER].join(", ")}. Valid IDs follow ` +
+        `'<neighborhood_key>__<bedroom_band>__<price_band>' (e.g. ` +
+        `'zona_romantica__2__200_400').`
+    );
+  }
+  if (MAX_BUCKETS) buckets = buckets.slice(0, MAX_BUCKETS);
   const totals = freshTotals();
   const runStart = Date.now();
+  let consecutiveZeroCardBuckets = 0;
 
   logEvent({
     event: "run_started",
     totalBuckets: buckets.length,
     dryRun: DRY_RUN,
+    debug: DEBUG,
+    bucketsFilter: BUCKETS_FILTER ? [...BUCKETS_FILTER] : null,
+    failFastAfter: FAIL_FAST_AFTER,
     pacingMs: { min: MIN_DELAY_MS, max: MAX_DELAY_MS },
     transport: "residential-direct",
   });
 
   await preflight();
 
-  for (const bucket of buckets) {
+  for (let bucketIndex = 0; bucketIndex < buckets.length; bucketIndex++) {
+    const bucket = buckets[bucketIndex];
     const startedAt = new Date();
     let counters: BucketCounters;
     try {
-      counters = await runBucket(bucket);
+      counters = await runBucket(bucket, bucketIndex);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       logEvent({ event: "bucket_finished", bucketId: bucket.bucketId, fatalError: msg });
@@ -830,6 +924,40 @@ async function main(): Promise<void> {
     totals.rejectedPropertyType += counters.rejectedPropertyType;
     totals.rejectedThinData += counters.rejectedThinData;
     totals.retryCount += counters.retryCount;
+
+    // Fail-fast: detect a dead sweep (broken transport, captcha wall, or
+    // bad URL set) before it burns the full IP budget. Tracks CONSECUTIVE
+    // buckets that returned zero candidates — a single dead bucket is a
+    // valid market signal, but ten in a row is a parser/URL/IP problem.
+    if (FAIL_FAST_AFTER > 0) {
+      if (counters.candidateIdsSeen === 0) {
+        consecutiveZeroCardBuckets++;
+      } else {
+        consecutiveZeroCardBuckets = 0;
+      }
+      if (consecutiveZeroCardBuckets >= FAIL_FAST_AFTER) {
+        const hint =
+          `First ${FAIL_FAST_AFTER} consecutive buckets returned 0 candidates. ` +
+          `Aborting before consuming the rest of the IP budget. ` +
+          `Re-run with DISCOVERY_DEBUG=1 DISCOVERY_MAX_BUCKETS=3 to see ` +
+          `the page-shape diagnostic (HTTP status, html length, ` +
+          `niobeClientData / __NEXT_DATA__ markers, /rooms/ + listingId ` +
+          `regex hit counts, snippet around the first match). The most ` +
+          `common causes are (a) datacenter IP being served stripped ` +
+          `pages, (b) over-restrictive search params returning empty ` +
+          `result sets, and (c) Airbnb HTML shape changes that broke ` +
+          `the parser. Try DISCOVERY_BUCKETS=zona_romantica__2__200_400 ` +
+          `as a known-good single-bucket smoke test.`;
+        logEvent({
+          event: "run_finished",
+          fatalError: "fail_fast_zero_candidate_buckets",
+          consecutiveZeroCardBuckets,
+          ...totals,
+          totalDurationMs: Date.now() - runStart,
+        });
+        throw new Error(hint);
+      }
+    }
   }
 
   totals.totalDurationMs = Date.now() - runStart;
