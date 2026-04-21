@@ -34,6 +34,11 @@ interface FormValues {
   bedrooms: 0 | 1 | 2 | 3 | 4;
   bathrooms: 1 | 2 | 3;          // 1 / 2 / 3+
   month: number;
+  // Optional stay window — when both populated, the engine prices the exact
+  // date range and overrides the month dropdown for seasonality. Empty
+  // strings mean "month-only pricing", preserving the legacy behavior.
+  checkIn:  string;   // YYYY-MM-DD
+  checkOut: string;   // YYYY-MM-DD
   // Premium features
   viewType: ViewType;
   finishQuality: FinishQuality;
@@ -216,6 +221,12 @@ interface CompsResult {
     weekend_high?: number | null;
     weekday_samples?: number;
     weekend_samples?: number;
+    stay_window_median?: number | null;
+    stay_window_low?: number | null;
+    stay_window_high?: number | null;
+    stay_window_total?: number | null;
+    stay_window_nights?: number | null;
+    stay_window_samples?: number;
   };
 }
 
@@ -529,6 +540,8 @@ export default function PricingToolPage() {
   const currentMonth = new Date().getMonth() + 1;
 
   const [form, setForm] = useState<FormValues>({
+    checkIn: "",
+    checkOut: "",
     neighborhood: "Zona Romantica",
     buildingName: "",
     bedrooms: 1,
@@ -642,6 +655,23 @@ export default function PricingToolPage() {
       if (form.largeTerrace)      amenities.push("outdoor_space");
       if (form.beachfront)        amenities.push("beachfront");
 
+      // Stay window — only sent when both endpoints are populated AND form a
+      // valid forward-looking range. Backend re-validates the regex and
+      // ordering, so this is purely an optimization to avoid noisy 400s
+      // during the auto-refine debounce while the user is mid-typing.
+      const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+      const stayWindowValid =
+        dateRe.test(form.checkIn) &&
+        dateRe.test(form.checkOut) &&
+        form.checkIn < form.checkOut;
+      // When a stay window is active, derive the month from check_in so the
+      // engine's seasonality + base anchor match the actual booking dates,
+      // regardless of what the dropdown shows. Keeps the UI flexible without
+      // forcing the user to manually re-sync the month.
+      const effectiveMonth = stayWindowValid
+        ? Number(form.checkIn.slice(5, 7))
+        : form.month;
+
       const payload = {
         neighborhood_normalized: form.neighborhood,
         bedrooms: Math.max(1, form.bedrooms),
@@ -651,7 +681,8 @@ export default function PricingToolPage() {
         amenities_normalized: amenities,
         rating_overall: form.ratingOverall ? parseFloat(form.ratingOverall) : null,
         building_name: form.buildingName || null,
-        month: form.month,
+        month: effectiveMonth,
+        ...(stayWindowValid ? { check_in: form.checkIn, check_out: form.checkOut } : {}),
         view_type: form.viewType,
         rooftop_pool: form.rooftopPool,
         year_built: form.buildingYear || "",
@@ -775,6 +806,43 @@ export default function PricingToolPage() {
                       </span>
                     );
                   })()}
+                </div>
+              </div>
+
+              {/* Stay window — optional. When both are set, the engine prices
+                  the exact range and the month dropdown is auto-derived from
+                  check-in. Leave empty for month-only pricing (legacy path). */}
+              <div>
+                <FieldLabel>
+                  {t("Stay dates (optional)", "Fechas de estadía (opcional)")}
+                </FieldLabel>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="date"
+                    value={form.checkIn}
+                    onChange={e => setField("checkIn", e.target.value)}
+                    className="px-3 py-2 rounded-md border bg-background text-sm tabular-nums"
+                    style={{ borderColor: "rgba(154,165,177,0.25)" }}
+                    aria-label={t("Check-in", "Llegada")}
+                  />
+                  <span className="text-muted-foreground text-sm">→</span>
+                  <input
+                    type="date"
+                    value={form.checkOut}
+                    onChange={e => setField("checkOut", e.target.value)}
+                    className="px-3 py-2 rounded-md border bg-background text-sm tabular-nums"
+                    style={{ borderColor: "rgba(154,165,177,0.25)" }}
+                    aria-label={t("Check-out", "Salida")}
+                  />
+                  {(form.checkIn || form.checkOut) && (
+                    <button
+                      type="button"
+                      onClick={() => { setField("checkIn", ""); setField("checkOut", ""); }}
+                      className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                    >
+                      {t("Clear", "Limpiar")}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1231,6 +1299,46 @@ export default function PricingToolPage() {
                           <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{t("Stretch", "Máximo")}</p>
                           <p className="text-xl font-bold">{formatCurrency(compsResult.stretch_price)}</p>
                         </div>
+                      </div>
+                    )}
+                    {/* Stay-window block — populated only when the user chose
+                        explicit dates AND the per-night sample inside that
+                        window is dense enough. Sits above weekday/weekend
+                        because it is the most specific signal: the actual
+                        nights being priced. */}
+                    {compsResult.summary?.stay_window_median != null && (
+                      <div className="flex items-center gap-5 mt-3 pt-3"
+                           style={{ borderTop: "1px solid rgba(154,165,177,0.12)" }}>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                            {t("Your dates", "Tus fechas")}
+                            {compsResult.summary.stay_window_nights != null && (
+                              <> · {compsResult.summary.stay_window_nights}
+                                {" "}{t("nights", "noches")}</>
+                            )}
+                          </p>
+                          <p className="text-xl font-bold tabular-nums" style={{ color: "#FF7849" }}>
+                            {formatCurrency(compsResult.summary.stay_window_median)}
+                            <span className="text-[11px] font-medium text-muted-foreground ml-1">
+                              {t("/ night", "/ noche")}
+                            </span>
+                          </p>
+                          {compsResult.summary.stay_window_low != null && compsResult.summary.stay_window_high != null && (
+                            <p className="text-[10px] text-muted-foreground tabular-nums">
+                              {formatCurrency(compsResult.summary.stay_window_low)} – {formatCurrency(compsResult.summary.stay_window_high)}
+                            </p>
+                          )}
+                        </div>
+                        {compsResult.summary.stay_window_total != null && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                              {t("Total stay", "Total estadía")}
+                            </p>
+                            <p className="text-xl font-bold tabular-nums">
+                              {formatCurrency(compsResult.summary.stay_window_total)}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     )}
                     {/* Weekday / weekend split — quietly hidden when the per-bucket

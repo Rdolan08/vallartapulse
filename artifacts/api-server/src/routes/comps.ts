@@ -258,6 +258,14 @@ const CompsRequestSchema = z.object({
   finish_quality: z.enum(FINISH_QUALITIES).default("standard"),
   private_plunge_pool: z.boolean().default(false),
   large_terrace: z.boolean().default(false),
+
+  // Optional stay-window inputs. When both are provided and well-formed, the
+  // engine treats the stay-window's first day as the seasonal anchor (overrides
+  // the `month` field) and computes a window-specific factor against the same
+  // selected comp pool's per-night data. When absent, behavior is identical to
+  // pre-stay-window — month-based pricing only.
+  check_in:  z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  check_out: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
 });
 
 type CompsRequest = z.infer<typeof CompsRequestSchema>;
@@ -381,11 +389,35 @@ router.post("/rental/comps", async (req, res) => {
 
   const input = parsed.data;
 
+  // ── Stay-window derivation ────────────────────────────────────────────────
+  // When both check_in and check_out are present and check_in < check_out, the
+  // stay window becomes the seasonal anchor and the source-of-truth date range
+  // for both the engine call and the per-night data block downstream. When
+  // absent (or malformed), behavior is identical to month-only pricing.
+  const checkIn  = input.check_in  ?? null;
+  const checkOut = input.check_out ?? null;
+  const useStayWindow = !!(checkIn && checkOut && checkIn < checkOut);
+  let effectiveYear:  number;
+  let effectiveMonth: number;
+  let stayNights = 0;
+  if (useStayWindow) {
+    const [yStr, mStr] = checkIn!.split("-");
+    effectiveYear  = parseInt(yStr, 10);
+    effectiveMonth = parseInt(mStr, 10);
+    // Inclusive of check-in, exclusive of check-out — standard hotel/STR
+    // night-count convention.
+    const ms = Date.parse(checkOut + "T00:00:00Z") - Date.parse(checkIn + "T00:00:00Z");
+    stayNights = Math.max(1, Math.round(ms / 86400000));
+  } else {
+    effectiveYear  = new Date().getFullYear();
+    effectiveMonth = input.month;
+  }
+
   req.log.info({
     neighborhood: input.neighborhood_normalized,
     bedrooms: input.bedrooms,
     bathrooms: input.bathrooms,
-    month: input.month,
+    month: effectiveMonth,
     view_type: input.view_type,
     rooftop_pool: input.rooftop_pool,
     finish_quality: input.finish_quality,
@@ -394,15 +426,15 @@ router.post("/rental/comps", async (req, res) => {
   }, "comps v3.1 request");
 
   try {
-    const targetYear = new Date().getFullYear();
+    const targetYear = effectiveYear;
 
     const [{ engine, listingCount, diagnostics: poolDiagnostics }, allEvents, monthAvail] = await Promise.all([
       getEngine(),
       getActiveEvents(),
-      getMonthAvailability(targetYear, input.month),
+      getMonthAvailability(targetYear, effectiveMonth),
     ]);
 
-    const pricingEvents = eventsForMonth(allEvents, targetYear, input.month);
+    const pricingEvents = eventsForMonth(allEvents, targetYear, effectiveMonth);
 
     // Building resolution
     let resolvedBuildingName: string | null = input.building_name ?? null;
@@ -442,7 +474,7 @@ router.post("/rental/comps", async (req, res) => {
       amenitiesNormalized: input.amenities_normalized,
       ratingOverall: input.rating_overall ?? null,
       buildingName: resolvedBuildingName,
-      month: input.month,
+      month: effectiveMonth,
       viewType: input.view_type as ViewType,
       rooftopPool: input.rooftop_pool,
       yearBuilt: input.year_built as YearBuiltRange,
@@ -517,9 +549,9 @@ router.post("/rental/comps", async (req, res) => {
       .filter((n): n is number => typeof n === "number" && Number.isFinite(n));
 
     if (compIdsForSplit.length > 0 && confidence !== "guidance_only") {
-      const startStr = `${targetYear}-${String(input.month).padStart(2, "0")}-01`;
-      const nextMonth = input.month === 12 ? 1 : input.month + 1;
-      const nextYear  = input.month === 12 ? targetYear + 1 : targetYear;
+      const startStr = `${targetYear}-${String(effectiveMonth).padStart(2, "0")}-01`;
+      const nextMonth = effectiveMonth === 12 ? 1 : effectiveMonth + 1;
+      const nextYear  = effectiveMonth === 12 ? targetYear + 1 : targetYear;
       const endStr    = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
 
       const idArrayLiteral = `ARRAY[${compIdsForSplit.join(",")}]::int[]`;
@@ -561,6 +593,71 @@ router.post("/rental/comps", async (req, res) => {
           weekendMedian = Math.round(result.recommended  * weFactor);
           weekendLow    = Math.round(result.conservative * weFactor);
           weekendHigh   = Math.round(result.stretch      * weFactor);
+        }
+      }
+    }
+
+    // ── Stay-window block ─────────────────────────────────────────────────────
+    // When the user provided check_in/check_out, derive a window-specific
+    // factor against the same selected comp pool's per-night data over the
+    // entire effectiveMonth. The factor captures within-month seasonality
+    // (e.g., Christmas week vs early-December baseline) and day-of-week mix
+    // simultaneously — exactly the information a stay-date selection demands.
+    // Falls back to nulls (UI hides) when either bucket is too thin.
+    let stayWindowMedian: number | null = null;
+    let stayWindowLow:    number | null = null;
+    let stayWindowHigh:   number | null = null;
+    let stayWindowTotal:  number | null = null;
+    let stayWindowSamples = 0;
+
+    if (
+      useStayWindow &&
+      compIdsForSplit.length > 0 &&
+      confidence !== "guidance_only"
+    ) {
+      const idArrayLiteral = `ARRAY[${compIdsForSplit.join(",")}]::int[]`;
+      // Two queries in parallel: month baseline (denominator) and stay-window
+      // (numerator). Both restricted to available, priced rows from the same
+      // comp set so the factor is apples-to-apples.
+      const [monthRowsRes, winRowsRes] = await Promise.all([
+        db.execute(sql`
+          SELECT nightly_price_usd::float8 AS price
+          FROM rental_prices_by_date
+          WHERE listing_id = ANY(${sql.raw(idArrayLiteral)})
+            AND date >= ${`${effectiveYear}-${String(effectiveMonth).padStart(2, "0")}-01`}::date
+            AND date <  ${`${effectiveMonth === 12 ? effectiveYear + 1 : effectiveYear}-${String(effectiveMonth === 12 ? 1 : effectiveMonth + 1).padStart(2, "0")}-01`}::date
+            AND availability_status = 'available'
+            AND nightly_price_usd IS NOT NULL
+        `),
+        db.execute(sql`
+          SELECT nightly_price_usd::float8 AS price
+          FROM rental_prices_by_date
+          WHERE listing_id = ANY(${sql.raw(idArrayLiteral)})
+            AND date >= ${checkIn}::date
+            AND date <  ${checkOut}::date
+            AND availability_status = 'available'
+            AND nightly_price_usd IS NOT NULL
+        `),
+      ]);
+
+      const monthPrices = (monthRowsRes.rows as Array<{ price: number }>).map(r => r.price);
+      const winPrices   = (winRowsRes.rows   as Array<{ price: number }>).map(r => r.price);
+      stayWindowSamples = winPrices.length;
+
+      // Min thresholds: month baseline needs enough density to be a stable
+      // denominator; window needs enough nights × listings to be meaningful.
+      const MIN_MONTH_BASELINE = 12;
+      const MIN_WINDOW_OBSERVATIONS = 8;
+      if (monthPrices.length >= MIN_MONTH_BASELINE && winPrices.length >= MIN_WINDOW_OBSERVATIONS) {
+        const sortAsc = (xs: number[]) => xs.slice().sort((a, b) => a - b);
+        const monthMedian  = median(sortAsc(monthPrices));
+        const windowMedian = median(sortAsc(winPrices));
+        if (monthMedian > 0) {
+          const factor = windowMedian / monthMedian;
+          stayWindowMedian = Math.round(result.recommended  * factor);
+          stayWindowLow    = Math.round(result.conservative * factor);
+          stayWindowHigh   = Math.round(result.stretch      * factor);
+          stayWindowTotal  = stayWindowMedian * stayNights;
         }
       }
     }
@@ -787,7 +884,7 @@ router.post("/rental/comps", async (req, res) => {
           nonSeasonalBase,
           neighborhood: input.neighborhood_normalized,
           bedrooms: input.bedrooms,
-          month: input.month,
+          month: effectiveMonth,
         },
         "comps: skipping seasonal_sweep — non-finite base would have rendered $NaN",
       );
@@ -845,7 +942,7 @@ router.post("/rental/comps", async (req, res) => {
         building_premium_pct: result.targetBuildingPremiumFactor != null
           ? parseFloat((result.targetBuildingPremiumFactor * 100).toFixed(1)) : null,
         segment_median: result.segmentMedian,
-        month: input.month,
+        month: effectiveMonth,
         view_type: input.view_type,
         rooftop_pool: input.rooftop_pool,
         finish_quality: input.finish_quality,
@@ -962,6 +1059,17 @@ router.post("/rental/comps", async (req, res) => {
         weekend_high:   weekendHigh,
         weekday_samples: weekdaySamples,
         weekend_samples: weekendSamples,
+
+        // Stay-window block — populated only when the request supplied valid
+        // check_in/check_out and the per-night sample within the window is
+        // dense enough. Same scaling pattern as weekday/weekend so the bands
+        // sit consistently around recommended/conservative/stretch.
+        stay_window_median:  stayWindowMedian,
+        stay_window_low:     stayWindowLow,
+        stay_window_high:    stayWindowHigh,
+        stay_window_total:   stayWindowTotal,
+        stay_window_nights:  useStayWindow ? stayNights : null,
+        stay_window_samples: stayWindowSamples,
       },
 
       generated_at: new Date().toISOString(),
