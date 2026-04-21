@@ -70,5 +70,8 @@
     "vite": "catalog:",
     "wouter": "^3.3.5",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
   }
 }

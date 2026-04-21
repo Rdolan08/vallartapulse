@@ -1,0 +1,86 @@
+I need a concrete production strategy for Airbnb calendar/pricing enrichment now that discovery is working at scale.
+
+Context:
+- VallartaPulse discovery is now inserting Airbnb listings successfully from a residential Mac mini into Railway/Postgres.
+- We just completed a full discovery sweep with strong yield and now have materially more Airbnb listings in rental_listings.
+- The website is already seeing the new listings from Postgres, but pricing/calendar coverage is lagging because enrichment has not caught up.
+- Current enrichment is a GitHub Action with a daily cap of 500 listings.
+- I do NOT want a vague answer. I want an operating model and implementation plan.
+
+Please design the refresh/enrichment strategy for Airbnb calendar/pricing data with these goals:
+1. Newly discovered listings should get pricing/calendar data quickly.
+2. Existing listings should still be refreshed often enough to keep comp pricing current.
+3. We must respect the 500/day GitHub Action cap unless you propose a split model.
+4. We should avoid wasting daily budget on low-value or stale listings when better priorities exist.
+5. The plan should fit the current architecture and be production-practical.
+
+Please answer with the following sections:
+
+SECTION 1 — RECOMMENDED ENRICHMENT STRATEGY
+Propose the exact prioritization order for which listings should get calendar/pricing enrichment first. I expect something like:
+- brand new listings discovered in the last 24h
+- listings with no calendar/pricing rows yet
+- high-value / high-confidence listings in Tier 1 neighborhoods
+- listings used recently by the pricing tool
+- stale listings whose calendar data is older than X days
+But I want your actual recommendation, with ordering and rationale.
+
+SECTION 2 — DAILY 500-CAP BUDGET ALLOCATION
+Give me a concrete suggested split of the 500/day cap. Example format:
+- X slots: newly discovered listings with no pricing
+- X slots: stale high-priority listings
+- X slots: stale medium-priority listings
+- X slots: opportunistic backfill / long-tail
+Use real numbers that add to 500 and explain why.
+
+SECTION 3 — SCHEDULING MODEL
+Recommend whether enrichment should stay entirely in GitHub Actions or be split across:
+- GitHub Actions for capped cloud refresh
+- Mac mini for discovery only
+- or Mac mini also handling some enrichment
+Be opinionated. If the best model is hybrid, say exactly what should run where and why.
+
+SECTION 4 — SQL/SELECTION LOGIC
+Define the actual selection logic for the enrichment queue. I want explicit prioritization criteria using fields we already have or should add. Include things like:
+- created_at
+- last_seen_at
+- scraped_at / pricing freshness timestamp
+- source_platform
+- neighborhood_normalized
+- property_type_normalized
+- bedrooms
+- whether the listing has any calendar rows yet
+- maybe whether it appears in Tier 1 buckets
+If needed, propose one or two helper fields/tables, but keep it lean.
+
+SECTION 5 — REFRESH POLICY
+Recommend how often different listing groups should be refreshed. Example:
+- new listings: same day
+- active Tier 1 listings: every 2–3 days
+- lower-priority listings: weekly
+- stale / inactive listings: much less often
+Again, give your actual recommendation.
+
+SECTION 6 — IMPLEMENTATION PLAN
+Give me a practical implementation plan in order:
+1. what to build first
+2. what SQL/view/queue to add
+3. what GitHub Action changes to make
+4. what logging/telemetry to add
+5. how to verify the system is working
+
+SECTION 7 — OUTPUT METRICS
+Tell me exactly what metrics I should monitor daily to know whether the enrichment strategy is healthy. I want things like:
+- listings with no calendar/pricing coverage
+- % of Tier 1 listings enriched
+- newly discovered listings enriched within 24h
+- stale enriched listings by age bucket
+- daily 500 budget utilization
+- median age of pricing data used by the pricing tool
+
+Important constraints:
+- Keep this focused on Airbnb first.
+- Do not re-architect the whole platform.
+- Assume discovery is working and this is now an enrichment prioritization problem.
+- The answer should be written as a concrete engineering recommendation, not a brainstorm.
+- If you think the GitHub Action 500/day cap is no longer enough, say so plainly and propose the best next step.

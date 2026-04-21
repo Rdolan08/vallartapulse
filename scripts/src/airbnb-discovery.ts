@@ -34,7 +34,19 @@
  *     exec tsx ./src/airbnb-discovery.ts
  *
  * Optional env knobs:
- *   DISCOVERY_MAX_BUCKETS    cap buckets per run (default: all 200)
+ *   DISCOVERY_TIER           which tier(s) to run (default: "all"). Accepts
+ *                              "1"          → daily core (~77 buckets)
+ *                              "1,2"        → daily + mid-yield (~91 buckets)
+ *                              "2"          → just T2 net-new (~14 buckets)
+ *                              "3"          → fringe / weekly (~109 buckets)
+ *                              "all"        → all 200 (legacy full sweep)
+ *                            Mutually exclusive with DISCOVERY_BUCKETS — if
+ *                            both are set, DISCOVERY_BUCKETS wins (explicit
+ *                            ID list is more specific than tier).
+ *   DISCOVERY_MAX_BUCKETS    cap buckets per run (default: all in selected
+ *                              tier). Applied AFTER tier + ID filtering, so
+ *                              "DISCOVERY_TIER=1 DISCOVERY_MAX_BUCKETS=10"
+ *                              gives the top 10 highest-priority T1 buckets.
  *   DISCOVERY_MAX_PAGES      pages per bucket   (default: 5)
  *   DISCOVERY_MIN_DELAY_MS   min between requests (default: 5000)
  *   DISCOVERY_MAX_DELAY_MS   max between requests (default: 8000)
@@ -69,6 +81,8 @@ import { extractCandidateIds } from "./lib/airbnb-search-cards-extract.js";
 import {
   buildBuckets,
   buildSearchUrl,
+  filterBucketsByTier,
+  parseTierEnv,
   type DiscoveryBucket,
 } from "./lib/airbnb-discovery-buckets.js";
 import {
@@ -106,6 +120,9 @@ const BUCKETS_FILTER = process.env.DISCOVERY_BUCKETS
         .filter(Boolean)
     )
   : null;
+// Parsed eagerly so a malformed DISCOVERY_TIER fails the run at import time
+// instead of silently selecting nothing. Returns "all" for unset/empty/"all".
+const TIER_FILTER = parseTierEnv(process.env.DISCOVERY_TIER);
 const FAIL_FAST_AFTER = process.env.DISCOVERY_FAIL_FAST_AFTER
   ? Math.max(0, parseInt(process.env.DISCOVERY_FAIL_FAST_AFTER, 10))
   : 5;
@@ -861,22 +878,55 @@ async function preflight(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  // buildBuckets() returns the 200-bucket cross-product already sorted by
+  // (executionRank asc) so the highest-yield slices appear first. Each bucket
+  // also carries its tier (1 | 2 | 3) for the optional DISCOVERY_TIER filter.
   const allBuckets = buildBuckets();
-  // Apply BUCKETS_FILTER first so MAX_BUCKETS clips the FILTERED list, not
-  // the full 200. Lets ops do "DISCOVERY_BUCKETS=foo,bar DISCOVERY_MAX_BUCKETS=2"
-  // to smoke-test a known-good subset without touching the rest.
-  let buckets = BUCKETS_FILTER
-    ? allBuckets.filter((b) => BUCKETS_FILTER.has(b.bucketId))
-    : allBuckets;
-  if (BUCKETS_FILTER && buckets.length === 0) {
-    throw new Error(
-      `DISCOVERY_BUCKETS filtered to zero buckets. Requested IDs: ` +
-        `${[...BUCKETS_FILTER].join(", ")}. Valid IDs follow ` +
-        `'<neighborhood_key>__<bedroom_band>__<price_band>' (e.g. ` +
-        `'zona_romantica__2__200_400').`
-    );
+  // Filter precedence (most-specific wins): DISCOVERY_BUCKETS > DISCOVERY_TIER.
+  // An explicit ID list is more specific than a tier, so when both are set
+  // the ID list takes effect and DISCOVERY_TIER is ignored. After filtering,
+  // MAX_BUCKETS clips the resulting list — so e.g.
+  //   DISCOVERY_TIER=1 DISCOVERY_MAX_BUCKETS=10
+  // gives the top-10 highest-priority Tier-1 buckets.
+  let buckets: DiscoveryBucket[];
+  if (BUCKETS_FILTER) {
+    buckets = allBuckets.filter((b) => BUCKETS_FILTER.has(b.bucketId));
+    if (buckets.length === 0) {
+      throw new Error(
+        `DISCOVERY_BUCKETS filtered to zero buckets. Requested IDs: ` +
+          `${[...BUCKETS_FILTER].join(", ")}. Valid IDs follow ` +
+          `'<neighborhood_key>__<bedroom_band>__<price_band>' (e.g. ` +
+          `'zona_romantica__2__200_400').`,
+      );
+    }
+  } else {
+    buckets = filterBucketsByTier(allBuckets, TIER_FILTER);
+    if (buckets.length === 0) {
+      throw new Error(
+        `DISCOVERY_TIER filtered to zero buckets. Requested tiers: ` +
+          `${TIER_FILTER === "all" ? "all" : [...TIER_FILTER].join(",")}.`,
+      );
+    }
   }
   if (MAX_BUCKETS) buckets = buckets.slice(0, MAX_BUCKETS);
+  // Tier composition for the run log — useful telemetry for "did the cron
+  // actually run T1 today, or did someone leave DISCOVERY_TIER=all set?".
+  const tierCounts = buckets.reduce(
+    (acc, b) => {
+      acc[`tier_${b.tier}`] = (acc[`tier_${b.tier}`] ?? 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+  logEvent({
+    event: "run_planned",
+    tierFilter: TIER_FILTER === "all" ? "all" : [...TIER_FILTER],
+    bucketsFilter: BUCKETS_FILTER ? [...BUCKETS_FILTER] : null,
+    maxBuckets: MAX_BUCKETS,
+    bucketsTotal: buckets.length,
+    bucketsByTier: tierCounts,
+    firstFiveBucketIds: buckets.slice(0, 5).map((b) => b.bucketId),
+  });
   const totals = freshTotals();
   const runStart = Date.now();
   let consecutiveZeroCardBuckets = 0;
