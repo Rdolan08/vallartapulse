@@ -737,41 +737,126 @@ router.post("/rental/comps", async (req, res) => {
     const topComps = comps.slice(0, 10);
     const topListingIds = topComps.map(c => c.listing.id);
 
-    // Pull the most recent guest-paid breakdown per listing from
-    // listing_price_quotes. Airbnb listings populate the full set of
-    // fees/taxes/total; PVRPV-only listings have no rows here, so the
-    // map lookup returns undefined and the UI renders "—".
-    const feeRows = topListingIds.length === 0
-      ? []
-      : (await db.execute(sql`
-          SELECT DISTINCT ON (listing_id)
-            listing_id::int                  AS listing_id,
-            nightly_price_usd::float8        AS nightly_price_usd,
-            cleaning_fee_usd::float8         AS cleaning_fee_usd,
-            service_fee_usd::float8          AS service_fee_usd,
-            taxes_usd::float8                AS taxes_usd,
-            total_price_usd::float8          AS total_price_usd,
-            stay_length_nights::int          AS stay_length_nights,
-            currency                         AS currency,
-            collected_at                     AS collected_at
-          FROM listing_price_quotes
-          WHERE listing_id = ANY(${sql.raw(`ARRAY[${topListingIds.map((n) => Number(n)).filter(Number.isFinite).join(",") || "NULL"}]::int[]`)})
-            AND availability_status = 'available'
-          ORDER BY listing_id, collected_at DESC
-        `)).rows as Array<{
-          listing_id: number;
-          nightly_price_usd: number | null;
-          cleaning_fee_usd: number | null;
-          service_fee_usd: number | null;
-          taxes_usd: number | null;
-          total_price_usd: number | null;
-          stay_length_nights: number | null;
-          currency: string | null;
-          collected_at: Date;
-        }>;
+    // Mexico vacation-rental tax bundle: 16% federal IVA + 3% Jalisco state
+    // lodging tax. PVRPV's quoted totals match this exactly; used to build
+    // synthetic stay-window quotes when no exact source quote exists.
+    const MX_VACATION_RENTAL_TAX_RATE = 0.19;
 
-    const feesByListing = new Map<number, typeof feeRows[number]>();
+    const topListingsIdArrayLiteral =
+      `ARRAY[${topListingIds.map((n) => Number(n)).filter(Number.isFinite).join(",") || "NULL"}]::int[]`;
+
+    type FeeRow = {
+      listing_id: number;
+      nightly_price_usd: number | null;
+      cleaning_fee_usd: number | null;
+      service_fee_usd: number | null;
+      taxes_usd: number | null;
+      total_price_usd: number | null;
+      stay_length_nights: number | null;
+      currency: string | null;
+      collected_at: Date;
+      // Provenance — distinguishes scraped quotes from per-night-derived
+      // synthetics so the UI can label the source honestly.
+      source?: "exact_quote" | "synthetic_window";
+    };
+
+    // Quote selection rules:
+    //   • Stay-window mode (check_in/check_out provided): require an EXACT
+    //     window match. Showing a quote for any other date range would
+    //     misrepresent the rate the user is actually pricing against.
+    //   • Month-only mode: keep the legacy "most-recent quote per listing"
+    //     behavior — there's no specific window to anchor to.
+    const feeRows: FeeRow[] = topListingIds.length === 0
+      ? []
+      : useStayWindow
+        ? (await db.execute(sql`
+            SELECT DISTINCT ON (listing_id)
+              listing_id::int                  AS listing_id,
+              nightly_price_usd::float8        AS nightly_price_usd,
+              cleaning_fee_usd::float8         AS cleaning_fee_usd,
+              service_fee_usd::float8          AS service_fee_usd,
+              taxes_usd::float8                AS taxes_usd,
+              total_price_usd::float8          AS total_price_usd,
+              stay_length_nights::int          AS stay_length_nights,
+              currency                         AS currency,
+              collected_at                     AS collected_at
+            FROM listing_price_quotes
+            WHERE listing_id = ANY(${sql.raw(topListingsIdArrayLiteral)})
+              AND availability_status = 'available'
+              AND checkin_date  = ${checkIn}::date
+              AND checkout_date = ${checkOut}::date
+            ORDER BY listing_id, collected_at DESC
+          `)).rows.map(r => ({ ...(r as Omit<FeeRow, "source">), source: "exact_quote" as const }))
+        : (await db.execute(sql`
+            SELECT DISTINCT ON (listing_id)
+              listing_id::int                  AS listing_id,
+              nightly_price_usd::float8        AS nightly_price_usd,
+              cleaning_fee_usd::float8         AS cleaning_fee_usd,
+              service_fee_usd::float8          AS service_fee_usd,
+              taxes_usd::float8                AS taxes_usd,
+              total_price_usd::float8          AS total_price_usd,
+              stay_length_nights::int          AS stay_length_nights,
+              currency                         AS currency,
+              collected_at                     AS collected_at
+            FROM listing_price_quotes
+            WHERE listing_id = ANY(${sql.raw(topListingsIdArrayLiteral)})
+              AND availability_status = 'available'
+            ORDER BY listing_id, collected_at DESC
+          `)).rows.map(r => ({ ...(r as Omit<FeeRow, "source">), source: "exact_quote" as const }));
+
+    const feesByListing = new Map<number, FeeRow>();
     for (const r of feeRows) feesByListing.set(r.listing_id, r);
+
+    // Stay-window synthetic fallback: for any selected comp without an
+    // exact-window quote, build one from rental_prices_by_date covering
+    // [check_in, check_out). Requires full nightly coverage AND every
+    // night marked available — partial coverage would mislead.
+    if (useStayWindow) {
+      const missingIds = topListingIds.filter(id => !feesByListing.has(id));
+      if (missingIds.length > 0) {
+        const missingArrayLiteral = `ARRAY[${missingIds.join(",")}]::int[]`;
+        const winRows = (await db.execute(sql`
+          SELECT listing_id::int AS listing_id,
+                 date,
+                 nightly_price_usd::float8 AS nightly_price_usd
+          FROM rental_prices_by_date
+          WHERE listing_id = ANY(${sql.raw(missingArrayLiteral)})
+            AND date >= ${checkIn}::date
+            AND date <  ${checkOut}::date
+            AND availability_status = 'available'
+            AND nightly_price_usd IS NOT NULL
+        `)).rows as Array<{ listing_id: number; date: Date | string; nightly_price_usd: number }>;
+
+        const pricesByListing = new Map<number, number[]>();
+        for (const r of winRows) {
+          let arr = pricesByListing.get(r.listing_id);
+          if (!arr) { arr = []; pricesByListing.set(r.listing_id, arr); }
+          arr.push(r.nightly_price_usd);
+        }
+        for (const [lid, prices] of pricesByListing) {
+          // Reject anything short of full coverage — a 5-of-6-night sample
+          // would imply the user can actually book the partial window, which
+          // we can't verify.
+          if (prices.length !== stayNights) continue;
+          const subtotal = prices.reduce((a, b) => a + b, 0);
+          const taxes    = subtotal * MX_VACATION_RENTAL_TAX_RATE;
+          const total    = subtotal + taxes;
+          const avgNightly = subtotal / stayNights;
+          feesByListing.set(lid, {
+            listing_id: lid,
+            nightly_price_usd: Math.round(avgNightly * 100) / 100,
+            cleaning_fee_usd: 0,
+            service_fee_usd: 0,
+            taxes_usd: Math.round(taxes * 100) / 100,
+            total_price_usd: Math.round(total * 100) / 100,
+            stay_length_nights: stayNights,
+            currency: "USD",
+            collected_at: new Date(),
+            source: "synthetic_window",
+          });
+        }
+      }
+    }
 
     // Per-night fees implied by each comp's guest-paid quote, used to derive
     // a comp-pool median fee uplift for the owner's recommended rate.
@@ -810,7 +895,13 @@ router.post("/rental/comps", async (req, res) => {
         distance_to_beach_m: c.listing.distanceToBeachM,
         beach_tier: c.listing.beachTier,
         price_tier: c.listing.priceTier,
-        nightly_price_usd: c.listing.nightlyPriceUsd,
+        // When pricing a stay window, anchor the displayed nightly to the
+        // SAME source as the total (exact quote or per-night synthetic) so
+        // the card is internally consistent. In month-only mode, fall back
+        // to the listing's sticker rate (legacy behavior).
+        nightly_price_usd: useStayWindow && fees && fees.nightly_price_usd != null
+          ? Math.round(fees.nightly_price_usd)
+          : c.listing.nightlyPriceUsd,
         rating_overall: c.listing.ratingOverall,
         building_name: c.listing.buildingNameNormalized,
         score: parseFloat(c.score.toFixed(1)),
@@ -837,6 +928,10 @@ router.post("/rental/comps", async (req, res) => {
               collected_at: fees.collected_at instanceof Date
                 ? fees.collected_at.toISOString()
                 : String(fees.collected_at),
+              // "exact_quote" = real scraped guest-paid quote for the exact
+              // window. "synthetic_window" = derived from per-night rates +
+              // 19% MX tax because no exact quote existed. UI labels both.
+              source: fees.source ?? "exact_quote",
             }
           : null,
       };
