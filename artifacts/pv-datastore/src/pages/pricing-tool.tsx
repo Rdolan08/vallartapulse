@@ -562,6 +562,14 @@ export default function PricingToolPage() {
   const [showComps, setShowComps] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
+  // Progressive refinement plumbing: cancel in-flight requests when the user
+  // edits faster than the network, and only auto-scroll on the very first
+  // result so subsequent refinements don't yank the viewport around.
+  const abortRef = useRef<AbortController | null>(null);
+  const firstResultScrolledRef = useRef(false);
+  // Manual force-refetch trigger — bumped by the error-pane retry button so
+  // the auto-refine effect re-runs even when the form payload hasn't changed.
+  const [refreshNonce, setRefreshNonce] = useState(0);
 
   const setField = useCallback(<K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -596,9 +604,11 @@ export default function PricingToolPage() {
     return null;
   }, [form.beachfront, beachPresetM, form.distanceCustom]);
 
-  // Scroll to results
+  // Scroll to first result only — subsequent refinements update in place so
+  // the viewport doesn't jump every time the user toggles an amenity.
   useEffect(() => {
-    if (phase === "results" && resultsRef.current) {
+    if (phase === "results" && resultsRef.current && !firstResultScrolledRef.current) {
+      firstResultScrolledRef.current = true;
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     }
     if (phase === "error" && errorRef.current) {
@@ -606,60 +616,92 @@ export default function PricingToolPage() {
     }
   }, [phase]);
 
-  // ── Handle Get Price ──
-  const handleGetPrice = useCallback(async () => {
-    if (distanceM === null) {
-      alert(t("Please select a beach distance.", "Por favor seleccione la distancia a la playa."));
-      return;
-    }
-    if (form.bedrooms === 0) {
-      // Studio → send as 1BR for engine
-    }
+  // Distance defaults to 200 m (mid-distance) until the user picks one, so
+  // the early estimate fires immediately on page load using the form's
+  // built-in defaults (Zona Romantica · 1BR · 1BA). Picking a real distance
+  // simply refines the live number in place.
+  const effectiveDistanceM = distanceM ?? 200;
 
-    setIsLoading(true);
-    setPhase("idle");
-    setErrorMsg(null);
+  // ── Progressive auto-refine ────────────────────────────────────────────────
+  // Fires a debounced /api/rental/comps request whenever any pricing-relevant
+  // form field changes. Cancels any in-flight request via AbortController so
+  // the UI never paints a stale older response over a newer one. Keeps the
+  // last good result visible while the next one is in flight — the result
+  // header surfaces a subtle "Updating…" pill instead of a blocking spinner.
+  useEffect(() => {
+    if (loadingMeta) return;
 
-    // Build amenities from secondary selections + premium feature keys
-    const amenities: string[] = [...form.secondaryAmenities];
-    if (form.rooftopPool) amenities.push("rooftop_pool");
-    if (form.privatePlungePool) amenities.push("private_pool");
-    if (form.largeTerrace) amenities.push("outdoor_space");
-    if (form.beachfront) amenities.push("beachfront");
+    const handle = setTimeout(() => {
+      abortRef.current?.abort();
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
 
-    const payload = {
-      neighborhood_normalized: form.neighborhood,
-      bedrooms: Math.max(1, form.bedrooms),
-      bathrooms: form.bathrooms,
-      sqft: form.size ? parseFloat(form.size) : null,
-      distance_to_beach_m: distanceM,
-      amenities_normalized: amenities,
-      rating_overall: form.ratingOverall ? parseFloat(form.ratingOverall) : null,
-      building_name: form.buildingName || null,
-      month: form.month,
-      view_type: form.viewType,
-      rooftop_pool: form.rooftopPool,
-      year_built: form.buildingYear || "",
-      finish_quality: form.finishQuality,
-      private_plunge_pool: form.privatePlungePool,
-      large_terrace: form.largeTerrace,
-    };
+      const amenities: string[] = [...form.secondaryAmenities];
+      if (form.rooftopPool)       amenities.push("rooftop_pool");
+      if (form.privatePlungePool) amenities.push("private_pool");
+      if (form.largeTerrace)      amenities.push("outdoor_space");
+      if (form.beachfront)        amenities.push("beachfront");
 
-    try {
-      const result = await apiFetch<CompsResult>("/api/rental/comps", {
+      const payload = {
+        neighborhood_normalized: form.neighborhood,
+        bedrooms: Math.max(1, form.bedrooms),
+        bathrooms: form.bathrooms,
+        sqft: form.size ? parseFloat(form.size) : null,
+        distance_to_beach_m: effectiveDistanceM,
+        amenities_normalized: amenities,
+        rating_overall: form.ratingOverall ? parseFloat(form.ratingOverall) : null,
+        building_name: form.buildingName || null,
+        month: form.month,
+        view_type: form.viewType,
+        rooftop_pool: form.rooftopPool,
+        year_built: form.buildingYear || "",
+        finish_quality: form.finishQuality,
+        private_plunge_pool: form.privatePlungePool,
+        large_terrace: form.largeTerrace,
+      };
+
+      setIsLoading(true);
+      apiFetch<CompsResult>("/api/rental/comps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      });
-      setCompsResult(result);
-      setPhase("results");
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : String(err));
-      setPhase("error");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [form, distanceM, t]);
+        signal: ctrl.signal,
+      })
+        .then(result => {
+          if (ctrl.signal.aborted) return;
+          setCompsResult(result);
+          setPhase("results");
+          setErrorMsg(null);
+        })
+        .catch(err => {
+          if (ctrl.signal.aborted) return;
+          if ((err as { name?: string })?.name === "AbortError") return;
+          // Don't blow away a good result on a transient failure — keep the
+          // last visible number and only switch to the error pane if we have
+          // nothing to show.
+          if (!compsResult) {
+            setErrorMsg(err instanceof Error ? err.message : String(err));
+            setPhase("error");
+          }
+        })
+        .finally(() => {
+          if (!ctrl.signal.aborted) setIsLoading(false);
+        });
+    }, 350);
+
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    loadingMeta,
+    form.neighborhood, form.buildingName, form.bedrooms, form.bathrooms,
+    form.size, effectiveDistanceM, form.beachfront,
+    form.viewType, form.month, form.rooftopPool, form.privatePlungePool,
+    form.largeTerrace, form.ratingOverall, form.buildingYear, form.finishQuality,
+    // secondaryAmenities is an array — stringify so reference identity changes
+    // from setForm spread don't fire spurious refetches when contents are equal.
+    form.secondaryAmenities.join(","),
+    refreshNonce,
+  ]);
 
   // ── Secondary amenity toggle ──
   const toggleSecondary = useCallback((key: string) => {
@@ -720,7 +762,7 @@ export default function PricingToolPage() {
                 <div className="flex items-center gap-3">
                   <StyledSelect value={form.month}
                     onChange={e => setField("month", Number(e.target.value) as typeof form.month)}
-                    disabled={isLoading} className="max-w-[160px]">
+ className="max-w-[160px]">
                     {MONTHS.map(m => <option key={m.n} value={m.n}>{m.full}</option>)}
                   </StyledSelect>
                   {(() => {
@@ -740,7 +782,7 @@ export default function PricingToolPage() {
               <div>
                 <FieldLabel>{t("Neighborhood", "Colonia")}</FieldLabel>
                 <StyledSelect value={form.neighborhood}
-                  onChange={e => setField("neighborhood", e.target.value as Neighborhood)} disabled={isLoading}>
+                  onChange={e => setField("neighborhood", e.target.value as Neighborhood)}>
                   <optgroup label="Puerto Vallarta">
                     <option value="Zona Romantica">Zona Romántica</option>
                     <option value="Amapas">Amapas / Conchas Chinas</option>
@@ -770,7 +812,7 @@ export default function PricingToolPage() {
                 {loadingMeta
                   ? <Skeleton className="h-10 rounded-xl" />
                   : <BuildingCombobox buildings={buildings} value={form.buildingName}
-                      onChange={v => setField("buildingName", v)} disabled={isLoading} />}
+                      onChange={v => setField("buildingName", v)} />}
                 <p className="text-[11px] mt-1" style={{ color: "rgba(154,165,177,0.4)" }}>
                   {t("Selecting a known building dramatically improves accuracy.", "Seleccionarlo mejora drásticamente la precisión.")}
                 </p>
@@ -784,7 +826,7 @@ export default function PricingToolPage() {
                     {BR_OPTIONS.map(o => (
                       <button key={o.value} type="button"
                         onClick={() => setField("bedrooms", o.value as typeof form.bedrooms)}
-                        disabled={isLoading}
+
                         className="px-3 py-1.5 rounded-lg text-sm font-medium border transition-all"
                         style={{
                           background: form.bedrooms === o.value ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
@@ -803,7 +845,7 @@ export default function PricingToolPage() {
                     {BATH_OPTIONS.map(o => (
                       <button key={o.value} type="button"
                         onClick={() => setField("bathrooms", o.value as typeof form.bathrooms)}
-                        disabled={isLoading}
+
                         className="flex-1 py-1.5 rounded-lg text-sm font-medium border transition-all"
                         style={{
                           background: form.bathrooms === o.value ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
@@ -829,7 +871,7 @@ export default function PricingToolPage() {
                   {VIEW_OPTIONS.map(v => (
                     <button key={v.value} type="button"
                       onClick={() => setField("viewType", v.value)}
-                      disabled={isLoading}
+
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all"
                       style={{
                         background: form.viewType === v.value ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
@@ -851,7 +893,7 @@ export default function PricingToolPage() {
                   {FINISH_OPTIONS.map(f => (
                     <button key={f.value} type="button"
                       onClick={() => setField("finishQuality", f.value)}
-                      disabled={isLoading}
+
                       className="flex flex-col items-start p-3 rounded-xl border transition-all text-left"
                       style={{
                         background: form.finishQuality === f.value ? "rgba(0,194,168,0.1)" : "rgba(255,255,255,0.03)",
@@ -907,7 +949,7 @@ export default function PricingToolPage() {
                     </div>
                     <Toggle value={item.value as boolean}
                       onChange={() => setField(item.key, !(item.value as boolean) as FormValues[typeof item.key])}
-                      disabled={isLoading} />
+ />
                   </div>
                 ))}
               </div>
@@ -932,7 +974,7 @@ export default function PricingToolPage() {
                       return (
                         <button key={p.m} type="button"
                           onClick={() => { setBeachPresetM(p.m); setField("distanceCustom", ""); }}
-                          disabled={isLoading}
+
                           className="px-2.5 py-1 rounded-lg text-[11px] border transition-all"
                           style={{
                             background: isSelected ? "rgba(0,194,168,0.15)" : "rgba(255,255,255,0.04)",
@@ -947,7 +989,7 @@ export default function PricingToolPage() {
                   <StyledInput type="number" min={0} placeholder="Or enter distance in feet (e.g. 500)"
                     value={form.distanceCustom}
                     onChange={e => { setField("distanceCustom", e.target.value); setBeachPresetM(null); }}
-                    disabled={isLoading} className="max-w-[280px]" />
+ className="max-w-[280px]" />
                   {distanceM === null && (
                     <p className="text-xs" style={{ color: "#F59E0B" }}>
                       {t("Please select or enter a beach distance before getting your price.", "Por favor seleccione la distancia a la playa.")}
@@ -965,7 +1007,7 @@ export default function PricingToolPage() {
                   const isOn = form.secondaryAmenities.includes(a.key);
                   return (
                     <button key={a.key} type="button"
-                      onClick={() => toggleSecondary(a.key)} disabled={isLoading}
+                      onClick={() => toggleSecondary(a.key)}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-all"
                       style={{
                         background: isOn ? "rgba(0,194,168,0.08)" : "rgba(255,255,255,0.03)",
@@ -989,7 +1031,7 @@ export default function PricingToolPage() {
 
             {/* ══ Section E: Optional (collapsed) ══ */}
             <div className="pt-4 border-t border-white/5">
-              <button type="button" onClick={() => setShowAdvanced(v => !v)} disabled={isLoading}
+              <button type="button" onClick={() => setShowAdvanced(v => !v)}
                 className="flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors">
                 {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                 {t("More details", "Más detalles")}
@@ -1007,12 +1049,12 @@ export default function PricingToolPage() {
                         <div>
                           <FieldLabel optional>{t("Unit size (sqft)", "Tamaño (sqft)")}</FieldLabel>
                           <StyledInput type="number" min={0} placeholder="e.g. 900"
-                            value={form.size} onChange={e => setField("size", e.target.value)} disabled={isLoading} />
+                            value={form.size} onChange={e => setField("size", e.target.value)} />
                         </div>
                         <div>
                           <FieldLabel optional>{t("Guest rating", "Calificación")}</FieldLabel>
                           <StyledSelect value={form.ratingOverall}
-                            onChange={e => setField("ratingOverall", e.target.value)} disabled={isLoading}>
+                            onChange={e => setField("ratingOverall", e.target.value)}>
                             <option value="">— Not yet rated —</option>
                             {Array.from({ length: 41 }, (_, i) => parseFloat((5.0 - i * 0.1).toFixed(1))).map(r => (
                               <option key={r} value={r}>{r.toFixed(1)} ★</option>
@@ -1025,7 +1067,7 @@ export default function PricingToolPage() {
                         <div>
                           <FieldLabel optional>{t("Year built", "Año de construcción")}</FieldLabel>
                           <StyledSelect value={form.buildingYear}
-                            onChange={e => setField("buildingYear", e.target.value)} disabled={isLoading}>
+                            onChange={e => setField("buildingYear", e.target.value)}>
                             <option value="">— Unknown —</option>
                             <option value="2020+">2020 or later</option>
                             <option value="2015-2019">2015–2019</option>
@@ -1044,7 +1086,7 @@ export default function PricingToolPage() {
                             </span>
                           </FieldLabel>
                           <StyledInput type="url" placeholder="airbnb.com/rooms/…"
-                            value={form.listingUrl} onChange={e => setField("listingUrl", e.target.value)} disabled={isLoading} />
+                            value={form.listingUrl} onChange={e => setField("listingUrl", e.target.value)} />
                         </div>
                       </div>
 
@@ -1052,10 +1094,10 @@ export default function PricingToolPage() {
                         <FieldLabel optional>{t("Location hint", "Referencia de ubicación")}</FieldLabel>
                         <div className="flex items-center gap-2">
                           <StreetAutocomplete placeholder={t("Cross street or landmark", "Calle o referencia")}
-                            value={form.crossStreet1} onChange={v => setField("crossStreet1", v)} disabled={isLoading} />
+                            value={form.crossStreet1} onChange={v => setField("crossStreet1", v)} />
                           <span className="text-muted-foreground text-sm shrink-0">×</span>
                           <StreetAutocomplete placeholder={t("2nd street (optional)", "2ª calle")}
-                            value={form.crossStreet2} onChange={v => setField("crossStreet2", v)} disabled={isLoading} />
+                            value={form.crossStreet2} onChange={v => setField("crossStreet2", v)} />
                         </div>
                       </div>
 
@@ -1065,14 +1107,20 @@ export default function PricingToolPage() {
               </AnimatePresence>
             </div>
 
-            {/* ── CTA ── */}
-            <div className="pt-5">
-              <PrimaryButton onClick={handleGetPrice} loading={isLoading} disabled={isLoading || distanceM === null}>
-                {isLoading
-                  ? t("Analyzing your property…", "Analizando tu propiedad…")
-                  : t("Get My Market Price", "Obtener Mi Precio de Mercado")}
-                {!isLoading && <BarChart3 className="w-4 h-4" />}
-              </PrimaryButton>
+            {/* Pricing now updates live as the form changes — no submit button.
+                A small status line confirms the engine is reacting so the user
+                doesn't wonder whether their last toggle landed. */}
+            <div className="pt-5 flex items-center gap-2 text-xs text-muted-foreground">
+              <BarChart3 className="w-3.5 h-3.5" style={{ color: "rgba(0,194,168,0.6)" }} />
+              {isLoading
+                ? <span className="inline-flex items-center gap-1.5">
+                    <Loader2 className="w-3 h-3 animate-spin" style={{ color: "#00C2A8" }} />
+                    {t("Updating estimate…", "Actualizando estimación…")}
+                  </span>
+                : compsResult
+                  ? t("Live estimate — every change refines it instantly.",
+                      "Estimación en vivo — cada cambio la refina al instante.")
+                  : t("Building your estimate…", "Generando tu estimación…")}
             </div>
 
           </CardContent>
@@ -1088,7 +1136,7 @@ export default function PricingToolPage() {
               <div>
                 <p className="text-sm font-semibold">{t("Something went wrong", "Algo salió mal")}</p>
                 <p className="text-xs mt-1 text-muted-foreground">{errorMsg}</p>
-                <button onClick={handleGetPrice} className="mt-2 text-xs font-medium flex items-center gap-1" style={{ color: "#00C2A8" }}>
+                <button onClick={() => setRefreshNonce(n => n + 1)} className="mt-2 text-xs font-medium flex items-center gap-1" style={{ color: "#00C2A8" }}>
                   <RefreshCw className="w-3 h-3" /> {t("Try again", "Intentar de nuevo")}
                 </button>
               </div>
@@ -1123,9 +1171,22 @@ export default function PricingToolPage() {
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                   {/* Price */}
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "rgba(0,194,168,0.7)" }}>
-                      {t("Recommended Nightly Rate", "Tarifa Nocturna Recomendada")}
-                    </p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "rgba(0,194,168,0.7)" }}>
+                        {t("Recommended Nightly Rate", "Tarifa Nocturna Recomendada")}
+                      </p>
+                      {/* Subtle in-place "updating" pill — appears whenever the
+                          last input change has triggered a fresh fetch. The old
+                          number stays visible underneath so the user sees the
+                          shape of the change rather than a blocking spinner. */}
+                      {isLoading && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider font-semibold"
+                          style={{ background: "rgba(0,194,168,0.12)", color: "rgba(0,194,168,0.85)" }}>
+                          <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                          {t("Updating", "Actualizando")}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-baseline gap-2">
                       <span className="text-6xl font-extrabold tracking-tight" style={{ color: "#00C2A8" }}>
                         {compsResult.recommended_price ? formatCurrency(compsResult.recommended_price) : "—"}
