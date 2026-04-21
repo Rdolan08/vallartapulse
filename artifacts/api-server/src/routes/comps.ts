@@ -491,6 +491,80 @@ router.post("/rental/comps", async (req, res) => {
         .toFixed(2)
     );
 
+    // ── Phase 2-prelude: weekday / weekend split ──────────────────────────────
+    // Pull per-night prices from rental_prices_by_date for the SAME listing
+    // IDs the engine already selected (no separate hidden comp pool), bucket
+    // Fri+Sat as weekend (PV short-term-rental convention), derive a factor
+    // against the overall raw median, then scale the engine's already-adjusted
+    // recommended/conservative/stretch by that factor. The split therefore
+    // sits consistently around summary.median and inherits every adjustment
+    // the engine applied (building, beach tier, premium features, seasonal).
+    //
+    // Degrades silently: if either bucket has fewer than MIN_PER_BUCKET rows,
+    // returns nulls for all six fields rather than surfacing a noisy partial
+    // signal. The UI hides the split block when both medians are null.
+    let weekdayMedian: number | null = null;
+    let weekdayLow:    number | null = null;
+    let weekdayHigh:   number | null = null;
+    let weekendMedian: number | null = null;
+    let weekendLow:    number | null = null;
+    let weekendHigh:   number | null = null;
+    let weekdaySamples = 0;
+    let weekendSamples = 0;
+
+    const compIdsForSplit = comps
+      .map(c => c.listing.id)
+      .filter((n): n is number => typeof n === "number" && Number.isFinite(n));
+
+    if (compIdsForSplit.length > 0 && confidence !== "guidance_only") {
+      const startStr = `${targetYear}-${String(input.month).padStart(2, "0")}-01`;
+      const nextMonth = input.month === 12 ? 1 : input.month + 1;
+      const nextYear  = input.month === 12 ? targetYear + 1 : targetYear;
+      const endStr    = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+
+      const idArrayLiteral = `ARRAY[${compIdsForSplit.join(",")}]::int[]`;
+      const dowRows = (await db.execute(sql`
+        SELECT
+          EXTRACT(DOW FROM date)::int AS dow,
+          nightly_price_usd::float8   AS price
+        FROM rental_prices_by_date
+        WHERE listing_id = ANY(${sql.raw(idArrayLiteral)})
+          AND date >= ${startStr}::date AND date < ${endStr}::date
+          AND availability_status = 'available'
+          AND nightly_price_usd IS NOT NULL
+      `)).rows as Array<{ dow: number; price: number }>;
+
+      const wd: number[] = [];
+      const we: number[] = [];
+      for (const r of dowRows) {
+        // dow: 0=Sun..6=Sat. Weekend = Fri (5) + Sat (6) nights — the
+        // industry-standard short-term-rental weekend definition.
+        if (r.dow === 5 || r.dow === 6) we.push(r.price);
+        else wd.push(r.price);
+      }
+      weekdaySamples = wd.length;
+      weekendSamples = we.length;
+
+      const MIN_PER_BUCKET = 8;
+      if (wd.length >= MIN_PER_BUCKET && we.length >= MIN_PER_BUCKET) {
+        const sortAsc = (xs: number[]) => xs.slice().sort((a, b) => a - b);
+        const wdSorted = sortAsc(wd);
+        const weSorted = sortAsc(we);
+        const overallSorted = sortAsc([...wd, ...we]);
+        const overallMedian = median(overallSorted);
+        if (overallMedian > 0) {
+          const wdFactor = median(wdSorted) / overallMedian;
+          const weFactor = median(weSorted) / overallMedian;
+          weekdayMedian = Math.round(result.recommended  * wdFactor);
+          weekdayLow    = Math.round(result.conservative * wdFactor);
+          weekdayHigh   = Math.round(result.stretch      * wdFactor);
+          weekendMedian = Math.round(result.recommended  * weFactor);
+          weekendLow    = Math.round(result.conservative * weFactor);
+          weekendHigh   = Math.round(result.stretch      * weFactor);
+        }
+      }
+    }
+
     req.log.info({
       pool_size: poolSize, confidence,
       conservative: result.conservative,
@@ -875,6 +949,19 @@ router.post("/rental/comps", async (req, res) => {
         static_share:              parseFloat(staticShare.toFixed(2)),
         static_avg_freshness_days: staticCount > 0 ? parseFloat(staticAvgFresh.toFixed(1)) : null,
         freshness_penalty_applied: staleStaticHeavy,
+
+        // Weekday / weekend split — derived from the SAME selected comp IDs
+        // via rental_prices_by_date for the requested month. All six fields
+        // are null when the per-bucket sample is too thin for a clean signal;
+        // the UI hides the block in that case rather than showing a caveat.
+        weekday_median: weekdayMedian,
+        weekday_low:    weekdayLow,
+        weekday_high:   weekdayHigh,
+        weekend_median: weekendMedian,
+        weekend_low:    weekendLow,
+        weekend_high:   weekendHigh,
+        weekday_samples: weekdaySamples,
+        weekend_samples: weekendSamples,
       },
 
       generated_at: new Date().toISOString(),

@@ -208,6 +208,14 @@ interface CompsResult {
     static_share: number;
     static_avg_freshness_days: number | null;
     freshness_penalty_applied: boolean;
+    weekday_median?: number | null;
+    weekday_low?: number | null;
+    weekday_high?: number | null;
+    weekend_median?: number | null;
+    weekend_low?: number | null;
+    weekend_high?: number | null;
+    weekday_samples?: number;
+    weekend_samples?: number;
   };
 }
 
@@ -1161,6 +1169,37 @@ export default function PricingToolPage() {
                         <div>
                           <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{t("Stretch", "Máximo")}</p>
                           <p className="text-xl font-bold">{formatCurrency(compsResult.stretch_price)}</p>
+                        </div>
+                      </div>
+                    )}
+                    {/* Weekday / weekend split — quietly hidden when the per-bucket
+                        sample in rental_prices_by_date is too thin to be honest.
+                        Same selected comp IDs as the headline number, scaled by the
+                        actual day-of-week pattern in the underlying nightly data. */}
+                    {compsResult.summary?.weekday_median != null && compsResult.summary?.weekend_median != null && (
+                      <div className="flex items-center gap-5 mt-3 pt-3"
+                           style={{ borderTop: "1px solid rgba(154,165,177,0.12)" }}>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{t("Weekday", "Entre semana")}</p>
+                          <p className="text-xl font-bold tabular-nums">
+                            {formatCurrency(compsResult.summary.weekday_median)}
+                          </p>
+                          {compsResult.summary.weekday_low != null && compsResult.summary.weekday_high != null && (
+                            <p className="text-[10px] text-muted-foreground tabular-nums">
+                              {formatCurrency(compsResult.summary.weekday_low)} – {formatCurrency(compsResult.summary.weekday_high)}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{t("Weekend", "Fin de semana")}</p>
+                          <p className="text-xl font-bold tabular-nums" style={{ color: "#00C2A8" }}>
+                            {formatCurrency(compsResult.summary.weekend_median)}
+                          </p>
+                          {compsResult.summary.weekend_low != null && compsResult.summary.weekend_high != null && (
+                            <p className="text-[10px] text-muted-foreground tabular-nums">
+                              {formatCurrency(compsResult.summary.weekend_low)} – {formatCurrency(compsResult.summary.weekend_high)}
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}
