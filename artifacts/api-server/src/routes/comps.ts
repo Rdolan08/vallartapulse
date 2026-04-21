@@ -11,6 +11,9 @@ import { z } from "zod";
 import { eq, asc, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { rentalListingsTable, marketEventsTable } from "@workspace/db/schema";
+// Phase 1.5 — availability filter: drop listings that are KNOWN-fully-blocked
+// for the requested month from the comp pool. Pulls from rental_prices_by_date,
+// which is populated for both PVRPV (with $) and Airbnb (availability only).
 import {
   CompsEngineV3,
   type TargetPropertyV3,
@@ -148,6 +151,65 @@ async function getActiveEvents(): Promise<MarketEvent[]> {
     .orderBy(asc(marketEventsTable.startDate));
   eventsCache = { events, builtAt: now };
   return events;
+}
+
+// ── Per-month availability cache ──────────────────────────────────────────────
+// For each (year, month) we cache the set of listing IDs that are KNOWN to be
+// fully blocked: i.e. they have ≥1 row in rental_prices_by_date for that month
+// and zero of those rows are availability_status='available'. Listings with NO
+// data for the month are NOT in the set — they pass through unaffected, since
+// "no calendar data yet" must not be confused with "blocked". 5-min TTL keeps
+// the lookup off the hot path.
+
+const AVAILABILITY_CACHE_TTL_MS = 5 * 60 * 1000;
+
+interface MonthAvailability {
+  /** listing IDs we have data for AND that are fully booked/blocked for the month */
+  unavailable: Set<number>;
+  /** total listings with any data in the month */
+  withData: number;
+  /** listings with at least one available night */
+  withAvailability: number;
+}
+
+const availabilityCache = new Map<string, { built: number; data: MonthAvailability }>();
+
+async function getMonthAvailability(year: number, month: number): Promise<MonthAvailability> {
+  const key = `${year}-${month}`;
+  const now = Date.now();
+  const hit = availabilityCache.get(key);
+  if (hit && now - hit.built < AVAILABILITY_CACHE_TTL_MS) return hit.data;
+
+  // Month bounds — start inclusive, end exclusive
+  const startStr = `${year}-${String(month).padStart(2, "0")}-01`;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const endStr = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+
+  const rows = (await db.execute(sql`
+    SELECT
+      listing_id::int                                                                AS listing_id,
+      COUNT(*) FILTER (WHERE availability_status = 'available')::int                  AS available_days,
+      COUNT(*)::int                                                                   AS total_days
+    FROM rental_prices_by_date
+    WHERE date >= ${startStr}::date AND date < ${endStr}::date
+    GROUP BY listing_id
+  `)).rows as Array<{ listing_id: number; available_days: number; total_days: number }>;
+
+  const unavailable = new Set<number>();
+  let withAvailability = 0;
+  for (const r of rows) {
+    if (r.total_days > 0 && r.available_days === 0) unavailable.add(r.listing_id);
+    if (r.available_days > 0) withAvailability += 1;
+  }
+
+  const data: MonthAvailability = {
+    unavailable,
+    withData: rows.length,
+    withAvailability,
+  };
+  availabilityCache.set(key, { built: now, data });
+  return data;
 }
 
 function eventsForMonth(events: MarketEvent[], year: number, month: number): MarketEvent[] {
@@ -332,12 +394,14 @@ router.post("/rental/comps", async (req, res) => {
   }, "comps v3.1 request");
 
   try {
-    const [{ engine, listingCount, diagnostics: poolDiagnostics }, allEvents] = await Promise.all([
+    const targetYear = new Date().getFullYear();
+
+    const [{ engine, listingCount, diagnostics: poolDiagnostics }, allEvents, monthAvail] = await Promise.all([
       getEngine(),
       getActiveEvents(),
+      getMonthAvailability(targetYear, input.month),
     ]);
 
-    const targetYear = new Date().getFullYear();
     const pricingEvents = eventsForMonth(allEvents, targetYear, input.month);
 
     // Building resolution
@@ -387,10 +451,44 @@ router.post("/rental/comps", async (req, res) => {
       largeTerrace: input.large_terrace,
     };
 
-    const result = engine.run(target);
+    // Phase 1.5: drop listings KNOWN-fully-blocked for the requested month
+    // from the comp pool. Listings without calendar data pass through.
+    const result = engine.run(target, { excludeIds: monthAvail.unavailable });
     const { comps, expandedPool, adjacentNeighborhood, adjacentNeighborhoodsUsed } = result;
     const poolSize = comps.length;
     const confidence = confidenceLabel(poolSize);
+
+    // Phase 1.5 — numeric confidence_score (0..1) for the structured summary,
+    // with a freshness penalty when the comp pool is dominated by static-displayed
+    // listings (mostly Airbnb baseline) AND those are stale beyond 7d. Per-night
+    // PVRPV daily comps don't get penalised — they're already the freshest source.
+    const compIds = new Set(comps.map(c => c.listing.id));
+    let staticCount = 0;
+    let staticFreshSum = 0;
+    let dailyCount = 0;
+    for (const c of comps) {
+      const src = c.listing.priceSource;
+      const fresh = c.listing.priceFreshnessDays;
+      if (src === "static_displayed" && typeof fresh === "number") {
+        staticCount += 1;
+        staticFreshSum += fresh;
+      } else if (src === "pvrpv_daily") {
+        dailyCount += 1;
+      }
+    }
+    const staticShare = poolSize > 0 ? staticCount / poolSize : 0;
+    const staticAvgFresh = staticCount > 0 ? staticFreshSum / staticCount : 0;
+    const staleStaticHeavy = staticShare >= 0.5 && staticAvgFresh > 7;
+    const baseConfidenceScore =
+      confidence === "high"           ? 1.00
+      : confidence === "medium"       ? 0.75
+      : confidence === "low"          ? 0.45
+      :                                  0.20; // guidance_only
+    const confidenceScore = parseFloat(
+      Math.max(0, Math.min(1, staleStaticHeavy ? baseConfidenceScore * 0.85 : baseConfidenceScore))
+        .toFixed(2)
+    );
+    void compIds; void dailyCount; // referenced for future per-source breakdown
 
     req.log.info({
       pool_size: poolSize, confidence,
@@ -748,6 +846,27 @@ router.post("/rental/comps", async (req, res) => {
       explanation,
       warnings,
       model_limitations: modelLimitations,
+
+      // Phase 1.5 — additive structured summary. Mirrors the existing
+      // conservative/recommended/stretch fields in a leaner shape so
+      // downstream callers (frontend, exports) can adopt without breaking
+      // the V3.1 response contract. `low`/`high` are the P15/P85 band
+      // (with the conservative/stretch guardrails applied), `median` is
+      // the post-adjustment recommended price.
+      summary: {
+        median:           confidence === "guidance_only" ? null : result.recommended,
+        low:              confidence === "guidance_only" ? null : result.conservative,
+        high:             confidence === "guidance_only" ? null : result.stretch,
+        confidence_score: confidenceScore,
+        sample_size:      poolSize,
+        // Diagnostic context for the freshness penalty above. Lets the UI
+        // show "trimmed N stale, M fully-blocked" without re-deriving it.
+        availability_filtered_out: monthAvail.unavailable.size,
+        static_share:              parseFloat(staticShare.toFixed(2)),
+        static_avg_freshness_days: staticCount > 0 ? parseFloat(staticAvgFresh.toFixed(1)) : null,
+        freshness_penalty_applied: staleStaticHeavy,
+      },
+
       generated_at: new Date().toISOString(),
     });
 

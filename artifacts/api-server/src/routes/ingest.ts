@@ -878,6 +878,86 @@ router.post("/ingest/enrich-airbnb-detail", async (req, res) => {
   }
 });
 
+// ── GET /ingest/airbnb-baseline-freshness ──────────────────────────────────
+//
+// Phase 1.5 — separate freshness probe for the Airbnb LISTING BASELINE
+// pricing (rental_listings.nightly_price_usd, refreshed nightly by the
+// detail-enrichment priority queue). This is the price source the comp
+// engine actually uses for Airbnb today (priceSource='static_displayed').
+//
+// Distinct from /ingest/airbnb-pricing-freshness, which probes the PAUSED
+// per-night quote pipeline (listing_price_quotes). That endpoint correctly
+// shows zero — but it must not be read as "Airbnb pricing in comps is
+// stale", which is what owners were concluding from the dashboard.
+router.get("/ingest/airbnb-baseline-freshness", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      WITH cohort AS (
+        SELECT rl.id, rl.scraped_at
+        FROM rental_listings rl
+        WHERE rl.source_platform = 'airbnb'
+          AND rl.is_active = true
+          AND rl.external_id IS NOT NULL
+          AND rl.external_id ~ '^[0-9]+$'
+      )
+      SELECT
+        COUNT(*)::int                                                                    AS listings_total,
+        COUNT(*) FILTER (WHERE scraped_at IS NULL)::int                                  AS listings_never_scraped,
+        COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '7 days' OR scraped_at IS NULL)::int   AS listings_stale_7d,
+        COUNT(*) FILTER (WHERE scraped_at < NOW() - INTERVAL '14 days' OR scraped_at IS NULL)::int  AS listings_stale_14d,
+        MAX(scraped_at)                                                                  AS newest_scrape_at
+      FROM cohort
+    `);
+    const row = (result as unknown as {
+      rows: Array<{
+        listings_total: number;
+        listings_never_scraped: number;
+        listings_stale_7d: number;
+        listings_stale_14d: number;
+        newest_scrape_at: string | null;
+      }>;
+    }).rows[0];
+
+    const newestAt = row.newest_scrape_at ? new Date(row.newest_scrape_at) : null;
+    const ageHours = newestAt
+      ? Math.floor((Date.now() - newestAt.getTime()) / 3_600_000)
+      : null;
+
+    let alertLevel: "ok" | "warn" | "fail" = "ok";
+    let alertReason = "";
+    if (row.listings_total === 0) {
+      alertLevel = "warn";
+      alertReason = "No active Airbnb listings in cohort";
+    } else if (ageHours === null || ageHours > 72) {
+      alertLevel = "fail";
+      alertReason = newestAt
+        ? `Newest baseline scrape is ${Math.round(ageHours! / 24)} days old`
+        : "No baselines have ever been scraped";
+    } else if (row.listings_stale_14d * 2 >= row.listings_total) {
+      alertLevel = "fail";
+      alertReason = `${row.listings_stale_14d}/${row.listings_total} listings stale >14d`;
+    } else if (row.listings_stale_7d * 3 >= row.listings_total) {
+      alertLevel = "warn";
+      alertReason = `${row.listings_stale_7d}/${row.listings_total} listings stale >7d`;
+    }
+
+    res.json({
+      source: "airbnb_baseline",
+      listingsTotal: row.listings_total,
+      listingsNeverScraped: row.listings_never_scraped,
+      listingsStale7d: row.listings_stale_7d,
+      listingsStale14d: row.listings_stale_14d,
+      newestScrapeAt: newestAt?.toISOString() ?? null,
+      newestScrapeAgeHours: ageHours,
+      alertLevel,
+      alertReason,
+    });
+  } catch (err) {
+    req.log.error({ err }, "ingest/airbnb-baseline-freshness failed");
+    res.status(500).json({ error: "Failed to compute Airbnb baseline freshness" });
+  }
+});
+
 // ── GET /ingest/airbnb-pricing-freshness ──────────────────────────────────
 //
 // Lightweight freshness probe over listing_price_quotes for the dashboard.
