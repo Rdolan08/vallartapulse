@@ -719,11 +719,15 @@ function buildRecommendationV2(
     : iqrTrim(allPrices, MIN_COMPS);
 
   const baseMedian  = Math.round(sortedPercentile(trimmedPrices, 50));
-  // Phase 1.5: P15-P85 (was P25-P75). Wider band better captures the realistic
-  // pricing envelope owners face — IQR was too narrow for thin-pool segments
-  // and clipped legitimate same-bedroom outliers that were real comps.
+  // Phase 1.5: widened lower bound to P15 (was P25). Keeps the conservative
+  // floor honest for thin-pool segments where IQR clipped legitimate comps.
+  // Phase 1.6: tightened upper bound to P80 (was P85) and added a hard
+  // stretch cap below — at 10-comp pools the 85th percentile is effectively
+  // "the second-highest listing", which surfaced single ultra-luxury outliers
+  // as a $888 stretch off a $313 median. P80 + 1.7× cap keeps the upper
+  // band market-realistic without losing the lower-band insight.
   const basePct15   = Math.round(sortedPercentile(trimmedPrices, 15));
-  const basePct85   = Math.round(sortedPercentile(trimmedPrices, 85));
+  const basePct80   = Math.round(sortedPercentile(trimmedPrices, 80));
   const avg         = Math.round(trimmedPrices.reduce((a, b) => a + b, 0) / trimmedPrices.length);
 
   let adjustedPrice = baseMedian;
@@ -788,7 +792,20 @@ function buildRecommendationV2(
 
   const recommended = Math.round(adjustedPrice);
   const conservative = Math.min(basePct15, Math.round(recommended * 0.85));
-  const stretch      = Math.max(basePct85, Math.round(recommended * 1.13));
+
+  // Stretch: take the tighter of P80 vs the floor (recommended × 1.13), then
+  // hard-cap at recommended × STRETCH_CAP_VS_RECOMMENDED. The cap protects
+  // against single ultra-luxury outliers in thin pools. Sanity guard: if the
+  // raw P80 itself sits beyond 2× recommended (extreme bimodal pool), force
+  // the cap regardless. Conservative is intentionally untouched.
+  const STRETCH_CAP_VS_RECOMMENDED = 1.7;
+  const stretchFloor = Math.round(recommended * 1.13);
+  const stretchCap   = Math.round(recommended * STRETCH_CAP_VS_RECOMMENDED);
+  const rawStretch   = Math.max(basePct80, stretchFloor);
+  const sanityTriggered = basePct80 > recommended * 2.0;
+  const stretch = sanityTriggered
+    ? stretchCap
+    : Math.min(rawStretch, stretchCap);
 
   return {
     conservative,
