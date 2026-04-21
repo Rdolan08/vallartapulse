@@ -191,6 +191,24 @@ interface CompsResult {
       recovery_window_end: string | null;
     }>;
   };
+  // Phase 1.5 additive summary block — composition counts power the
+  // concise data-signal line in the result header.
+  summary?: {
+    median: number | null;
+    low: number | null;
+    high: number | null;
+    confidence_score: number;
+    sample_size: number;
+    composition?: {
+      nightly_priced: number;
+      airbnb_baseline: number;
+      other: number;
+    };
+    availability_filtered_out: number;
+    static_share: number;
+    static_avg_freshness_days: number | null;
+    freshness_penalty_applied: boolean;
+  };
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -1154,19 +1172,53 @@ export default function PricingToolPage() {
                     {compsResult.building_context && (
                       <PositioningBadge positioning={compsResult.building_context.positioning} />
                     )}
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <BarChart3 className="w-3.5 h-3.5" />
-                      {compsResult.pool_size} {t("comparable listings", "comparables")}
-                    </div>
+                    {/* Concise data-signal line — composition (when available) tells
+                        the operator how grounded the range is without paragraphs of
+                        caveats. Falls back gracefully to the simple count if the
+                        backend hasn't shipped the summary block yet. */}
+                    {(() => {
+                      const comp = compsResult.summary?.composition;
+                      const total = compsResult.pool_size;
+                      if (comp && (comp.nightly_priced + comp.airbnb_baseline + comp.other) > 0) {
+                        const parts: string[] = [];
+                        const partsEs: string[] = [];
+                        if (comp.nightly_priced > 0) {
+                          parts.push(`${comp.nightly_priced} nightly-priced`);
+                          partsEs.push(`${comp.nightly_priced} con precio diario`);
+                        }
+                        if (comp.airbnb_baseline > 0) {
+                          parts.push(`${comp.airbnb_baseline} Airbnb`);
+                          partsEs.push(`${comp.airbnb_baseline} de Airbnb`);
+                        }
+                        if (comp.other > 0) {
+                          parts.push(`${comp.other} other`);
+                          partsEs.push(`${comp.other} otros`);
+                        }
+                        return (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <BarChart3 className="w-3.5 h-3.5" />
+                            <span>
+                              {t(
+                                `Based on ${total} comparable listings (${parts.join(", ")})`,
+                                `Basado en ${total} comparables (${partsEs.join(", ")})`,
+                              )}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <BarChart3 className="w-3.5 h-3.5" />
+                          {total} {t("comparable listings", "comparables")}
+                        </div>
+                      );
+                    })()}
                     {compsResult.thin_pool_warning && (
                       <div className="text-[11px] px-2 py-1 rounded-lg"
                         style={{ background: "rgba(249,115,22,0.12)", color: "#F97316", border: "1px solid rgba(249,115,22,0.2)" }}>
                         ⚠ {t("Thin pool — use the range", "Pocos comparables — use el rango")}
                       </div>
                     )}
-                    <p className="text-[10px] text-right" style={{ color: "rgba(154,165,177,0.35)" }}>
-                      PVRPV + Vacation Vallarta + Airbnb + VRBO
-                    </p>
                   </div>
                 </div>
               </div>

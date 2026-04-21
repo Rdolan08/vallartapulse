@@ -462,18 +462,20 @@ router.post("/rental/comps", async (req, res) => {
     // with a freshness penalty when the comp pool is dominated by static-displayed
     // listings (mostly Airbnb baseline) AND those are stale beyond 7d. Per-night
     // PVRPV daily comps don't get penalised — they're already the freshest source.
-    const compIds = new Set(comps.map(c => c.listing.id));
-    let staticCount = 0;
+    let staticCount = 0;          // Airbnb baseline (rental_listings.nightly_price_usd)
     let staticFreshSum = 0;
-    let dailyCount = 0;
+    let dailyCount = 0;            // PVRPV daily quotes — freshest source
+    let otherCount = 0;            // anything else (vrbo scrape, vacation_vallarta, ...)
     for (const c of comps) {
       const src = c.listing.priceSource;
       const fresh = c.listing.priceFreshnessDays;
-      if (src === "static_displayed" && typeof fresh === "number") {
+      if (src === "static_displayed") {
         staticCount += 1;
-        staticFreshSum += fresh;
+        if (typeof fresh === "number") staticFreshSum += fresh;
       } else if (src === "pvrpv_daily") {
         dailyCount += 1;
+      } else {
+        otherCount += 1;
       }
     }
     const staticShare = poolSize > 0 ? staticCount / poolSize : 0;
@@ -488,7 +490,6 @@ router.post("/rental/comps", async (req, res) => {
       Math.max(0, Math.min(1, staleStaticHeavy ? baseConfidenceScore * 0.85 : baseConfidenceScore))
         .toFixed(2)
     );
-    void compIds; void dailyCount; // referenced for future per-source breakdown
 
     req.log.info({
       pool_size: poolSize, confidence,
@@ -859,6 +860,15 @@ router.post("/rental/comps", async (req, res) => {
         high:             confidence === "guidance_only" ? null : result.stretch,
         confidence_score: confidenceScore,
         sample_size:      poolSize,
+        // Composition counts for the UI's concise data-signal line:
+        //   "Based on N comparable listings (X nightly-priced, Y Airbnb)"
+        // Drawn from the same source breakdown that powers the freshness
+        // penalty, so the line reflects exactly what the engine actually used.
+        composition: {
+          nightly_priced:   dailyCount,   // PVRPV daily quotes (freshest)
+          airbnb_baseline:  staticCount,  // rental_listings.nightly_price_usd
+          other:            otherCount,
+        },
         // Diagnostic context for the freshness penalty above. Lets the UI
         // show "trimmed N stale, M fully-blocked" without re-deriving it.
         availability_filtered_out: monthAvail.unavailable.size,

@@ -1,0 +1,59 @@
+Proceed with the next phase using this approach:
+
+We should build forward on the assumption that Airbnb data quality and precision will continue to improve, but I want a backward-validation checkpoint created now so we verify that the data are actually doing what we think they are doing after one week.
+
+Please do the following:
+
+1. Continue with the pricing tool improvement path assuming better Airbnb data is coming
+- keep tightening the pricing tool output using the current improved comp engine
+- keep the current response shape intact
+- do not add heavy disclaimers or explanatory text in the UI
+- for the pricing tool UI, prefer a concise “data signal” line later like:
+  “Based on X comparable listings (Y nightly-priced, Z Airbnb)”
+  or similar clean wording
+- goal is better, tighter, more credible ranges without over-explaining
+
+2. Create a GitHub issue right now for backward validation, targeted for one week from now
+Use a title like:
+Backward Validation: Airbnb Pricing Data Integrity and Comp Output Sanity
+
+Issue should cover these checks:
+- Airbnb baseline freshness
+  - % of Airbnb listings scraped in last 24h
+  - % older than 7 days
+- consistency vs PVRPV
+  - compare medians by neighborhood + bedroom count
+  - flag material divergence
+- pricing range stability
+  - test a fixed set of representative pricing tool inputs over 7 days
+  - check whether ranges are stable / believable / tightening
+- comp composition
+  - how much of the comp pool is PVRPV nightly-priced vs Airbnb baseline
+- insert/update health
+  - daily Airbnb insert rate
+  - updated vs new
+- outlier review
+  - identify listings consistently outside trimmed range
+- output sanity
+  - manually sample a small set of pricing tool scenarios and confirm the outputs feel market-realistic
+
+The issue should end with:
+- short findings summary
+- anomalies
+- recommendation on whether to proceed further with Phase 2 GraphQL pricing, or tune the current system first
+
+3. Keep the near-term product direction focused on better pricing output, not over-disclosure
+I do not want the pricing tool littered with caveats. I want better data and better ranges.
+If source composition is surfaced, keep it short, elegant, and confidence-oriented.
+
+4. After the issue is created, move on to the next implementation step
+My current preference:
+- keep improving the pricing tool UX and output quality
+- prepare for date-grain pricing
+- but do not yet try to explain the entire data model to the user
+- Phase 2 GraphQL listing_price_quotes is still the long-term unlock, but the current system should be made as strong and credible as possible first
+
+Please send back:
+- the GitHub issue link
+- the exact issue body you used
+- and your recommendation for the next build step after this
