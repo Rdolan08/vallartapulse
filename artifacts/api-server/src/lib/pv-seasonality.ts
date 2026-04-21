@@ -249,6 +249,85 @@ export function getSeasonalContext(month: number, day?: number): SeasonalContext
   };
 }
 
+/**
+ * Compute a date-aware seasonal context for an explicit stay window
+ * [checkIn, checkOut). Avoids the month-level event-leak bug where a stay
+ * window after a holiday (e.g. 4/22–4/28, after Semana Santa 4/10–4/22)
+ * inherits the highest-premium event of the month.
+ *
+ * Per-night multipliers are computed via getSeasonalContext(month, day) and
+ * arithmetically averaged across the stay. activeEvent and eventPremiumPct
+ * are derived from events that actually overlap one or more nights of the
+ * stay (highest-premium event wins for display).
+ */
+export function getStayWindowSeasonalContext(
+  checkIn: Date,
+  checkOut: Date,
+): SeasonalContext {
+  const nights: Date[] = [];
+  for (
+    let d = new Date(checkIn);
+    d < checkOut;
+    d.setUTCDate(d.getUTCDate() + 1)
+  ) {
+    nights.push(new Date(d));
+  }
+  if (nights.length === 0) {
+    // Defensive — fall back to month-level context for the check-in month.
+    return getSeasonalContext(checkIn.getUTCMonth() + 1);
+  }
+
+  let multSum = 0;
+  let monthlyMultSum = 0;
+  const overlappingEvents = new Map<string, EventOverlay>();
+
+  for (const night of nights) {
+    const m = night.getUTCMonth() + 1;
+    const day = night.getUTCDate();
+    const ctx = getSeasonalContext(m, day);
+    multSum += ctx.totalMultiplier;
+    monthlyMultSum += ctx.monthlyMultiplier;
+    if (ctx.activeEvent) {
+      overlappingEvents.set(ctx.activeEvent.name, ctx.activeEvent);
+    }
+  }
+
+  const totalMultiplier = multSum / nights.length;
+  const monthlyMultiplier = monthlyMultSum / nights.length;
+
+  const sortedEvents = [...overlappingEvents.values()].sort(
+    (a, b) => b.additionalPct - a.additionalPct,
+  );
+  const activeEvent = sortedEvents[0] ?? null;
+  const eventPremiumPct = activeEvent?.additionalPct ?? null;
+
+  // Use the check-in month for display naming.
+  const dominantMonth = checkIn.getUTCMonth() + 1;
+  const dominantFactor = getMonthFactor(dominantMonth);
+
+  let displayLabel = `${dominantFactor.name} (${
+    dominantFactor.season.charAt(0).toUpperCase() + dominantFactor.season.slice(1)
+  } Season)`;
+  if (activeEvent) {
+    displayLabel += ` — ${activeEvent.name}`;
+  } else {
+    displayLabel += " — stay window (date-aware)";
+  }
+
+  return {
+    month: dominantMonth,
+    monthName: dominantFactor.name,
+    monthAbbr: dominantFactor.abbr,
+    season: dominantFactor.season,
+    monthlyMultiplier,
+    monthlyNote: dominantFactor.note,
+    activeEvent,
+    totalMultiplier,
+    eventPremiumPct,
+    displayLabel,
+  };
+}
+
 /** Current month (1-indexed) based on server time. */
 export function currentMonth(): number {
   return new Date().getMonth() + 1;

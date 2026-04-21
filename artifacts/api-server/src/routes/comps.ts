@@ -24,7 +24,7 @@ import {
 import { type CompsListingV2, type CompResultV2, type BeachTier } from "../lib/comps-engine-v2";
 import { selectCompPriceSources, type PriceSource } from "../lib/comps-pricing-source";
 import { lookupBuilding } from "../lib/building-lookup";
-import { PV_MONTHLY_FACTORS } from "../lib/pv-seasonality";
+import { PV_MONTHLY_FACTORS, getStayWindowSeasonalContext } from "../lib/pv-seasonality";
 import { recordPricingToolSuccess } from "../lib/pricing-tool-uptime";
 import type { MarketEvent } from "@workspace/db/schema";
 
@@ -465,6 +465,18 @@ router.post("/rental/comps", async (req, res) => {
       }
     }
 
+    // Bug fix: when an explicit stay window is provided, build a date-aware
+    // seasonal context that averages per-night multipliers across the stay.
+    // This prevents month-level event leak — e.g. a 4/22–4/28 stay should
+    // NOT inherit the Easter/Semana Santa premium (4/10–4/22) just because
+    // both fall in April.
+    const seasonalContextOverride = useStayWindow
+      ? getStayWindowSeasonalContext(
+          new Date(checkIn! + "T00:00:00Z"),
+          new Date(checkOut! + "T00:00:00Z"),
+        )
+      : undefined;
+
     const target: TargetPropertyV3 = {
       neighborhoodNormalized: input.neighborhood_normalized,
       bedrooms: input.bedrooms,
@@ -475,6 +487,7 @@ router.post("/rental/comps", async (req, res) => {
       ratingOverall: input.rating_overall ?? null,
       buildingName: resolvedBuildingName,
       month: effectiveMonth,
+      seasonalContextOverride,
       viewType: input.view_type as ViewType,
       rooftopPool: input.rooftop_pool,
       yearBuilt: input.year_built as YearBuiltRange,
