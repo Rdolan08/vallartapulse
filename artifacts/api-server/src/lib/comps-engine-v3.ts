@@ -3,13 +3,20 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * VallartaPulse Pricing Engine — Version 3
  *
- * Version:   3.2 — April 2026
- * Changes from V3.1 — PV market calibration:
- *   • Rooftop pool:      +12/15% → +15/18%  (scarcest premium feature in ZR/Amapas)
- *   • Premium finish:    +16%    → +22%      (design-forward units command real premium)
- *   • Upgraded finish:   +8%     → +10%      (above-average finish meaningfully valued)
- *   • Private plunge:    +8%     → +12%      (rare in ZR/Amapas buildings)
- *   • Large terrace:     +5%     → +8%       (indoor-outdoor lifestyle = primary PV driver)
+ * Version:   3.3 — April 2026 (Phase 1.5)
+ * Changes from V3.2 — premium-feature weight bump (no comp-pool change):
+ *   • Rooftop pool:      +15/18% → +17/20%  (still scarcest lifestyle premium)
+ *   • Private plunge:    +12%    → +14%      (rare in ZR/Amapas → stronger premium)
+ *   • Large terrace:     +8%     → +10%      (indoor-outdoor lifestyle priced higher)
+ *   • Comp-engine V2 weights: building_match bumped (5→8 ZR, 7→10 Amapas)
+ *   • Comp-engine V2 stats: P15-P85 band (was P25-P75 IQR)
+ *
+ * V3.2 baseline (April 2026) — PV market calibration:
+ *   • Rooftop pool:      +12/15% → +15/18%
+ *   • Premium finish:    +16%    → +22%
+ *   • Upgraded finish:   +8%     → +10%
+ *   • Private plunge:    +8%     → +12%
+ *   • Large terrace:     +5%     → +8%
  *   • Year built factor: halved — renovation & finish quality > raw build year in PV
  *   • Beach tier cross-adj: capped ±8% — comp selection already controls for proximity;
  *     generic beach distance must not be over-weighted in ZR/Amapas pricing
@@ -183,9 +190,9 @@ function computeRooftopPoolFactor(
   );
 
   if (hasStandardPool) {
-    return { factor: 0.15, note: "Rooftop pool: +15% — scarcest lifestyle premium in PV; comps include standard pool" };
+    return { factor: 0.17, note: "Rooftop pool: +17% — scarcest lifestyle premium in PV; comps include standard pool" };
   }
-  return { factor: 0.18, note: "Rooftop pool: +18% — scarcest lifestyle premium in PV; no standard pool in comp set" };
+  return { factor: 0.20, note: "Rooftop pool: +20% — scarcest lifestyle premium in PV; no standard pool in comp set" };
 }
 
 // ── Main V3 Engine ────────────────────────────────────────────────────────────
@@ -201,9 +208,9 @@ export class CompsEngineV3 {
     this.v2Engine = new CompsEngineV2(listings);
   }
 
-  run(target: TargetPropertyV3): CompsResultV3 {
+  run(target: TargetPropertyV3, options: { excludeIds?: Set<number> } = {}): CompsResultV3 {
     // ── 1. Run v2 engine ─────────────────────────────────────────────────────
-    const v2Result = this.v2Engine.run(target);
+    const v2Result = this.v2Engine.run(target, { excludeIds: options.excludeIds });
     const { recommendation, comps, expandedPool, adjacentNeighborhood, adjacentNeighborhoodsUsed } = v2Result;
 
     const baseCompMedian = recommendation.baseCompMedian;
@@ -336,8 +343,8 @@ export class CompsEngineV3 {
     });
 
     // Layer 7: Private plunge pool
-    // Rare in ZR/Amapas buildings — scarcity justifies +12% in the PV market.
-    const plungeFactor = target.privatePlungePool ? 0.12 : 0;
+    // Rare in ZR/Amapas buildings — scarcity justifies +14% in the PV market.
+    const plungeFactor = target.privatePlungePool ? 0.14 : 0;
     price = price * (1 + plungeFactor);
     const plungePct = parseFloat((plungeFactor * 100).toFixed(1));
     layers.push({
@@ -348,13 +355,13 @@ export class CompsEngineV3 {
       cumulative_price: Math.round(price),
       applied: plungeFactor !== 0,
       note: target.privatePlungePool
-        ? "Private plunge pool: +12% — rare in ZR/Amapas; scarcity drives a strong unit-level premium"
+        ? "Private plunge pool: +14% — rare in ZR/Amapas; scarcity drives a strong unit-level premium"
         : "No private pool",
     });
 
     // Layer 8: Large terrace
     // Indoor-outdoor living is a primary PV lifestyle driver — not a minor convenience.
-    const terraceFactor = target.largeTerrace ? 0.08 : 0;
+    const terraceFactor = target.largeTerrace ? 0.10 : 0;
     price = price * (1 + terraceFactor);
     const terracePct = parseFloat((terraceFactor * 100).toFixed(1));
     layers.push({

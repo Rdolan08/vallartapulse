@@ -252,15 +252,19 @@ interface SegmentStats {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+// Phase 1.5 (Apr 2026): building_match bumped at the expense of beach_distance.
+// Beach proximity is already controlled for via beach-tier matching + selection,
+// so generic distance was double-counting. Building match deserves more weight
+// per owner feedback: same-building comps are the strongest signal we have.
 const BASE_WEIGHTS_ZR: NeighborhoodWeights = {
-  beachDistance:  20,
+  beachDistance:  17,  // was 20
   amenities:      22,
   sqft:           17,
   bathrooms:      12,
   rating:         11,
   beachTierMatch:  8,
   priceTierMatch:  5,
-  buildingMatch:   5,
+  buildingMatch:   8,  // was 5
 };
 
 const BASE_WEIGHTS_AMAPAS: NeighborhoodWeights = {
@@ -269,9 +273,9 @@ const BASE_WEIGHTS_AMAPAS: NeighborhoodWeights = {
   beachTierMatch: 13,
   bathrooms:      12,
   rating:         10,
-  beachDistance:  10,
+  beachDistance:   7,  // was 10
   priceTierMatch:  5,
-  buildingMatch:   7,
+  buildingMatch:  10,  // was 7 — premium buildings are the dominant signal in Amapas
 };
 
 const BEACH_SCALE_ZR_M    = 300;  // ZR: 300m delta → beach score = 0
@@ -492,14 +496,14 @@ function computeBuildingSummaries(
 // Generic balanced weights for neighborhoods without calibrated data yet
 // (Hotel Zone, Centro, 5 de Diciembre, Old Town, Versalles, Marina Vallarta)
 const BASE_WEIGHTS_GENERIC: NeighborhoodWeights = {
-  beachDistance:  15,
+  beachDistance:  12,
   amenities:      20,
   sqft:           20,
   bathrooms:      12,
   rating:         11,
   beachTierMatch: 10,
   priceTierMatch:  7,
-  buildingMatch:   5,
+  buildingMatch:   8,
 };
 
 // ── Adjacent neighborhood fallback map ────────────────────────────────────────
@@ -715,8 +719,11 @@ function buildRecommendationV2(
     : iqrTrim(allPrices, MIN_COMPS);
 
   const baseMedian  = Math.round(sortedPercentile(trimmedPrices, 50));
-  const basePct25   = Math.round(sortedPercentile(trimmedPrices, 25));
-  const basePct75   = Math.round(sortedPercentile(trimmedPrices, 75));
+  // Phase 1.5: P15-P85 (was P25-P75). Wider band better captures the realistic
+  // pricing envelope owners face — IQR was too narrow for thin-pool segments
+  // and clipped legitimate same-bedroom outliers that were real comps.
+  const basePct15   = Math.round(sortedPercentile(trimmedPrices, 15));
+  const basePct85   = Math.round(sortedPercentile(trimmedPrices, 85));
   const avg         = Math.round(trimmedPrices.reduce((a, b) => a + b, 0) / trimmedPrices.length);
 
   let adjustedPrice = baseMedian;
@@ -780,8 +787,8 @@ function buildRecommendationV2(
   }
 
   const recommended = Math.round(adjustedPrice);
-  const conservative = Math.min(basePct25, Math.round(recommended * 0.88));
-  const stretch      = Math.max(basePct75, Math.round(recommended * 1.10));
+  const conservative = Math.min(basePct15, Math.round(recommended * 0.85));
+  const stretch      = Math.max(basePct85, Math.round(recommended * 1.13));
 
   return {
     conservative,
@@ -824,9 +831,9 @@ export class CompsEngineV2 {
 
   run(
     target: TargetPropertyV2,
-    options: { excludeId?: number; minComps?: number; maxComps?: number } = {}
+    options: { excludeId?: number; excludeIds?: Set<number>; minComps?: number; maxComps?: number } = {}
   ): CompsResultV2 {
-    const { excludeId, minComps = MIN_COMPS, maxComps = MAX_COMPS } = options;
+    const { excludeId, excludeIds, minComps = MIN_COMPS, maxComps = MAX_COMPS } = options;
 
     const targetBeachTierVal = beachTier(target.distanceToBeachM);
     const targetBuildingNorm = normalizeBuildingName(target.buildingName ?? null);
@@ -844,10 +851,13 @@ export class CompsEngineV2 {
     // We do a quick pre-pass to estimate target price tier from characteristics
     const targetPriceTier: PriceTier | null = null; // deferred — see below
 
-    // Filter eligible pool for this target (same neighborhood, exclude self)
+    // Filter eligible pool for this target (same neighborhood, exclude self,
+    // exclude any IDs the caller has flagged as ineligible — e.g. listings with
+    // zero availability for the requested month).
     const pool = this.eligible.filter(
       (l) => l.neighborhoodNormalized === target.neighborhoodNormalized &&
-             (excludeId == null || l.id !== excludeId)
+             (excludeId == null || l.id !== excludeId) &&
+             (!excludeIds || !excludeIds.has(l.id))
     );
 
     // ── Beach-tier-first pool selection ─────────────────────────────────────

@@ -82,6 +82,21 @@ const PIPELINES: PipelineCardConfig[] = [
     newestLabelEs: "Extracción más reciente",
   },
   {
+    // Airbnb LISTING BASELINE — rental_listings.nightly_price_usd refreshed
+    // nightly by the detail-enrichment priority queue. This is the price
+    // source the comp engine actually uses for Airbnb today
+    // (priceSource='static_displayed'). Surfacing it explicitly so owners
+    // don't read the paused per-night card below as "Airbnb pricing in
+    // comps is stale" — the baseline that feeds comps IS fresh.
+    endpoint: "/api/ingest/airbnb-baseline-freshness",
+    labelEn: "Airbnb listing baseline (feeds comps)",
+    labelEs: "Precio base de Airbnb (alimenta comparables)",
+    mode: "cohort",
+    newestField: "newestScrapeAt",
+    newestLabelEn: "Newest baseline",
+    newestLabelEs: "Base más reciente",
+  },
+  {
     endpoint: "/api/ingest/airbnb-pricing-freshness",
     labelEn: "Airbnb per-night quotes",
     labelEs: "Cotizaciones por noche de Airbnb",
