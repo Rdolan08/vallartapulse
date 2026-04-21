@@ -1,0 +1,8 @@
+bucket_id,candidate_ids_seen,existing_touched,new_inserted,rejected_property_type,rejected_thin_data
+bucerias__4__100_200,22,5,2,15,0
+bucerias__4__200_400,18,9,2,5,0
+bucerias__4__400_plus,20,9,5,1,0
+bucerias__5_plus__under_100,6,2,0,4,0
+bucerias__5_plus__100_200,7,2,0,5,0
+bucerias__5_plus__200_400,27,3,3,16,0
+bucerias__5_plus__400_plus,26,12,6,6,0
