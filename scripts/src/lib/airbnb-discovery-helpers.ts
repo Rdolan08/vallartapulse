@@ -113,6 +113,21 @@ const ALLOWED_PROPERTY_TOKENS = [
   // bedroom to qualify). Legitimate comp pool member; nightly rates
   // for studios are a real comp signal for 1BR pricing.
   "studio",
+  // "Vacation home" — observed in the bucerias sweep rejection
+  // breakdown (4 hits). Technically already covered by the "home"
+  // substring match (lower.includes("home") is true for "vacation
+  // home"), but listed explicitly so the policy intent is greppable
+  // and survives any future tightening of the "home" token. Same
+  // defensive-policy convention as "serviced apartment".
+  "vacation home",
+  // "casa particular" — Airbnb's untranslated Spanish category label
+  // for private homes rented short-term, common across Latin America
+  // and the Caribbean. Not covered by any existing English token. The
+  // og:title parser keeps it as-is (no Entire/Private/Shared prefix
+  // to strip — "casa particular" is itself the category name). 3 hits
+  // in the bucerias sweep — small but non-zero, and these are
+  // legitimate whole-unit vacation rentals by definition.
+  "casa particular",
 ] as const;
 
 const REJECTED_PROPERTY_TOKENS = [
