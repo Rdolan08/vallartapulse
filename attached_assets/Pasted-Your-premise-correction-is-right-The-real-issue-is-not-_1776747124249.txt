@@ -1,0 +1,37 @@
+Your premise correction is right. The real issue is not a 500/day cap. The real issue is that discovery now works, detail enrichment already drains, calendar already runs, and the missing piece is per-night quote pricing because the two GraphQL pricing adapters are still stubs.
+
+Proceed in two phases.
+
+PHASE 1 — small operational cleanup now
+Please implement steps 1–4 from your recommendation:
+
+1. Replace the SELECT in /api/ingest/enrich-airbnb-detail with the unified priority query so new + stale are handled in one ordered queue.
+2. Exclude listings where last_seen_at < NOW() - INTERVAL '14 days' from daily enrichment.
+3. Add per-priority-bucket telemetry to the existing run summary output so we can confirm P0/P1 drain rates.
+4. Simplify airbnb-enrich-refresh.yml so it makes one call through the priority queue instead of the current dual-call mode=new / mode=stale pattern.
+
+Keep this focused. Do not mix in the quote pipeline yet.
+
+PHASE 2 — real pricing coverage work next
+After Phase 1, I want the quote pipeline scoped and built as the next major effort:
+
+1. Implement the two paused stubs:
+   - airbnb-graphql-pricing-adapter.ts
+   - airbnb-graphql-quote-adapter.ts
+2. Plan for that quote refresh to run from the Mac mini residential IP, not Railway/GitHub Actions.
+3. Add pricing_tool_last_used_at to rental_listings when you do that work and use it for quote refresh prioritization.
+
+A few implementation preferences:
+- Keep discovery on the Mac mini.
+- Keep detail enrichment and calendar in the cloud unless there is a concrete reason to move them.
+- Do not add a hard 500/day cap right now if the system is still draining comfortably.
+- Keep the solution lean. No new enrichment_queue table unless you can prove it is necessary.
+
+Please start with Phase 1 and return:
+- the exact code/files changed
+- the final queue ordering logic
+- the telemetry fields added
+- any workflow change summary
+- confirmation of whether the current daily detail job should still fully drain at present scale
+
+Once Phase 1 is in, then we’ll move directly to scoping the GraphQL quote pipeline as the next thread.
