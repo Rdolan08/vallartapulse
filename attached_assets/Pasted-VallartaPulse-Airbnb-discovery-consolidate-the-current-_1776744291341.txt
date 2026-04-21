@@ -1,0 +1,176 @@
+VallartaPulse Airbnb discovery: consolidate the current working system into a cleaner production configuration. The first full residential-IP run is complete and the pipeline is now working end to end. Please make the following changes.
+
+GOAL
+Move from “full exploratory sweep” to “efficient production discovery.” Keep what is working. Reduce runtime and waste. Improve yield. Preserve observability.
+
+WHAT IS ALREADY WORKING
+- Residential-IP execution from the Mac mini
+- Bucketed Airbnb discovery runner
+- Long Airbnb listing ID extraction (7–19 digits)
+- Embedded JSON listing extraction via listingId markers
+- Identity check /rooms/{id} validation
+- Detail parsing good enough for inserts
+- discovery_run_log telemetry
+- discovery_rejected_candidates persistence
+- Inserts into rental_listings are now working at scale
+
+LATEST FULL-RUN RESULTS
+- candidates: 4259
+- existing_touched: 1945
+- new_inserted: 1089
+- rejected_identity: 0
+- rejected_geo: 26
+- rejected_property_type: 1199
+- rejected_thin_data: 0
+- duration: ~5.5 hours
+
+LATEST WRONG_PROPERTY_TYPE BREAKDOWN (most recent run window)
+- Home: 237
+- Serviced apartment: 32
+- Rental unit: 20
+- Vacation home: 4
+- casa particular: 3
+- Treehouse: 2
+- Tower: 1
+- Camper/RV: 1
+- Hotel: 1
+- Castle: 1
+
+PROPERTY TYPE POLICY CHANGES
+1. Allow and normalize these into the main cohort:
+   - Home -> House
+   - Serviced apartment -> Apartment
+   - Rental unit -> Apartment
+
+2. Keep these rejected from the main comp cohort:
+   - Vacation home
+   - casa particular
+   - Treehouse
+   - Tower
+   - Camper/RV
+   - Hotel
+   - Castle
+   - Hostel
+   - Boat
+   - Tent
+   - Cave
+   - Private room / shared-room style categories if they appear
+
+3. Preserve the raw Airbnb property type in the DB, but use a normalized property type for cohort inclusion and comp logic.
+
+BUCKET STRATEGY CHANGES
+The current 200-bucket blind cross-product worked as a discovery exercise, but it is too slow and includes too many weak combinations. Rewrite the bucket generator into a tiered production set.
+
+TIER 1 — RUN DAILY
+Neighborhoods:
+- zona_romantica
+- centro
+- versalles
+- fluvial
+- marina_vallarta
+- nuevo_vallarta
+- amapas
+
+Bedrooms:
+- 1
+- 2
+- 3
+
+Price bands:
+- 100_200
+- 200_400
+- 400_plus
+
+Special case:
+- keep under_100 only for 1BR and 2BR where the run proved it produces inserts:
+  - zona_romantica
+  - versalles
+  - fluvial
+  - marina_vallarta
+  - nuevo_vallarta
+  - centro
+  - amapas if yield is acceptable
+
+TIER 2 — RUN 2–3x PER WEEK
+Neighborhoods:
+- conchas_chinas
+- amapas (3BR/4BR + higher bands if not already in Tier 1)
+- marina_vallarta
+- centro
+- versalles
+- fluvial
+
+Bedrooms:
+- 3
+- 4
+
+Price bands:
+- 200_400
+- 400_plus
+
+TIER 3 — RUN WEEKLY OR REMOVE FROM DEFAULT
+- all 5_plus buckets
+- most 4BR under_100
+- most 4BR 100_200
+- fringe low-yield combinations
+- any bucket that consistently returns zero or near-zero inserts after two or more runs
+
+EXPLICITLY DEPRIORITIZE / REMOVE FROM DAILY
+- all 5_plus__under_100
+- all 5_plus__100_200
+- most 5_plus__200_400
+- most 4__under_100
+- most 4__100_200
+
+BUCKET ORDERING CHANGES
+Reorder execution so high-yield buckets run first. I want useful inventory in the first 10–15 minutes of a run.
+
+Run earliest:
+1. zona_romantica 1BR / 2BR / 3BR in 100_200 and 200_400
+2. zona_romantica 1BR under_100 and 400_plus
+3. versalles 1BR / 2BR in under_100, 100_200, 200_400
+4. fluvial 1BR / 2BR in under_100, 100_200, 200_400
+5. marina_vallarta 1BR / 2BR in 100_200, 200_400, 400_plus
+6. nuevo_vallarta 1BR / 2BR in 100_200, 200_400, 400_plus
+7. centro 1BR / 2BR in under_100, 100_200, 200_400
+8. amapas 1BR / 2BR in 100_200, 200_400
+Then the rest.
+
+DO NOT CHANGE
+- residential-only fetch behavior
+- identity check logic
+- long-ID extraction logic
+- discovery_run_log structure
+- discovery_rejected_candidates structure
+- rejection persistence
+- current pacing model and no-parallelism model
+
+FAIL-FAST / OBSERVABILITY
+Keep fail-fast behavior. If early buckets produce zero candidates again in a future regression, abort clearly. Keep structured JSON logs. Keep bucket-level metrics exactly as they are.
+
+RUN CADENCE
+Move to this production model:
+- Tier 1 daily
+- Tier 2 two to three times per week
+- Tier 3 weekly or manual only
+
+Do not keep running the full 200-bucket exploratory sweep as the default production schedule.
+
+ENRICHMENT FOLLOW-UP
+Discovery is now working. The next bottleneck is enrichment coverage, not listing discovery. Do not mix this change into the bucket refactor, but note that the next pipeline step should prioritize newly discovered listings first:
+- created_at within the last 24 hours
+- or listings with no pricing/calendar enrichment yet
+
+IMPLEMENTATION REQUEST
+Please:
+1. Rewrite the bucket generator/config to reflect the tiered bucket strategy above
+2. Update property-type normalization/allowlist exactly as specified
+3. Keep raw property type and normalized property type separate
+4. Reorder buckets so the highest-yield slices run first
+5. Preserve existing working discovery, extraction, validation, and logging behavior
+6. Return a concise summary of:
+   - the final bucket count by tier
+   - the exact property type normalization map
+   - the expected runtime reduction vs the old 200-bucket sweep
+
+This is not a new scraper build. It is a production optimization pass on a working system.

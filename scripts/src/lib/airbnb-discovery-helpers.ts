@@ -57,17 +57,44 @@ export function inMarket(lat: number, lng: number): boolean {
   );
 }
 
-// ── Property-type whitelist ─────────────────────────────────────────────────
+// ── Property-type policy ────────────────────────────────────────────────────
+//
+// Two-stage policy:
+//
+//   1. ALLOWED / REJECTED token sets decide whether a listing enters the
+//      main comp cohort. REJECTED is checked FIRST so multi-word labels
+//      like "Vacation home" can be excluded even though they contain the
+//      "home" substring used by the allow check.
+//
+//   2. normalizePropertyType() collapses Airbnb's many overlapping labels
+//      into a small canonical set used for cohort/comp queries. The raw
+//      label is preserved separately in property_type_raw so we can
+//      always go back to source. The canonical set:
+//
+//        apartment   ← Apartment, Serviced apartment, Rental unit,
+//                       Condominium, Condo (these all price the same
+//                       in PV — multi-unit building, shared services,
+//                       per-unit rentals)
+//        house       ← House, Home, Single-family home (whole-unit
+//                       detached or quasi-detached residences)
+//        villa       ← Villa
+//        townhouse   ← Townhouse
+//        loft        ← Loft
+//        bungalow    ← Bungalow
+//        guest_suite ← Guest suite, Guesthouse, Guest house
+//        cottage     ← Cottage
+//        cabin       ← Cabin
+//        studio      ← Studio
+//
+// Anything else falls through to allow=false → rejected.
 
-/**
- * Allowed property types for vacation-rental comp pool. Tokens are matched
- * lowercase, substring-aware so "Apartment" matches "Entire apartment", etc.
- */
 const ALLOWED_PROPERTY_TOKENS = [
-  "apartment",
+  "apartment",        // covers Apartment + Serviced apartment via substring
+  "rental unit",      // Airbnb's default whole-unit category
   "condominium",
   "condo",
-  "house",
+  "house",            // covers House + Townhouse via substring
+  "home",             // covers Home (Entire prefix stripped by parser)
   "villa",
   "townhouse",
   "loft",
@@ -76,58 +103,8 @@ const ALLOWED_PROPERTY_TOKENS = [
   "guesthouse",
   "guest house",
   "cottage",
-  "cabin", // Airbnb sometimes labels small detached units this way
-  // "Rental unit" is Airbnb's default category for whole-unit rentals
-  // that aren't sub-classified as apartment/condo/etc. Empirically it's
-  // the dominant property type on listings created in the last ~year
-  // (78%+ of new admits in the zona_romantica smoke runs were getting
-  // rejected on this token). Allowed because the og:title parser
-  // already strips the "Entire/Private/Shared" prefix before this
-  // gate runs, so a "Rental unit" label here is implicitly a whole-unit.
-  "rental unit",
-  // "Serviced apartment" — DECISION: allow. Airbnb uses this label for
-  // furnished, hotel-adjacent, owner/management-operated whole units that
-  // behave like vacation rentals for pricing purposes (per-night rates,
-  // furnished, instant-bookable, often building-level concierge). They
-  // are legitimate comp pool members for nightly-rate modeling. The
-  // existing "apartment" token already substring-matches this label
-  // (lower.includes("apartment") is true for "serviced apartment"), so
-  // this token is technically redundant — but listing it explicitly
-  // documents the policy decision and prevents an accidental future
-  // narrowing of "apartment" → "/^apartment$/" from silently dropping
-  // them.
-  "serviced apartment",
-  // "Home" — observed on the Mac mini smoke run as a frequent rejection
-  // (propertyType:"Home"). Comes from og:titles like "Entire home in
-  // Puerto Vallarta · ..." where the parser strips the "Entire" prefix
-  // and stores propertyTypeRaw="home". Airbnb uses this label as the
-  // umbrella whole-unit category in its UI ("Type of place: Entire
-  // home" — see Airbnb's filter chip), so it's the canonical name for
-  // exactly what our discovery URLs are asking for via
-  // room_types[]=Entire+home/apt. Excluded from REJECTED_PROPERTY_TOKENS
-  // checks because no rejected token contains the substring "home"
-  // standalone (treehouse / earthen check on different tokens).
-  "home",
-  // "Studio" — small whole-unit rentals where the og:title is just
-  // "Studio in <neighborhood>" (no Entire prefix because there's no
-  // bedroom to qualify). Legitimate comp pool member; nightly rates
-  // for studios are a real comp signal for 1BR pricing.
+  "cabin",
   "studio",
-  // "Vacation home" — observed in the bucerias sweep rejection
-  // breakdown (4 hits). Technically already covered by the "home"
-  // substring match (lower.includes("home") is true for "vacation
-  // home"), but listed explicitly so the policy intent is greppable
-  // and survives any future tightening of the "home" token. Same
-  // defensive-policy convention as "serviced apartment".
-  "vacation home",
-  // "casa particular" — Airbnb's untranslated Spanish category label
-  // for private homes rented short-term, common across Latin America
-  // and the Caribbean. Not covered by any existing English token. The
-  // og:title parser keeps it as-is (no Entire/Private/Shared prefix
-  // to strip — "casa particular" is itself the category name). 3 hits
-  // in the bucerias sweep — small but non-zero, and these are
-  // legitimate whole-unit vacation rentals by definition.
-  "casa particular",
 ] as const;
 
 const REJECTED_PROPERTY_TOKENS = [
@@ -147,33 +124,131 @@ const REJECTED_PROPERTY_TOKENS = [
   "barn",
   "shipping container",
   "shared room",
-  "private room", // we only want whole-unit rentals
+  "private room",
+  // The next three were briefly allowed during admission tuning but the
+  // production policy (consolidated 2026-04) is to exclude them from the
+  // main cohort: they price differently from the standard whole-unit
+  // vacation rental and would distort comp medians.
+  //
+  //   - "vacation home" — would otherwise pass via the "home" substring,
+  //     hence the explicit reject; pricing tends to follow a luxury /
+  //     long-stay pattern that's not comparable to nightly vacation
+  //     rental comps.
+  //   - "casa particular" — Cuban-style category Airbnb keeps untranslated;
+  //     not covered by any English allow token, so this entry is
+  //     belt-and-suspenders for clarity / greppability.
+  //   - "tower" / "castle" — novelty categories; explicitly listed so
+  //     anyone reading the rejection log knows it's intentional.
+  "vacation home",
+  "casa particular",
+  "tower",
+  "castle",
 ] as const;
 
 /**
- * Check whether a raw property-type label belongs to the whitelist.
+ * Pre-compile each token as a word-boundary regex.
  *
- * Returns `true` iff the label contains at least one allowed token AND
- * does not contain any rejected token. NULL/empty labels default to
- * `false` (treat as wrong-type) so the runner doesn't insert thin records
- * into the active cohort.
+ * Why not plain `String.includes`: a previous version of this code used
+ * substring matching, which had a subtle bug — the "rv" reject token
+ * (for Camper/RV) substring-matches "se**rv**iced apartment" and would
+ * silently kick out every Serviced apartment listing. Short tokens like
+ * "rv", "tent", "barn" all need word-boundary protection. Compiling the
+ * patterns once at module load avoids per-listing regex construction.
+ *
+ * `\b` treats hyphens, slashes, spaces, punctuation, and string edges as
+ * boundaries — so all of these still match correctly:
+ *
+ *   "Entire apartment"       → \bapartment\b ✓
+ *   "Single-family home"     → \bhome\b      ✓
+ *   "Camper/RV"              → \brv\b        ✓
+ *   "Serviced apartment"     → \bapartment\b ✓ (no false \brv\b)
+ *   "Vacation home"          → \bvacation home\b ✓
+ */
+function compileTokenPattern(tok: string): RegExp {
+  // Escape regex metacharacters in the token before wrapping in \b…\b.
+  const escaped = tok.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}\\b`, "i");
+}
+
+const ALLOWED_PATTERNS: readonly RegExp[] = ALLOWED_PROPERTY_TOKENS.map(compileTokenPattern);
+const REJECTED_PATTERNS: readonly RegExp[] = REJECTED_PROPERTY_TOKENS.map(compileTokenPattern);
+
+/**
+ * Check whether a raw property-type label belongs in the active cohort.
+ *
+ * Returns `true` iff the label matches at least one allowed token AND
+ * matches no rejected token. NULL/empty labels default to `false`
+ * (treat as wrong-type) so the runner doesn't insert thin records into
+ * the active cohort.
+ *
+ * REJECTED is checked first so multi-word excludes like "vacation home"
+ * win over the "home" allow pattern.
  */
 export function isAllowedPropertyType(raw: string | null | undefined): boolean {
   if (!raw) return false;
-  const lower = raw.toLowerCase();
-  for (const tok of REJECTED_PROPERTY_TOKENS) {
-    if (lower.includes(tok)) return false;
+  for (const re of REJECTED_PATTERNS) {
+    if (re.test(raw)) return false;
   }
-  for (const tok of ALLOWED_PROPERTY_TOKENS) {
-    if (lower.includes(tok)) return true;
+  for (const re of ALLOWED_PATTERNS) {
+    if (re.test(raw)) return true;
   }
   return false;
 }
 
-/** Lowercase + collapse whitespace; NULL stays NULL. */
-export function normalizePropertyType(raw: string | null | undefined): string | null {
+/**
+ * Canonical normalization map. Applied AFTER isAllowedPropertyType has
+ * passed the listing into the cohort, so we can assume the raw label
+ * contains at least one allowed token and no rejected token.
+ *
+ * Order matters: more specific patterns must precede their substring
+ * matches (e.g. "serviced apartment" is checked before bare "apartment"
+ * — though both map to "apartment" today, the explicit ordering
+ * documents intent and survives future divergence).
+ *
+ * Returns NULL only if the input is null/empty. Otherwise always returns
+ * one of the canonical values:
+ *
+ *   "apartment" | "house" | "villa" | "townhouse" | "loft" |
+ *   "bungalow" | "guest_suite" | "cottage" | "cabin" | "studio" |
+ *   "<lowercased raw>"   ← only for unknown labels that somehow passed
+ *                          isAllowedPropertyType; defensive fallback.
+ */
+export function normalizePropertyType(
+  raw: string | null | undefined,
+): string | null {
   if (!raw) return null;
-  return raw.toLowerCase().replace(/\s+/g, " ").trim();
+  const lower = raw.toLowerCase().replace(/\s+/g, " ").trim();
+  if (!lower) return null;
+
+  // Order matters — most specific first.
+  if (lower.includes("serviced apartment")) return "apartment";
+  if (lower.includes("rental unit")) return "apartment";
+  if (lower.includes("condominium") || lower.includes("condo")) return "apartment";
+  if (lower.includes("apartment")) return "apartment";
+
+  if (lower.includes("townhouse")) return "townhouse";
+  if (lower.includes("guest suite") ||
+      lower.includes("guesthouse") ||
+      lower.includes("guest house")) return "guest_suite";
+
+  // House / home / single-family — all fold to "house". Done after townhouse
+  // and guest house so those don't get swallowed by the "house" substring.
+  if (lower.includes("single-family") ||
+      lower.includes("single family") ||
+      lower.includes("house") ||
+      lower.includes("home")) return "house";
+
+  if (lower.includes("villa")) return "villa";
+  if (lower.includes("loft")) return "loft";
+  if (lower.includes("bungalow")) return "bungalow";
+  if (lower.includes("cottage")) return "cottage";
+  if (lower.includes("cabin")) return "cabin";
+  if (lower.includes("studio")) return "studio";
+
+  // Defensive fallback: passed allow check but didn't match a canonical
+  // bucket. Preserves the raw label (lowercased) so comp queries don't
+  // crash on null while flagging the gap for future allowlist tuning.
+  return lower;
 }
 
 // ── External-ID parsing ─────────────────────────────────────────────────────
@@ -190,12 +265,14 @@ export function parseExternalId(sourceListingId: string): string {
 // ── Structured stdout logging ───────────────────────────────────────────────
 
 export type EventType =
+  | "run_planned"
   | "run_started"
   | "run_finished"
   | "bucket_started"
   | "bucket_finished"
   | "search_page_fetched"
   | "search_page_failed"
+  | "search_page_debug"
   | "candidate_deduped"
   | "identity_check_started"
   | "identity_check_passed"
