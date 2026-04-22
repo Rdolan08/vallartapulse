@@ -1,0 +1,277 @@
+Quick Read of the Codebase
+This is a pnpm monorepo with workspace packages under artifacts/*, lib/*, lib/integrations/*, and scripts.
+Root scripts enforce pnpm usage and provide repo-wide typecheck/build commands (typecheck, typecheck:libs, build).
+The project is VallartaPulse, a BI platform for Puerto Vallarta STR market data, with frontend on Vercel, API on Railway, and Postgres on Railway according to docs.
+Major Components I Identified
+Frontend app: @workspace/pv-datastore (Vite + React + TypeScript), with routes for dashboard, tourism, rental market, pricing tool, economic, safety, weather, sources, about, and contact.
+Backend API: @workspace/api-server (Express + TypeScript), with route modules for health, dashboard, tourism, rental, economic, safety, weather, sources, comps, ingest, airport, cruise schedule, and contact.
+Database library: lib/db exports schema modules for tourism, rental market, economic, safety, weather, discovery jobs/logging, listing details/prices/reviews, and more.
+Operational scripts: @workspace/scripts includes ingestion flows and scraping/reporting tasks (airport/tourism/safety/economic/weather/events + Airbnb/VRBO/PVRPV tooling).
+Commands I Ran
+pwd && rg --files -g 'AGENTS.md'
+rg --files | head -n 200
+sed -n '1,220p' README.md
+cat package.json
+cat pnpm-workspace.yaml
+find . -name package.json -not -path '*/node_modules/*' -maxdepth 4 | sed 's#^./##' | sort
+nl -ba ... on key files for line-referenced inspection
+git status --short && git status --branch --short
+(Repo is currently clean from my side; I didn’t make changes.)
+If you want, next I can do one of these:
+
+architecture map (data flow from ingest → DB → API → UI),
+“how to run locally” sanity checklist, or
+targeted code review of one area (pricing engine, ingest, API, frontend).
+do you have any suggestions for improvement.  I've been working heavily on this with Replit agents and chatgpt. It's currently live and I seek to constantly improve the pricing engine (the main selling point of the product).
+Copy
+Love this question — and yes, you’re already doing a lot right.
+You’ve built a layered, explainable engine with explicit diagnostics, confidence labels, and pricing breakdowns, which is exactly what most pricing tools don’t do. 
+Here are my highest-impact suggestions, prioritized for a live product.
+
+1) Build a formal backtesting loop (biggest ROI)
+Right now the engine is highly configurable, but I don’t see a dedicated offline evaluator that measures “did recommendation X beat baseline Y?” over historical outcomes.
+This is the next maturity step for a pricing product.
+Why now:
+
+You already expose a lot of structured outputs (pricing_breakdown, confidence_score, etc.) that are perfect for logging and backtesting. 
+The comp contract doc explicitly notes weighted aggregation is a follow-up. Backtesting tells you which follow-up matters most first. 
+What to implement:
+Log every quote request + returned price + key context (nbhd, BR, month, features, comp IDs, confidence).
+Join later to realized outcomes (occupancy/booking speed/revenue proxy) and compare:
+current model,
+simpler baseline (segment median),
+and one variant at a time.
+Track error/impact by segment (ZR 1BR, Amapas 3BR, etc.).
+2) Upgrade from unweighted median to freshness/source-weighted pricing
+Your contract already computes freshness weights but says they’re advisory; the core median is still unweighted. 
+Why this matters:
+
+A 2-day-old PVRPV signal and a 45-day-old static fallback should not influence the result equally.
+You already have priceFreshnessWeight per comp to use directly. 
+Practical rollout:
+Start with weighted median only when pool size ≥ 6.
+Keep current method as fallback for thin pools.
+A/B this change first in one neighborhood before full rollout.
+3) Replace hand-tuned premiums with calibration tables per segment
+Feature premiums (view, rooftop, finish, etc.) are currently fixed constants globally. 
+Suggestion:
+
+Move these constants to DB-backed calibration tables keyed by:
+neighborhood,
+bedroom bucket,
+season regime (peak/high/shoulder/low).
+Update from monthly calibration jobs, not code edits.
+This reduces “version churn by code patch” and makes tuning safer for a live product.
+4) Add confidence-aware guardrails on adjustment amplitude
+You already compute confidence labels/scores and warn on thin pools. 
+Use that directly in pricing:
+
+If confidence is low/guidance-only, dampen non-core premiums (finish/view/terrace/plunge) toward zero.
+Keep base comp median + conservative bounds dominant.
+That prevents overfitting in sparse segments while still giving explainable outputs.
+5) Tighten consistency: documentation/comments vs live multipliers
+I spotted drift:
+pv-seasonality has Mar = 1.05, Nov = 0.95, Oct = 0.84. 
+In computeSeasonalSweep, comments say Oct 0.88, Nov 1.00, Mar 1.20. 
+README also mentions Sep 0.68 → Mar 1.20. 
+Even if runtime math is correct, this creates operator confusion and weakens trust.
+I’d treat “single source of truth + generated docs” as a product-quality task.
+6) Expand stay-window logic into a booking-window-aware recommendation
+You already handle check-in/check-out seasonality and window-specific factoring — this is excellent. 
+Next step:
+
+Add “days until check-in” effects (near-term gap fill vs long-lead premium).
+Return recommended range by booking window bucket (0–7d, 8–30d, 31+d).
+This will make outputs feel more “revenue-manager grade” vs static comps.
+7) Persistence for pricing-tool health signal
+Current /health/pricing-tool state is process-local memory. 
+After a restart, it resets and can blur true uptime history. 
+For production credibility, persist last success in DB/Redis and include last N checks.
+
+Suggested execution order (fastest value)
+Backtesting framework (foundation).
+Weighted median by freshness/source (clear measurable gain).
+Confidence-aware damping (risk control).
+DB calibration tables for premiums (operational scalability).
+Docs/constants sync hardening (trust + maintainability).
+If you want, I can draft a concrete “Pricing Engine v3.4 roadmap” with:
+exact schema changes,
+metric definitions,
+and a 2-week implementation sequence that avoids breaking your live endpoint.
+I would like all of that. Also - My main concern is that I have all of this Airbnb data with calendar ingestion but no pricing data yet (I have an issue in GitHub to resolve in 6 days).  those 2000 records with pricing data should increase market coverage and freshness substantially. What would adding data from airdna and VRBO do to the site's data?
+Copy
+Excellent — and your timing is good.
+You said the Airbnb pricing issue is due in 6 days; from today (April 22, 2026 UTC), that’s roughly April 28, 2026. I’d treat that as the highest-priority unlock because it changes both coverage and freshness in the pricing engine immediately.
+
+Critical clarification on your Airbnb pricing concern
+Right now, your comp-price selector is explicitly v1:
+Rank 1 = rental_prices_by_date daily price feed (labeled pvrpv_daily),
+Rank 2 = static fallback from rental_listings.nightly_price_usd. 
+And your contract states:
+listing_price_quotes is not used by comp-pool selection in v1. 
+So if your “2000 Airbnb pricing records” land only in listing_price_quotes, they improve quote/fee analytics, but do not automatically improve base comp pricing until you wire that source into comp selection logic. 
+What adding Airbnb price rows, AirDNA, and VRBO will do
+1) Airbnb per-night pricing (once wired into comp selection)
+Expected upside
+Big jump in market coverage and less dependence on static fallback pricing.
+Better freshness vs snapshot prices (you already apply freshness gates). 
+Better seasonality and lead-time behavior when paired with your stay-window logic. 
+Caveat
+You need to define source priority clearly, otherwise source-mix drift can destabilize outputs (you already have a good contract pattern). 
+2) VRBO
+You already have VRBO ingestion plumbing and a runner that synthesizes quotes from listing-level fields. 
+What this does
+Improves inventory breadth and competitive context.
+Adds quote rows for fee views.
+What it does not do yet
+It’s currently synthetic fee/total modeling, not true per-night dynamic calendar pricing. 
+Discovery is documented as bot-challenge constrained, so coverage growth may be uneven until that is solved. 
+3) AirDNA
+What it can add
+Strong macro-market priors (occupancy, ADR, RevPAR trends), useful for:
+priors in thin-comp segments,
+regime detection (high/shoulder/low behavior),
+calibration sanity checks.
+What to watch
+AirDNA is aggregated/estimated and may not map 1:1 to your listing-level comp math.
+Best use: calibration layer / prior, not direct replacement of listing-level comps.
+Recommended architecture after April 28 (v3.4 plan)
+Phase 0 (next 6 days): unlock Airbnb pricing into comp pool
+Extend PriceSource to include Airbnb daily source(s).
+In selectCompPriceSources, insert Airbnb daily as rank 1.5 (as your contract already anticipates). 
+Keep static fallback last.
+Return per-source counts in API summary (you already expose composition scaffolding). 
+Success metric: summary.composition.airbnb_baseline drops while priced-source share rises.
+Phase 1 (1–2 weeks): weighted aggregation + source-aware confidence
+Switch comp aggregation from unweighted median to freshness/source-weighted median for sufficiently large pools.
+Keep current unweighted method as fallback for thin pools.
+Add source-mix penalty:
+high static share + stale => stronger damping (you already have a partial version). 
+Phase 2 (2–4 weeks): calibration framework (Airbnb + VRBO + AirDNA)
+Move hardcoded premiums (view, finish, rooftop, etc.) to DB calibration tables by neighborhood/bedroom/season. 
+Use AirDNA as macro prior:
+market_regime_multiplier at neighborhood-month level,
+do not overwrite listing-level comp math.
+Build monthly calibration job to update coefficients.
+Phase 3 (4–6 weeks): backtesting + release gating
+Log every recommendation with model version, source mix, confidence, and comp IDs.
+Backtest vs realized outcomes.
+Create release gate:
+no coefficient change ships unless it beats baseline in targeted segments.
+How this affects the site (practical outcomes)
+If implemented cleanly, adding Airbnb pricing + VRBO + AirDNA should:
+Increase coverage (more priced comps available per query),
+Increase freshness (less stale static fallback),
+Improve stability (fewer thin-pool guidance-only results),
+Improve trust (clearer source composition + confidence consistency). 
+But unmanaged source mixing can hurt reliability. Your existing contract-first pattern is exactly the right protection. 
+Immediate priority list (what I’d do this week)
+Wire Airbnb priced rows into comp selection (must-do by ~April 28, 2026).
+Add source-level diagnostics endpoint (coverage, freshness by platform).
+Implement weighted median in shadow mode for 1 week.
+Flip weighted median on for high-confidence pools only.
+If you want, next I can draft:
+the exact schema + enum changes,
+a concrete selectCompPriceSources v2 pseudocode,
+and a backtest table design + SQL so you can ship this in small, safe releases.
+all of this! you're the best.  I'm running the scrapers to gather Airbnb Data from multiple places - GitHub actions and from my residential IP using my Mac mini. This should be in the GitHub logs.
+Copy
+That’s awesome — you’re doing exactly the right thing by running both channels (GitHub Actions + Mac mini residential path).
+And yes, your repo confirms this dual-path architecture is intentional:
+
+GitHub Actions path for calendar/enrichment jobs. 
+Mac/residential path is explicitly documented for Airbnb discovery. 
+What this means for you right now
+1) Good news: your ingestion strategy is correct
+You’re already operating in the model the project expects:
+Airbnb discovery from residential IP/Mac (anti-bot reality). 
+Daily GH-triggered refresh/enrichment jobs for the rest. 
+2) Important caveat: pricing-refresh workflow is currently paused
+Your Airbnb pricing workflow file is marked PAUSED and says daily cron is commented out. 
+So if you’re seeing Airbnb pricing in logs, it’s likely from manual/alternate paths (or older runs), not an active daily cron from that workflow.
+
+Quick “trust but verify” checklist (do this daily)
+Use this as your single dashboard habit:
+GH Actions checks
+airbnb-enrich-refresh last run success and counts.
+airbnb-calendar-scrape last run success and runtime.
+airbnb-pricing-refresh status (currently paused unless manually dispatched). 
+DB freshness checks (from your own docs)
+max scraped_at by source.
+stale rows over 24h.
+enrichment stale backlog. 
+Pricing engine source mix
+Watch summary.composition and static_share from /api/rental/comps responses.
+Your objective: decrease static share, increase truly priced comps. 
+Next tactical move (this week)
+Since you said “all of this”:
+I strongly recommend you ship a single “source telemetry” endpoint that merges:
+GH run recency (or persisted heartbeat),
+DB freshness per platform,
+comp-engine mix (nightly_priced, airbnb_baseline, static share),
+so you can see “pipeline healthy but model still static-heavy” in one place.
+You already have most of the ingredients in code; this is mostly assembly work. 
+
+If you want, I can now draft the exact JSON contract for that telemetry endpoint and the SQL behind it, so you can implement in one pass.
+Commands I ran for this check
+find .github/workflows -maxdepth 1 -type f | sed 's#^./##' | sort
+nl -ba .github/workflows/airbnb-calendar-scrape.yml | sed -n '1,220p'
+nl -ba .github/workflows/airbnb-enrich-refresh.yml | sed -n '1,240p'
+nl -ba .github/workflows/airbnb-pricing-refresh.yml | sed -n '1,240p'
+nl -ba .github/workflows/vrbo-pricing-refresh.yml | sed -n '1,220p'
+this is great.  I'm right now wrapping up the first pass at the localized event and seasonality price calendar. how events impact pricing at the neighborhood level.
+Copy
+That is a great milestone — honestly, you’re tackling exactly the right differentiator.
+You’re already setting this up correctly by keeping neighborhood event effects in explanatory mode first (not price-active yet). That’s the safest path for a live product. 
+
+What I’d do next (to finish this pass cleanly)
+Keep Phase B explanatory-only for now
+You already annotate this as pricing_mode: "legacy_event_only" and return candidate multipliers in audit output. Keep it that way until you have calibration evidence. 
+Log candidate vs actual deltas by neighborhood/event
+For each stay window, store:
+event-only multiplier,
+zone candidate multiplier,
+realized booking/price outcome (when available).
+This gives you your empirical M_event_avg needed before turning zone effects on in pricing math (which your own comments already call out). 
+Turn on zone pricing behind a feature flag
+Example: SEASONAL_ZONE_PRICING_MODE=off|shadow|on
+shadow: compute both old and new outputs, return both, bill with old.
+on: switch only after shadow metrics stabilize.
+Per-neighborhood caps for first activation
+You already have protective clamps; keep strict caps initially (e.g., max ±6–8% zone effect) to avoid double-counting with comp/neighborhood effects. 
+Start with just 2–3 high-signal events
+Your file already notes sparse seed events (good). Launch narrowly (Pride/Bear/BeefDip) and expand only after backtest confidence. 
+If you want, I can draft a Phase C activation spec next:
+exact flag behavior,
+shadow metrics to monitor,
+pass/fail thresholds for enabling neighborhood event multipliers per zone.
+I think we are being more aggressive with phase b.  Once complete, I'll look for your advice on phase c
+Copy
+Perfect — that’s a solid call.
+If you’re going aggressive on Phase B, the key is: be aggressive in coverage + telemetry, conservative in price activation. You’ll move fast and protect trust.
+
+When you’re ready for Phase C, I can help you with a tight go-live checklist (flags, thresholds, rollback, and monitoring). 🚀
+did a bunch of work on it just now.  feel free to evaluate it
+Copy
+Love the pace. I pulled the current branch and reviewed the latest committed work (there were no uncommitted local diffs at evaluation time).
+What looks strong
+Great separation of concerns: forward-demand is explicitly informational and does not mutate comp engine pricing. That protects trust while you iterate. 
+Good gating discipline: you require both event-window match and calibration signal, with stale/missing calibration suppression. This is exactly the right risk posture. 
+Telemetry-first design: track-shown / track-applied plus forward_demand_observations schema gives you real post-event learning loops. 
+UI integration is clean and scoped: forward-demand and stay-rent-value panels are additive and non-invasive in the pricing tool flow. 
+Issues I’d fix next (highest priority first)
+React side effect during render in ForwardDemandPanel
+markTransitionSeen(...) is called inside render/map. That mutates localStorage during render, which can create unpredictable behavior and rerender artifacts. Move this into a useEffect or mark on user interaction. 
+Calibration timestamp robustness
+new Date(snap.metadata.run_at) is assumed valid; if malformed, daysBetween can produce invalid math. Add a validity guard and return suppression reason like snapshot_invalid_timestamp. 
+track-applied idempotency/semantics
+Currently updates timestamp every click; consider “first apply wins” (WHERE recommendation_applied IS NULL) if you want clean conversion metrics. 
+Lifecycle reset for tracking cache
+observationIdsRef never resets when key inputs change substantially (new query/session). Consider clearing on neighborhood/date change to avoid stale in-memory state. 
+One strategic note
+Your architecture is very close to a good Phase C launch shape: keep this panel as decision support, then graduate to price-active only after you can show uplift from the observation table.
+Checks I ran
+✅ git status --short --branch (clean working tree; branch work)
+✅ git show --name-only --oneline --stat -n 3 (reviewed latest commits and touched files)
+❌ pnpm run typecheck (fails due to existing repo-wide TypeScript issues beyond just this feature)
+If you want, I can do a surgical Phase B hardening pass next: only fix the top 2–3 issues above without changing behavior.
