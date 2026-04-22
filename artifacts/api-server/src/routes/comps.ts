@@ -1091,10 +1091,16 @@ router.post("/rental/comps", async (req, res) => {
         monthly_multiplier: result.seasonalContext.monthlyMultiplier,
         monthly_note: result.seasonalContext.monthlyNote,
         event_name: result.seasonalContext.activeEvent?.name ?? null,
+        event_key: result.seasonalContext.activeEvent?.key ?? null,
         event_premium_pct: result.seasonalContext.eventPremiumPct != null
           ? parseFloat((result.seasonalContext.eventPremiumPct * 100).toFixed(1)) : null,
         total_multiplier: parseFloat(result.seasonalContext.totalMultiplier.toFixed(4)),
         display_label: result.seasonalContext.displayLabel,
+        // Phase A audit array — one entry per night in the stay window. Null for
+        // month-only requests. multiplier_applied = the event multiplier we
+        // ultimately applied (1.0 = neutral). Will gain a nested `breakdown`
+        // sub-object in Phase C when zone × property come online.
+        event_audit: result.seasonalContext.eventAudit,
       },
 
       // New V3.1 fields
