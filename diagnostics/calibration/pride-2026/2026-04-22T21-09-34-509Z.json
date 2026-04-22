@@ -1,0 +1,264 @@
+{
+  "metadata": {
+    "run_at": "2026-04-22T21:09:34.509Z",
+    "script_version": "1.0.0",
+    "query_frozen_at": "2026-04-22",
+    "data_source": "rental_prices_by_date (production / Railway)",
+    "filters": {
+      "availability_status": "(none — intentionally not filtered)",
+      "nightly_price_usd": "IS NOT NULL",
+      "source_platform": "(none — Airbnb / PVRPV / Vacation Vallarta all included)"
+    },
+    "windows": [
+      {
+        "label": "1_pre",
+        "start": "2026-05-06",
+        "end": "2026-05-14",
+        "note": "9 nights, Wed-Thu, weekend May 8-10"
+      },
+      {
+        "label": "2_pride",
+        "start": "2026-05-20",
+        "end": "2026-05-28",
+        "note": "9 nights, Wed-Thu, weekend May 22-24, Pride core"
+      },
+      {
+        "label": "3_post",
+        "start": "2026-06-03",
+        "end": "2026-06-11",
+        "note": "9 nights, Wed-Thu, weekend Jun 5-7"
+      }
+    ],
+    "hood_definitions": [
+      {
+        "label": "ZR + Old Town",
+        "includes": [
+          "Zona Romantica",
+          "Old Town"
+        ],
+        "note": "Primary ZR diagnostic — combines ZR with Old Town alias rows"
+      },
+      {
+        "label": "Zona Romantica only",
+        "includes": [
+          "Zona Romantica"
+        ],
+        "note": "Pure ZR for comparison against the combined bucket"
+      },
+      {
+        "label": "Amapas",
+        "includes": [
+          "Amapas"
+        ],
+        "note": "Spillover hood with mid-strength Pride zone seed (1.06)"
+      },
+      {
+        "label": "Marina Vallarta",
+        "includes": [
+          "Marina Vallarta"
+        ],
+        "note": "Negative-control hood — no Pride zone seed"
+      }
+    ],
+    "notes": [
+      "Read-only diagnostic. Does not affect pricing behavior.",
+      "Compare across checkpoints to observe Pride uplift trajectory in raw host pricing.",
+      "All windows are 9 nights (Wed-Thu) with one full Fri-Sun weekend.",
+      "Pre and post controls are 14 days from Pride core in either direction."
+    ]
+  },
+  "mapping_inventory": [
+    {
+      "hood_label": "Amapas",
+      "exact_mapping_count": 64,
+      "null_mapping_count": 117,
+      "total_listing_count": 181
+    },
+    {
+      "hood_label": "Marina Vallarta",
+      "exact_mapping_count": 47,
+      "null_mapping_count": 150,
+      "total_listing_count": 197
+    },
+    {
+      "hood_label": "Zona Romantica only",
+      "exact_mapping_count": 166,
+      "null_mapping_count": 272,
+      "total_listing_count": 438
+    },
+    {
+      "hood_label": "ZR + Old Town",
+      "exact_mapping_count": 170,
+      "null_mapping_count": 278,
+      "total_listing_count": 448
+    }
+  ],
+  "measurements": [
+    {
+      "hood": "Amapas",
+      "window": "1_pre",
+      "listing_count": 33,
+      "nightly_row_count": 297,
+      "median": 245,
+      "p25": 170,
+      "p75": 355,
+      "exact_mapping_count": 64,
+      "null_mapping_count": 117
+    },
+    {
+      "hood": "Amapas",
+      "window": "2_pride",
+      "listing_count": 33,
+      "nightly_row_count": 297,
+      "median": 245,
+      "p25": 170,
+      "p75": 385,
+      "exact_mapping_count": 64,
+      "null_mapping_count": 117
+    },
+    {
+      "hood": "Amapas",
+      "window": "3_post",
+      "listing_count": 33,
+      "nightly_row_count": 297,
+      "median": 225,
+      "p25": 170,
+      "p75": 385,
+      "exact_mapping_count": 64,
+      "null_mapping_count": 117
+    },
+    {
+      "hood": "Marina Vallarta",
+      "window": "1_pre",
+      "listing_count": 3,
+      "nightly_row_count": 27,
+      "median": 141,
+      "p25": 120,
+      "p75": 165,
+      "exact_mapping_count": 47,
+      "null_mapping_count": 150
+    },
+    {
+      "hood": "Marina Vallarta",
+      "window": "2_pride",
+      "listing_count": 3,
+      "nightly_row_count": 27,
+      "median": 141,
+      "p25": 120,
+      "p75": 165,
+      "exact_mapping_count": 47,
+      "null_mapping_count": 150
+    },
+    {
+      "hood": "Marina Vallarta",
+      "window": "3_post",
+      "listing_count": 3,
+      "nightly_row_count": 27,
+      "median": 141,
+      "p25": 120,
+      "p75": 165,
+      "exact_mapping_count": 47,
+      "null_mapping_count": 150
+    },
+    {
+      "hood": "Zona Romantica only",
+      "window": "1_pre",
+      "listing_count": 103,
+      "nightly_row_count": 927,
+      "median": 155,
+      "p25": 120,
+      "p75": 202,
+      "exact_mapping_count": 166,
+      "null_mapping_count": 272
+    },
+    {
+      "hood": "Zona Romantica only",
+      "window": "2_pride",
+      "listing_count": 103,
+      "nightly_row_count": 927,
+      "median": 155,
+      "p25": 120,
+      "p75": 202,
+      "exact_mapping_count": 166,
+      "null_mapping_count": 272
+    },
+    {
+      "hood": "Zona Romantica only",
+      "window": "3_post",
+      "listing_count": 104,
+      "nightly_row_count": 936,
+      "median": 155,
+      "p25": 117.5,
+      "p75": 202.75,
+      "exact_mapping_count": 166,
+      "null_mapping_count": 272
+    },
+    {
+      "hood": "ZR + Old Town",
+      "window": "1_pre",
+      "listing_count": 108,
+      "nightly_row_count": 972,
+      "median": 160,
+      "p25": 120,
+      "p75": 205,
+      "exact_mapping_count": 170,
+      "null_mapping_count": 278
+    },
+    {
+      "hood": "ZR + Old Town",
+      "window": "2_pride",
+      "listing_count": 108,
+      "nightly_row_count": 972,
+      "median": 160,
+      "p25": 120,
+      "p75": 205,
+      "exact_mapping_count": 170,
+      "null_mapping_count": 278
+    },
+    {
+      "hood": "ZR + Old Town",
+      "window": "3_post",
+      "listing_count": 109,
+      "nightly_row_count": 981,
+      "median": 155,
+      "p25": 120,
+      "p75": 205,
+      "exact_mapping_count": 170,
+      "null_mapping_count": 278
+    }
+  ],
+  "ratios": [
+    {
+      "hood": "ZR + Old Town",
+      "pride_median": 160,
+      "pre_median": 160,
+      "post_median": 155,
+      "pride_vs_pre_median_ratio": 1,
+      "pride_vs_post_median_ratio": 1.0323
+    },
+    {
+      "hood": "Zona Romantica only",
+      "pride_median": 155,
+      "pre_median": 155,
+      "post_median": 155,
+      "pride_vs_pre_median_ratio": 1,
+      "pride_vs_post_median_ratio": 1
+    },
+    {
+      "hood": "Amapas",
+      "pride_median": 245,
+      "pre_median": 245,
+      "post_median": 225,
+      "pride_vs_pre_median_ratio": 1,
+      "pride_vs_post_median_ratio": 1.0889
+    },
+    {
+      "hood": "Marina Vallarta",
+      "pride_median": 141,
+      "pre_median": 141,
+      "post_median": 141,
+      "pride_vs_pre_median_ratio": 1,
+      "pride_vs_post_median_ratio": 1
+    }
+  ]
+}
