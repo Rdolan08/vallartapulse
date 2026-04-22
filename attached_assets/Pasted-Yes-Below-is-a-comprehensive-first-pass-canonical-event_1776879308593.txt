@@ -1,0 +1,411 @@
+Yes. Below is a comprehensive first-pass canonical event schema and seeded Tier 1 event rules for VallartaPulse, designed so one shared source can drive all event pricing logic.
+
+A few dates are safe to seed now from current sources: Vallarta Pride 2026 is listed for May 17–24, 2026; BeefDip 2027 for January 24–31, 2027; the VidantaWorld Mexico Open 2026 for October 29–November 1, 2026; Semana Santa 2026 for March 29–April 5; and Semana Santa 2027 for March 21–28.  ￼
+
+Canonical shared schema
+
+Use one shared module such as src/shared/events/eventRules.ts or a DB table with the same contract. Every pricing path should read from this and nowhere else.
+
+export type EventType =
+  | "holiday_peak"
+  | "domestic_surge"
+  | "circuit_identity"
+  | "luxury_maritime"
+  | "athlete";
+export type ApplicationMode = "per_night_weighted";
+export type NeighborhoodKey =
+  | "zona_romantica"
+  | "amapas"
+  | "conchas_chinas"
+  | "centro"
+  | "5_de_diciembre"
+  | "marina_vallarta"
+  | "nuevo_vallarta";
+export type PropertyTypeKey =
+  | "condo"
+  | "villa"
+  | "luxury";
+export type EventImpactZone = {
+  neighborhood_key: NeighborhoodKey;
+  multiplier: number;        // zone effect on top of event multiplier
+  notes?: string;
+};
+export type PropertyTypeAdjustment = {
+  property_type: PropertyTypeKey;
+  multiplier: number;        // property-type effect on top of event + zone
+  notes?: string;
+};
+export type EventRule = {
+  event_key: string;
+  display_name: string;
+  year: number;
+  core_start_date: string;   // YYYY-MM-DD
+  core_end_date: string;     // YYYY-MM-DD
+  shoulder_start_date?: string;
+  shoulder_end_date?: string;
+  core_multiplier: number;
+  shoulder_multiplier?: number;
+  event_type: EventType;
+  application_mode: ApplicationMode; // default: per_night_weighted
+  event_impact_zones: EventImpactZone[];
+  property_type_adjustments?: PropertyTypeAdjustment[];
+  // auditability
+  active: boolean;
+  priority: number;          // higher wins if same-night conflict
+  date_confidence: "confirmed" | "derived" | "tentative";
+  source_refs: string[];
+  notes?: string;
+};
+
+Why this shape works
+
+It keeps the system:
+
+* spatially aware
+* asset aware
+* auditable
+* easy to test
+
+It also cleanly separates three things:
+
+* event intensity via core_multiplier / shoulder_multiplier
+* where it matters via event_impact_zones
+* what inventory responds differently via property_type_adjustments
+
+Seeded Tier 1 definitions
+
+These are deliberately conservative enough to be explainable, while still giving BeefDip and Pride real teeth in the south-side condo market.
+
+export const TIER1_EVENT_RULES: EventRule[] = [
+  {
+    event_key: "new_years_2026_2027",
+    display_name: "New Year's",
+    year: 2026,
+    core_start_date: "2026-12-30",
+    core_end_date: "2027-01-02",
+    shoulder_start_date: "2026-12-27",
+    shoulder_end_date: "2027-01-04",
+    core_multiplier: 1.55,
+    shoulder_multiplier: 1.18,
+    event_type: "holiday_peak",
+    application_mode: "per_night_weighted",
+    event_impact_zones: [
+      { neighborhood_key: "zona_romantica", multiplier: 1.18 },
+      { neighborhood_key: "amapas", multiplier: 1.14 },
+      { neighborhood_key: "conchas_chinas", multiplier: 1.12 },
+      { neighborhood_key: "centro", multiplier: 1.08 },
+      { neighborhood_key: "5_de_diciembre", multiplier: 1.05 },
+      { neighborhood_key: "marina_vallarta", multiplier: 1.02 },
+      { neighborhood_key: "nuevo_vallarta", multiplier: 1.04 }
+    ],
+    property_type_adjustments: [
+      { property_type: "condo", multiplier: 1.00 },
+      { property_type: "villa", multiplier: 1.08 },
+      { property_type: "luxury", multiplier: 1.12 }
+    ],
+    active: true,
+    priority: 90,
+    date_confidence: "derived",
+    source_refs: ["calendar-derived"],
+    notes: "Broad holiday peak. Strong citywide demand, with extra upside for upscale inventory."
+  },
+  {
+    event_key: "semana_santa_2026",
+    display_name: "Semana Santa",
+    year: 2026,
+    core_start_date: "2026-03-29",
+    core_end_date: "2026-04-05",
+    shoulder_start_date: "2026-03-27",
+    shoulder_end_date: "2026-04-10",
+    core_multiplier: 1.42,
+    shoulder_multiplier: 1.10,
+    event_type: "domestic_surge",
+    application_mode: "per_night_weighted",
+    event_impact_zones: [
+      { neighborhood_key: "zona_romantica", multiplier: 1.03 },
+      { neighborhood_key: "amapas", multiplier: 1.05 },
+      { neighborhood_key: "conchas_chinas", multiplier: 1.07 },
+      { neighborhood_key: "centro", multiplier: 1.08 },
+      { neighborhood_key: "5_de_diciembre", multiplier: 1.07 },
+      { neighborhood_key: "marina_vallarta", multiplier: 1.10 },
+      { neighborhood_key: "nuevo_vallarta", multiplier: 1.14 }
+    ],
+    property_type_adjustments: [
+      { property_type: "condo", multiplier: 1.00 },
+      { property_type: "villa", multiplier: 1.06 },
+      { property_type: "luxury", multiplier: 1.08 }
+    ],
+    active: true,
+    priority: 80,
+    date_confidence: "confirmed",
+    source_refs: [
+      "https://elpais.com/mexico/2026-03-31/semana-santa-en-mexico-2026-cuando-son-las-vacaciones-cuanto-duran-dias-clave-y-tradiciones-de-la-temporada.html"
+    ],
+    notes: "Domestic and family-heavy surge; stronger fit for larger-format and resort-adjacent inventory."
+  },
+  {
+    event_key: "semana_santa_2027",
+    display_name: "Semana Santa",
+    year: 2027,
+    core_start_date: "2027-03-21",
+    core_end_date: "2027-03-28",
+    shoulder_start_date: "2027-03-19",
+    shoulder_end_date: "2027-03-31",
+    core_multiplier: 1.42,
+    shoulder_multiplier: 1.10,
+    event_type: "domestic_surge",
+    application_mode: "per_night_weighted",
+    event_impact_zones: [
+      { neighborhood_key: "zona_romantica", multiplier: 1.03 },
+      { neighborhood_key: "amapas", multiplier: 1.05 },
+      { neighborhood_key: "conchas_chinas", multiplier: 1.07 },
+      { neighborhood_key: "centro", multiplier: 1.08 },
+      { neighborhood_key: "5_de_diciembre", multiplier: 1.07 },
+      { neighborhood_key: "marina_vallarta", multiplier: 1.10 },
+      { neighborhood_key: "nuevo_vallarta", multiplier: 1.14 }
+    ],
+    property_type_adjustments: [
+      { property_type: "condo", multiplier: 1.00 },
+      { property_type: "villa", multiplier: 1.06 },
+      { property_type: "luxury", multiplier: 1.08 }
+    ],
+    active: true,
+    priority: 80,
+    date_confidence: "confirmed",
+    source_refs: [
+      "https://www.timeanddate.com/calendar/monthly.html?country=40&month=3&year=2027"
+    ],
+    notes: "Same logic as 2026. Broad domestic demand, less concentrated than Pride or BeefDip."
+  },
+  {
+    event_key: "vallarta_pride_2026",
+    display_name: "Vallarta Pride",
+    year: 2026,
+    core_start_date: "2026-05-17",
+    core_end_date: "2026-05-24",
+    shoulder_start_date: "2026-05-15",
+    shoulder_end_date: "2026-05-26",
+    core_multiplier: 1.50,
+    shoulder_multiplier: 1.18,
+    event_type: "circuit_identity",
+    application_mode: "per_night_weighted",
+    event_impact_zones: [
+      { neighborhood_key: "zona_romantica", multiplier: 1.35, notes: "Primary zone" },
+      { neighborhood_key: "amapas", multiplier: 1.20, notes: "Strong spillover" },
+      { neighborhood_key: "conchas_chinas", multiplier: 1.12, notes: "Luxury spillover" },
+      { neighborhood_key: "centro", multiplier: 1.08 },
+      { neighborhood_key: "5_de_diciembre", multiplier: 1.04 },
+      { neighborhood_key: "marina_vallarta", multiplier: 0.98 },
+      { neighborhood_key: "nuevo_vallarta", multiplier: 0.96 }
+    ],
+    property_type_adjustments: [
+      { property_type: "condo", multiplier: 1.08 },
+      { property_type: "villa", multiplier: 0.98 },
+      { property_type: "luxury", multiplier: 1.02 }
+    ],
+    active: true,
+    priority: 95,
+    date_confidence: "confirmed",
+    source_refs: [
+      "https://vallartapride.org/en/calendario-oficial/",
+      "https://visitapuertovallarta.com.mx/eventos/vallarta-pride-2026"
+    ],
+    notes: "South-side, nightlife, and walkability driven. Strongest in Zona Romántica."
+  },
+  {
+    event_key: "beefdip_2027",
+    display_name: "BeefDip",
+    year: 2027,
+    core_start_date: "2027-01-24",
+    core_end_date: "2027-01-31",
+    shoulder_start_date: "2027-01-22",
+    shoulder_end_date: "2027-02-01",
+    core_multiplier: 1.75,
+    shoulder_multiplier: 1.20,
+    event_type: "circuit_identity",
+    application_mode: "per_night_weighted",
+    event_impact_zones: [
+      { neighborhood_key: "zona_romantica", multiplier: 1.55, notes: "Primary zone" },
+      { neighborhood_key: "amapas", multiplier: 1.28, notes: "Strong spillover" },
+      { neighborhood_key: "conchas_chinas", multiplier: 1.18, notes: "Luxury spillover" },
+      { neighborhood_key: "centro", multiplier: 1.08 },
+      { neighborhood_key: "5_de_diciembre", multiplier: 1.03 },
+      { neighborhood_key: "marina_vallarta", multiplier: 0.96 },
+      { neighborhood_key: "nuevo_vallarta", multiplier: 0.94 }
+    ],
+    property_type_adjustments: [
+      { property_type: "condo", multiplier: 1.15 },
+      { property_type: "villa", multiplier: 0.95 },
+      { property_type: "luxury", multiplier: 1.00 }
+    ],
+    active: true,
+    priority: 100,
+    date_confidence: "confirmed",
+    source_refs: [
+      "https://www.gayguidevallarta.com/calendar/event/10384/"
+    ],
+    notes: "Tier 1 south-side condo event. This is the sharpest location-sensitive surge in the initial ruleset."
+  },
+  {
+    event_key: "mexico_open_2026",
+    display_name: "Mexico Open at VidantaWorld",
+    year: 2026,
+    core_start_date: "2026-10-29",
+    core_end_date: "2026-11-01",
+    shoulder_start_date: "2026-10-26",
+    shoulder_end_date: "2026-11-03",
+    core_multiplier: 1.28,
+    shoulder_multiplier: 1.08,
+    event_type: "luxury_maritime",
+    application_mode: "per_night_weighted",
+    event_impact_zones: [
+      { neighborhood_key: "zona_romantica", multiplier: 0.98 },
+      { neighborhood_key: "amapas", multiplier: 1.00 },
+      { neighborhood_key: "conchas_chinas", multiplier: 1.02 },
+      { neighborhood_key: "centro", multiplier: 1.00 },
+      { neighborhood_key: "5_de_diciembre", multiplier: 0.98 },
+      { neighborhood_key: "marina_vallarta", multiplier: 1.20, notes: "Golf / marina adjacency" },
+      { neighborhood_key: "nuevo_vallarta", multiplier: 1.32, notes: "Primary zone" }
+    ],
+    property_type_adjustments: [
+      { property_type: "condo", multiplier: 1.00 },
+      { property_type: "villa", multiplier: 1.08 },
+      { property_type: "luxury", multiplier: 1.12 }
+    ],
+    active: true,
+    priority: 85,
+    date_confidence: "confirmed",
+    source_refs: [
+      "https://mexicoopen.vidantaworld.com/en",
+      "https://visitapuertovallarta.com.mx/eventos/vidantaworld-mexico-open-2026"
+    ],
+    notes: "North-side luxury, golf, marina, and resort-sensitive event."
+  }
+];
+
+Zone-multiplier philosophy
+
+This is the intended meaning of the zones in the seed set:
+
+* zona_romantica: strongest for Pride and BeefDip because that cluster is the center of LGBTQ nightlife and south-side visitor concentration. The area is widely described as a tourist-heavy, LGBTQ-friendly district, and “Old Town / South Side” language is common in travel references.  ￼
+* amapas: immediate hillside spillover behind Los Muertos, so it benefits heavily from south-side identity and nightlife demand.
+* conchas_chinas: more luxury spillover than street-level nightlife effect.
+* centro and 5_de_diciembre: secondary beneficiaries for core-city events.
+* marina_vallarta and nuevo_vallarta: strongest fit for the Mexico Open because Marina Vallarta is tied to golf and marina activity, while the 2026 tournament is explicitly at VidantaWorld Vallarta / Nuevo Nayarit.  ￼
+
+How this plugs into the pricing engine
+
+Keep the comp engine intact. This is an overlay.
+
+Recommended flow:
+
+const compResult = runCompEngine(input);
+const eventOverlay = computeStayEventOverlay({
+  checkIn: input.checkIn,
+  checkOut: input.checkOut,
+  neighborhoodKey: input.neighborhoodKey,
+  propertyType: input.propertyType,
+});
+const finalRecommendedRate =
+  compResult.recommendedRate * eventOverlay.stayMultiplier;
+
+Event overlay contract
+
+export type EventOverlayNight = {
+  date: string;
+  event_key?: string;
+  phase?: "core" | "shoulder";
+  base_event_multiplier: number;
+  zone_multiplier: number;
+  property_type_multiplier: number;
+  final_night_multiplier: number;
+};
+export type EventOverlayResult = {
+  applied: boolean;
+  stayMultiplier: number;
+  nights: EventOverlayNight[];
+  winningEvents: string[];
+};
+
+Night-by-night computation rules
+
+For each night in the stay:
+
+1. Find matching active event rules.
+2. Determine whether the night falls in core or shoulder.
+3. Start with core_multiplier or shoulder_multiplier.
+4. Apply the matching neighborhood zone multiplier.
+5. Apply the property-type multiplier.
+6. If multiple events overlap on the same night, use the highest-priority event, then highest resulting multiplier as the tiebreaker.
+7. Average nightly multipliers across the stay.
+
+Formula:
+
+nightMultiplier =
+  baseEventMultiplier
+  * zoneMultiplier
+  * propertyTypeMultiplier;
+stayMultiplier =
+  sum(nightMultiplier for each night) / totalNights;
+
+That gives you exactly what you asked for: per_night_weighted, spatially aware, asset aware, and auditable.
+
+Modules that should migrate to this shared logic
+
+These should stop owning their own event timing:
+
+* current date-based event multiplier helper
+* any seasonality/date overlay module that hardcodes event windows
+* stay pricing calculator
+* pricing explanation / audit response builder
+* any tests or fixtures with embedded event date logic
+
+In plain English: if any module says “if date between X and Y, bump rate,” that logic needs to move into the shared event rules source.
+
+Recommended API response shape
+
+Expose the math. That will save you later.
+
+{
+  "event_overlay": {
+    "applied": true,
+    "stayMultiplier": 1.34,
+    "winningEvents": ["beefdip_2027"],
+    "nights": [
+      {
+        "date": "2027-01-26",
+        "event_key": "beefdip_2027",
+        "phase": "core",
+        "base_event_multiplier": 1.75,
+        "zone_multiplier": 1.55,
+        "property_type_multiplier": 1.15,
+        "final_night_multiplier": 3.12125
+      }
+    ]
+  }
+}
+
+Guardrails for pass one
+
+Keep these rules simple:
+
+* no radius calculations
+* no IP-driven behavior
+* no inferred demand spikes
+* no stacking multiple events multiplicatively on the same night yet
+* no duplicated date logic anywhere else
+
+One more thing I would add now
+
+Add a tiny schema version marker so future migrations are easier:
+
+export const EVENT_RULES_SCHEMA_VERSION = 1;
+
+That keeps future refactors from becoming archaeological digs.
+
+If you want, the next step is the actual Replit-ready implementation block that defines:
+
+* the shared schema
+* the Tier 1 event rules file
+* the computeStayEventOverlay() function
+* the minimal changes to plug it into your current pricing flow
