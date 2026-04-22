@@ -1,0 +1,77 @@
+Phase B looks good. Keep it exactly as implemented: explanatory-only.
+
+Key direction — do NOT activate any zone or deseasonalization math yet.
+
+We are not building pricing logic right now. We are building a measurement layer to validate whether spatial/event effects are real.
+
+Actions:
+
+1) Keep current behavior locked
+- total_multiplier and recommended_price must remain identical to Phase A
+- zone_multiplier and final_night_multiplier remain audit-only fields
+- do not introduce deseasonalized pricing into any live path
+
+2) Remove / disable live deseasonalization math
+- do not compute or use P_base = P_observed / M_event_avg in pricing
+- do not introduce deseasonalized_event_only or deseasonalized_event_plus_zone as active pricing modes
+- if implemented, keep behind a flag and OFF
+
+3) Keep and expand audit output
+- multiplier_applied remains the live field
+- zone_multiplier = candidate only
+- final_night_multiplier = candidate only
+- this is now our calibration surface
+
+4) Add neighborhood normalization (if not already done)
+- map display strings → canonical keys (zona_romantica, etc.)
+- no radius / coordinate logic
+
+5) Do NOT touch:
+- comp engine
+- event selection logic
+- multiplier magnitudes
+- property-type logic
+
+6) Next step is data, not code
+We are moving calibration out of the API layer.
+
+Prepare for read-only retrospective queries against rental_prices_by_date:
+
+We need to pull for 2025 (no availability filter):
+- Pride week + 1 pre-control + 1 post-control
+- Easter / Semana Santa
+- Day of the Dead
+- Christmas / NYE
+
+Break out by:
+- Zona Romantica
+- Amapas
+- Marina Vallarta
+
+Return:
+- count
+- median nightly price
+- p25 / p75
+
+Do NOT use:
+- stay_window_median
+- recommended_price
+- /api/rental/comps
+
+Goal:
+Determine actual event uplift by neighborhood using historical data before activating any spatial pricing.
+
+7) Important context
+The current comp engine already reflects:
+- same-neighborhood pricing
+- stay-window pricing
+- market response to events
+
+So any zone multiplier applied directly risks double-counting.
+
+We will only consider activating zone math after retrospective data shows:
+- consistent within-hood event uplift
+- meaningful cross-hood separation
+- signal not explained by comp filtering alone
+
+Hold here after this step.
