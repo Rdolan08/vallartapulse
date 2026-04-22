@@ -108,6 +108,10 @@ interface GuestPaidBreakdown {
   stay_length_nights: number | null;
   currency: string;
   collected_at: string;
+  // exact_quote = real scraped guest-paid quote for the user's exact window.
+  // synthetic_window = derived from per-night rates + 19% MX tax because no
+  // exact quote was on file. Surfaced so the comp card can label honestly.
+  source?: "exact_quote" | "synthetic_window";
 }
 
 interface CompEntry {

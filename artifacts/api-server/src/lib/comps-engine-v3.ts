@@ -113,6 +113,13 @@ export interface PricingLayer {
 
 export interface TargetPropertyV3 extends TargetPropertyV2 {
   month: number;
+  /**
+   * Optional pre-computed seasonal context. When present, the engine uses
+   * this instead of deriving from `month` alone. Set this when an explicit
+   * stay window is provided so date-aware (per-night) seasonality applies
+   * instead of month-level event leak. See getStayWindowSeasonalContext.
+   */
+  seasonalContextOverride?: SeasonalContext;
   viewType: ViewType;
   rooftopPool: boolean;
   yearBuilt: YearBuiltRange;
@@ -218,7 +225,7 @@ export class CompsEngineV3 {
     const v2Stretch      = recommendation.stretch;
 
     // ── 2. Compute factors ───────────────────────────────────────────────────
-    const seasonal      = getSeasonalContext(target.month);
+    const seasonal      = target.seasonalContextOverride ?? getSeasonalContext(target.month);
     const viewFactor    = VIEW_PREMIUM[target.viewType];
     const finishFactor  = FINISH_QUALITY_FACTOR[target.finishQuality];
     const { factor: rooftopFactor, note: rooftopNote } =
