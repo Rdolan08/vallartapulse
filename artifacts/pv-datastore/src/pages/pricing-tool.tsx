@@ -10,6 +10,8 @@ import {
   Dumbbell, ParkingSquare, Wifi, ChefHat, PawPrint, Users,
 } from "lucide-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
+import { ForwardDemandPanel } from "@/components/forward-demand-panel";
+import { StayRentValuePanel } from "@/components/stay-rent-value-panel";
 import { useLanguage } from "@/contexts/language-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -538,7 +540,7 @@ const LAYER_COLORS: Record<string, string> = {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function PricingToolPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   // ── State ──
   const currentMonth = new Date().getMonth() + 1;
@@ -1623,6 +1625,32 @@ export default function PricingToolPage() {
                     </p>
                   </CardContent>
                 </Card>
+              )}
+
+              {/* ── Forward-demand recommendation (informational layer) ──
+                  Independent signal, computed alongside comp-based pricing.
+                  Returns null when the calibration gate is closed or no Tier 1
+                  event overlaps the requested dates — layout is unaffected. */}
+              {compsResult && form.checkIn && form.checkOut && (
+                <ForwardDemandPanel
+                  neighborhood={form.neighborhood}
+                  checkIn={form.checkIn}
+                  checkOut={form.checkOut}
+                  compMedian={compsResult.summary?.median ?? compsResult.base_comp_median}
+                  lang={lang}
+                />
+              )}
+
+              {/* ── Stay vs Rent — opportunity-cost framing (informational) ──
+                  Pure frontend reader of the existing comps response. Returns
+                  null when the headline number is missing or the stay-window
+                  sample is too thin to ground the estimate honestly. */}
+              {compsResult && (
+                <StayRentValuePanel
+                  summary={compsResult.summary}
+                  neighborhood={form.neighborhood}
+                  lang={lang}
+                />
               )}
 
               {/* ── Warnings ── */}

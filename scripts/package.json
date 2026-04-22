@@ -21,15 +21,18 @@
     "db:apply-views": "tsx ./src/setup-airbnb-comp-signal-view.ts",
     "report:airbnb-comp-signal": "tsx ./src/report-airbnb-comp-signal.ts",
     "report:vv-coverage": "tsx ./src/report-vv-coverage.ts",
+    "calibrate:pride": "tsx ./calibration/pride-2026-pre-post.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "og": "tsx ./src/generate-og.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/pg": "^8.18.0",
     "playwright": "^1.59.1",
     "tsx": "catalog:"
   }

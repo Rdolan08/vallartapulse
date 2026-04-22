@@ -1,0 +1,122 @@
+Here’s a clean GitHub issue you can drop in as-is:
+
+⸻
+
+Title
+
+Refine Stay vs Rent v1 copy and add optional range display for high-value stays
+
+⸻
+
+Summary
+
+Tighten the Stay vs Rent v1 card copy to strengthen clarity and impact, and optionally introduce a range display (instead of a point estimate) for high-value date ranges (e.g., NYE, Christmas).
+
+This is a pure frontend refinement. No pricing logic, backend changes, or tracking additions.
+
+⸻
+
+Current Behavior
+
+The card shows:
+
+“Based on comparable rentals in [hood] for the same dates.
+This is an estimate of what the stay would earn if rented — not a price recommendation.”
+
+Headline shows a single point estimate derived from:
+
+* summary.stay_window_total
+* or fallback stay_window_median × nights
+
+⸻
+
+Problem
+
+1. Copy is slightly defensive (“not a price recommendation”) and reduces impact.
+2. Point estimate can feel overly precise, especially for high-value stays.
+3. Opportunity-cost framing could be clearer and more direct.
+
+⸻
+
+Proposed Changes
+
+1. Copy refinement (required)
+
+Replace current body copy with:
+
+Based on comparable rentals in [hood] for the same dates.
+Estimated rental value: what this stay could earn if rented.
+
+Notes:
+
+* Remove “not a price recommendation”
+* Keep tone factual and neutral
+* Maintain opportunity-cost framing
+
+⸻
+
+2. Range display for high-value stays (optional, behind simple condition)
+
+For high-value date ranges (e.g., total ≥ configurable threshold, e.g. $1,500):
+
+Display:
+
+Estimated rental value: $3,200–$4,100
+
+Instead of:
+
+Estimated rental value: $3,450
+
+Range construction (v1 simple approach)
+
+* center = current total
+* band = ±10–15% (or small fixed band, e.g. ±$200–$500 depending on magnitude)
+* round to clean numbers (no cents)
+
+Notes:
+
+* Do NOT introduce new backend fields
+* Compute entirely in frontend
+* Keep logic simple and conservative
+
+⸻
+
+Non-Goals
+
+* No pricing-engine changes
+* No new endpoints
+* No tracking additions
+* No event logic integration
+* No actions/buttons added to the card
+
+⸻
+
+Acceptance Criteria
+
+* Updated copy renders correctly for all locales via t()
+* Card still suppresses when:
+    * no usable stay-window data
+    * stay_window_samples < 5
+* Range display only appears when threshold condition met
+* No visual overlap or confusion with Forward-demand card
+* No regressions in pricing tool behavior
+
+⸻
+
+Priority
+
+Low (UX polish), but high leverage for perception and clarity—especially on high-value dates.
+
+⸻
+
+Context
+
+This card is designed to:
+
+* frame opportunity cost (stay vs rent)
+* remain informational (no actions)
+* complement Forward-demand without overlapping responsibilities
+
+⸻
+
+Let me know if you want a second issue for future enhancements (guest-count input, weekly delta line, etc.).
