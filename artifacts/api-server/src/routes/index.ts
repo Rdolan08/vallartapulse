@@ -9,6 +9,7 @@ import safetyRouter from "./safety";
 import weatherRouter from "./weather";
 import sourcesRouter from "./sources";
 import compsRouter from "./comps";
+import forwardDemandRouter from "./forward-demand";
 import rentalHelpersRouter from "./rental-helpers";
 import ingestRouter from "./ingest";
 import contactRouter from "./contact";
@@ -28,6 +29,7 @@ router.use(weatherRouter);
 router.use(sourcesRouter);
 router.use(rentalHelpersRouter); // must be before compsRouter (comps/prepare vs comps)
 router.use(compsRouter);
+router.use(forwardDemandRouter);
 router.use(ingestRouter);
 router.use(airportRouter);
 router.use(cruiseScheduleRouter);

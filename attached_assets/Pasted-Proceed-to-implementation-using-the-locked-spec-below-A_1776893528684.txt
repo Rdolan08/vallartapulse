@@ -1,0 +1,83 @@
+Proceed to implementation using the locked spec below.
+
+Approved with one small guardrail:
+- if the calibration-gate signal for the relevant hood/date is unavailable or stale, suppress the feature rather than inferring or falling back
+
+Everything else is locked as written.
+
+Implementation target:
+Forward-demand v1 only
+
+Scope:
+- Tier 1 events only: Pride PV and Christmas/NYE
+- no other events in v1
+- eventImpactZones taxonomy unchanged
+
+Trigger condition (both required):
+1. date is inside a Tier 1 event window
+2. comps are still flat for that event window:
+   - pride_vs_pre_median_ratio < 1.03 for the relevant hood
+   - sourced from the calibration query / saved script output
+Guardrail:
+- if the calibration signal is missing, stale, or unavailable for that hood/date, do not show the feature
+
+Core message:
+“The market around you hasn’t adjusted for this date yet.”
+“This is an opportunity to capture higher-value bookings early.”
+
+Range posture:
+- conservative and narrow
+- Early (60+): comp + $15 to + $20
+- Mid (30–60): comp + $10 to + $15
+- Late (15–30): comp + $0 to + $10
+- Very late (<15): comp - $5 to comp
+- no wider bands in v1
+
+Badges:
+- ◆ for Early / Mid / Late
+- ⏱ for Very late
+- never both
+
+Very-late transition message:
+Show once when a date first crosses from Late to Very late:
+“This was a forward-demand opportunity — that window has passed. Now the priority is getting booked.”
+
+Why section:
+- 2–3 qualitative bullets only
+- no percentages
+- no multipliers
+- no comp counts as proof
+- no flight-search data
+- no charts
+
+Apply behavior:
+- manual click only
+- [Apply $X] [Keep $Y] [Customize]
+- no auto-apply
+- no scheduled changes
+
+Internal tracking:
+Create a single internal table capturing:
+- listing_id
+- night_date
+- event_label
+- bucket
+- recommended_price
+- comp_median_at_show
+- recommendation_shown
+- recommendation_applied
+- final_booking_price
+- booked
+- days_to_booking
+
+Out of scope:
+- Tier 2/3 events
+- external demand-signal pipelines
+- charts/dashboards
+- auto-recalibration
+- bucket tuning
+- confidence-based range widening
+- using tracking data to change behavior in v1
+
+Build exactly this.
+No extra product ideas, no broadened scope.
