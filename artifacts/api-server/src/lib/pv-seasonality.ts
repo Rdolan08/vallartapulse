@@ -292,6 +292,12 @@ export const PV_EVENT_OVERLAYS: EventOverlay[] = [
     priority: 60, dateConfidence: "tentative",
     sourceRefs: ["historical-pv-event-pattern"],
     description: "First/second week of February — major LGBTQ+ demand event in PV",
+    // Phase B explanatory-only seed (NOT applied to price; visible in audit)
+    eventImpactZones: [
+      { neighborhoodKey: "zona_romantica", multiplier: 1.18, notes: "Primary zone" },
+      { neighborhoodKey: "amapas",         multiplier: 1.08, notes: "Strong spillover" },
+      { neighborhoodKey: "conchas_chinas", multiplier: 1.04, notes: "Luxury spillover" },
+    ],
   },
   {
     key: "bear_week_2027", name: "Bear Week / Beef Dip",
@@ -300,6 +306,12 @@ export const PV_EVENT_OVERLAYS: EventOverlay[] = [
     priority: 60, dateConfidence: "tentative",
     sourceRefs: ["historical-pv-event-pattern"],
     description: "First/second week of February — major LGBTQ+ demand event in PV",
+    // Phase B explanatory-only seed (NOT applied to price; visible in audit)
+    eventImpactZones: [
+      { neighborhoodKey: "zona_romantica", multiplier: 1.18, notes: "Primary zone" },
+      { neighborhoodKey: "amapas",         multiplier: 1.08, notes: "Strong spillover" },
+      { neighborhoodKey: "conchas_chinas", multiplier: 1.04, notes: "Luxury spillover" },
+    ],
   },
 
   // ── Valentine's (fixed) ──
@@ -403,6 +415,12 @@ export const PV_EVENT_OVERLAYS: EventOverlay[] = [
     priority: 100, dateConfidence: "tentative",
     sourceRefs: ["historical-pv-event-pattern"],
     description: "Late May — PV Pride festival; ZR and LGBT-friendly properties see premium",
+    // Phase B explanatory-only seed (NOT applied to price; visible in audit)
+    eventImpactZones: [
+      { neighborhoodKey: "zona_romantica", multiplier: 1.12, notes: "Primary zone" },
+      { neighborhoodKey: "amapas",         multiplier: 1.06, notes: "Strong spillover" },
+      { neighborhoodKey: "conchas_chinas", multiplier: 1.03, notes: "Luxury spillover" },
+    ],
   },
   {
     key: "pride_pv_2027", name: "Pride PV",
@@ -411,6 +429,12 @@ export const PV_EVENT_OVERLAYS: EventOverlay[] = [
     priority: 100, dateConfidence: "tentative",
     sourceRefs: ["historical-pv-event-pattern"],
     description: "Late May — PV Pride festival; ZR and LGBT-friendly properties see premium",
+    // Phase B explanatory-only seed (NOT applied to price; visible in audit)
+    eventImpactZones: [
+      { neighborhoodKey: "zona_romantica", multiplier: 1.12, notes: "Primary zone" },
+      { neighborhoodKey: "amapas",         multiplier: 1.06, notes: "Strong spillover" },
+      { neighborhoodKey: "conchas_chinas", multiplier: 1.03, notes: "Luxury spillover" },
+    ],
   },
 
   // ── Canadian Thanksgiving (2nd Mon of Oct) ──
@@ -710,4 +734,40 @@ export function seasonColor(season: SeasonLabel): "emerald" | "blue" | "amber" |
     case "shoulder": return "amber";
     case "low":      return "orange";
   }
+}
+
+// ── Neighborhood normalization (Phase B) ─────────────────────────────────────
+// Maps the display strings used by /api/rental/comps requests to the
+// snake_case keys used in EventOverlay.eventImpactZones[].neighborhoodKey.
+// Phase B uses these only for explanatory zone audit output; no pricing math
+// reads them today. Add new neighborhoods here as zone seeds expand.
+
+export const NEIGHBORHOOD_KEY_MAP: Readonly<Record<string, string>> = Object.freeze({
+  "Zona Romantica":          "zona_romantica",
+  "Old Town":                "zona_romantica",   // alias for ZR
+  "Amapas":                  "amapas",
+  "Conchas Chinas":          "conchas_chinas",
+  "Centro":                  "centro",
+  "5 de Diciembre":          "5_de_diciembre",
+  "Hotel Zone":              "hotel_zone",
+  "Versalles":               "versalles",
+  "Marina Vallarta":         "marina_vallarta",
+  "Nuevo Vallarta":          "nuevo_vallarta",
+  "Bucerias":                "bucerias",
+  "La Cruz de Huanacaxtle":  "la_cruz",
+  "Punta Mita":              "punta_mita",
+  "El Anclote":              "el_anclote",
+  "Sayulita":                "sayulita",
+  "San Pancho":              "san_pancho",
+  "Mismaloya":               "mismaloya",
+});
+
+/** Normalize a display-name neighborhood to its snake_case key. Returns null
+ *  for empty input. Falls back to a slugified form for unknown neighborhoods
+ *  so future zone rules can match without requiring a code change to the map. */
+export function normalizeNeighborhoodKey(displayName: string | null | undefined): string | null {
+  if (!displayName) return null;
+  const direct = NEIGHBORHOOD_KEY_MAP[displayName];
+  if (direct) return direct;
+  return displayName.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }

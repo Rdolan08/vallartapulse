@@ -24,7 +24,8 @@ import {
 import { type CompsListingV2, type CompResultV2, type BeachTier } from "../lib/comps-engine-v2";
 import { selectCompPriceSources, type PriceSource } from "../lib/comps-pricing-source";
 import { lookupBuilding } from "../lib/building-lookup";
-import { PV_MONTHLY_FACTORS, getStayWindowSeasonalContext } from "../lib/pv-seasonality";
+import { PV_MONTHLY_FACTORS, getStayWindowSeasonalContext, normalizeNeighborhoodKey } from "../lib/pv-seasonality";
+import { enrichAuditWithZoneCandidate } from "../lib/event-zone-overlay";
 import { recordPricingToolSuccess } from "../lib/pricing-tool-uptime";
 import type { MarketEvent } from "@workspace/db/schema";
 
@@ -1084,24 +1085,35 @@ router.post("/rental/comps", async (req, res) => {
       pricing_breakdown: result.pricingBreakdown,
       total_adjustment_multiplier: parseFloat(result.totalAdjustmentMultiplier.toFixed(4)),
 
-      seasonal: {
-        month: result.seasonalContext.month,
-        month_name: result.seasonalContext.monthName,
-        season: result.seasonalContext.season,
-        monthly_multiplier: result.seasonalContext.monthlyMultiplier,
-        monthly_note: result.seasonalContext.monthlyNote,
-        event_name: result.seasonalContext.activeEvent?.name ?? null,
-        event_key: result.seasonalContext.activeEvent?.key ?? null,
-        event_premium_pct: result.seasonalContext.eventPremiumPct != null
-          ? parseFloat((result.seasonalContext.eventPremiumPct * 100).toFixed(1)) : null,
-        total_multiplier: parseFloat(result.seasonalContext.totalMultiplier.toFixed(4)),
-        display_label: result.seasonalContext.displayLabel,
-        // Phase A audit array — one entry per night in the stay window. Null for
-        // month-only requests. multiplier_applied = the event multiplier we
-        // ultimately applied (1.0 = neutral). Will gain a nested `breakdown`
-        // sub-object in Phase C when zone × property come online.
-        event_audit: result.seasonalContext.eventAudit,
-      },
+      seasonal: (() => {
+        const ctx = result.seasonalContext;
+        // Phase B: enrich the Phase A audit with zone candidates (per-night
+        // zone_multiplier + final_night_multiplier, plus stay-level averages).
+        // EXPLANATORY ONLY — these values are NOT applied to price. Pricing
+        // remains identical to Phase A (legacy_event_only mode). Activating
+        // zone math against price requires empirical M_event_avg from
+        // historical pricing data and is reserved for a future phase.
+        const enrichedAudit = ctx.eventAudit
+          ? enrichAuditWithZoneCandidate({
+              audit: ctx.eventAudit,
+              neighborhoodKey: normalizeNeighborhoodKey(input.neighborhood_normalized),
+            })
+          : null;
+        return {
+          month: ctx.month,
+          month_name: ctx.monthName,
+          season: ctx.season,
+          monthly_multiplier: ctx.monthlyMultiplier,
+          monthly_note: ctx.monthlyNote,
+          event_name: ctx.activeEvent?.name ?? null,
+          event_key: ctx.activeEvent?.key ?? null,
+          event_premium_pct: ctx.eventPremiumPct != null
+            ? parseFloat((ctx.eventPremiumPct * 100).toFixed(1)) : null,
+          total_multiplier: parseFloat(ctx.totalMultiplier.toFixed(4)),
+          display_label: ctx.displayLabel,
+          event_audit: enrichedAudit,
+        };
+      })(),
 
       // New V3.1 fields
       seasonal_sweep: seasonalSweep,
