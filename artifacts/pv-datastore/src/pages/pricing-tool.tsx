@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { ForwardDemandPanel } from "@/components/forward-demand-panel";
+import { StayRentValuePanel } from "@/components/stay-rent-value-panel";
 import { useLanguage } from "@/contexts/language-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1636,6 +1637,18 @@ export default function PricingToolPage() {
                   checkIn={form.checkIn}
                   checkOut={form.checkOut}
                   compMedian={compsResult.summary?.median ?? compsResult.base_comp_median}
+                  lang={lang}
+                />
+              )}
+
+              {/* ── Stay vs Rent — opportunity-cost framing (informational) ──
+                  Pure frontend reader of the existing comps response. Returns
+                  null when the headline number is missing or the stay-window
+                  sample is too thin to ground the estimate honestly. */}
+              {compsResult && (
+                <StayRentValuePanel
+                  summary={compsResult.summary}
+                  neighborhood={form.neighborhood}
                   lang={lang}
                 />
               )}

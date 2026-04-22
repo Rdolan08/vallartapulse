@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, Clock, Check, ChevronDown, ChevronUp } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api-base";
 
 interface NightRec {
   date: string;
@@ -106,7 +106,7 @@ export function ForwardDemandPanel({
     }
     let cancelled = false;
     setLoading(true);
-    apiFetch("/api/rental/forward-demand", {
+    apiFetch<ForwardDemandResponse>("/api/rental/forward-demand", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -116,8 +116,7 @@ export function ForwardDemandPanel({
         comp_median: compMedian,
       }),
     })
-      .then((r) => r.json())
-      .then((j: ForwardDemandResponse) => {
+      .then((j) => {
         if (cancelled) return;
         setData(j);
       })
@@ -142,19 +141,21 @@ export function ForwardDemandPanel({
       if (observationIdsRef.current[key] != null) continue;
       // Mark as in-flight to prevent duplicate fires inside StrictMode.
       observationIdsRef.current[key] = -1;
-      apiFetch("/api/rental/forward-demand/track-shown", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          night_date: n.date,
-          event_label: n.event_label,
-          bucket: n.bucket,
-          recommended_price: n.recommended_apply_price,
-          comp_median_at_show: n.comp_median,
-        }),
-      })
-        .then((r) => r.json())
-        .then((j: { observation_id: number | null }) => {
+      apiFetch<{ observation_id: number | null }>(
+        "/api/rental/forward-demand/track-shown",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            night_date: n.date,
+            event_label: n.event_label,
+            bucket: n.bucket,
+            recommended_price: n.recommended_apply_price,
+            comp_median_at_show: n.comp_median,
+          }),
+        },
+      )
+        .then((j) => {
           if (cancelled) return;
           if (j.observation_id != null) observationIdsRef.current[key] = j.observation_id;
         })
