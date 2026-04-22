@@ -1,0 +1,227 @@
+Your read is right.
+
+The proposal was directionally strong, but it overreached in one important way: it treated the event layer like a fresh pricing engine instead of an additive extension to what you already shipped. And yes, the double-count problem is the blocker.
+
+My revised position
+
+Do not implement zone and property multipliers yet.
+
+First, formalize the existing event system into an auditable shared schema without changing the math. Then resolve, on paper, whether future spatial logic applies to:
+
+* the current comp-engine output, or
+* a deseasonalized baseline derived from comps
+
+Until that is answered, any location-aware event uplift is dangerous.
+
+The actual structural issue
+
+You called it exactly:
+
+If comps already use:
+
+* same-neighborhood filtering
+* actual stay-window quotes
+* event-aware market pricing for those dates
+
+then a second event overlay on top of that can absolutely double-count, and in some cases triple-count.
+
+So the key design decision is:
+
+Option A
+
+Overlay applies to current comp output
+
+* simplest
+* lowest engineering effort
+* high double-count risk
+* probably only safe for weak shoulder shaping or explanatory audit output
+
+Option B
+
+Overlay applies to deseasonalized comp baseline
+
+* architecturally correct
+* requires new work
+* only path that makes strong zone/property multipliers defensible
+
+I agree with you that the long-term answer is B.
+
+What I would do now
+
+Phase A: additive schema upgrade only
+
+No pricing behavior change.
+
+Extend the existing PV_EVENT_OVERLAYS / EventOverlay structure with optional fields:
+
+export const EVENT_RULES_SCHEMA_VERSION = 1;
+export interface EventOverlay {
+  key: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  shoulderStartDate?: string;
+  shoulderEndDate?: string;
+  pct: number;
+  shoulderPct?: number;
+  priority?: number;
+  dateConfidence?: "confirmed" | "derived" | "tentative";
+  sourceRefs?: string[];
+  notes?: string;
+  // reserved for later phases
+  eventImpactZones?: Array<{
+    neighborhoodKey: string;
+    multiplier: number;
+    notes?: string;
+  }>;
+  propertyTypeAdjustments?: Array<{
+    propertyType: "condo" | "villa" | "luxury";
+    multiplier: number;
+    notes?: string;
+  }>;
+}
+
+Important part:
+
+* eventImpactZones and propertyTypeAdjustments can exist in schema now
+* but remain unused until the double-count question is resolved
+
+That gives you forward compatibility without pretending the math is settled.
+
+Highest-leverage immediate change
+
+You were dead right: the nights[] audit array is the best part of the whole plan.
+
+Ship that now.
+
+Something like:
+
+export interface EventOverlayNightAudit {
+  date: string;
+  matchedEventKey?: string;
+  matchedEventName?: string;
+  phase?: "core" | "shoulder";
+  multiplierApplied: number;
+  source: "event_overlay" | "none";
+}
+
+And in /api/rental/comps:
+
+eventOverlay: {
+  schemaVersion: 1,
+  stayMultiplier: number,
+  nights: EventOverlayNightAudit[]
+}
+
+Even if math stays identical, this is a huge win for:
+
+* explainability
+* debugging
+* future calibration
+* user trust
+
+How I’d revise the migration plan
+
+Phase A
+
+Schema + provenance + audit array
+No magnitude changes.
+No zone math.
+No property-type math.
+No behavioral change.
+
+Phase B
+
+Resolve the double-count question explicitly.
+
+Document one of these:
+
+1. overlay remains explanatory only
+2. overlay applies only to a weak residual uplift
+3. overlay applies to a deseasonalized baseline
+
+I agree the real answer is likely 3.
+
+Phase C
+
+Add zone multipliers only for the clearest cases:
+
+* Pride
+* BeefDip
+
+Only after the pricing base is mathematically clean.
+
+Phase D
+
+Add derived property type server-side from current fields:
+
+* finish_quality
+* bedrooms
+* building_name
+
+No new UI input.
+
+Phase E
+
+Empirical calibration from real Airbnb pricing history once the pipeline is healthy.
+
+On property type
+
+Agreed. Do not add a new user-facing input.
+
+Derive it.
+
+Something like:
+
+* luxury if finish_quality === "luxury"
+* villa if likely standalone and large-format
+* otherwise condo
+
+It should be an internal classification, not a form field.
+
+On event stacking
+
+Also agreed.
+
+“Highest priority wins” is acceptable only as a temporary simplification. It should be labeled as a known limitation, not presented as principled truth.
+
+Longer term:
+
+* additive or capped blended stacking
+* probably with a global cap
+
+But not now.
+
+On Tier 1 vs current production coverage
+
+Also correct. We should not regress from the 13-ish live windows already in production.
+
+So the right migration stance is:
+
+* keep existing event coverage
+* enrich all current rules with provenance and priority
+* introduce Tier 1 enrichment first
+* do not silently drop MLK, Valentine’s, Canadian Thanksgiving, US Thanksgiving, Spring Break, etc.
+
+Revised bottom line
+
+Your version is the right one:
+
+* the schema direction is good
+* the audit model is essential
+* the architecture must extend the existing module, not replace it
+* the double-count issue must be resolved before zone/property multipliers affect pricing
+* magnitude calibration is not yet data-defensible
+
+So yes, I would move forward with Phase A only right now:
+
+* additive schema extension
+* provenance fields
+* schema version
+* per-night audit array
+* backfill existing live events
+* zero math change
+
+Then pause and explicitly decide the double-count strategy before touching spatial multipliers.
+
+If you want, I’ll write the exact revised implementation plan and Replit-ready spec for Phase A only, with no hand-wavy future-state clutter.
