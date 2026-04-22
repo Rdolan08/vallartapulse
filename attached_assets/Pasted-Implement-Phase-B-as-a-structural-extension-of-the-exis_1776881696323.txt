@@ -1,0 +1,376 @@
+Implement Phase B as a structural extension of the existing event system, not a rewrite. The goal is to resolve the double-count problem BEFORE any zone-aware pricing meaningfully changes rates.
+
+OBJECTIVE
+Build a deseasonalization step so event timing can be separated from observed comp pricing. This allows future zone multipliers to be applied safely. For this phase:
+- preserve current behavior by default
+- enable the plumbing for deseasonalized-baseline math
+- optionally allow limited zone application behind a feature flag
+- do NOT activate property-type math yet
+- do NOT change any existing request shape
+- do NOT remove or replace the current Phase A audit contract
+
+KEY PRINCIPLE
+Current comp output already reflects:
+- same-neighborhood comp filtering
+- actual stay-window quotes
+- event-aware market pricing for those dates
+
+Therefore:
+DO NOT apply zone/property multipliers directly on top of current comp_output.
+
+Instead:
+1. compute current event stay multiplier from Phase A event audit
+2. deseasonalize comp_output back to a neutral baseline
+3. reapply event timing cleanly
+4. optionally apply zone multiplier
+5. leave property multiplier at 1.00 for now
+
+FORMAL MODEL
+Let:
+- P_observed = current comp-engine recommendedRate
+- M_event_avg = weighted average event multiplier across the stay window from Phase A audit
+- P_base = deseasonalized baseline
+- M_zone_avg = weighted average zone multiplier across the stay window (Phase B, optional)
+- M_property_avg = 1.00 in this phase
+
+Compute:
+- P_base = P_observed / M_event_avg
+- P_reconstructed = P_base * M_event_avg
+- P_final = P_base * M_event_avg * M_zone_avg * M_property_avg
+
+Invariants:
+- if zone multipliers are disabled or 1.00, P_final must equal current P_observed within floating-point tolerance
+- if no event applies, M_event_avg = 1.00 and P_base = P_observed
+
+IMPLEMENTATION PLAN
+
+1) FEATURE FLAGS
+Add flags in server config:
+- ENABLE_EVENT_DESEASONALIZATION = true
+- ENABLE_EVENT_ZONE_MULTIPLIERS = false   // default OFF in first rollout
+- EVENT_ZONE_MULTIPLIER_CAP = 2.0         // total overlay safety cap
+- EVENT_ZONE_MIN = 0.95
+- EVENT_ZONE_MAX = 1.40
+
+2) EXTEND EXISTING TYPES (ADDITIVE ONLY)
+Do not break existing clients.
+
+Existing Phase A response stays intact and is extended.
+
+Add or extend types like:
+
+type NeighborhoodKey =
+  | "zona_romantica"
+  | "amapas"
+  | "conchas_chinas"
+  | "centro"
+  | "5_de_diciembre"
+  | "marina_vallarta"
+  | "nuevo_vallarta";
+
+type EventOverlayNightAudit = {
+  date: string;
+  matched_event_key?: string | null;
+  matched_event_name?: string | null;
+  phase?: "core" | "shoulder" | null;
+  multiplier_applied: number;
+
+  // Phase B additions
+  zone_multiplier?: number;
+  final_night_multiplier?: number;
+};
+
+type EventAudit = {
+  schema_version: number;
+  nights: EventOverlayNightAudit[];
+  stay_multiplier: number;
+
+  // Phase B additions
+  deseasonalized_baseline?: number;
+  event_avg_multiplier?: number;
+  zone_avg_multiplier?: number;
+  final_overlay_multiplier?: number;
+  pricing_mode?: "legacy_event_only" | "deseasonalized_event_only" | "deseasonalized_event_plus_zone";
+};
+
+Do NOT rename multiplier_applied.
+Keep it stable.
+In Phase B:
+- multiplier_applied = event-only multiplier for that night
+- final_night_multiplier = multiplier_applied * zone_multiplier
+
+3) KEEP USING EXISTING PHASE A EVENT LOGIC
+Do not replace PV_EVENT_OVERLAYS or the current nightly evaluator.
+Continue using the existing per-night ISO-date logic, priority rules, and audit generation.
+
+Assume an existing function similar to:
+- evaluateEventOverlayForStay(startDate, endDate, options) -> EventAudit
+
+If a helper does not exist yet, factor the current logic out of the seasonal calculation path into a shared helper.
+
+Expected behavior:
+- returns the existing nights[] audit
+- returns stay_multiplier as current weighted average event multiplier
+- preserves current “highest priority wins / no stacking” behavior
+- no month-level leakage
+
+4) NEW HELPER: COMPUTE DESEASONALIZED BASELINE
+Add a pure helper in the pricing layer, e.g.:
+- src/server/lib/pricing/event-deseasonalization.ts
+
+Function signature:
+
+function computeDeseasonalizedBaseline(params: {
+  observedRate: number;
+  eventAudit: EventAudit | null | undefined;
+}): {
+  observedRate: number;
+  eventAvgMultiplier: number;
+  deseasonalizedBaseline: number;
+  reconstructedObservedRate: number;
+} {
+  // behavior:
+  // if no audit or no nights, eventAvgMultiplier = 1.0
+  // if eventAvgMultiplier <= 0, clamp to 1.0 defensively
+  // deseasonalizedBaseline = observedRate / eventAvgMultiplier
+  // reconstructedObservedRate = deseasonalizedBaseline * eventAvgMultiplier
+}
+
+Rules:
+- round only at final presentation boundaries, not inside the math
+- tolerate tiny floating-point drift
+- add unit tests
+
+5) NEW HELPER: RESOLVE ZONE MULTIPLIER FOR A NIGHT
+Add a pure helper, e.g.:
+- src/server/lib/pricing/event-zone-multiplier.ts
+
+Function signature:
+
+function resolveNightZoneMultiplier(params: {
+  eventKey?: string | null;
+  neighborhoodKey?: string | null;
+  eventRules: EventOverlay[];
+  enableZoneMultipliers: boolean;
+}): number {
+  // if flag disabled => 1.0
+  // if no eventKey => 1.0
+  // if no matching rule or no eventImpactZones => 1.0
+  // look up matching neighborhoodKey in eventImpactZones
+  // if missing => 1.0
+  // clamp to EVENT_ZONE_MIN / EVENT_ZONE_MAX
+  // return multiplier
+}
+
+Important:
+- use normalized neighborhoods already in the system
+- do NOT introduce any radius math
+- do NOT infer from coordinates
+- do NOT attempt fuzzy geography
+
+6) NEW HELPER: COMPUTE FINAL STAY MULTIPLIER
+Add a pure helper, e.g.:
+- src/server/lib/pricing/event-final-overlay.ts
+
+Function signature:
+
+function computeFinalEventOverlay(params: {
+  eventAudit: EventAudit | null | undefined;
+  neighborhoodKey?: string | null;
+  eventRules: EventOverlay[];
+  enableZoneMultipliers: boolean;
+}): {
+  nights: EventOverlayNightAudit[];
+  eventAvgMultiplier: number;
+  zoneAvgMultiplier: number;
+  finalOverlayMultiplier: number;
+  pricingMode: "legacy_event_only" | "deseasonalized_event_only" | "deseasonalized_event_plus_zone";
+} {
+  // if no audit => return all multipliers as 1.0
+  // for each night:
+  //   eventMult = night.multiplier_applied ?? 1.0
+  //   zoneMult = resolveNightZoneMultiplier(...)
+  //   finalNightMult = eventMult * zoneMult
+  // average eventMult across nights => eventAvgMultiplier
+  // average zoneMult across nights => zoneAvgMultiplier
+  // average finalNightMult across nights => finalOverlayMultiplier
+  // apply total cap defensively to finalOverlayMultiplier
+  // return enriched nights[] with zone_multiplier and final_night_multiplier
+}
+
+Important:
+- In this phase, property multiplier is implicitly 1.0 and is not represented yet
+- Do not stack multiple events beyond current Phase A rule resolution
+- Do not change event selection semantics
+
+7) INSERTION POINT IN CURRENT PRICING PIPELINE
+Find the existing stay-window pricing path in /api/rental/comps after:
+- comp selection
+- comp quote aggregation
+- recommendedRate computation
+- current seasonal/event overlay calculation
+
+Current conceptual flow is something like:
+1. build comp set
+2. aggregate comp prices
+3. compute recommendedRate
+4. compute seasonal block / event overlay
+5. return response
+
+Change it to:
+1. build comp set
+2. aggregate comp prices
+3. compute recommendedRate => this is P_observed
+4. compute Phase A eventAudit using existing logic
+5. compute deseasonalized baseline from recommendedRate + eventAudit
+6. compute final overlay from eventAudit + neighborhood
+7. compute finalRecommendedRate:
+   - if ENABLE_EVENT_DESEASONALIZATION is false:
+     finalRecommendedRate = recommendedRate
+   - if ENABLE_EVENT_DESEASONALIZATION is true AND ENABLE_EVENT_ZONE_MULTIPLIERS is false:
+     finalRecommendedRate = deseasonalizedBaseline * eventAvgMultiplier
+     // must equal recommendedRate
+   - if both flags true:
+     finalRecommendedRate = deseasonalizedBaseline * finalOverlayMultiplier
+8. return both the final rate and the enriched event audit block
+
+This means:
+- rollout 1 with zone OFF should be a no-op mathematically
+- rollout 2 can enable limited zone effects safely
+
+8) RESPONSE SHAPE CHANGES
+In the seasonal/event block returned by /api/rental/comps, add:
+
+seasonal: {
+  ...
+  event_key?: string | null;
+  display_label?: string | null;
+  total_multiplier?: number;
+  event_audit?: {
+    schema_version: 1,
+    pricing_mode: "legacy_event_only" | "deseasonalized_event_only" | "deseasonalized_event_plus_zone",
+    stay_multiplier: number,
+    event_avg_multiplier: number,
+    zone_avg_multiplier: number,
+    final_overlay_multiplier: number,
+    deseasonalized_baseline: number,
+    nights: [
+      {
+        date: "2026-05-21",
+        matched_event_key: "pride_pv_2026",
+        matched_event_name: "Vallarta Pride",
+        phase: "core",
+        multiplier_applied: 1.18,
+        zone_multiplier: 1.00,
+        final_night_multiplier: 1.18
+      }
+    ]
+  }
+}
+
+Definitions:
+- stay_multiplier: keep backward-compatible meaning equal to the current event-only average unless you already use it for something else; if needed, preserve current field and add new fields explicitly
+- event_avg_multiplier: average of multiplier_applied
+- zone_avg_multiplier: average of zone_multiplier
+- final_overlay_multiplier: average of final_night_multiplier
+- deseasonalized_baseline: base rate after removing event timing
+
+9) EVENT RULES: SAFE INITIAL ZONE POPULATION
+Do NOT change pricing math yet, but allow these rules to be populated now.
+
+Only populate eventImpactZones for:
+- pride_pv_2026
+- beefdip_2027
+
+Initial example values (kept modest for first live math pass):
+- Pride:
+  - zona_romantica: 1.12
+  - amapas: 1.06
+  - conchas_chinas: 1.03
+  - all others: omit => 1.00
+- BeefDip:
+  - zona_romantica: 1.18
+  - amapas: 1.08
+  - conchas_chinas: 1.04
+  - all others: omit => 1.00
+
+Do NOT activate:
+- marina/nuevo negative offsets
+- wide citywide zone maps
+- propertyTypeAdjustments
+
+Reason:
+Phase B is about structural correctness first, not about aggressively moving prices.
+
+10) TESTS REQUIRED
+
+A. REGRESSION / NO-OP TESTS
+1. Zone disabled:
+- finalRecommendedRate must equal prior recommendedRate within tolerance
+- pricing_mode = deseasonalized_event_only
+2. Non-event stay:
+- eventAvgMultiplier = 1.0
+- deseasonalizedBaseline = observedRate
+- finalOverlayMultiplier = 1.0
+
+B. EVENT AUDIT TESTS
+3. Existing Easter split still works:
+- core nights 1.18
+- shoulder nights 1.08
+- clean baseline 1.00
+4. event_audit.nights length matches stay nights exactly
+5. month-only request still returns event_audit = null if that is current contract
+
+C. DESEASONALIZATION TESTS
+6. For an event stay:
+- deseasonalizedBaseline * eventAvgMultiplier reconstructs observedRate within tolerance
+7. For Pride stay with zone disabled:
+- final rate unchanged
+8. For Pride stay with zone enabled in Zona Romántica:
+- final rate > observedRate
+- uplift reflects only zone effect, not double application of event timing
+
+D. CAP / CLAMP TESTS
+9. Any zone multiplier outside bounds is clamped
+10. finalOverlayMultiplier never exceeds EVENT_ZONE_MULTIPLIER_CAP
+
+11) KNOWN LIMITATIONS TO DOCUMENT IN CODE
+Add comments / notes clearly stating:
+- multiple same-night events still resolve by priority, no stacking
+- zone multipliers are intentionally sparse and conservative in Phase B
+- propertyTypeAdjustments are schema-only and ignored in pricing
+- current deseasonalization removes event timing, not all market structure
+- observed comps remain neighborhood-filtered; this is a partial de-biasing step, not a full causal decomposition
+
+12) WHAT NOT TO DO
+- do NOT rebuild the event module from scratch
+- do NOT replace PV_EVENT_OVERLAYS
+- do NOT add UI inputs for property type
+- do NOT use radius or coordinates
+- do NOT turn on propertyTypeAdjustments
+- do NOT calibrate multiplier magnitudes from intuition in this phase
+- do NOT silently narrow existing production event coverage
+- do NOT change Phase A behavior unless flags explicitly enable it
+
+13) DELIVERABLES
+Expected commits:
+Commit 1:
+- pure deseasonalization + zone helpers
+- types extended
+- tests added
+- no runtime behavior change with flags off
+
+Commit 2:
+- pipeline integration in /api/rental/comps
+- enriched event_audit response
+- optional feature-flagged zone application
+- regression checks green
+
+SUCCESS CRITERIA
+Phase B is successful if:
+- with zone multipliers OFF, outputs are mathematically unchanged from Phase A
+- the response now exposes deseasonalized_baseline and final_overlay_multiplier cleanly
+- with zone multipliers ON for limited events, Pride/BeefDip can move Zona Romántica differently from other zones without reapplying event timing twice
+- the code path is auditable and easy to reason about
+
+If anything in the current code conflicts with this spec, prefer extending the existing per-night event evaluator rather than adding a parallel implementation.
