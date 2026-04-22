@@ -1728,17 +1728,18 @@ export default function PricingToolPage() {
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
                         <CardContent className="pt-4">
-                          {/* Column header — apples-to-apples breakdown */}
-                          <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_repeat(6,minmax(60px,72px))_auto_auto] gap-3 px-3 pb-2 text-[9px] font-semibold uppercase tracking-widest"
+                          {/* Column header — Total + Eff/Night are the apples-to-apples
+                              comparison signals; Base Nightly is the listing's published
+                              rate, shown secondary. Cleaning/service/taxes are intentionally
+                              omitted because nightly and quote-level totals come from
+                              different sources and can't be reconciled row-by-row. */}
+                          <div className="hidden md:grid grid-cols-[auto_minmax(0,1fr)_repeat(3,minmax(80px,96px))_auto_auto] gap-3 px-3 pb-2 text-[9px] font-semibold uppercase tracking-widest"
                             style={{ color: "rgba(154,165,177,0.45)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                             <span className="w-5" />
                             <span>{t("Listing", "Listado")}</span>
-                            <span className="text-right">{t("Nightly", "Por noche")}</span>
-                            <span className="text-right">{t("Cleaning", "Limpieza")}</span>
-                            <span className="text-right">{t("Service", "Servicio")}</span>
-                            <span className="text-right">{t("Taxes", "Impuestos")}</span>
                             <span className="text-right">{t("Total", "Total")}</span>
                             <span className="text-right">{t("Eff/Night", "Eff/Noche")}</span>
+                            <span className="text-right">{t("Base /Night", "Base /Noche")}</span>
                             <span className="text-right">{t("Score", "Puntaje")}</span>
                             <span />
                           </div>
