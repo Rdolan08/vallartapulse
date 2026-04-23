@@ -89,9 +89,44 @@ export async function getOrDiscoverQuoteSha(
 let browser: Browser | null = null;
 let context: BrowserContext | null = null;
 
+/** Parsed PROXY_URL split into Playwright's expected shape. */
+interface ParsedProxy {
+  server: string;
+  username?: string;
+  password?: string;
+}
+
+function parseProxyUrl(raw: string): ParsedProxy | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  try {
+    const u = new URL(trimmed);
+    const port = u.port ? `:${u.port}` : "";
+    return {
+      server: `${u.protocol}//${u.hostname}${port}`,
+      username: u.username ? decodeURIComponent(u.username) : undefined,
+      password: u.password ? decodeURIComponent(u.password) : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function getContext(): Promise<BrowserContext> {
   if (context) return context;
-  browser = await chromium.launch({ headless: true });
+  // Route Playwright through the residential proxy (Decodo) when PROXY_URL
+  // is configured. Without this every quote request goes out from
+  // Railway's raw datacenter IP, and Airbnb fast-walls it with an
+  // "Access Denied" interstitial after the first ~15 requests
+  // (validated 2026-04-23: cp 1-16 fine, cp 17+ all returned
+  // title="Access Denied"). The same residential proxy is already
+  // used by raw-fetch.ts and browser-fetch.ts; we mirror their parser
+  // here rather than coupling adapters.
+  const proxy = parseProxyUrl(process.env.PROXY_URL ?? "");
+  browser = await chromium.launch({
+    headless: true,
+    ...(proxy ? { proxy } : {}),
+  });
   context = await browser.newContext({
     userAgent: REALISTIC_UA,
     viewport: { width: 1280, height: 900 },
@@ -241,6 +276,34 @@ export async function fetchAirbnbQuote(
       const dumpPart = dumpPaths.length > 0 ? ` dump=${dumpPaths.join(",")}` : "";
       errors.push(
         `delisted-or-blocked title="${pageTitle.slice(0, 80)}" ` +
+          `body="${bodyPreview}"${dumpPart}`,
+      );
+      return baseResult;
+    }
+
+    // Fast-path: Airbnb's bot wall. When the IP/session gets flagged
+    // the response body is replaced with a tiny "Access Denied" page.
+    // Without this branch we would wait the full SIDEBAR_WAIT_MS (~40s)
+    // for a price selector that will never render — turning a 1-listing
+    // smoke test into a 22+ minute grind across all 34 nightly
+    // checkpoints. Validated 2026-04-23: every Railway-direct request
+    // past cp 16 returned title="Access Denied". With PROXY_URL now
+    // wired into chromium.launch we expect this branch to be rare, but
+    // it remains a real failure mode if the proxy itself gets soft-
+    // blocked, so keep the fast-fail in place permanently.
+    if (/Access Denied/i.test(pageTitle)) {
+      bodyPreview = (
+        await page.locator("body").innerText({ timeout: 2000 }).catch(() => "")
+      )
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 200);
+      const dumpPaths = await dumpFailureArtifacts("access-denied");
+      await page.close().catch(() => {});
+      pageRef = null;
+      const dumpPart = dumpPaths.length > 0 ? ` dump=${dumpPaths.join(",")}` : "";
+      errors.push(
+        `access-denied title="${pageTitle.slice(0, 80)}" ` +
           `body="${bodyPreview}"${dumpPart}`,
       );
       return baseResult;
