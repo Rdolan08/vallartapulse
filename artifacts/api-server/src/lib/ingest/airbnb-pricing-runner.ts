@@ -672,6 +672,31 @@ export async function runAirbnbPricingRefresh(
       stat.error = (e as Error).message.slice(0, 200);
     }
     perListing.push(stat);
+
+    // ── Fail-fast guard ─────────────────────────────────────────────
+    // If the first N listings produced ZERO quotes despite having
+    // fully-available checkpoints to enrich, the quote adapter is
+    // dark — almost always Playwright's Chromium binary is missing
+    // (the runner-wide "Executable doesn't exist" failure mode that
+    // burned 12 minutes of Railway compute on 2026-04-23 before
+    // 502'ing GitHub Actions). Bail now so CI fails loudly in
+    // seconds with a clear reason, instead of grinding through 150
+    // listings worth of guaranteed-failed quote attempts and timing
+    // out at the edge.
+    const FAIL_FAST_AFTER = 5;
+    if (
+      !skipFullQuotes &&
+      currentQuoteSha &&
+      perListing.length >= FAIL_FAST_AFTER &&
+      perListing.length < listings.length &&
+      totalQuotes === 0 &&
+      totalFullyAvailableCheckpoints > 0
+    ) {
+      console.warn(
+        `[airbnb-pricing] fail-fast: 0 quotes written across first ${perListing.length} listings (${totalFullyAvailableCheckpoints} fully-available checkpoints available to enrich). Aborting remaining ${listings.length - perListing.length} listings — quote adapter is dark.`,
+      );
+      break;
+    }
   }
 
   const ok = perListing.filter((p) => p.ok).length;

@@ -2,7 +2,16 @@
 nixPkgs = ["nodejs_20", "pnpm"]
 
 [phases.install]
-cmds = ["pnpm install --no-frozen-lockfile"]
+cmds = [
+  "pnpm install --no-frozen-lockfile",
+  # Install Playwright's Chromium binary + system deps. The api-server
+  # uses Playwright for per-night Airbnb quote enrichment; without this
+  # step the binary ends up missing from /root/.cache/ms-playwright at
+  # runtime and every quote attempt throws "Executable doesn't exist",
+  # silently dark-pricing the whole pipeline. Adds ~250MB to the image
+  # but it's the only way to make the quote adapter work on Railway.
+  "pnpm --filter @workspace/api-server exec playwright install --with-deps chromium",
+]
 
 [phases.build]
 cmds = ["pnpm --filter @workspace/api-server... build"]
