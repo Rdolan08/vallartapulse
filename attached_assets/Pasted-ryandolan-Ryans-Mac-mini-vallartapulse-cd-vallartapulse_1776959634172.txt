@@ -1,0 +1,36 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && git pull && pnpm --filter @workspace/scripts exec tsx ./src/airbnb-quote-test.ts 53116610 2026-06-20 2026-06-22 2
+remote: Enumerating objects: 20, done.
+remote: Counting objects: 100% (20/20), done.
+remote: Compressing objects: 100% (4/4), done.
+remote: Total 12 (delta 8), reused 12 (delta 8), pack-reused 0 (from 0)
+Unpacking objects: 100% (12/12), 3.76 KiB | 428.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   529ba17..23077fb  main       -> origin/main
+Updating 529ba17..23077fb
+Fast-forward
+ artifacts/api-server/src/lib/ingest/airbnb-graphql-quote-adapter.ts                              | 41 ++++++++++++++++++++++++++++++-----------
+ attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776959410955.txt | 36 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 66 insertions(+), 11 deletions(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776959410955.txt
+{"event":"quote-test.start","externalId":"53116610","checkin":"2026-06-20","checkout":"2026-06-22","guestCount":2,"ts":"2026-04-23T15:53:33.825Z"}
+{
+  "event": "quote-test.done",
+  "elapsedMs": 4045,
+  "result": {
+    "accommodationUsd": null,
+    "cleaningFeeUsd": null,
+    "serviceFeeUsd": null,
+    "taxesUsd": null,
+    "totalPriceUsd": null,
+    "currency": "USD",
+    "shaUsed": "playwright-dom-scrape",
+    "available": false,
+    "errors": [
+      "parser found $ but no Total. sidebar=\"$287 $265 Show price breakdown for 2 nights CHECK-IN 6/20/2026 CHECKOUT 6/22/2026 GUESTS 2 guests $0 today · Free cancellation before June 15 Reserve You won't be charged yet\" dump=/tmp/airbnb-debug-53116610-2026-06-20-noparse-1776959617784.html,/tmp/airbnb-debug-53116610-2026-06-20-noparse-1776959617784.png"
+    ],
+    "staleSha": false
+  }
+}
+/Users/ryandolan/vallartapulse/scripts:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 2: tsx ./src/airbnb-quote-test.ts 53116610 2026-06-20 2026-06-22 2
+ryandolan@Ryans-Mac-mini vallartapulse % 

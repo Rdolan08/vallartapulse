@@ -246,10 +246,20 @@ export async function fetchAirbnbQuote(
       return baseResult;
     }
 
-    // Booking sidebar — section id BOOK_IT_SIDEBAR / BOOK_IT_FLOATING_FOOTER.
-    // Wait for ANY price-shaped string to appear in it.
-    const sidebar = page.locator('[data-section-id*="BOOK_IT"]').first();
+    // Booking sidebar — Airbnb SPLITS this into two sections:
+    //   BOOK_IT_SIDEBAR — the FORM (date pickers, guests, Reserve button,
+    //                     "$0 today" deposit text). NO actual stay price.
+    //   BOOK_IT_NAV     — the price summary ("$287 $265 for 2 nights",
+    //                     line items, fees, Total). The numbers we want.
+    //
+    // The previous version used .first() which always picked
+    // BOOK_IT_SIDEBAR — so the wait timed out (18s) never seeing a
+    // non-zero price, and the parser got the form text instead of the
+    // price summary. We now wait for ANY BOOK_IT_* section to attach,
+    // and the wait/extract logic below reads ALL of them concatenated.
+    const sidebar = page.locator('[data-section-id*="BOOK_IT"]');
     await sidebar
+      .first()
       .waitFor({ state: "attached", timeout: SIDEBAR_WAIT_MS })
       .catch(() => {});
 
@@ -271,14 +281,18 @@ export async function fetchAirbnbQuote(
     //       and disappears the instant the price API resolves.
     //
     // Passed as a string so TS doesn't try to typecheck DOM globals here.
+    // Walks ALL BOOK_IT_* sections (querySelectorAll) and concatenates
+    // their innerText — the price summary lives in BOOK_IT_NAV, not
+    // BOOK_IT_SIDEBAR (the form), so we MUST look at both.
     await page
       .waitForFunction(
         `(() => {
-          const el = document.querySelector('[data-section-id*="BOOK_IT"]');
-          if (!el) return false;
-          const t = el.innerText || "";
-          if (/loading/i.test(t)) return false;
-          return /\\$[1-9]\\d*/.test(t);
+          const els = document.querySelectorAll('[data-section-id*="BOOK_IT"]');
+          if (!els.length) return false;
+          let combined = "";
+          for (const el of els) combined += " " + (el.innerText || "");
+          if (/loading/i.test(combined)) return false;
+          return /\\$[1-9]\\d*/.test(combined);
         })()`,
         null,
         { timeout: SIDEBAR_WAIT_MS },
@@ -297,9 +311,14 @@ export async function fetchAirbnbQuote(
       await page.waitForTimeout(400);
     }
 
-    sidebarText = await sidebar
-      .innerText({ timeout: 3000 })
-      .catch(() => "");
+    // Concatenate ALL BOOK_IT_* sections (BOOK_IT_SIDEBAR has the form,
+    // BOOK_IT_NAV has the actual price summary). allInnerTexts() returns
+    // an array — joining with a separator gives the parser one blob to
+    // hunt through. Without this we'd only see the form text.
+    const sidebarTexts = await sidebar
+      .allInnerTexts()
+      .catch(() => [] as string[]);
+    sidebarText = sidebarTexts.join(" \n ");
 
     // Fallback: if section locator missed, dump body text and let the
     // parser hunt — it's tolerant of extra noise.
@@ -495,6 +514,34 @@ function parsePriceLines(text: string): ParsedPrice {
     const sum =
       (accommodation ?? 0) + (cleaning ?? 0) + (service ?? 0) + (taxes ?? 0);
     if (sum > 0 && accommodation !== null) total = round2(sum);
+  }
+
+  // Collapsed-view fallback: short stays (often 1-3 nights) and many
+  // listings render only the inline summary "$287 $265 for 2 nights"
+  // without a "Total" row, "Cleaning fee" row, or expandable breakdown.
+  // In that case the loop above sets nothing and we land here with
+  // total=null. Hunt for the pattern in the FULL text:
+  //
+  //   ($N1 )?($N2 )?for K nights
+  //
+  // The LAST dollar amount immediately before "for K nights" is the
+  // real (post-discount) stay total. If only one $ appears, that's it;
+  // if two, the second is the actual price (first is strikethrough).
+  // We treat the result as both `accommodation` and `total` because
+  // for collapsed views Airbnb is showing the all-in nightly average ×
+  // nights without separating fees — and the rest of the pipeline
+  // treats `total` as the source of truth anyway.
+  if (total === null) {
+    const collapsed = text.match(
+      /(?:\$([\d,]+(?:\.\d+)?)\s+)?\$([\d,]+(?:\.\d+)?)\s+(?:[A-Za-z\s]*?\s+)?for\s+(\d+)\s+nights?/i,
+    );
+    if (collapsed) {
+      const actual = Number.parseFloat(collapsed[2].replace(/,/g, ""));
+      if (Number.isFinite(actual) && actual > 0) {
+        total = actual;
+        if (accommodation === null) accommodation = actual;
+      }
+    }
   }
 
   return { accommodation, cleaning, service, taxes, total };
