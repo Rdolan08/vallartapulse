@@ -141,7 +141,7 @@ export interface CompsListingV2 {
   // See docs/comp-model-contract.md. Optional so legacy callers/tests
   // that hand-build listings continue to compile; the production
   // assembly path in routes/comps.ts always populates them.
-  priceSource?: "pvrpv_daily" | "static_displayed";
+  priceSource?: "airbnb_quote" | "pvrpv_daily" | "static_displayed";
   priceObservedAt?: string;            // ISO timestamp
   priceFreshnessDays?: number;
   priceFreshnessWeight?: 0 | 0.25 | 0.5 | 1;

@@ -32,6 +32,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { logger } from "../logger.js";
+import { inferPresumedBookings } from "./presumed-bookings-inference.js";
 import {
   airbnbPricingRunSummariesTable,
   listingPriceQuotesTable,
@@ -162,6 +163,16 @@ export interface AirbnbPricingRunSummary {
   alertLevel: "ok" | "warn" | "fail";
   /** Human-readable reason for the alertLevel (empty when ok). */
   alertReason: string;
+  /**
+   * Post-scrape booked-rate inference. Counts new presumed_bookings rows
+   * derived from this run's listing_price_quotes by detecting
+   * available→unavailable transitions. Pure DB derivation — no extra
+   * Airbnb traffic. `null` when the inference step was skipped or errored
+   * (the scrape itself is still considered successful — inference is a
+   * downstream nicety, not a gate).
+   */
+  presumedBookingsInserted: number | null;
+  presumedBookingsCandidatesEvaluated: number | null;
 }
 
 export interface AirbnbPricingRunResult {
@@ -710,9 +721,38 @@ export async function runAirbnbPricingRefresh(
       quoteShaRediscoveriesDuringRun: quoteShaRediscoveries,
       alertLevel,
       alertReason,
+      // Filled in below by the post-scrape inference step (best-effort).
+      presumedBookingsInserted: null,
+      presumedBookingsCandidatesEvaluated: null,
     },
     listings: perListing,
   };
+
+  // ── Post-scrape: derive presumed bookings ────────────────────────────
+  // When a (listing × stay-window) flips from priced/available → unavailable
+  // between two consecutive quotes, we presume it rented at the prior rate.
+  // Pure DB derivation, no extra Airbnb traffic. Best-effort: a failure
+  // here never demotes a successful scrape.
+  if (!dryRun) {
+    try {
+      const inference = await inferPresumedBookings(db);
+      result.summary.presumedBookingsInserted = inference.inserted;
+      result.summary.presumedBookingsCandidatesEvaluated =
+        inference.candidatesEvaluated;
+      logger.info(
+        {
+          inserted: inference.inserted,
+          candidatesEvaluated: inference.candidatesEvaluated,
+        },
+        "airbnb-pricing-runner: presumed-bookings inference complete",
+      );
+    } catch (err) {
+      logger.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        "airbnb-pricing-runner: presumed-bookings inference failed (non-fatal)",
+      );
+    }
+  }
 
   // Persist this run's summary so the freshness/alert endpoint has
   // cross-run history to evaluate the enrichment-rate trend against

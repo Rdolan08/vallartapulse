@@ -994,7 +994,22 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
          WHERE q.last_quoted IS NULL OR q.last_quoted < NOW() - INTERVAL '14 days')::int
                                                                                AS listings_stale_14d,
         (SELECT MAX(last_quoted) FROM last_quote q
-         WHERE q.listing_id IN (SELECT id FROM cohort))                        AS newest_quote_at
+         WHERE q.listing_id IN (SELECT id FROM cohort))                        AS newest_quote_at,
+        -- 24h activity counters: distinguish priced vs. unavailable rows so
+        -- the dashboard tooltip can show "N priced · M unavailable" instead
+        -- of misreading the new fast-path's unavailable rows as failures.
+        (SELECT COUNT(*) FROM listing_price_quotes lpq
+         WHERE lpq.collected_at >= NOW() - INTERVAL '24 hours')::int           AS quotes_last_24h,
+        (SELECT COUNT(*) FROM listing_price_quotes lpq
+         WHERE lpq.collected_at >= NOW() - INTERVAL '24 hours'
+           AND lpq.total_price_usd IS NOT NULL)::int                           AS quotes_priced_last_24h,
+        (SELECT COUNT(*) FROM listing_price_quotes lpq
+         WHERE lpq.collected_at >= NOW() - INTERVAL '24 hours'
+           AND lpq.availability_status = 'unavailable')::int                   AS quotes_unavailable_last_24h,
+        -- Booked-rate inference signal — count rows the post-scrape
+        -- inference step wrote in the last 24h.
+        (SELECT COUNT(*) FROM presumed_bookings pb
+         WHERE pb.inferred_at >= NOW() - INTERVAL '24 hours')::int             AS presumed_bookings_last_24h
     `);
     const row = (result as unknown as {
       rows: Array<{
@@ -1004,6 +1019,10 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
         listings_stale_7d: number;
         listings_stale_14d: number;
         newest_quote_at: string | null;
+        quotes_last_24h: number;
+        quotes_priced_last_24h: number;
+        quotes_unavailable_last_24h: number;
+        presumed_bookings_last_24h: number;
       }>;
     }).rows[0];
 
@@ -1085,6 +1104,10 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
       listingsStale14d: row.listings_stale_14d,
       newestQuoteAt: newestAt?.toISOString() ?? null,
       newestQuoteAgeHours: ageHours,
+      quotesLast24h: row.quotes_last_24h,
+      quotesPricedLast24h: row.quotes_priced_last_24h,
+      quotesUnavailableLast24h: row.quotes_unavailable_last_24h,
+      presumedBookingsLast24h: row.presumed_bookings_last_24h,
       alertLevel,
       alertReason,
       parserHealth: {

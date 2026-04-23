@@ -5,10 +5,21 @@
  *
  * Implements the v1 Comp Model Contract (docs/comp-model-contract.md):
  *
+ *   Rank 0: Airbnb quote        — listing_price_quotes (booking-sidebar
+ *                                 scrape, all-in nightly rate Airbnb
+ *                                 quotes a guest TODAY)
  *   Rank 1: PVRPV daily         — rental_prices_by_date, forward 30–90d window
  *   Rank 2: Static displayed    — rental_listings.nightly_price_usd
  *
- *   Mac-scraper Airbnb daily slots in at rank 1.5 when it ships.
+ * Rank 0 was added 2026-04-23 once the Playwright DOM scraper started
+ * writing real per-stay totals into listing_price_quotes. It's the
+ * truest demand signal we have for Airbnb inventory because it's what
+ * a real guest would actually be charged at the moment of booking
+ * (post-discount, pre-taxes-and-fees from sidebar — the same number
+ * displayed on the listing page). PVRPV daily is a different platform
+ * and the host's static displayed price isn't always transactable,
+ * so quotes outrank both when fresh.
+ *
  *   The reverted Airbnb GraphQL replay (path 2) is intentionally absent.
  *
  * The selector returns one chosen price per listing plus the freshness
@@ -28,7 +39,7 @@
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
-export type PriceSource = "pvrpv_daily" | "static_displayed";
+export type PriceSource = "airbnb_quote" | "pvrpv_daily" | "static_displayed";
 
 export type FreshnessWeight = 0 | 0.25 | 0.5 | 1;
 
@@ -62,6 +73,16 @@ export interface SourceSelectionResult {
 const FORWARD_WINDOW_START_DAYS = 30;
 const FORWARD_WINDOW_END_DAYS = 90;
 
+/**
+ * Trailing window for Airbnb-quote averaging. Quotes are stay-window
+ * specific (each row is one checkpoint × one listing) so we want
+ * enough history to smooth across multiple checkpoints, but not so
+ * much that ancient pricing pollutes the current rate. 30d aligns
+ * with the "half credit" freshness band — anything older is stale
+ * enough that PVRPV daily is probably a better signal anyway.
+ */
+const QUOTE_LOOKBACK_DAYS = 30;
+
 const FRESHNESS_FULL_CREDIT_DAYS = 7;
 const FRESHNESS_HALF_CREDIT_DAYS = 30;
 const FRESHNESS_QUARTER_CREDIT_DAYS = 60;
@@ -90,6 +111,12 @@ interface DailyPriceAggRow {
   latest_scraped_at: Date;
 }
 
+interface QuoteAggRow {
+  listing_id: number;
+  avg_price: number;
+  latest_collected_at: Date;
+}
+
 /**
  * Build the per-listing chosen-price map for the supplied listing IDs.
  *
@@ -109,6 +136,7 @@ export async function selectCompPriceSources(
     no_static_fallback: 0,
   };
   const sourceCounts: Record<PriceSource, number> = {
+    airbnb_quote: 0,
     pvrpv_daily: 0,
     static_displayed: 0,
   };
@@ -116,6 +144,36 @@ export async function selectCompPriceSources(
   if (listingIds.length === 0) {
     return { chosen, excluded, excludedReasons, sourceCounts };
   }
+
+  // ── Rank 0: Airbnb quote — booking-sidebar scrape ─────────────────────
+  //
+  // Aggregate per-listing AVG nightly_price_usd across recent quotes
+  // where Airbnb actually returned a price (total_price_usd IS NOT NULL
+  // — i.e. NOT the "Those dates are not available" rows the runner now
+  // also writes). Window = trailing QUOTE_LOOKBACK_DAYS so we average
+  // multiple checkpoint windows together rather than fixating on a
+  // single stay date.
+  //
+  // Why pre-filter by total > 0: the scraper writes both successful
+  // quotes AND unavailable signals to listing_price_quotes. The
+  // unavailable rows have total_price_usd = NULL, but if we ever start
+  // writing 0 instead, the > 0 guard keeps them out of the average.
+  const quoteRows = (await db.execute(sql`
+    SELECT
+      lpq.listing_id::int                  AS listing_id,
+      AVG(lpq.nightly_price_usd)::float8   AS avg_price,
+      MAX(lpq.collected_at)                AS latest_collected_at
+    FROM listing_price_quotes lpq
+    WHERE lpq.listing_id = ANY(${sql.raw(`ARRAY[${listingIds.map((n) => Number(n)).filter(Number.isFinite).join(",") || "NULL"}]::int[]`)})
+      AND lpq.total_price_usd IS NOT NULL
+      AND lpq.nightly_price_usd IS NOT NULL
+      AND lpq.nightly_price_usd > 0
+      AND lpq.collected_at >= NOW() - INTERVAL '${sql.raw(String(QUOTE_LOOKBACK_DAYS))} days'
+    GROUP BY lpq.listing_id
+  `)).rows as unknown as QuoteAggRow[];
+
+  const quoteByListing = new Map<number, QuoteAggRow>();
+  for (const row of quoteRows) quoteByListing.set(row.listing_id, row);
 
   // ── Rank 1: PVRPV daily — average over forward 30–90d priced rows ─────
   const dailyRows = (await db.execute(sql`
@@ -149,6 +207,29 @@ export async function selectCompPriceSources(
 
   // ── Per-listing selection ────────────────────────────────────────────
   for (const listingId of listingIds) {
+    // Rank 0: Airbnb quote (highest priority — real booking-funnel rate)
+    const quote = quoteByListing.get(listingId);
+    if (quote) {
+      const observedAt = new Date(quote.latest_collected_at);
+      const ageDays = ageInDays(now, observedAt);
+      const weight = freshnessWeightForAgeDays(ageDays);
+      // If quote is too stale (weight=0), fall through to PVRPV/static
+      // rather than excluding outright — that's the whole point of
+      // having a waterfall.
+      if (weight > 0) {
+        chosen.set(listingId, {
+          listingId,
+          nightlyPriceUsd: quote.avg_price,
+          priceSource: "airbnb_quote",
+          priceObservedAt: observedAt,
+          priceFreshnessDays: ageDays,
+          priceFreshnessWeight: weight,
+        });
+        sourceCounts.airbnb_quote += 1;
+        continue;
+      }
+    }
+
     const daily = dailyByListing.get(listingId);
     if (daily) {
       const observedAt = new Date(daily.latest_scraped_at);
