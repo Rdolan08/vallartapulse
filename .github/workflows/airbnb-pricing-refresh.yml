@@ -1,27 +1,10 @@
-name: Airbnb Pricing Refresh (PAUSED)
+name: Airbnb Pricing Refresh
 
 # ─────────────────────────────────────────────────────────────────────────
-# PAUSED 2026-04-19 — Airbnb pricing quote collection is on hold.
-#
-# The /api/ingest/airbnb-pricing-refresh endpoint depends on two adapters
-# that are still compile-only stubs (they throw "not implemented"):
-#   - airbnb-graphql-pricing-adapter.ts
-#   - airbnb-graphql-quote-adapter.ts
-# The endpoint deliberately stays in safe-fail mode (returns 500 with a
-# clear "not implemented" message) until those adapters land. See
-# replit.md ("Airbnb pricing pipeline — PAUSED") for full context and the
-# tracking notes for the real implementation work.
-#
-# What is disabled here:
-#   - The daily cron schedule (commented out below).
-#   - The Slack push notification on `fail`.
-#   - The GitHub-issue dedupe creation/comment on `fail`.
-# What is intentionally NOT disabled:
-#   - workflow_dispatch — kept available for manual smoke-testing once the
-#     adapters land. Triggering it today will fail loudly (curl exit 22)
-#     because the endpoint correctly refuses to run; that is expected and
-#     only happens on explicit manual dispatch.
-#   - The endpoint itself — it stays in safe-fail state on purpose.
+# RE-ENABLED 2026-04-23 — both GraphQL adapters shipped and the unavailable
+# fast-path landed in 68475e8. Daily cron now active; the runner also
+# triggers a post-scrape presumed_bookings inference step so we slowly
+# build a transaction-rate (vs. asking-rate) dataset over time.
 # ─────────────────────────────────────────────────────────────────────────
 
 # Triggers the per-night Airbnb pricing pipeline ("path 2" in
@@ -35,10 +18,13 @@ name: Airbnb Pricing Refresh (PAUSED)
 # query SHA discovery) live there, not in GitHub Actions.
 #
 # Schedule rationale:
-#   - 07:20 UTC sits 10 min after airbnb-calendar-scrape.yml (07:10) so
-#     the availability feed has finished writing before the pricing feed
-#     starts. They write to different tables, but staggering keeps the
-#     proxy / DB load curve flat.
+#   - 09:00 UTC = 03:00 PV / 04:00 ET. Off-peak for Airbnb's frontend
+#     traffic and for our residential proxy pool. Sits ~110 min after
+#     airbnb-calendar-scrape.yml (07:10) so the availability feed has
+#     fully drained before the pricing feed starts hammering the same
+#     proxy egress. One run per night by design — keeps exposure low
+#     and freshness comfortably inside the ≤7d full-credit band that
+#     comps-pricing-source.ts uses for Rank 0 quote selection.
 #
 # Required GitHub repository secrets:
 #   RAILWAY_API_URL          e.g. https://api.vallartapulse.com (no trailing slash)
@@ -57,10 +43,8 @@ name: Airbnb Pricing Refresh (PAUSED)
 # "re-alert only every 24h or when the situation changes" requirement.
 
 on:
-  # PAUSED — daily cron disabled until the GraphQL pricing/quote adapters
-  # land. Re-enable by uncommenting the schedule block below.
-  # schedule:
-  #   - cron: "20 7 * * *"   # daily 07:20 UTC
+  schedule:
+    - cron: "0 9 * * *"   # daily 09:00 UTC (= 03:00 PV / 04:00 ET)
   workflow_dispatch:
     inputs:
       max_listings:

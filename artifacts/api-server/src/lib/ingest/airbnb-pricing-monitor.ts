@@ -79,6 +79,11 @@ export async function loadRecentDailyRunRecords(
       quoteShaRediscoveriesDuringRun: 0,
       alertLevel: "ok",
       alertReason: "",
+      // The summary table doesn't persist these — they only appear in
+      // live run results, not history. Backfill as null for type
+      // compatibility.
+      presumedBookingsInserted: null,
+      presumedBookingsCandidatesEvaluated: null,
     },
   }));
 }
