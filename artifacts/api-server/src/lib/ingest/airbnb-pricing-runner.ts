@@ -198,7 +198,21 @@ async function loadStaleFirstListings(maxListings: number): Promise<ListingRow[]
       AND rl.is_active = true
       AND rl.external_id IS NOT NULL
       AND rl.external_id ~ '^[0-9]+$'
-    ORDER BY q.last_quoted ASC NULLS FIRST, rl.id ASC
+    -- Cohort priority:
+    --   1. Never-quoted listings come first (NULLS FIRST), so we expand
+    --      coverage every run.
+    --   2. Among never-quoted, prefer RECENTLY DISCOVERED listings.
+    --      Empirically the lowest-ID never-quoted rows are 2022-era
+    --      inventory and ~80% are delisted (validated 2026-04-23 smoke
+    --      cohort: listings 305, 339, 341, 342 all returned the
+    --      homepage-redirect "delisted-or-blocked" signal). Fresh
+    --      discoveries from recent scrapes get id >> those, so we sort
+    --      created_at DESC + id DESC to surface them first.
+    --   3. Among already-quoted, oldest quote wins (standard refresh
+    --      semantics — keep the per-night data current).
+    ORDER BY q.last_quoted ASC NULLS FIRST,
+             rl.created_at DESC NULLS LAST,
+             rl.id DESC
     LIMIT ${maxListings}
   `);
   const rows = (result as unknown as {
