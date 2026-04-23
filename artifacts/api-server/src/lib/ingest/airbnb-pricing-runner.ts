@@ -618,7 +618,17 @@ export async function runAirbnbPricingRefresh(
             stat.quotesFailed++;
           }
           const elapsed = Date.now() - t0;
-          const totalStr = q.totalPriceUsd !== null ? `$${q.totalPriceUsd}` : "—";
+          // Distinguish three outcomes in the log:
+          //   $265           — price captured
+          //   unavailable    — Airbnb said dates unavailable (clean signal,
+          //                    no error pushed by adapter)
+          //   —              — actual failure (parser miss, delisted, etc.)
+          const totalStr =
+            q.totalPriceUsd !== null
+              ? `$${q.totalPriceUsd}`
+              : q.available === false && q.errors.length === 0
+                ? "unavailable"
+                : "—";
           const errStr = q.errors.length > 0 ? ` err=${q.errors[0].slice(0, 80)}` : "";
           console.error(
             `[airbnb-pricing]   cp ${cpIdx}/${checkpointRows.length} ` +
