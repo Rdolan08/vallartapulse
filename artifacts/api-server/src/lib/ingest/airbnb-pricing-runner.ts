@@ -70,6 +70,8 @@ export interface AirbnbPricingRunOpts {
    * calendar SHA still works. Default false.
    */
   skipFullQuotes?: boolean;
+  /** Cap checkpoints per listing (smoke-test hook). Default unlimited. */
+  maxCheckpointsPerListing?: number;
 }
 
 export interface AirbnbPricingPerListing {
@@ -421,6 +423,7 @@ export async function runAirbnbPricingRefresh(
   const dryRun = opts.dryRun ?? false;
   const today = opts.today ?? new Date();
   const skipFullQuotes = opts.skipFullQuotes ?? false;
+  const maxCheckpointsPerListing = opts.maxCheckpointsPerListing ?? Infinity;
 
   const listings = await loadStaleFirstListings(maxListings);
 
@@ -490,11 +493,18 @@ export async function runAirbnbPricingRefresh(
         stat.error = "calendar: " + result.errors.join("; ").slice(0, 180);
       }
 
-      const checkpointRows = buildQuoteRows(l.id, result, new Date(), today);
+      let checkpointRows = buildQuoteRows(l.id, result, new Date(), today);
+      if (Number.isFinite(maxCheckpointsPerListing)) {
+        checkpointRows = checkpointRows.slice(0, maxCheckpointsPerListing);
+      }
       stat.checkpointsAttempted = checkpointRows.length;
       stat.fullyAvailableCheckpoints = checkpointRows.filter(
         (cr) => cr.fullyAvailable,
       ).length;
+      console.error(
+        `[airbnb-pricing] listing ${l.id} (${l.externalId}): ` +
+          `${checkpointRows.length} checkpoints to quote`,
+      );
 
       // Per-checkpoint full-fee quote enrichment. We call the
       // reservation-flow endpoint for EVERY emitted checkpoint so the
@@ -512,7 +522,10 @@ export async function runAirbnbPricingRefresh(
         // Canary mode: keep calendar-only rows.
         for (const cr of checkpointRows) enrichedRows.push(cr.row);
       } else {
+        let cpIdx = 0;
         for (const cr of checkpointRows) {
+          cpIdx++;
+          const t0 = Date.now();
           let q = await fetchAirbnbQuote(
             l.externalId,
             currentQuoteSha,
@@ -575,6 +588,14 @@ export async function runAirbnbPricingRefresh(
             // No usable quote → drop the row rather than write half-data.
             stat.quotesFailed++;
           }
+          const elapsed = Date.now() - t0;
+          const totalStr = q.totalPriceUsd !== null ? `$${q.totalPriceUsd}` : "—";
+          const errStr = q.errors.length > 0 ? ` err=${q.errors[0].slice(0, 80)}` : "";
+          console.error(
+            `[airbnb-pricing]   cp ${cpIdx}/${checkpointRows.length} ` +
+              `${cr.checkpoint.checkin}→${cr.checkpoint.checkout} ` +
+              `total=${totalStr} ${elapsed}ms${errStr}`,
+          );
         }
       }
 
