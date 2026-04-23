@@ -4,6 +4,31 @@
 
 ---
 
+## ⚠️ Known blocker (as of 2026-04-23)
+
+**The pricing pipeline does not currently produce data.** The architecture is correct end-to-end, but the two GraphQL adapters at the bottom of the stack are **compile-only stubs** that throw `"... is not implemented in this build"`:
+
+- `artifacts/api-server/src/lib/ingest/airbnb-graphql-pricing-adapter.ts` — `fetchAirbnbCalendarGraphql`, `getOrDiscoverSha`
+- `artifacts/api-server/src/lib/ingest/airbnb-graphql-quote-adapter.ts` — `fetchAirbnbQuote`, `getOrDiscoverQuoteSha`
+
+These exist as stubs purely so esbuild can bundle the API server (the runner imports them unconditionally). Both files contain the comment:
+
+> *"Do not call /ingest/airbnb-pricing-refresh until this module is wired up."*
+
+Until they're implemented, running `pnpm scrape:airbnb-pricing` from the Mac mini will:
+1. Pick the cohort (works).
+2. For each listing, call `fetchAirbnbCalendarGraphql` → throws → caught → counted as a failed listing.
+3. Print a run summary with `totalListingsFailed === totalListings` and `totalDaysWithPrice === 0`.
+4. Exit code **4** with the message `"airbnb-graphql-pricing-adapter / airbnb-graphql-quote-adapter are still compile-only stubs"`.
+
+This explicit fail is intentional and **better than the previous codex implementation**, which silently produced empty CSVs that looked like successful runs.
+
+**Additional contract drift to fix when implementing the quote adapter:** the runner at `airbnb-pricing-runner.ts:361` reads four fields from `AirbnbQuoteResult` that don't exist on the stub interface — `currency`, `shaUsed`, `available`, `errors`. The real implementation must add these. Same for the calendar adapter result, which is already complete (`days`, `daysReturned`, `daysWithPrice`, `staleSha`, `errors`).
+
+Tracked in [issue #34](https://github.com/Rdolan08/vallartapulse/issues/34).
+
+---
+
 ## TL;DR
 
 | Want | Endpoint | Adapter | DB table | Script to run |

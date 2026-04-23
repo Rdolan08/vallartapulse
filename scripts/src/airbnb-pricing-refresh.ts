@@ -41,6 +41,14 @@
  *   DATABASE_URL                  required (use $RAILWAY_DATABASE_URL for prod)
  *   AIRBNB_PRICING_MAX_LISTINGS   default 50 (matches the in-process daily budget)
  *   AIRBNB_PRICING_DRY_RUN        truthy => skip DB writes
+ *
+ * KNOWN BLOCKER (as of 2026-04-23):
+ *   The two GraphQL adapters this runner depends on
+ *   (airbnb-graphql-pricing-adapter.ts and airbnb-graphql-quote-adapter.ts)
+ *   are currently compile-only stubs that throw "not implemented in this
+ *   build". Until they're implemented, every listing in the cohort will
+ *   fail with that exact message and this script will exit with code 4.
+ *   Tracked in docs/AIRBNB_PRICING_PIPELINE.md.
  */
 
 import { pool } from "@workspace/db";
@@ -113,6 +121,26 @@ async function main(): Promise<number> {
     return 2;
   }
   if (totalFailed === totalListings) {
+    // Look at the per-listing errors to distinguish "stub adapters" (the
+    // current known blocker) from "real network/parser failure". This lets
+    // the operator see at a glance whether they need to wait for the GraphQL
+    // adapter implementation or actually debug something.
+    const listings = (result.summary as unknown as {
+      listings?: Array<{ error?: string }>;
+    }).listings ?? [];
+    const stubHits = listings.filter((p) =>
+      typeof p.error === "string" && /not implemented in this build/i.test(p.error),
+    ).length;
+
+    if (stubHits === totalListings) {
+      console.error(
+        "ERROR: airbnb-graphql-pricing-adapter / airbnb-graphql-quote-adapter " +
+          "are still compile-only stubs. Implement them before running this " +
+          "script. See docs/AIRBNB_PRICING_PIPELINE.md > 'Known blocker'.",
+      );
+      return 4;
+    }
+
     console.error("ERROR: every listing failed");
     return 3;
   }
