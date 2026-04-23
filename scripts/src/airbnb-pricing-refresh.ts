@@ -75,6 +75,10 @@ async function main(): Promise<number> {
 
   const maxListings = parseIntEnv("AIRBNB_PRICING_MAX_LISTINGS", 50);
   const dryRun = isTruthy(process.env.AIRBNB_PRICING_DRY_RUN);
+  const maxCheckpointsPerListing = parseIntEnv(
+    "AIRBNB_PRICING_MAX_CHECKPOINTS_PER_LISTING",
+    Number.POSITIVE_INFINITY as unknown as number,
+  );
 
   console.log(
     JSON.stringify(
@@ -85,7 +89,13 @@ async function main(): Promise<number> {
   const t0 = Date.now();
   let result: Awaited<ReturnType<typeof runAirbnbPricingRefresh>>;
   try {
-    result = await runAirbnbPricingRefresh({ maxListings, dryRun });
+    result = await runAirbnbPricingRefresh({
+      maxListings,
+      dryRun,
+      maxCheckpointsPerListing: Number.isFinite(maxCheckpointsPerListing)
+        ? maxCheckpointsPerListing
+        : undefined,
+    });
   } catch (err) {
     // The two GraphQL adapters (airbnb-graphql-pricing-adapter,
     // airbnb-graphql-quote-adapter) currently throw "not implemented in
@@ -114,6 +124,7 @@ async function main(): Promise<number> {
         event: "airbnb-pricing-refresh.done",
         elapsedMs,
         summary: result.summary,
+        listings: result.listings,
       },
       null,
       2,

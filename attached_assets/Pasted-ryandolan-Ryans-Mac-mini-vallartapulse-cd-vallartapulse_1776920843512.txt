@@ -1,0 +1,219 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && git pull && pnpm install && AIRBNB_PRICING_MAX_LISTINGS=2 AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts run scrape:airbnb-pricing
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (15/15), done.
+remote: Compressing objects: 100% (6/6), done.
+remote: Total 15 (delta 9), reused 15 (delta 9), pack-reused 0 (from 0)
+Unpacking objects: 100% (15/15), 11.50 KiB | 905.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   601b95c..4c6b03f  main       -> origin/main
+Updating 601b95c..4c6b03f
+Fast-forward
+ artifacts/api-server/src/lib/ingest/airbnb-graphql-quote-adapter.ts             | 512 ++++++++++++++++++++-----------------
+ artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts                    |   8 +
+ ...ed-Property-null-pdpPresentation-extensions-traceId-string_1776919254975.txt |  40 +++
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776919137191.txt | 177 +++++++++++++
+ 4 files changed, 498 insertions(+), 239 deletions(-)
+ create mode 100644 attached_assets/Pasted-Property-null-pdpPresentation-extensions-traceId-string_1776919254975.txt
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776919137191.txt
+Scope: all 9 workspace projects
+Lockfile is up to date, resolution step is skipped
+Already up to date
+. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm inst…
+└─ Done in 14ms
+Done in 630ms using pnpm v10.33.0
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":2,"dryRun":true,"ts":"2026-04-23T04:53:21.025Z"}
+{
+  "event": "airbnb-pricing-refresh.done",
+  "elapsedMs": 994,
+  "summary": {
+    "attempted": 2,
+    "ok": 0,
+    "failed": 2,
+    "totalQuotesWritten": 0,
+    "totalDaysWithPrice": 0,
+    "totalQuotesEnriched": 0,
+    "totalQuotesFailed": 0,
+    "totalFullyAvailableCheckpoints": 0,
+    "totalQuotesEnrichedFullyAvailable": 0,
+    "enrichmentRate": null,
+    "shaSource": "fallback",
+    "quoteShaSource": "cache",
+    "shaRediscoveriesDuringRun": 0,
+    "quoteShaRediscoveriesDuringRun": 0,
+    "alertLevel": "fail",
+    "alertReason": "All 2 listings failed — Airbnb pricing has gone dark"
+  }
+}
+WARN: zero listings processed (check the active Airbnb cohort)
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && git pull && AIRBNB_PRICING_MAX_LISTINGS=2 AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts run scrape:airbnb-pricing
+remote: Enumerating objects: 24, done.
+remote: Counting objects: 100% (24/24), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 13 (delta 10), reused 13 (delta 10), pack-reused 0 (from 0)
+Unpacking objects: 100% (13/13), 2.46 KiB | 252.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   4c6b03f..630dcb7  main       -> origin/main
+Updating 4c6b03f..630dcb7
+Fast-forward
+ artifacts/api-server/src/lib/ingest/airbnb-graphql-pricing-adapter.ts           |  2 +-
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776920021338.txt | 52 ++++++++++++++++++++++++++++++++++++++
+ scripts/src/airbnb-pricing-refresh.ts                                           |  1 +
+ 3 files changed, 54 insertions(+), 1 deletion(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776920021338.txt
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":2,"dryRun":true,"ts":"2026-04-23T04:55:16.049Z"}
+{
+  "event": "airbnb-pricing-refresh.done",
+  "elapsedMs": 910,
+  "summary": {
+    "attempted": 2,
+    "ok": 0,
+    "failed": 2,
+    "totalQuotesWritten": 0,
+    "totalDaysWithPrice": 0,
+    "totalQuotesEnriched": 0,
+    "totalQuotesFailed": 0,
+    "totalFullyAvailableCheckpoints": 0,
+    "totalQuotesEnrichedFullyAvailable": 0,
+    "enrichmentRate": null,
+    "shaSource": "fallback",
+    "quoteShaSource": "cache",
+    "shaRediscoveriesDuringRun": 0,
+    "quoteShaRediscoveriesDuringRun": 0,
+    "alertLevel": "fail",
+    "alertReason": "All 2 listings failed — Airbnb pricing has gone dark"
+  },
+  "listings": [
+    {
+      "listingId": 305,
+      "externalId": "1552402429",
+      "ok": false,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 0,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 0,
+      "fullyAvailableCheckpoints": 0,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    },
+    {
+      "listingId": 339,
+      "externalId": "787254975877",
+      "ok": false,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 0,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 0,
+      "fullyAvailableCheckpoints": 0,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    }
+  ]
+}
+WARN: zero listings processed (check the active Airbnb cohort)
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && git pull && AIRBNB_PRICING_MAX_LISTINGS=2 AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts run scrape:airbnb-pricing
+remote: Enumerating objects: 18, done.
+remote: Counting objects: 100% (18/18), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 10 (delta 7), reused 10 (delta 7), pack-reused 0 (from 0)
+Unpacking objects: 100% (10/10), 3.32 KiB | 485.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   630dcb7..7fdae7d  main       -> origin/main
+Updating 630dcb7..7fdae7d
+Fast-forward
+ artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts                    |  22 +++++-
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776920145171.txt | 133 +++++++++++++++++++++++++++++++++++++
+ 2 files changed, 152 insertions(+), 3 deletions(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776920145171.txt
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":2,"dryRun":true,"ts":"2026-04-23T04:58:03.242Z"}
+
+^Z
+zsh: suspended  AIRBNB_PRICING_MAX_LISTINGS=2 AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL= pnpm    
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && git pull && AIRBNB_PRICING_MAX_LISTINGS=1 AIRBNB_PRICING_MAX_CHECKPOINTS_PER_LISTING=3 AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts run scrape:airbnb-pricing
+remote: Enumerating objects: 21, done.
+remote: Counting objects: 100% (21/21), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 11 (delta 9), reused 11 (delta 9), pack-reused 0 (from 0)
+Unpacking objects: 100% (11/11), 1.85 KiB | 172.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   7fdae7d..1f8266f  main       -> origin/main
+Updating 7fdae7d..1f8266f
+Fast-forward
+ artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts | 23 ++++++++++++++++++++++-
+ scripts/src/airbnb-pricing-refresh.ts                        | 12 +++++++++++-
+ 2 files changed, 33 insertions(+), 2 deletions(-)
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":1,"dryRun":true,"ts":"2026-04-23T05:04:08.041Z"}
+[airbnb-pricing] listing 305 (1552402429): 3 checkpoints to quote
+[airbnb-pricing]   cp 1/3 2026-04-24→2026-04-26 total=— 21565ms err=no price text rendered in booking sidebar (listing may be unbookable for this wi
+[airbnb-pricing]   cp 2/3 2026-04-25→2026-04-27 total=— 21800ms err=no price text rendered in booking sidebar (listing may be unbookable for this wi
+[airbnb-pricing]   cp 3/3 2026-05-01→2026-05-03 total=— 39203ms err=no price text rendered in booking sidebar (listing may be unbookable for this wi
+{
+  "event": "airbnb-pricing-refresh.done",
+  "elapsedMs": 83389,
+  "summary": {
+    "attempted": 1,
+    "ok": 1,
+    "failed": 0,
+    "totalQuotesWritten": 0,
+    "totalDaysWithPrice": 0,
+    "totalQuotesEnriched": 0,
+    "totalQuotesFailed": 3,
+    "totalFullyAvailableCheckpoints": 3,
+    "totalQuotesEnrichedFullyAvailable": 0,
+    "enrichmentRate": 0,
+    "shaSource": "fallback",
+    "quoteShaSource": "cache",
+    "shaRediscoveriesDuringRun": 0,
+    "quoteShaRediscoveriesDuringRun": 0,
+    "alertLevel": "ok",
+    "alertReason": ""
+  },
+  "listings": [
+    {
+      "listingId": 305,
+      "externalId": "1552402429",
+      "ok": true,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 3,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 3,
+      "fullyAvailableCheckpoints": 3,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "calendar: unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    }
+  ]
+}
+WARN: zero listings processed (check the active Airbnb cohort)

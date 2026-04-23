@@ -47,6 +47,7 @@ import {
 import {
   fetchAirbnbQuote,
   getOrDiscoverQuoteSha,
+  shutdownQuoteBrowser,
   type AirbnbQuoteResult,
 } from "./airbnb-graphql-quote-adapter.js";
 import {
@@ -69,6 +70,8 @@ export interface AirbnbPricingRunOpts {
    * calendar SHA still works. Default false.
    */
   skipFullQuotes?: boolean;
+  /** Cap checkpoints per listing (smoke-test hook). Default unlimited. */
+  maxCheckpointsPerListing?: number;
 }
 
 export interface AirbnbPricingPerListing {
@@ -224,6 +227,19 @@ function pricesForStay(
   checkpoint: Checkpoint,
   index: Map<string, AirbnbGraphqlDay>,
 ): { perNight: number[]; nightsCovered: number; allAvailable: boolean; anyAvailable: boolean } {
+  // Empty calendar (Airbnb GraphQL shape changed / SHA stale / IP blocked) =>
+  // assume all nights available, no per-night price. The Playwright quote
+  // becomes the sole source of truth for price AND availability — if the
+  // window is unbookable the quote returns null and the row is dropped
+  // downstream.
+  if (index.size === 0) {
+    return {
+      perNight: [],
+      nightsCovered: checkpoint.stayNights,
+      allAvailable: true,
+      anyAvailable: true,
+    };
+  }
   const start = new Date(`${checkpoint.checkin}T00:00:00Z`);
   const perNight: number[] = [];
   let allAvailable = true;
@@ -407,9 +423,11 @@ export async function runAirbnbPricingRefresh(
   const dryRun = opts.dryRun ?? false;
   const today = opts.today ?? new Date();
   const skipFullQuotes = opts.skipFullQuotes ?? false;
+  const maxCheckpointsPerListing = opts.maxCheckpointsPerListing ?? Infinity;
 
   const listings = await loadStaleFirstListings(maxListings);
 
+  try {
   // Discover the calendar SHA up front so all listings share one cache hit.
   const initial = await getOrDiscoverSha();
   let currentSha = initial.sha;
@@ -466,17 +484,42 @@ export async function runAirbnbPricingRefresh(
       stat.daysReturned = result.daysReturned;
       stat.daysWithPrice = result.daysWithPrice;
 
+      // Calendar failure is no longer fatal — we record it as a note in
+      // stat.error but proceed to per-checkpoint Playwright quotes. The
+      // empty-index branch in pricesForStay above synthesizes "presumed
+      // available" checkpoints; the quote phase filters out actually-
+      // unbooked windows by returning null totals.
       if (result.errors.length > 0 && result.daysReturned === 0) {
-        stat.error = result.errors.join("; ").slice(0, 200);
-        perListing.push(stat);
-        continue;
+        stat.error = "calendar: " + result.errors.join("; ").slice(0, 180);
       }
 
-      const checkpointRows = buildQuoteRows(l.id, result, new Date(), today);
+      let checkpointRows = buildQuoteRows(l.id, result, new Date(), today);
+      if (
+        Number.isFinite(maxCheckpointsPerListing) &&
+        checkpointRows.length > maxCheckpointsPerListing
+      ) {
+        // Evenly-spaced sample across the full checkpoint range so smoke
+        // tests cover near-term + mid-range + far-future. (Slicing the
+        // first N would only ever exercise short-notice windows, which
+        // most listings block via min-stay or advance-notice rules and
+        // therefore correctly render no price.)
+        const n = maxCheckpointsPerListing;
+        const total = checkpointRows.length;
+        const sampled: typeof checkpointRows = [];
+        for (let i = 0; i < n; i++) {
+          const idx = Math.min(total - 1, Math.floor((i * total) / (n - 1 || 1)));
+          sampled.push(checkpointRows[idx]);
+        }
+        checkpointRows = sampled;
+      }
       stat.checkpointsAttempted = checkpointRows.length;
       stat.fullyAvailableCheckpoints = checkpointRows.filter(
         (cr) => cr.fullyAvailable,
       ).length;
+      console.error(
+        `[airbnb-pricing] listing ${l.id} (${l.externalId}): ` +
+          `${checkpointRows.length} checkpoints to quote`,
+      );
 
       // Per-checkpoint full-fee quote enrichment. We call the
       // reservation-flow endpoint for EVERY emitted checkpoint so the
@@ -494,7 +537,10 @@ export async function runAirbnbPricingRefresh(
         // Canary mode: keep calendar-only rows.
         for (const cr of checkpointRows) enrichedRows.push(cr.row);
       } else {
+        let cpIdx = 0;
         for (const cr of checkpointRows) {
+          cpIdx++;
+          const t0 = Date.now();
           let q = await fetchAirbnbQuote(
             l.externalId,
             currentQuoteSha,
@@ -557,6 +603,14 @@ export async function runAirbnbPricingRefresh(
             // No usable quote → drop the row rather than write half-data.
             stat.quotesFailed++;
           }
+          const elapsed = Date.now() - t0;
+          const totalStr = q.totalPriceUsd !== null ? `$${q.totalPriceUsd}` : "—";
+          const errStr = q.errors.length > 0 ? ` err=${q.errors[0].slice(0, 80)}` : "";
+          console.error(
+            `[airbnb-pricing]   cp ${cpIdx}/${checkpointRows.length} ` +
+              `${cr.checkpoint.checkin}→${cr.checkpoint.checkout} ` +
+              `total=${totalStr} ${elapsed}ms${errStr}`,
+          );
         }
       }
 
@@ -682,5 +736,11 @@ export async function runAirbnbPricingRefresh(
   }
 
   return result;
+  } finally {
+    // Always release the headless Chromium spawned by the quote adapter,
+    // even if the run threw partway through. Otherwise the cron process
+    // would hang on the live browser handle.
+    await shutdownQuoteBrowser();
+  }
 }
 
