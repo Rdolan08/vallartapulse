@@ -1,0 +1,20 @@
+ryandolan@Ryans-Mac-mini vallartapulse % curl -i --max-time 180 -X POST 'https://the-data-store-production.up.railway.app/api/ingest/airbnb-pricing-refresh' -H 'Content-Type: application/json' -H "X-Internal-Token: $INTERNAL_TRIGGER_TOKEN" -d '{"maxListings":1}'
+HTTP/2 200 
+access-control-allow-credentials: true
+x-railway-cdn-edge: fastly/cache-msp11829-MSP
+content-type: application/json; charset=utf-8
+date: Thu, 23 Apr 2026 20:36:25 GMT
+etag: W/"3a8-kDU9Sd0rxrML3vTz4q27CcCo5e0"
+server: railway-edge
+vary: Origin
+x-powered-by: Express
+x-railway-edge: railway/us-east4-eqdc4a
+x-railway-request-id: 9EFXLQWSS8KZRLpvo3UVLg
+x-cache: MISS
+x-cache-hits: 0
+x-served-by: cache-msp11829-MSP
+content-length: 936
+
+{"dryRun":false,"summary":{"attempted":1,"ok":1,"failed":0,"totalQuotesWritten":0,"totalDaysWithPrice":0,"totalQuotesEnriched":0,"totalQuotesFailed":34,"totalFullyAvailableCheckpoints":23,"totalQuotesEnrichedFullyAvailable":0,"enrichmentRate":0,"shaSource":"fallback","quoteShaSource":"cache","shaRediscoveriesDuringRun":0,"quoteShaRediscoveriesDuringRun":0,"alertLevel":"fail","alertReason":"0 quotes written despite a non-empty cohort","presumedBookingsInserted":0,"presumedBookingsCandidatesEvaluated":0},"listings":[{"listingId":4214,"externalId":"1610096526897460312","ok":true,"daysReturned":365,"daysWithPrice":0,"checkpointsAttempted":34,"quotesEnriched":0,"quotesEnrichedFullyAvailable":0,"quotesFailed":34,"fullyAvailableCheckpoints":23,"quotesWritten":0,"staleShaRetried":false,"staleQuoteShaRetried":false,"shaUsed":"b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914","quoteShaUsed":"playwright-dom-scrape"}]}%                       ryandolan@Ryans-Mac-mini vallartapulse % curl -i --max-time 180 -X POST 'https://the-data-store-production.up.railway.app/api/ingest/airbnb-pricing-refresh' -H 'Content-Type: application/json' -H "X-Internal-Token: $INTERNAL_TRIGGER_TOKEN" -d '{"maxListings":1}'
+curl: (28) Operation timed out after 180011 milliseconds with 0 bytes received
+ryandolan@Ryans-Mac-mini vallartapulse % 

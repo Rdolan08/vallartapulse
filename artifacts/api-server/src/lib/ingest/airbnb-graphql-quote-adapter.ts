@@ -125,6 +125,21 @@ async function getContext(): Promise<BrowserContext> {
   const proxy = parseProxyUrl(process.env.PROXY_URL ?? "");
   browser = await chromium.launch({
     headless: true,
+    // Stealth args — without --disable-blink-features=AutomationControlled
+    // navigator.webdriver evaluates to true and Airbnb soft-redirects every
+    // /rooms/<id> request to the homepage (page title becomes "Airbnb:
+    // Vacation Rentals, Cabins, Beach Houses, Unique Homes & Experiences",
+    // which our delisted-or-blocked branch then catches). Validated
+    // 2026-04-23: with proxy correctly wired but no stealth args, all 34
+    // checkpoints of a known-live listing returned the homepage redirect
+    // in ~3s each. browser-fetch.ts uses the identical args list — keep
+    // them in sync.
+    args: [
+      "--no-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-blink-features=AutomationControlled",
+      "--disable-features=IsolateOrigins,site-per-process",
+    ],
     ...(proxy ? { proxy } : {}),
   });
   context = await browser.newContext({
