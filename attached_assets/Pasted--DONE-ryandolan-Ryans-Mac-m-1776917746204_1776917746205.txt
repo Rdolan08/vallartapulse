@@ -1,0 +1,58 @@
+══════ DONE ══════════════════════════════════════════════════════════════════
+ryandolan@Ryans-Mac-mini vallartapulse % git pull && pnpm --filter @workspace/scripts run debug:airbnb-pricing
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 6.90 KiB | 1.15 MiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   a09d6ab..c6c71a5  main       -> origin/main
+Updating a09d6ab..c6c71a5
+Fast-forward
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776917453845.txt |  60 ++++++
+ scripts/src/airbnb-pricing-debug.ts                                             | 385 ++++++++++++++++++++++---------------
+ 2 files changed, 285 insertions(+), 160 deletions(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776917453845.txt
+
+> @workspace/scripts@0.0.0 debug:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-debug.ts
+
+starting airbnb-pricing-debug v2 — externalId: 1610096526897460312
+
+══════ PROBE A: PDP HTML scrape (check_in/check_out) ═════════════════════════
+URL: https://www.airbnb.com/rooms/1610096526897460312?check_in=2026-05-23&check_out=2026-05-26&adults=2
+WINDOW: 2026-05-23 → 2026-05-26
+HTTP: 200 → https://www.airbnb.com/rooms/1610096526897460312?check_in=2026-05-23&check_out=2026-05-26&adults=2
+HTML length: 456192
+blob length: 146395
+blob top-level shape: { niobeClientData: [1 × [2 × string]] }
+
+KEY HITS in blob:
+  [structuredDisplayPrice] at $.niobeClientData[0][1].data.presentation.stayProductDetailPage.sections.sections[0].section.structuredDisplayPrice → null
+  [structuredDisplayPrice] at $.niobeClientData[0][1].data.presentation.stayProductDetailPage.sections.sections[7].section.structuredDisplayPrice → null
+  [structuredDisplayPrice] at $.niobeClientData[0][1].data.presentation.stayProductDetailPage.sections.sections[12].section.structuredDisplayPrice → null
+  [structuredDisplayPrice] at $.niobeClientData[0][1].data.presentation.stayProductDetailPage.sections.sections[16].section.structuredDisplayPrice → null
+
+FULL structuredDisplayPrice (first found):
+null
+
+══════ PROBE B: StaysPdpSections GraphQL ═════════════════════════════════════
+
+— variant: raw numeric (id=1610096526897460312…)
+HTTP: 400
+BODY (first 600): {"error_code":400,"error_type":"persisted_query_not_found","error_message":"PersistedQueryNotFound"}
+
+— variant: base64 (id=U3RheUxpc3Rpbmc6MTYxMDA5NjUyNjg5NzQ2MDMxMg==…)
+HTTP: 400
+BODY (first 600): {"error_code":400,"error_type":"persisted_query_not_found","error_message":"PersistedQueryNotFound"}
+
+══════ PROBE C: SHA discovery from PDP HTML ══════════════════════════════════
+HTTP: 200
+  PdpAvailabilityCalendar: NOT FOUND in PDP HTML
+  StaysPdpSections: NOT FOUND in PDP HTML
+  StaysPdpReservation: NOT FOUND in PDP HTML
+  StartStaysCheckout: NOT FOUND in PDP HTML
+first JS bundle refs (up to 5): (none)
+
+══════ DONE ══════════════════════════════════════════════════════════════════
+ryandolan@Ryans-Mac-mini vallartapulse % 

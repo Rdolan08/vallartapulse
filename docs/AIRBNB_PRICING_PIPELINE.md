@@ -4,26 +4,19 @@
 
 ---
 
-## ⚠️ Known blocker (as of 2026-04-23)
+## Status (as of 2026-04-23)
 
-**The pricing pipeline does not currently produce data.** The architecture is correct end-to-end, but the two GraphQL adapters at the bottom of the stack are **compile-only stubs** that throw `"... is not implemented in this build"`:
+**Pipeline is wired and ready for first real Mac mini run.** Both GraphQL adapters that were previously stubs are now implemented:
 
-- `artifacts/api-server/src/lib/ingest/airbnb-graphql-pricing-adapter.ts` — `fetchAirbnbCalendarGraphql`, `getOrDiscoverSha`
-- `artifacts/api-server/src/lib/ingest/airbnb-graphql-quote-adapter.ts` — `fetchAirbnbQuote`, `getOrDiscoverQuoteSha`
+- `airbnb-graphql-pricing-adapter.ts` — calls `/api/v3/PdpAvailabilityCalendar/{sha}` (the priced GraphQL variant), parses `data.merlin.pdpAvailabilityCalendar.calendarMonths[].days[]`, returns 12 months of per-night prices. Bootstrap SHA is hard-coded; on `PersistedQueryNotFound` the adapter rediscovers from a public PDP page. In-process cache only — no DB schema added.
+- `airbnb-graphql-quote-adapter.ts` — uses the v2 REST `pdp_listing_booking_details` endpoint internally (file name preserved to avoid touching every runner import; tactical choice documented in the file header). Parses the `price.price_items[]` breakdown into accommodation / cleaning / service / taxes / total. Returns `currency`, `shaUsed`, `available`, `errors` to satisfy the runner contract that was previously broken.
 
-These exist as stubs purely so esbuild can bundle the API server (the runner imports them unconditionally). Both files contain the comment:
+First Mac mini run instructions: see "Running the pricing refresh" below. Expected outcome on a working run: `summary.totalDaysWithPrice > 0`, `summary.enrichmentRate ≥ 0.7`, exit code 0.
 
-> *"Do not call /ingest/airbnb-pricing-refresh until this module is wired up."*
-
-Until they're implemented, running `pnpm scrape:airbnb-pricing` from the Mac mini will:
-1. Pick the cohort (works).
-2. For each listing, call `fetchAirbnbCalendarGraphql` → throws → caught → counted as a failed listing.
-3. Print a run summary with `totalListingsFailed === totalListings` and `totalDaysWithPrice === 0`.
-4. Exit code **4** with the message `"airbnb-graphql-pricing-adapter / airbnb-graphql-quote-adapter are still compile-only stubs"`.
-
-This explicit fail is intentional and **better than the previous codex implementation**, which silently produced empty CSVs that looked like successful runs.
-
-**Additional contract drift to fix when implementing the quote adapter:** the runner at `airbnb-pricing-runner.ts:361` reads four fields from `AirbnbQuoteResult` that don't exist on the stub interface — `currency`, `shaUsed`, `available`, `errors`. The real implementation must add these. Same for the calendar adapter result, which is already complete (`days`, `daysReturned`, `daysWithPrice`, `staleSha`, `errors`).
+If the new adapters error out, exit codes:
+- **2** — fetched cleanly but zero priced days (most likely a SHA rotation Airbnb didn't surface as `PersistedQueryNotFound`, or a parser-shape regression)
+- **3** — every listing failed (look at `summary.listings[].error` for the pattern: 403/429 = IP block, transport = network, anything else = parse)
+- **4** — adapters reverted to "not implemented" stubs (would mean a regression)
 
 Tracked in [issue #34](https://github.com/Rdolan08/vallartapulse/issues/34).
 

@@ -1,0 +1,60 @@
+ryandolan@Ryans-Mac-mini vallartapulse % git pull && pnpm --filter @workspace/scripts run debug:airbnb-pricing
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 7 (delta 5), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 1.98 KiB | 338.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   36b2351..a09d6ab  main       -> origin/main
+Updating 36b2351..a09d6ab
+Fast-forward
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776917319292.txt | 42 +++++++++++++++++++++++++++++++++++
+ scripts/src/airbnb-pricing-debug.ts                                             | 45 ++++++++++----------------------------
+ 2 files changed, 53 insertions(+), 34 deletions(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776917319292.txt
+
+> @workspace/scripts@0.0.0 debug:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-debug.ts
+
+starting airbnb-pricing-debug…
+listing externalId: 1610096526897460312
+
+══════ CALENDAR: PdpAvailabilityCalendar GraphQL ═════════════════════════════
+URL: https://www.airbnb.com/api/v3/PdpAvailabilityCalendar/8f08e03c7bd16fcad3c92a3592c19a8b559a0d0855a84028d1163d4733ed9ade?operationName=PdpAvailabilityCalendar&locale=en&currency=USD&…
+HTTP: 200
+BODY (first 800 chars):
+{"data":{"merlin":{"__typename":"MerlinQuery","pdpAvailabilityCalendar":{"__typename":"MerlinPdpAvailabilityCalendarResponse","calendarMonths":[{"__typename":"MerlinCalendarMonth","month":4,"year":2026,"days":[{"__typename":"MerlinCalendarDay","calendarDate":"2026-04-01","available":false,"maxNights":1125,"minNights":1,"availableForCheckin":false,"availableForCheckout":false,"bookable":null,"price":{"__typename":"MerlinCalendarDayPrice","localPriceFormatted":null}},{"__typename":"MerlinCalendarDay","calendarDate":"2026-04-02","available":false,"maxNights":1125,"minNights":1,"availableForCheckin":false,"availableForCheckout":false,"bookable":null,"price":{"__typename":"MerlinCalendarDayPrice","localPriceFormatted":null}},{"__typename":"MerlinCalendarDay","calendarDate":"2026-04-03","availab
+
+TOP-LEVEL SHAPE: { data: { merlin: { __typename: string, pdpAvailabilityCalendar: { __typename: string, calendarMonths: […12], metadata: {…} } } }, extensions: { traceId: string } }
+CALENDAR MONTHS: 12
+FIRST DAY SHAPE: { __typename: string, calendarDate: string, available: boolean, maxNights: number, minNights: number, availableForCheckin: boolean, availableForCheckout: boolean, bookable: null, price: { __typename: string, localPriceFormatted: null } }
+FIRST DAY (raw): {
+  "__typename": "MerlinCalendarDay",
+  "calendarDate": "2026-04-01",
+  "available": false,
+  "maxNights": 1125,
+  "minNights": 1,
+  "availableForCheckin": false,
+  "availableForCheckout": false,
+  "bookable": null,
+  "price": {
+    "__typename": "MerlinCalendarDayPrice",
+    "localPriceFormatted": null
+  }
+}
+DAY STATS: total=365 available=88 withPrice=0
+
+══════ QUOTE: v2 REST pdp_listing_booking_details ════════════════════════════
+URL: https://www.airbnb.com/api/v2/pdp_listing_booking_details/1610096526897460312?_format=for_web_with_date&check_in=2026-05-23&check_out=2026-05-26&number_of_adults=2&number_of_children=0&number_of_infants=0&number_of_pets=…
+WINDOW: 2026-05-23 → 2026-05-26
+HTTP: 404
+BODY (first 1200 chars):
+{"error_code":404,"error_type":"route_not_found","error_message":"Route not found"}
+
+TOP-LEVEL SHAPE: { error_code: number, error_type: string, error_message: string }
+
+══════ QUOTE: alternative — StaysPdpSections (v3 GraphQL) ════════════════════
+v2 REST without `key=` query param — HTTP: 404
+BODY (first 400 chars): {"error_code":404,"error_type":"route_not_found","error_message":"Route not found"}
+
+══════ DONE ══════════════════════════════════════════════════════════════════

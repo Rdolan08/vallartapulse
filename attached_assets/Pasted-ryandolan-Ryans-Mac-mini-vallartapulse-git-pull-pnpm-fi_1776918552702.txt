@@ -1,0 +1,340 @@
+ryandolan@Ryans-Mac-mini vallartapulse % git pull && pnpm --filter @workspace/scripts run debug:airbnb-pricing
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 7 (delta 5), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 4.98 KiB | 728.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   04be785..c66c6af  main       -> origin/main
+Updating 04be785..c66c6af
+Fast-forward
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776917952207.txt |  44 +++++
+ scripts/src/airbnb-pricing-debug.ts                                             | 367 ++++++++++++++++++++-----------------
+ 2 files changed, 244 insertions(+), 167 deletions(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776917952207.txt
+
+> @workspace/scripts@0.0.0 debug:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-debug.ts
+
+starting airbnb-pricing-debug v4 — externalId: 1610096526897460312
+
+══════ FETCH PDP HTML ════════════════════════════════════════════════════════
+PDP HTML fetch: 200
+HTML length: 472326
+
+══════ PROBE G: niobeClientData verbatim + extraction ════════════════════════
+niobeClientData has 1 entries
+  [0] array of length 2; element types: string, object
+  [0][0] string, length 3141, first 800:
+    StaysPdpSections:{"amenityIds":null,"categoryTag":null,"dateRange":{"endDate":"2026-05-26","startDate":"2026-05-23"},"demandStayListingId":"RGVtYW5kU3RheUxpc3Rpbmc6MTYxMDA5NjUyNjg5NzQ2MDMxMg==","federatedSearchId":null,"federatedSearchSessionId":null,"guestCounts":{"numberOfAdults":2},"id":"U3RheUxpc3Rpbmc6MTYxMDA5NjUyNjg5NzQ2MDMxMg==","includeGpAmenitiesFragment":true,"includeGpBookItFragment":true,"includeGpBookItNonExperiencedGuestFragment":true,"includeGpDescriptionFragment":false,"includeGpHeroFragment":true,"includeGpHighlightsFragment":true,"includeGpLocationPdpFragment":true,"includeGpMarqueeBookItFloatingFooterFragment":true,"includeGpMarqueeBookItNavFragment":true,"includeGpMarqueeBookItSidebarFragment":true,"includeGpMeetYourHostFragment":true,"includeGpNavFragment":true,"includ
+
+niobe SHA extraction yielded: 0
+
+══════ PROBE H: exhaustive bundle search ═════════════════════════════════════
+searching 52 bundles for operation SHAs…
+bundle search total: 0 hits
+
+══════ PROBE I: SKIPPED — no StaysPdpSections SHA discovered ═════════════════
+If we reached this with all 52 bundles searched and niobe verbatim dumped, the next step is to run a headless browser (Playwright) to capture the real XHR Airbnb makes — there is no static-discovery path.
+
+══════ DONE ══════════════════════════════════════════════════════════════════
+ryandolan@Ryans-Mac-mini vallartapulse % git pull && pnpm --filter @workspace/scripts run debug:airbnb-pricing
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 5.80 KiB | 848.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   c66c6af..741f845  main       -> origin/main
+Updating c66c6af..741f845
+Fast-forward
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776918223058.txt |  40 ++++
+ scripts/src/airbnb-pricing-debug.ts                                             | 386 ++++++++++++-------------------------
+ 2 files changed, 159 insertions(+), 267 deletions(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776918223058.txt
+
+> @workspace/scripts@0.0.0 debug:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-debug.ts
+
+starting airbnb-pricing-debug v5 — externalId: 1610096526897460312
+
+══════ PROBE J [30d-out / 3 nights]: search PDP SSR response for price fields 
+window: 2026-05-23 → 2026-05-26 (3 nights)
+URL: https://www.airbnb.com/rooms/1610096526897460312?check_in=2026-05-23&check_out=2026-05-26&adults=2
+HTTP: 200
+HTML length: 470050
+niobe response top-level keys: data, variables
+
+found 59 price-shaped fields with non-empty values:
+
+[loggingId] ×12
+  $.data.presentation.stayProductDetailPage.sections.sections[0].section.inlineCalendarLoggingEventData.guestInputLoggingEventData.loggingId
+    type=string  preview: pdp.inlineCalendar.guestInput
+  $.data.presentation.stayProductDetailPage.sections.sections[0].section.inlineCalendarLoggingEventData.selectMaxNightsViolationDateLoggingEventData.loggingId
+    type=string  preview: pdp.inlineCalendar.selectMaxNightsViolationDate
+  $.data.presentation.stayProductDetailPage.sections.sections[0].section.inlineCalendarLoggingEventData.selectMinNightsViolationDateLoggingEventData.loggingId
+    type=string  preview: pdp.inlineCalendar.selectMinNightsViolationDate
+  …+9 more
+
+[component] ×12
+  $.data.presentation.stayProductDetailPage.sections.sections[0].section.inlineCalendarLoggingEventData.guestInputLoggingEventData.component
+    type=string  preview: guestInput
+  $.data.presentation.stayProductDetailPage.sections.sections[0].section.inlineCalendarLoggingEventData.selectMaxNightsViolationDateLoggingEventData.component
+    type=string  preview: selectMaxNightsViolationDate
+  $.data.presentation.stayProductDetailPage.sections.sections[0].section.inlineCalendarLoggingEventData.selectMinNightsViolationDateLoggingEventData.component
+    type=string  preview: selectMinNightsViolationDate
+  …+9 more
+
+[showPriceBreakdown] ×4
+  $.data.presentation.stayProductDetailPage.sections.sections[1].section.showPriceBreakdown
+    type=boolean  preview: false
+  $.data.presentation.stayProductDetailPage.sections.sections[8].section.showPriceBreakdown
+    type=boolean  preview: true
+  $.data.presentation.stayProductDetailPage.sections.sections[12].section.showPriceBreakdown
+    type=boolean  preview: false
+  …+1 more
+
+[subtitle] ×4
+  $.data.presentation.stayProductDetailPage.sections.sections[2].section.disclaimer.subtitle
+    type=string  preview: Reviews from past guests help our community learn more about each home. By default, reviews are sorted by relevancy. Relevancy is based on recency, length, and information that you provide to us, such
+  $.data.presentation.stayProductDetailPage.sections.sections[17].section.highlights[2].subtitle
+    type=string  preview: Recent guests gave Claudia Lizzette a 5-star rating for communication.
+  $.data.presentation.stayProductDetailPage.sections.sections[21].section.seeAllAmenitiesGroups[6].amenities[0].subtitle
+    type=string  preview: Space where guests can cook their own meals
+  …+1 more
+
+[title] ×4
+  $.data.presentation.stayProductDetailPage.sections.sections[6].section.houseRules[2].title
+    type=string  preview: 4 guests maximum
+  $.data.presentation.stayProductDetailPage.sections.sections[6].section.houseRulesSections[1].items[0].title
+    type=string  preview: 4 guests maximum
+  $.data.presentation.stayProductDetailPage.sections.sections[30].section.items[1].title
+    type=string  preview: Guest access
+  …+1 more
+
+[value] ×3
+  $.data.presentation.stayProductDetailPage.sections.sections[4].section.cardData.stats[0].value
+    type=string  preview: 9
+  $.data.presentation.stayProductDetailPage.sections.sections[4].section.cardData.stats[1].value
+    type=string  preview: 4.56
+  $.data.presentation.stayProductDetailPage.sections.sections[4].section.cardData.stats[2].value
+    type=string  preview: 3
+
+[__typename] ×3
+  $.data.presentation.stayProductDetailPage.sections.sections[8].section.adultsPicker.__typename
+    type=string  preview: GuestPickerSection
+  $.data.presentation.stayProductDetailPage.sections.sections[8].section.childrenPicker.__typename
+    type=string  preview: GuestPickerSection
+  $.data.presentation.stayProductDetailPage.sections.sections[8].section.infantsPicker.__typename
+    type=string  preview: GuestPickerSection
+
+[sectionId] ×3
+  $.data.presentation.stayProductDetailPage.sections.sections[14].sectionId
+    type=string  preview: GUEST_FAVORITE_BANNER
+  $.data.presentation.stayProductDetailPage.sections.screens[3].sectionPlacements[3].sectionDetails[1].sectionId
+    type=string  preview: GUEST_FAVORITE_BANNER
+  $.data.presentation.stayProductDetailPage.sections.screens[3].sectionPlacements[7].sectionDetails[3].sectionId
+    type=string  preview: GUEST_FAVORITE_BANNER
+
+[emptyCategoryRatingDisclaimer] ×1
+  $.data.presentation.stayProductDetailPage.sections.sections[2].section.emptyCategoryRatingDisclaimer
+    type=string  preview: Detailed ratings will appear once more guests have reviewed this place.
+
+[ratePlanLoggingEventData] ×1
+  $.data.presentation.stayProductDetailPage.sections.sections[8].section.ratePlanLoggingEventData
+    type=object  preview: {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.ratePlanInput","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":null,"component":null}
+
+[accessibilityLabel] ×1
+  $.data.presentation.stayProductDetailPage.sections.sections[28].section.mediaItem.accessibilityLabel
+    type=string  preview: A guest with a service animal being greeted by a host
+
+[screenId] ×1
+  $.data.presentation.stayProductDetailPage.sections.screens[12].screenId
+    type=string  preview: NON_EXPERIENCED_GUEST_LEARN_MORE_MODAL
+
+[visibleReviewCount] ×1
+  $.data.presentation.stayProductDetailPage.sections.metadata.loggingContext.eventDataLogging.visibleReviewCount
+    type=string  preview: 2
+
+[bookingPrefetchData] ×1
+  $.data.presentation.stayProductDetailPage.sections.metadata.bookingPrefetchData
+    type=object  preview: {"__typename":"PdpBookingPrefetchData","isHotelRatePlanEnabled":null,"tpointContent":null,"barPrice":null,"canInstantBook":null,"cancellationPolicies":[{"__typename":"LegacyPdpCancellationSection","ca
+
+[reviewCount] ×1
+  $.data.presentation.stayProductDetailPage.sections.sbuiData.sectionConfiguration.root.sections[0].sectionData.reviewData.reviewCount
+    type=string  preview: 2
+
+[localizedStringWithTranslationPreference] ×1
+  $.data.node.pdpPresentation.descriptions.longDescriptionHtml.localizedStringWithTranslationPreference
+    type=string  preview: Enjoy Puerto Vallarta from this exclusive oceanfront apartment at The Reef. <br /><br />Designed for up to 4 people with a king size bed and a sofa bed. <br /><br />Private balcony with direct ocean v
+
+[localizedString] ×1
+  $.data.node.pdpPresentation.descriptions.longDescriptionHtml.localizedString
+    type=string  preview: Enjoy Puerto Vallarta from this exclusive oceanfront apartment at The Reef. <br /><br />Designed for up to 4 people with a king size bed and a sofa bed. <br /><br />Private balcony with direct ocean v
+
+[source] ×1
+  $.data.node.pdpPresentation.descriptions.longDescriptionHtml.source
+    type=string  preview: Disfruta Puerto Vallarta desde este exclusivo depa frente al mar en The Reef. <br /><br />Diseñado para hasta 4 personas con cama king y sofá cama. <br /><br />Balcón privado con vista directa al océa
+
+[ratingCount] ×1
+  $.data.node.pdpPresentation.quality.listingRatingStats.overallRatingStats.ratingCount
+    type=string  preview: 2
+
+[adults] ×1
+  $.variables.pdpSectionsRequest.adults
+    type=string  preview: 2
+
+[privateBooking] ×1
+  $.variables.pdpSectionsRequest.privateBooking
+    type=boolean  preview: false
+
+[staysBookingMigrationEnabled] ×1
+  $.variables.pdpSectionsRequest.staysBookingMigrationEnabled
+    type=boolean  preview: false
+
+══════ PROBE J [60d-out / 7 nights]: search PDP SSR response for price fields 
+window: 2026-06-22 → 2026-06-29 (7 nights)
+URL: https://www.airbnb.com/rooms/1610096526897460312?check_in=2026-06-22&check_out=2026-06-29&adults=2
+HTTP: 200
+HTML length: 473721
+niobe response top-level keys: data, variables
+
+found 63 price-shaped fields with non-empty values:
+
+[loggingId] ×12
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.tripDetailsLoggingEventData.guestInputLoggingEventData.loggingId
+    type=string  preview: pdp.bookItSidebar.guestInput
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.tripDetailsLoggingEventData.selectMaxNightsViolationDateLoggingEventData.loggingId
+    type=string  preview: pdp.bookItSidebar.selectMaxNightsViolationDate
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.tripDetailsLoggingEventData.selectMinNightsViolationDateLoggingEventData.loggingId
+    type=string  preview: pdp.bookItSidebar.selectMinNightsViolationDate
+  …+9 more
+
+[component] ×12
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.tripDetailsLoggingEventData.guestInputLoggingEventData.component
+    type=string  preview: guestInput
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.tripDetailsLoggingEventData.selectMaxNightsViolationDateLoggingEventData.component
+    type=string  preview: selectMaxNightsViolationDate
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.tripDetailsLoggingEventData.selectMinNightsViolationDateLoggingEventData.component
+    type=string  preview: selectMinNightsViolationDate
+  …+9 more
+
+[showPriceBreakdown] ×4
+  $.data.presentation.stayProductDetailPage.sections.sections[2].section.showPriceBreakdown
+    type=boolean  preview: false
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.showPriceBreakdown
+    type=boolean  preview: true
+  $.data.presentation.stayProductDetailPage.sections.sections[13].section.showPriceBreakdown
+    type=boolean  preview: false
+  …+1 more
+
+[title] ×4
+  $.data.presentation.stayProductDetailPage.sections.sections[3].section.houseRules[2].title
+    type=string  preview: 4 guests maximum
+  $.data.presentation.stayProductDetailPage.sections.sections[3].section.houseRulesSections[1].items[0].title
+    type=string  preview: 4 guests maximum
+  $.data.presentation.stayProductDetailPage.sections.sections[28].section.items[1].title
+    type=string  preview: Guest access
+  …+1 more
+
+[subtitle] ×4
+  $.data.presentation.stayProductDetailPage.sections.sections[4].section.disclaimer.subtitle
+    type=string  preview: Reviews from past guests help our community learn more about each home. By default, reviews are sorted by relevancy. Relevancy is based on recency, length, and information that you provide to us, such
+  $.data.presentation.stayProductDetailPage.sections.sections[18].section.highlights[2].subtitle
+    type=string  preview: Recent guests gave Claudia Lizzette a 5-star rating for communication.
+  $.data.presentation.stayProductDetailPage.sections.sections[22].section.seeAllAmenitiesGroups[6].amenities[0].subtitle
+    type=string  preview: Space where guests can cook their own meals
+  …+1 more
+
+[value] ×3
+  $.data.presentation.stayProductDetailPage.sections.sections[6].section.cardData.stats[0].value
+    type=string  preview: 9
+  $.data.presentation.stayProductDetailPage.sections.sections[6].section.cardData.stats[1].value
+    type=string  preview: 4.56
+  $.data.presentation.stayProductDetailPage.sections.sections[6].section.cardData.stats[2].value
+    type=string  preview: 3
+
+[__typename] ×3
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.adultsPicker.__typename
+    type=string  preview: GuestPickerSection
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.childrenPicker.__typename
+    type=string  preview: GuestPickerSection
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.infantsPicker.__typename
+    type=string  preview: GuestPickerSection
+
+[sectionId] ×3
+  $.data.presentation.stayProductDetailPage.sections.sections[15].sectionId
+    type=string  preview: GUEST_FAVORITE_BANNER
+  $.data.presentation.stayProductDetailPage.sections.screens[6].sectionPlacements[3].sectionDetails[1].sectionId
+    type=string  preview: GUEST_FAVORITE_BANNER
+  $.data.presentation.stayProductDetailPage.sections.screens[6].sectionPlacements[7].sectionDetails[3].sectionId
+    type=string  preview: GUEST_FAVORITE_BANNER
+
+[integratedPillMessageType] ×2
+  $.data.presentation.stayProductDetailPage.sections.sections[2].section.integratedPillMessageType
+    type=string  preview: FLEXIBLE_CANCELLATION_POLICY
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.integratedPillMessageType
+    type=string  preview: FLEXIBLE_CANCELLATION_POLICY
+
+[integratedPill] ×2
+  $.data.presentation.stayProductDetailPage.sections.sections[2].section.integratedPill
+    type=object  preview: {"__typename":"BasicListItem","icon":"COMPACT_CHECK","title":"Free cancellation before <b>May 23</b>","shortTitle":null,"loggingEventData":{"__typename":"LoggingEventData","loggingId":"pdp.bookItFoote
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.integratedPill
+    type=object  preview: {"__typename":"BasicListItem","icon":"COMPACT_CHECK","title":"Free cancellation before <b>May 23</b>","shortTitle":null,"loggingEventData":{"__typename":"LoggingEventData","loggingId":"pdp.bookItSideb
+
+[id] ×2
+  $.data.presentation.stayProductDetailPage.sections.sections[8].id
+    type=string  preview: U2VjdGlvbkNvbnRhaW5lcjotNDUzOTM4NTQyOTc0MzMxNDkxNQ==
+  $.data.node.pdpPresentation.mediaTour.stops[7].items[10].image.id
+    type=string  preview: SW1hZ2VFbnRpdHk6MTI1MDMxNjQ4NzQwMzU3MzgxNw==
+
+[accessibilityLabel] ×1
+  $.data.presentation.stayProductDetailPage.sections.sections[0].section.mediaItem.accessibilityLabel
+    type=string  preview: A guest with a service animal being greeted by a host
+
+[emptyCategoryRatingDisclaimer] ×1
+  $.data.presentation.stayProductDetailPage.sections.sections[4].section.emptyCategoryRatingDisclaimer
+    type=string  preview: Detailed ratings will appear once more guests have reviewed this place.
+
+[ratePlanLoggingEventData] ×1
+  $.data.presentation.stayProductDetailPage.sections.sections[9].section.ratePlanLoggingEventData
+    type=object  preview: {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.ratePlanInput","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":null,"component":null}
+
+[htmlText] ×1
+  $.data.presentation.stayProductDetailPage.sections.sections[20].section.htmlDescription.htmlText
+    type=string  preview: Enjoy Puerto Vallarta from this exclusive oceanfront apartment at The Reef. <br /><br />Designed for up to 4 people with a king size bed and a sofa bed. <br /><br />Private balcony with direct ocean v
+
+[screenId] ×1
+  $.data.presentation.stayProductDetailPage.sections.screens[2].screenId
+    type=string  preview: NON_EXPERIENCED_GUEST_LEARN_MORE_MODAL
+
+[visibleReviewCount] ×1
+  $.data.presentation.stayProductDetailPage.sections.metadata.loggingContext.eventDataLogging.visibleReviewCount
+    type=string  preview: 2
+
+[bookingPrefetchData] ×1
+  $.data.presentation.stayProductDetailPage.sections.metadata.bookingPrefetchData
+    type=object  preview: {"__typename":"PdpBookingPrefetchData","isHotelRatePlanEnabled":null,"tpointContent":null,"barPrice":null,"canInstantBook":null,"cancellationPolicies":[{"__typename":"LegacyPdpCancellationSection","ca
+
+[reviewCount] ×1
+  $.data.presentation.stayProductDetailPage.sections.sbuiData.sectionConfiguration.root.sections[0].sectionData.reviewData.reviewCount
+    type=string  preview: 2
+
+[ratingCount] ×1
+  $.data.node.pdpPresentation.quality.listingRatingStats.overallRatingStats.ratingCount
+    type=string  preview: 2
+
+[adults] ×1
+  $.variables.pdpSectionsRequest.adults
+    type=string  preview: 2
+
+[privateBooking] ×1
+  $.variables.pdpSectionsRequest.privateBooking
+    type=boolean  preview: false
+
+[staysBookingMigrationEnabled] ×1
+  $.variables.pdpSectionsRequest.staysBookingMigrationEnabled
+    type=boolean  preview: false
+
+══════ DONE ══════════════════════════════════════════════════════════════════
+ryandolan@Ryans-Mac-mini vallartapulse % 
