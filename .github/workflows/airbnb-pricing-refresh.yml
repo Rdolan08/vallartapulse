@@ -1,10 +1,18 @@
 name: Airbnb Pricing Refresh
 
 # ─────────────────────────────────────────────────────────────────────────
-# RE-ENABLED 2026-04-23 — both GraphQL adapters shipped and the unavailable
-# fast-path landed in 68475e8. Daily cron now active; the runner also
-# triggers a post-scrape presumed_bookings inference step so we slowly
-# build a transaction-rate (vs. asking-rate) dataset over time.
+# CRON DISABLED 2026-04-23 — the Decodo residential proxy pool is burned
+# (every /rooms/<id> request soft-redirects to the Airbnb homepage), so
+# triggering the Railway endpoint just produces zero-quote runs and dark-
+# pricing alerts. The nightly schedule has moved to a launchd job on the
+# Mac mini (com.vallartapulse.airbnb-pricing, 17:00 PV = 23:00 UTC) which
+# invokes the same runner via `pnpm scrape:airbnb-pricing` against
+# $RAILWAY_DATABASE_URL — same code, residential IP, no proxy needed.
+#
+# `workflow_dispatch` is preserved as an operator escape hatch in case the
+# Decodo pool ever gets rotated and the Railway path becomes viable again.
+# To re-enable the cron, uncomment the `schedule:` block below and flip the
+# Slack/issue `if: false` gates back to their original conditions.
 # ─────────────────────────────────────────────────────────────────────────
 
 # Triggers the per-night Airbnb pricing pipeline ("path 2" in
@@ -43,8 +51,9 @@ name: Airbnb Pricing Refresh
 # "re-alert only every 24h or when the situation changes" requirement.
 
 on:
-  schedule:
-    - cron: "0 9 * * *"   # daily 09:00 UTC (= 03:00 PV / 04:00 ET)
+  # schedule:
+  #   - cron: "0 9 * * *"   # DISABLED 2026-04-23 — see header. Mac mini
+  #                         # launchd job owns the nightly schedule now.
   workflow_dispatch:
     inputs:
       max_listings:
