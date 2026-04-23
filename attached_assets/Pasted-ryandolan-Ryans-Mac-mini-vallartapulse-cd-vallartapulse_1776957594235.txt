@@ -1,0 +1,78 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && git pull && AIRBNB_PRICING_MAX_LISTINGS=1 AIRBNB_PRICING_MAX_CHECKPOINTS_PER_LISTING=1 AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts run scrape:airbnb-pricing
+remote: Enumerating objects: 81, done.
+remote: Counting objects: 100% (81/81), done.
+remote: Compressing objects: 100% (10/10), done.
+remote: Total 49 (delta 31), reused 48 (delta 30), pack-reused 0 (from 0)
+Unpacking objects: 100% (49/49), 331.82 KiB | 2.96 MiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   70ae69b..7c78ffb  main       -> origin/main
+Updating 70ae69b..7c78ffb
+Fast-forward
+ artifacts/api-server/src/lib/ingest/airbnb-graphql-quote-adapter.ts             |   46 +-
+ artifacts/pv-datastore/about/index.html                                         |    6 +-
+ artifacts/pv-datastore/contact/index.html                                       |    6 +-
+ artifacts/pv-datastore/economic/index.html                                      |    6 +-
+ artifacts/pv-datastore/index.html                                               |    6 +-
+ artifacts/pv-datastore/pricing-tool/index.html                                  |    6 +-
+ artifacts/pv-datastore/public/og/pricing-tool.png                               |  Bin 75259 -> 197509 bytes
+ artifacts/pv-datastore/public/og/sources.png                                    |  Bin 104934 -> 106916 bytes
+ artifacts/pv-datastore/rental-market/index.html                                 |    6 +-
+ artifacts/pv-datastore/safety/index.html                                        |    6 +-
+ artifacts/pv-datastore/sources/index.html                                       |    6 +-
+ artifacts/pv-datastore/tourism/index.html                                       |    6 +-
+ artifacts/pv-datastore/weather/index.html                                       |    6 +-
+ ...ed-Absolutely-I-took-a-first-pass-look-through-the-repo-Qu_1776957326016.txt | 2949 ++++++++++++++++++++++++++++++++++++
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776921417445.txt |  154 ++
+ 15 files changed, 3175 insertions(+), 34 deletions(-)
+ create mode 100644 attached_assets/Pasted-Absolutely-I-took-a-first-pass-look-through-the-repo-Qu_1776957326016.txt
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776921417445.txt
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":1,"dryRun":true,"ts":"2026-04-23T15:19:01.920Z"}
+[airbnb-pricing] listing 305 (1552402429): 1 checkpoints to quote
+[airbnb-pricing]   cp 1/1 2026-04-24→2026-04-26 total=— 21745ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+{
+  "event": "airbnb-pricing-refresh.done",
+  "elapsedMs": 22581,
+  "summary": {
+    "attempted": 1,
+    "ok": 1,
+    "failed": 0,
+    "totalQuotesWritten": 0,
+    "totalDaysWithPrice": 0,
+    "totalQuotesEnriched": 0,
+    "totalQuotesFailed": 1,
+    "totalFullyAvailableCheckpoints": 1,
+    "totalQuotesEnrichedFullyAvailable": 0,
+    "enrichmentRate": 0,
+    "shaSource": "fallback",
+    "quoteShaSource": "cache",
+    "shaRediscoveriesDuringRun": 0,
+    "quoteShaRediscoveriesDuringRun": 0,
+    "alertLevel": "ok",
+    "alertReason": ""
+  },
+  "listings": [
+    {
+      "listingId": 305,
+      "externalId": "1552402429",
+      "ok": true,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 1,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 1,
+      "fullyAvailableCheckpoints": 1,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "calendar: unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    }
+  ]
+}
+WARN: zero listings processed (check the active Airbnb cohort)
