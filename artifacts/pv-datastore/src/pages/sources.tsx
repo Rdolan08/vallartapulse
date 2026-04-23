@@ -367,7 +367,10 @@ function PipelinesHealth({
 interface QualityPlatform {
   sourcePlatform: string;
   totalRows: number;
-  distinctListings: number;
+  // Optional — older API deploys (before the active-cohort retrofit) don't
+  // return this field. Frontend must tolerate `undefined` during the
+  // Vercel-vs-Railway deploy gap, otherwise the whole panel crashes.
+  distinctListings?: number;
   nullPrice: number;
   zeroPrice: number;
   lowPrice: number;
@@ -487,7 +490,7 @@ function DataQualityPanel({
                 {perPlatform.map((p) => (
                   <tr key={p.sourcePlatform} className="border-b border-border/10 last:border-0">
                     <td className="py-1.5 pr-3 font-mono">{p.sourcePlatform}</td>
-                    <td className="py-1.5 px-2 text-right tabular-nums font-medium text-foreground">{p.distinctListings.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums font-medium text-foreground">{(p.distinctListings ?? 0).toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{p.totalRows.toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-emerald-400">{p.plausiblePrice.toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{p.nullPrice.toLocaleString()}</td>
@@ -521,7 +524,7 @@ function DataQualityPanel({
                 {all && (
                   <tr className="border-t-2 border-border/30 font-medium">
                     <td className="py-1.5 pr-3 font-mono">{all.sourcePlatform}</td>
-                    <td className="py-1.5 px-2 text-right tabular-nums text-foreground">{all.distinctListings.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-foreground">{(all.distinctListings ?? 0).toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{all.totalRows.toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-emerald-400">{all.plausiblePrice.toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{all.nullPrice.toLocaleString()}</td>
