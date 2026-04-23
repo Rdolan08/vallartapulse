@@ -494,8 +494,23 @@ export async function runAirbnbPricingRefresh(
       }
 
       let checkpointRows = buildQuoteRows(l.id, result, new Date(), today);
-      if (Number.isFinite(maxCheckpointsPerListing)) {
-        checkpointRows = checkpointRows.slice(0, maxCheckpointsPerListing);
+      if (
+        Number.isFinite(maxCheckpointsPerListing) &&
+        checkpointRows.length > maxCheckpointsPerListing
+      ) {
+        // Evenly-spaced sample across the full checkpoint range so smoke
+        // tests cover near-term + mid-range + far-future. (Slicing the
+        // first N would only ever exercise short-notice windows, which
+        // most listings block via min-stay or advance-notice rules and
+        // therefore correctly render no price.)
+        const n = maxCheckpointsPerListing;
+        const total = checkpointRows.length;
+        const sampled: typeof checkpointRows = [];
+        for (let i = 0; i < n; i++) {
+          const idx = Math.min(total - 1, Math.floor((i * total) / (n - 1 || 1)));
+          sampled.push(checkpointRows[idx]);
+        }
+        checkpointRows = sampled;
       }
       stat.checkpointsAttempted = checkpointRows.length;
       stat.fullyAvailableCheckpoints = checkpointRows.filter(
