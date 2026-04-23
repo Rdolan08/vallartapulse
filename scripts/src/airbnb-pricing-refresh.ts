@@ -114,6 +114,7 @@ async function main(): Promise<number> {
         event: "airbnb-pricing-refresh.done",
         elapsedMs,
         summary: result.summary,
+        listings: result.listings,
       },
       null,
       2,

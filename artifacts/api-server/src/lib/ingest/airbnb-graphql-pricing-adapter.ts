@@ -58,7 +58,7 @@ const AIRBNB_API_KEY = "d306zoyjsyarp7ifhu67rjxn52tv0t20";
  * SHA grepped from a current `view-source:airbnb.com/rooms/<id>` page.
  */
 const BOOTSTRAP_SHA =
-  "8f08e03c7bd16fcad3c92a3592c19a8b559a0d0855a84028d1163d4733ed9ade";
+  "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914";
 
 /** Realistic Chrome 124 macOS UA — matches the discovery-runner UA. */
 const REALISTIC_UA =
