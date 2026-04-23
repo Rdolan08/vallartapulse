@@ -163,6 +163,7 @@ export async function fetchAirbnbQuote(
   let sidebarText = "";
   let pageTitle = "";
   let bodyPreview = "";
+  let pageRef: typeof page | null = page;
 
   try {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: PAGE_NAV_TIMEOUT_MS });
@@ -216,17 +217,51 @@ export async function fetchAirbnbQuote(
     }
   } catch (err) {
     errors.push(`playwright nav: ${err instanceof Error ? err.message : String(err)}`);
-  } finally {
-    await page.close().catch(() => {});
   }
 
   if (!sidebarText || !/\$\d/.test(sidebarText)) {
+    // Capture diagnostic artifacts BEFORE closing the page so we can see
+    // what Airbnb actually served (captcha, login wall, region redirect,
+    // selector change, etc.). Best-effort — never throw from the dump.
+    let dumpPaths: string[] = [];
+    if (pageRef && process.env.AIRBNB_PRICING_DUMP !== "0") {
+      try {
+        bodyPreview = (
+          await pageRef.locator("body").innerText({ timeout: 2000 }).catch(() => "")
+        )
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 300);
+        const ts = Date.now();
+        const tag = `${externalId}-${opts.checkin}-${ts}`;
+        const htmlPath = `/tmp/airbnb-debug-${tag}.html`;
+        const pngPath = `/tmp/airbnb-debug-${tag}.png`;
+        const html = await pageRef.content().catch(() => "");
+        if (html) {
+          const fs = await import("node:fs/promises");
+          await fs.writeFile(htmlPath, html, "utf8").catch(() => {});
+          dumpPaths.push(htmlPath);
+        }
+        await pageRef.screenshot({ path: pngPath, fullPage: false }).catch(() => {});
+        dumpPaths.push(pngPath);
+      } catch {
+        // best-effort
+      }
+    }
+    await page.close().catch(() => {});
+    pageRef = null;
+
+    const titlePart = pageTitle ? ` title="${pageTitle.slice(0, 80)}"` : "";
+    const bodyPart = bodyPreview ? ` body="${bodyPreview}"` : "";
+    const dumpPart = dumpPaths.length > 0 ? ` dump=${dumpPaths.join(",")}` : "";
     errors.push(
-      "no price text rendered in booking sidebar (listing may be unbookable for this window, " +
-        "host hidden pricing, or Airbnb served a bot-challenge page)",
+      "no price text rendered in booking sidebar" + titlePart + bodyPart + dumpPart,
     );
     return baseResult;
   }
+
+  await page.close().catch(() => {});
+  pageRef = null;
 
   const parsed = parsePriceLines(sidebarText);
 
