@@ -367,6 +367,7 @@ function PipelinesHealth({
 interface QualityPlatform {
   sourcePlatform: string;
   totalRows: number;
+  distinctListings: number;
   nullPrice: number;
   zeroPrice: number;
   lowPrice: number;
@@ -472,6 +473,7 @@ function DataQualityPanel({
               <thead>
                 <tr className="text-muted-foreground border-b border-border/30">
                   <th className="text-left py-1 pr-3 font-medium">{t("Platform", "Plataforma")}</th>
+                  <th className="text-right py-1 px-2 font-medium">{t("Listings", "Anuncios")}</th>
                   <th className="text-right py-1 px-2 font-medium">{t("Total rows", "Filas totales")}</th>
                   <th className="text-right py-1 px-2 font-medium">{t("Plausible", "Plausibles")}</th>
                   <th className="text-right py-1 px-2 font-medium">{t("Null price", "Precio nulo")}</th>
@@ -485,7 +487,8 @@ function DataQualityPanel({
                 {perPlatform.map((p) => (
                   <tr key={p.sourcePlatform} className="border-b border-border/10 last:border-0">
                     <td className="py-1.5 pr-3 font-mono">{p.sourcePlatform}</td>
-                    <td className="py-1.5 px-2 text-right tabular-nums">{p.totalRows.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums font-medium text-foreground">{p.distinctListings.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{p.totalRows.toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-emerald-400">{p.plausiblePrice.toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{p.nullPrice.toLocaleString()}</td>
                     <td className={cn(
@@ -518,7 +521,8 @@ function DataQualityPanel({
                 {all && (
                   <tr className="border-t-2 border-border/30 font-medium">
                     <td className="py-1.5 pr-3 font-mono">{all.sourcePlatform}</td>
-                    <td className="py-1.5 px-2 text-right tabular-nums">{all.totalRows.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-foreground">{all.distinctListings.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{all.totalRows.toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-emerald-400">{all.plausiblePrice.toLocaleString()}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{all.nullPrice.toLocaleString()}</td>
                     <td className={cn(

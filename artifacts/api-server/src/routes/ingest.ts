@@ -1596,20 +1596,39 @@ router.get("/ingest/airbnb-calendar-freshness", async (req, res) => {
 // since the page that consumes it is public.
 router.get("/ingest/rental-prices-quality", async (req, res) => {
   try {
+    // INNER JOIN against rental_listings WHERE is_active = true scopes the
+    // table to the *active cohort* — the listings we actually care about for
+    // pricing decisions. Rows belonging to delisted/paused listings, and
+    // orphan rows whose listing_id no longer exists in rental_listings, are
+    // excluded so the row counts mean something.
+    //
+    // We deliberately KEEP null-price rows in the count: Airbnb's calendar
+    // legitimately omits price for booked / blocked / minimum-stay-restricted
+    // nights, and those null-price rows are the input signal for the
+    // presumed-bookings inference (rented-night detection). Filtering them
+    // out would silently destroy that signal.
+    //
+    // distinct_listings is a far more interpretable number than raw row
+    // counts ("1,979 listings covered" vs "542,500 rows"), surfaced as a
+    // separate column.
     const result = await db.execute(sql`
       WITH joined AS (
         SELECT
-          COALESCE(rl.source_platform, 'unknown') AS source_platform,
+          rl.source_platform,
+          rpbd.listing_id,
           rpbd.nightly_price_usd,
           rpbd.date,
           rpbd.scraped_at
         FROM rental_prices_by_date rpbd
-        LEFT JOIN rental_listings rl ON rl.id = rpbd.listing_id
+        INNER JOIN rental_listings rl
+          ON rl.id = rpbd.listing_id
+         AND rl.is_active = true
       ),
       grouped AS (
         SELECT
           source_platform,
           COUNT(*)::int                                                              AS total_rows,
+          COUNT(DISTINCT listing_id)::int                                            AS distinct_listings,
           COUNT(*) FILTER (WHERE nightly_price_usd IS NULL)::int                    AS null_price,
           COUNT(*) FILTER (WHERE nightly_price_usd = 0)::int                        AS zero_price,
           COUNT(*) FILTER (WHERE nightly_price_usd > 0 AND nightly_price_usd < 20)::int
@@ -1625,24 +1644,28 @@ router.get("/ingest/rental-prices-quality", async (req, res) => {
           MAX(scraped_at)                                                            AS newest_scrape_at
         FROM joined
         GROUP BY source_platform
+      ),
+      all_row AS (
+        SELECT
+          'ALL'                                          AS source_platform,
+          SUM(total_rows)::int                           AS total_rows,
+          (SELECT COUNT(DISTINCT listing_id)::int FROM joined) AS distinct_listings,
+          SUM(null_price)::int                           AS null_price,
+          SUM(zero_price)::int                           AS zero_price,
+          SUM(low_price)::int                            AS low_price,
+          SUM(plausible_price)::int                      AS plausible_price,
+          SUM(high_price)::int                           AS high_price,
+          SUM(past_dated)::int                           AS past_dated,
+          SUM(scraped_30d_plus)::int                     AS scraped_30d_plus,
+          SUM(scraped_60d_plus)::int                     AS scraped_60d_plus,
+          SUM(scraped_90d_plus)::int                     AS scraped_90d_plus,
+          MIN(oldest_scrape_at)                          AS oldest_scrape_at,
+          MAX(newest_scrape_at)                          AS newest_scrape_at
+        FROM grouped
       )
       SELECT * FROM grouped
       UNION ALL
-      SELECT
-        'ALL',
-        SUM(total_rows)::int,
-        SUM(null_price)::int,
-        SUM(zero_price)::int,
-        SUM(low_price)::int,
-        SUM(plausible_price)::int,
-        SUM(high_price)::int,
-        SUM(past_dated)::int,
-        SUM(scraped_30d_plus)::int,
-        SUM(scraped_60d_plus)::int,
-        SUM(scraped_90d_plus)::int,
-        MIN(oldest_scrape_at),
-        MAX(newest_scrape_at)
-      FROM grouped
+      SELECT * FROM all_row
       ORDER BY source_platform
     `);
 
