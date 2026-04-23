@@ -1,0 +1,36 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && git pull && pnpm --filter @workspace/scripts exec tsx ./src/airbnb-quote-test.ts 53116610 2026-06-20 2026-06-22 2 && ls -la /tmp/airbnb-debug-53116610-*
+remote: Enumerating objects: 11, done.
+remote: Counting objects: 100% (11/11), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 3.50 KiB | 448.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   56d609a..895d19f  main       -> origin/main
+Updating 56d609a..895d19f
+Fast-forward
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776958860377.txt |  76 +++++++++++++++++++++++++++
+ scripts/src/airbnb-quote-test.ts                                                | 105 +++++++++++++++++++++++++++++++++++++
+ 2 files changed, 181 insertions(+)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776958860377.txt
+ create mode 100644 scripts/src/airbnb-quote-test.ts
+{"event":"quote-test.start","externalId":"53116610","checkin":"2026-06-20","checkout":"2026-06-22","guestCount":2,"ts":"2026-04-23T15:44:36.086Z"}
+{
+  "event": "quote-test.done",
+  "elapsedMs": 1150,
+  "result": {
+    "accommodationUsd": null,
+    "cleaningFeeUsd": null,
+    "serviceFeeUsd": null,
+    "taxesUsd": null,
+    "totalPriceUsd": null,
+    "currency": "USD",
+    "shaUsed": "playwright-dom-scrape",
+    "available": false,
+    "errors": [
+      "delisted-or-blocked title=\"Airbnb: Vacation Rentals, Cabins, Beach Houses, Unique Homes & Experiences\" body=\"Skip to content Homes NEW NEW Experiences, new NEW NEW Services, new Start your search Location Check in / Check out Guests What Become a host\" dump=/tmp/airbnb-debug-53116610-2026-06-20-delisted-1776959077194.html,/tmp/airbnb-debug-53116610-2026-06-20-delisted-1776959077194.png"
+    ],
+    "staleSha": false
+  }
+}
+/Users/ryandolan/vallartapulse/scripts:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 2: tsx ./src/airbnb-quote-test.ts 53116610 2026-06-20 2026-06-22 2

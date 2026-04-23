@@ -104,6 +104,26 @@ async function getContext(): Promise<BrowserContext> {
     if (t === "image" || t === "media" || t === "font") return route.abort();
     return route.continue();
   });
+  // CRITICAL: warm the session by visiting the homepage once. Without this,
+  // every subsequent /rooms/<id> hit looks like a brand-new no-cookie bot
+  // session and Airbnb fast-paths it to the homepage redirect (we proved
+  // this empirically — adding ctx.clearCookies() per quote broke ALL
+  // listings, including the known-live MarshmallowTown 53116610). The
+  // homepage nav sets the bev / _abp / _airbed_session_id / etc cookies
+  // that anti-scraping checks expect on listing requests. We only do this
+  // once per process — let cookies accumulate naturally after that.
+  try {
+    const warmup = await context.newPage();
+    await warmup.goto("https://www.airbnb.com/", {
+      waitUntil: "domcontentloaded",
+      timeout: 15_000,
+    });
+    // Brief settle so background JS can set its cookies.
+    await warmup.waitForTimeout(1_500);
+    await warmup.close().catch(() => {});
+  } catch {
+    // Non-fatal — if warmup fails the per-listing nav will still try.
+  }
   return context;
 }
 
@@ -159,15 +179,72 @@ export async function fetchAirbnbQuote(
     `&check_out=${opts.checkout}` +
     `&adults=${Math.max(1, opts.guestCount | 0)}`;
 
+  // DO NOT clear cookies between quotes. We tried it as a defensive
+  // measure and it broke EVERY listing — Airbnb fast-paths cookie-less
+  // requests to the homepage redirect (validated 2026-04-23 against
+  // listing 53116610 which is alive in a normal browser). Cookies set
+  // by the homepage warmup in getContext() must persist across the
+  // entire run so /rooms/<id> requests look like a real session.
+
   const page = await ctx.newPage();
   let sidebarText = "";
   let pageTitle = "";
   let bodyPreview = "";
   let pageRef: typeof page | null = page;
 
+  // Helper: write HTML + screenshot dump of the current page state to /tmp.
+  // Always best-effort. Returns the list of paths written.
+  const dumpFailureArtifacts = async (reason: string): Promise<string[]> => {
+    if (!pageRef || process.env.AIRBNB_PRICING_DUMP === "0") return [];
+    const paths: string[] = [];
+    try {
+      const ts = Date.now();
+      const tag = `${externalId}-${opts.checkin}-${reason}-${ts}`;
+      const htmlPath = `/tmp/airbnb-debug-${tag}.html`;
+      const pngPath = `/tmp/airbnb-debug-${tag}.png`;
+      const html = await pageRef.content().catch(() => "");
+      if (html) {
+        const fs = await import("node:fs/promises");
+        await fs.writeFile(htmlPath, html, "utf8").catch(() => {});
+        paths.push(htmlPath);
+      }
+      await pageRef.screenshot({ path: pngPath, fullPage: false }).catch(() => {});
+      paths.push(pngPath);
+    } catch {
+      /* best-effort */
+    }
+    return paths;
+  };
+
   try {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: PAGE_NAV_TIMEOUT_MS });
     pageTitle = await page.title().catch(() => "");
+
+    // Fast-path: if the title is the generic Airbnb homepage / "Oops!" 404
+    // page, the listing has been delisted (or we got soft-blocked into a
+    // redirect). Bail immediately — no point waiting 18s for a sidebar
+    // that will never render.
+    if (
+      /^Airbnb: Vacation Rentals/i.test(pageTitle) ||
+      /Oops/i.test(pageTitle) ||
+      /Page not found/i.test(pageTitle)
+    ) {
+      bodyPreview = (
+        await page.locator("body").innerText({ timeout: 2000 }).catch(() => "")
+      )
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 200);
+      const dumpPaths = await dumpFailureArtifacts("delisted");
+      await page.close().catch(() => {});
+      pageRef = null;
+      const dumpPart = dumpPaths.length > 0 ? ` dump=${dumpPaths.join(",")}` : "";
+      errors.push(
+        `delisted-or-blocked title="${pageTitle.slice(0, 80)}" ` +
+          `body="${bodyPreview}"${dumpPart}`,
+      );
+      return baseResult;
+    }
 
     // Booking sidebar — section id BOOK_IT_SIDEBAR / BOOK_IT_FLOATING_FOOTER.
     // Wait for ANY price-shaped string to appear in it.
@@ -176,7 +253,23 @@ export async function fetchAirbnbQuote(
       .waitFor({ state: "attached", timeout: SIDEBAR_WAIT_MS })
       .catch(() => {});
 
-    // Wait until the sidebar actually renders dollars (not just skeleton).
+    // Wait until the sidebar actually renders the REAL stay price.
+    //
+    // The previous version of this wait used /\$\d/ which matched the
+    // "$0 today" deposit placeholder Airbnb renders FIRST while the
+    // pricing API is still in-flight. Result: we exited the wait early
+    // and scraped a sidebar that still had the literal text "loading"
+    // at the end (validated 2026-04-23 against listing 53116610).
+    //
+    // The fix: require BOTH conditions before we consider the sidebar
+    // ready —
+    //   (a) a non-zero dollar amount appears anywhere in the sidebar
+    //       (\$[1-9]\d* — must start with 1-9 so "$0 today" doesn't
+    //       satisfy it). The real stay price is always >=$10.
+    //   (b) the literal substring "loading" is GONE from the sidebar
+    //       (case-insensitive). This is Airbnb's skeleton placeholder
+    //       and disappears the instant the price API resolves.
+    //
     // Passed as a string so TS doesn't try to typecheck DOM globals here.
     await page
       .waitForFunction(
@@ -184,7 +277,8 @@ export async function fetchAirbnbQuote(
           const el = document.querySelector('[data-section-id*="BOOK_IT"]');
           if (!el) return false;
           const t = el.innerText || "";
-          return /\\$\\d/.test(t);
+          if (/loading/i.test(t)) return false;
+          return /\\$[1-9]\\d*/.test(t);
         })()`,
         null,
         { timeout: SIDEBAR_WAIT_MS },
@@ -220,34 +314,15 @@ export async function fetchAirbnbQuote(
   }
 
   if (!sidebarText || !/\$\d/.test(sidebarText)) {
-    // Capture diagnostic artifacts BEFORE closing the page so we can see
-    // what Airbnb actually served (captcha, login wall, region redirect,
-    // selector change, etc.). Best-effort — never throw from the dump.
-    let dumpPaths: string[] = [];
-    if (pageRef && process.env.AIRBNB_PRICING_DUMP !== "0") {
-      try {
-        bodyPreview = (
-          await pageRef.locator("body").innerText({ timeout: 2000 }).catch(() => "")
-        )
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 300);
-        const ts = Date.now();
-        const tag = `${externalId}-${opts.checkin}-${ts}`;
-        const htmlPath = `/tmp/airbnb-debug-${tag}.html`;
-        const pngPath = `/tmp/airbnb-debug-${tag}.png`;
-        const html = await pageRef.content().catch(() => "");
-        if (html) {
-          const fs = await import("node:fs/promises");
-          await fs.writeFile(htmlPath, html, "utf8").catch(() => {});
-          dumpPaths.push(htmlPath);
-        }
-        await pageRef.screenshot({ path: pngPath, fullPage: false }).catch(() => {});
-        dumpPaths.push(pngPath);
-      } catch {
-        // best-effort
-      }
-    }
+    bodyPreview = (
+      await (pageRef
+        ? pageRef.locator("body").innerText({ timeout: 2000 }).catch(() => "")
+        : Promise.resolve(""))
+    )
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 300);
+    const dumpPaths = await dumpFailureArtifacts("nosidebar");
     await page.close().catch(() => {});
     pageRef = null;
 
@@ -260,10 +335,24 @@ export async function fetchAirbnbQuote(
     return baseResult;
   }
 
+  const parsed = parsePriceLines(sidebarText);
+
+  // Parser-fail dump: sidebar HAD $ text but parser couldn't extract a Total.
+  // We need to SEE the text to fix the parser. Dump before closing the page.
+  if (parsed.total === null) {
+    const dumpPaths = await dumpFailureArtifacts("noparse");
+    const sidebarSnippet = sidebarText.replace(/\s+/g, " ").trim().slice(0, 300);
+    await page.close().catch(() => {});
+    pageRef = null;
+    const dumpPart = dumpPaths.length > 0 ? ` dump=${dumpPaths.join(",")}` : "";
+    errors.push(
+      `parser found $ but no Total. sidebar="${sidebarSnippet}"${dumpPart}`,
+    );
+    return baseResult;
+  }
+
   await page.close().catch(() => {});
   pageRef = null;
-
-  const parsed = parsePriceLines(sidebarText);
 
   return {
     accommodationUsd: parsed.accommodation,

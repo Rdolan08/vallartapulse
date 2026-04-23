@@ -1,0 +1,36 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && git pull && pnpm --filter @workspace/scripts exec tsx ./src/airbnb-quote-test.ts 53116610 2026-06-20 2026-06-22 2 && ls -la /tmp/airbnb-debug-53116610-*
+remote: Enumerating objects: 18, done.
+remote: Counting objects: 100% (18/18), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 10 (delta 7), reused 10 (delta 7), pack-reused 0 (from 0)
+Unpacking objects: 100% (10/10), 3.07 KiB | 348.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   895d19f..ba1200e  main       -> origin/main
+Updating 895d19f..ba1200e
+Fast-forward
+ artifacts/api-server/src/lib/ingest/airbnb-graphql-quote-adapter.ts                              | 29 ++++++++++++++++++++++++++---
+ attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776959095655.txt | 36 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 62 insertions(+), 3 deletions(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776959095655.txt
+{"event":"quote-test.start","externalId":"53116610","checkin":"2026-06-20","checkout":"2026-06-22","guestCount":2,"ts":"2026-04-23T15:47:16.940Z"}
+{
+  "event": "quote-test.done",
+  "elapsedMs": 3554,
+  "result": {
+    "accommodationUsd": null,
+    "cleaningFeeUsd": null,
+    "serviceFeeUsd": null,
+    "taxesUsd": null,
+    "totalPriceUsd": null,
+    "currency": "USD",
+    "shaUsed": "playwright-dom-scrape",
+    "available": false,
+    "errors": [
+      "parser found $ but no Total. sidebar=\"CHECK-IN 6/20/2026 CHECKOUT 6/22/2026 GUESTS 2 guests $0 today · Free cancellation before June 15 loading\" dump=/tmp/airbnb-debug-53116610-2026-06-20-noparse-1776959240428.html,/tmp/airbnb-debug-53116610-2026-06-20-noparse-1776959240428.png"
+    ],
+    "staleSha": false
+  }
+}
+/Users/ryandolan/vallartapulse/scripts:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 2: tsx ./src/airbnb-quote-test.ts 53116610 2026-06-20 2026-06-22 2
+ryandolan@Ryans-Mac-mini vallartapulse % 
