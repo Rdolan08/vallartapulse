@@ -104,6 +104,26 @@ async function getContext(): Promise<BrowserContext> {
     if (t === "image" || t === "media" || t === "font") return route.abort();
     return route.continue();
   });
+  // CRITICAL: warm the session by visiting the homepage once. Without this,
+  // every subsequent /rooms/<id> hit looks like a brand-new no-cookie bot
+  // session and Airbnb fast-paths it to the homepage redirect (we proved
+  // this empirically — adding ctx.clearCookies() per quote broke ALL
+  // listings, including the known-live MarshmallowTown 53116610). The
+  // homepage nav sets the bev / _abp / _airbed_session_id / etc cookies
+  // that anti-scraping checks expect on listing requests. We only do this
+  // once per process — let cookies accumulate naturally after that.
+  try {
+    const warmup = await context.newPage();
+    await warmup.goto("https://www.airbnb.com/", {
+      waitUntil: "domcontentloaded",
+      timeout: 15_000,
+    });
+    // Brief settle so background JS can set its cookies.
+    await warmup.waitForTimeout(1_500);
+    await warmup.close().catch(() => {});
+  } catch {
+    // Non-fatal — if warmup fails the per-listing nav will still try.
+  }
   return context;
 }
 
@@ -159,9 +179,12 @@ export async function fetchAirbnbQuote(
     `&check_out=${opts.checkout}` +
     `&adults=${Math.max(1, opts.guestCount | 0)}`;
 
-  // Defensive: clear cookies before every quote so an upstream
-  // bot-challenge cookie from a previous checkpoint can't poison this one.
-  await ctx.clearCookies().catch(() => {});
+  // DO NOT clear cookies between quotes. We tried it as a defensive
+  // measure and it broke EVERY listing — Airbnb fast-paths cookie-less
+  // requests to the homepage redirect (validated 2026-04-23 against
+  // listing 53116610 which is alive in a normal browser). Cookies set
+  // by the homepage warmup in getContext() must persist across the
+  // entire run so /rooms/<id> requests look like a real session.
 
   const page = await ctx.newPage();
   let sidebarText = "";
