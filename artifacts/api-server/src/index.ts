@@ -44,6 +44,44 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     logger.info({ port }, "Server listening");
+
+    // Pricing-tool uptime probe — fire ONE internal self-test against
+    // /api/rental/comps shortly after the server starts listening, so the
+    // in-process `lastSuccessAt` counter that powers /api/health/pricing-tool
+    // is populated within seconds of a Railway redeploy. Without this, every
+    // Railway redeploy resets the counter and the dashboard pill goes yellow
+    // until the next daily smoke check (which is also the only thing that
+    // updates it from outside). Best-effort only: a failure here is logged
+    // but never crashes the server, since the daily smoke workflow will
+    // still take over.
+    //
+    // Same minimal payload the GitHub smoke workflow uses, picked because
+    // Zona Romantica + 2 BR / 2 BA / 300 m to beach always has a populated
+    // comp pool under any seasonal load.
+    setTimeout(() => {
+      const url = `http://127.0.0.1:${port}/api/rental/comps`;
+      const payload = {
+        neighborhood_normalized: "Zona Romantica",
+        bedrooms: 2,
+        bathrooms: 2,
+        distance_to_beach_m: 300,
+      };
+      fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(payload),
+      })
+        .then((r) => {
+          if (r.ok) {
+            logger.info({ status: r.status }, "Pricing-tool startup self-test succeeded");
+          } else {
+            logger.warn({ status: r.status }, "Pricing-tool startup self-test returned non-2xx");
+          }
+        })
+        .catch((selfTestErr) => {
+          logger.warn({ err: selfTestErr }, "Pricing-tool startup self-test failed (best-effort, ignoring)");
+        });
+    }, 2000);
   });
 }
 
