@@ -25,7 +25,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "og": "tsx ./src/generate-og.ts",
     "scrape:airbnb-pricing": "tsx ./src/airbnb-pricing-refresh.ts",
-    "debug:airbnb-pricing": "tsx ./src/airbnb-pricing-debug.ts"
+    "debug:airbnb-pricing": "tsx ./src/airbnb-pricing-debug.ts",
+    "discover:airbnb": "tsx ./src/airbnb-discovery.ts",
+    "discover:str": "tsx ./src/str-discovery.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
