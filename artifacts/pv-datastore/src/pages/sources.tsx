@@ -128,25 +128,10 @@ const PIPELINES: PipelineCardConfig[] = [
     newestLabelEn: "Newest quote",
     newestLabelEs: "Cotización más reciente",
   },
-  {
-    // Consolidated VRBO pill — discovery (scrape) blocks pricing, so they
-    // share a fate. Show one row and mention both pipelines in the tooltip
-    // via the scrape freshness endpoint, which is the upstream blocker.
-    endpoint: "/api/ingest/vrbo-scrape-freshness",
-    labelEn: "VRBO",
-    labelEs: "VRBO",
-    mode: "cohort",
-    newestField: "newestScrapeAt",
-    newestLabelEn: "Newest scrape",
-    newestLabelEs: "Extracción más reciente",
-    overrideStatus: {
-      kind: "paused",
-      reasonEn:
-        "Discovery + pricing both paused — residential proxy cannot defeat VRBO's anti-bot challenge",
-      reasonEs:
-        "Descubrimiento y precios pausados — el proxy residencial no logra superar el desafío anti-bot de VRBO",
-    },
-  },
+  // VRBO pill removed 2026-04-23 — paused indefinitely (residential proxy
+  // cannot defeat the anti-bot challenge). The freshness endpoint is
+  // preserved for future re-enablement; just not surfaced on /sources
+  // until VRBO discovery + pricing actually resume.
   {
     endpoint: "/api/ingest/vacation-vallarta-pricing-freshness",
     labelEn: "Vacation Vallarta pricing",
