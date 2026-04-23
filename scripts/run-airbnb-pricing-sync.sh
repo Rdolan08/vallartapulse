@@ -12,9 +12,6 @@ set -euo pipefail
 #   AIRBNB_PRICING_EXPORT_MAX_LISTINGS (default 2000)
 #   AIRBNB_PRICING_EXPORT_CONCURRENCY (default 2)
 #   AIRBNB_PRICING_EXPORT_FILE (default ./airbnb_calendar_prices.csv)
-#   AIRBNB_PRICING_EXPORT_RESUME (1=true, default 0)
-#   AIRBNB_PRICING_EXPORT_START_OFFSET (default 0)
-#   AIRBNB_PRICING_EXPORT_PROGRESS_FILE (default ./.airbnb-pricing-export.progress.json)
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_DIR"
