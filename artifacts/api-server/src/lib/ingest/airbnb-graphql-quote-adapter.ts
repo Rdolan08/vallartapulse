@@ -516,6 +516,34 @@ function parsePriceLines(text: string): ParsedPrice {
     if (sum > 0 && accommodation !== null) total = round2(sum);
   }
 
+  // Collapsed-view fallback: short stays (often 1-3 nights) and many
+  // listings render only the inline summary "$287 $265 for 2 nights"
+  // without a "Total" row, "Cleaning fee" row, or expandable breakdown.
+  // In that case the loop above sets nothing and we land here with
+  // total=null. Hunt for the pattern in the FULL text:
+  //
+  //   ($N1 )?($N2 )?for K nights
+  //
+  // The LAST dollar amount immediately before "for K nights" is the
+  // real (post-discount) stay total. If only one $ appears, that's it;
+  // if two, the second is the actual price (first is strikethrough).
+  // We treat the result as both `accommodation` and `total` because
+  // for collapsed views Airbnb is showing the all-in nightly average ×
+  // nights without separating fees — and the rest of the pipeline
+  // treats `total` as the source of truth anyway.
+  if (total === null) {
+    const collapsed = text.match(
+      /(?:\$([\d,]+(?:\.\d+)?)\s+)?\$([\d,]+(?:\.\d+)?)\s+(?:[A-Za-z\s]*?\s+)?for\s+(\d+)\s+nights?/i,
+    );
+    if (collapsed) {
+      const actual = Number.parseFloat(collapsed[2].replace(/,/g, ""));
+      if (Number.isFinite(actual) && actual > 0) {
+        total = actual;
+        if (accommodation === null) accommodation = actual;
+      }
+    }
+  }
+
   return { accommodation, cleaning, service, taxes, total };
 }
 
