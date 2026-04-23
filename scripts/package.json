@@ -26,7 +26,6 @@
     "og": "tsx ./src/generate-og.ts",
     "scrape:airbnb-pricing-export": "tsx ./src/airbnb-pricing-export.ts",
     "scrape:airbnb-pricing-sync": "bash ./run-airbnb-pricing-sync.sh"
-    "scrape:airbnb-pricing-export": "tsx ./src/airbnb-pricing-export.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
