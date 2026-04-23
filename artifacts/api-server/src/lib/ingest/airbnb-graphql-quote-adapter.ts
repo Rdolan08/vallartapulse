@@ -161,9 +161,12 @@ export async function fetchAirbnbQuote(
 
   const page = await ctx.newPage();
   let sidebarText = "";
+  let pageTitle = "";
+  let bodyPreview = "";
 
   try {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: PAGE_NAV_TIMEOUT_MS });
+    pageTitle = await page.title().catch(() => "");
 
     // Booking sidebar — section id BOOK_IT_SIDEBAR / BOOK_IT_FLOATING_FOOTER.
     // Wait for ANY price-shaped string to appear in it.
