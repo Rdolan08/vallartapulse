@@ -1,0 +1,132 @@
+ryandolan@Ryans-Mac-mini vallartapulse % set -a; source ~/vallartapulse/.env; set +a && AIRBNB_PRICING_MAX_LISTINGS=5 AIRBNB_PRICING_MAX_CHECKPOINTS_PER_LISTING=2 AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts run scrape:airbnb-pricing 2>&1 | tee /tmp/smoke4.log
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":5,"dryRun":true,"ts":"2026-04-23T16:30:09.382Z"}
+[airbnb-pricing] listing 4214 (1610096526897460312): 2 checkpoints to quote
+[airbnb-pricing]   cp 1/2 2026-04-24→2026-04-26 total=unavailable 3957ms
+[airbnb-pricing]   cp 2/2 2027-03-20→2027-03-27 total=unavailable 1567ms
+[airbnb-pricing] listing 4213 (1508818201576753078): 2 checkpoints to quote
+[airbnb-pricing]   cp 1/2 2026-04-24→2026-04-26 total=unavailable 1462ms
+[airbnb-pricing]   cp 2/2 2027-03-20→2027-03-27 total=$1211 4792ms
+[airbnb-pricing] listing 4212 (1131262839989442604): 2 checkpoints to quote
+[airbnb-pricing]   cp 1/2 2026-04-24→2026-04-26 total=unavailable 1630ms
+[airbnb-pricing]   cp 2/2 2027-03-20→2027-03-27 total=unavailable 1495ms
+[airbnb-pricing] listing 4111 (1668381698431117746): 2 checkpoints to quote
+[airbnb-pricing]   cp 1/2 2026-04-24→2026-04-26 total=$119 4612ms
+[airbnb-pricing]   cp 2/2 2027-03-20→2027-03-27 total=$414 4671ms
+[airbnb-pricing] listing 4110 (873155792315908830): 2 checkpoints to quote
+[airbnb-pricing]   cp 1/2 2026-04-24→2026-04-26 total=unavailable 1693ms
+[airbnb-pricing]   cp 2/2 2027-03-20→2027-03-27 total=unavailable 1756ms
+{
+  "event": "airbnb-pricing-refresh.done",
+  "elapsedMs": 29697,
+  "summary": {
+    "attempted": 5,
+    "ok": 5,
+    "failed": 0,
+    "totalQuotesWritten": 3,
+    "totalDaysWithPrice": 0,
+    "totalQuotesEnriched": 3,
+    "totalQuotesFailed": 7,
+    "totalFullyAvailableCheckpoints": 3,
+    "totalQuotesEnrichedFullyAvailable": 3,
+    "enrichmentRate": 1,
+    "shaSource": "fallback",
+    "quoteShaSource": "cache",
+    "shaRediscoveriesDuringRun": 0,
+    "quoteShaRediscoveriesDuringRun": 0,
+    "alertLevel": "ok",
+    "alertReason": ""
+  },
+  "listings": [
+    {
+      "listingId": 4214,
+      "externalId": "1610096526897460312",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 2,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 2,
+      "fullyAvailableCheckpoints": 0,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    },
+    {
+      "listingId": 4213,
+      "externalId": "1508818201576753078",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 2,
+      "quotesEnriched": 1,
+      "quotesEnrichedFullyAvailable": 1,
+      "quotesFailed": 1,
+      "fullyAvailableCheckpoints": 1,
+      "quotesWritten": 1,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    },
+    {
+      "listingId": 4212,
+      "externalId": "1131262839989442604",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 2,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 2,
+      "fullyAvailableCheckpoints": 0,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    },
+    {
+      "listingId": 4111,
+      "externalId": "1668381698431117746",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 2,
+      "quotesEnriched": 2,
+      "quotesEnrichedFullyAvailable": 2,
+      "quotesFailed": 0,
+      "fullyAvailableCheckpoints": 2,
+      "quotesWritten": 2,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    },
+    {
+      "listingId": 4110,
+      "externalId": "873155792315908830",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 2,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 2,
+      "fullyAvailableCheckpoints": 0,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    }
+  ]
+}
+WARN: zero listings processed (check the active Airbnb cohort)
+ryandolan@Ryans-Mac-mini vallartapulse % 
