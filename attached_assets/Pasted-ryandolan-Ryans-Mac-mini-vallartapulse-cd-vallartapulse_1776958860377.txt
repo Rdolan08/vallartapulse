@@ -1,0 +1,76 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && git pull && AIRBNB_PRICING_MAX_LISTINGS=5 AIRBNB_PRICING_MAX_CHECKPOINTS_PER_LISTING=3 AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts run scrape:airbnb-pricing 2>&1 | tee /tmp/smoke.log
+remote: Enumerating objects: 34, done.
+remote: Counting objects: 100% (34/34), done.
+remote: Compressing objects: 100% (10/10), done.
+remote: Total 26 (delta 20), reused 22 (delta 16), pack-reused 0 (from 0)
+Unpacking objects: 100% (26/26), 2.79 MiB | 9.92 MiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   7c78ffb..56d609a  main       -> origin/main
+Updating 7c78ffb..56d609a
+Fast-forward
+ artifacts/api-server/src/lib/ingest/airbnb-graphql-quote-adapter.ts             | 109 +++++++++++++++++++++--------
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776957594235.txt |  78 +++++++++++++++++++++
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776958016710.txt | 131 ++++++++++++++++++++++++++++++++++
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776958440944.txt | 140 +++++++++++++++++++++++++++++++++++++
+ attached_assets/Screenshot_2026-04-23_at_10.21.09_AM_1776957677346.png          | Bin 0 -> 233897 bytes
+ attached_assets/Screenshot_2026-04-23_at_10.37.41_AM_1776958670297.png          | Bin 0 -> 2747006 bytes
+ 6 files changed, 428 insertions(+), 30 deletions(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776957594235.txt
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776958016710.txt
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776958440944.txt
+ create mode 100644 attached_assets/Screenshot_2026-04-23_at_10.21.09_AM_1776957677346.png
+ create mode 100644 attached_assets/Screenshot_2026-04-23_at_10.37.41_AM_1776958670297.png
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+/Users/ryandolan/vallartapulse/lib/db/src/index.ts:8
+  throw new Error(
+        ^
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+    at <anonymous> (/Users/ryandolan/vallartapulse/lib/db/src/index.ts:8:9)
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v25.9.0
+/Users/ryandolan/vallartapulse/scripts:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/scripts@0.0.0 scrape:airbnb-pricing: `tsx ./src/airbnb-pricing-refresh.ts`
+Exit status 1
+ryandolan@Ryans-Mac-mini vallartapulse % ls -la /tmp/airbnb-debug-*
+-rw-r--r--  1 ryandolan  wheel  254357 Apr 23 10:25 /tmp/airbnb-debug-110666190324-2026-04-24-1776957941217.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:25 /tmp/airbnb-debug-110666190324-2026-04-24-1776957941217.png
+-rw-r--r--  1 ryandolan  wheel  254338 Apr 23 10:31 /tmp/airbnb-debug-110666190324-2026-04-24-1776958308443.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:31 /tmp/airbnb-debug-110666190324-2026-04-24-1776958308443.png
+-rw-r--r--  1 ryandolan  wheel  254338 Apr 23 10:32 /tmp/airbnb-debug-110666190324-2026-06-20-1776958330114.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:32 /tmp/airbnb-debug-110666190324-2026-06-20-1776958330114.png
+-rw-r--r--  1 ryandolan  wheel  254338 Apr 23 10:32 /tmp/airbnb-debug-110666190324-2027-05-29-1776958351886.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:32 /tmp/airbnb-debug-110666190324-2027-05-29-1776958351886.png
+-rw-r--r--  1 ryandolan  wheel  254357 Apr 23 10:26 /tmp/airbnb-debug-119643620055-2026-04-24-1776957963566.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:26 /tmp/airbnb-debug-119643620055-2026-04-24-1776957963566.png
+-rw-r--r--  1 ryandolan  wheel  254338 Apr 23 10:32 /tmp/airbnb-debug-119643620055-2026-04-24-1776958374177.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:32 /tmp/airbnb-debug-119643620055-2026-04-24-1776958374177.png
+-rw-r--r--  1 ryandolan  wheel  254338 Apr 23 10:33 /tmp/airbnb-debug-119643620055-2026-06-20-1776958395847.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:33 /tmp/airbnb-debug-119643620055-2026-06-20-1776958395847.png
+-rw-r--r--  1 ryandolan  wheel  254338 Apr 23 10:33 /tmp/airbnb-debug-119643620055-2027-05-29-1776958417334.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:33 /tmp/airbnb-debug-119643620055-2027-05-29-1776958417334.png
+-rw-r--r--  1 ryandolan  wheel  254408 Apr 23 10:19 /tmp/airbnb-debug-1552402429-2026-04-24-1776957564428.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:19 /tmp/airbnb-debug-1552402429-2026-04-24-1776957564428.png
+-rw-r--r--  1 ryandolan  wheel  254358 Apr 23 10:24 /tmp/airbnb-debug-1552402429-2026-04-24-1776957878402.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:24 /tmp/airbnb-debug-1552402429-2026-04-24-1776957878402.png
+-rw-r--r--  1 ryandolan  wheel  254339 Apr 23 10:29 /tmp/airbnb-debug-1552402429-2026-04-24-1776958154470.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:29 /tmp/airbnb-debug-1552402429-2026-04-24-1776958154470.png
+-rw-r--r--  1 ryandolan  wheel  254673 Apr 23 10:29 /tmp/airbnb-debug-1552402429-2026-06-20-1776958176166.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:29 /tmp/airbnb-debug-1552402429-2026-06-20-1776958176166.png
+-rw-r--r--  1 ryandolan  wheel  254318 Apr 23 10:29 /tmp/airbnb-debug-1552402429-2027-05-29-1776958198210.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:29 /tmp/airbnb-debug-1552402429-2027-05-29-1776958198210.png
+-rw-r--r--  1 ryandolan  wheel  254714 Apr 23 10:25 /tmp/airbnb-debug-787254975877-2026-04-24-1776957900360.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:25 /tmp/airbnb-debug-787254975877-2026-04-24-1776957900360.png
+-rw-r--r--  1 ryandolan  wheel  254338 Apr 23 10:30 /tmp/airbnb-debug-787254975877-2026-04-24-1776958220885.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:30 /tmp/airbnb-debug-787254975877-2026-04-24-1776958220885.png
+-rw-r--r--  1 ryandolan  wheel  254338 Apr 23 10:30 /tmp/airbnb-debug-787254975877-2026-06-20-1776958242595.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:30 /tmp/airbnb-debug-787254975877-2026-06-20-1776958242595.png
+-rw-r--r--  1 ryandolan  wheel  254338 Apr 23 10:31 /tmp/airbnb-debug-787254975877-2027-05-29-1776958264396.html
+-rw-r--r--  1 ryandolan  wheel   43561 Apr 23 10:31 /tmp/airbnb-debug-787254975877-2027-05-29-1776958264396.png
+ryandolan@Ryans-Mac-mini vallartapulse % 
