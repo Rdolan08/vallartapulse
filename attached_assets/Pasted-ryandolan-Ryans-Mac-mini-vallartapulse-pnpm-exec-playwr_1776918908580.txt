@@ -1,0 +1,34 @@
+ryandolan@Ryans-Mac-mini vallartapulse % pnpm exec playwright install chromium
+pnpm --filter @workspace/scripts run debug:airbnb-pricing
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command "playwright" not found
+
+> @workspace/scripts@0.0.0 debug:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-debug.ts
+
+starting airbnb-pricing-debug v6 (Playwright) — externalId: 1610096526897460312
+chromium launched
+
+══════ PROBE [30d-out / 3 nights] ════════════════════════════════════════════
+navigating to https://www.airbnb.com/rooms/1610096526897460312?check_in=2026-05-23&check_out=2026-05-26&adults=2
+  ✓ intercepted StaysPdpSections XHR — status=200, body bytes=64279, sha=00d9599429448897…
+  navigation warning: page.goto: Timeout 30000ms exceeded.
+Call log:
+  - navigating to "https://www.airbnb.com/rooms/1610096526897460312?check_in=2026-05-23&check_out=2026-05-26&adults=2", waiting until "networkidle"
+
+waiting up to 25000ms for StaysPdpSections XHR…
+captured 1 StaysPdpSections XHR(s)
+
+— XHR #1
+  URL: https://www.airbnb.com/api/v3/StaysPdpSections/00d95994294488977bd6733f66775aa20d7b5fd209029587456ec80ebb31fffb?operationName=StaysPdpSections&locale=en&currency=USD
+  status: 200
+  sha: 00d95994294488977bd6733f66775aa20d7b5fd209029587456ec80ebb31fffb
+  shape: { data: { presentation: { __typename: string, stayProductDetailPage: {…} }, node: { __typename: string, bnbProperty: null, pdpPresentation: {…} } }, extensions: { traceId: string } }
+  structuredDisplayPrice hits: 4 (non-null: 0)
+
+══════ DIRECT FETCH with captured SHA 00d959942944… ══════════════════════════
+HTTP: 200
+body bytes: 206 first 400: {"errors":[{"message":"Sorry, something went wrong.","locations":[{"line":1,"column":34}],"extensions":{"classification":"ValidationError"}}],"data":null,"extensions":{"traceId":"QiEzV6QDpjkEhyaqGpKCuw=="}}
+structuredDisplayPrice non-null hits: 0
+
+══════ DONE ══════════════════════════════════════════════════════════════════
+ryandolan@Ryans-Mac-mini vallartapulse % 
