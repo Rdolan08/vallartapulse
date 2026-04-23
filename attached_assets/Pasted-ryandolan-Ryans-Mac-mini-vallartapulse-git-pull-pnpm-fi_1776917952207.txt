@@ -1,0 +1,44 @@
+ryandolan@Ryans-Mac-mini vallartapulse % git pull && pnpm --filter @workspace/scripts run debug:airbnb-pricing
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 6.75 KiB | 1.13 MiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   c6c71a5..04be785  main       -> origin/main
+Updating c6c71a5..04be785
+Fast-forward
+ .../Pasted--DONE-ryandolan-Ryans-Mac-m-1776917746204_1776917746205.txt          |  58 ++++++
+ scripts/src/airbnb-pricing-debug.ts                                             | 370 +++++++++++++++++++------------------
+ 2 files changed, 253 insertions(+), 175 deletions(-)
+ create mode 100644 attached_assets/Pasted--DONE-ryandolan-Ryans-Mac-m-1776917746204_1776917746205.txt
+
+> @workspace/scripts@0.0.0 debug:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-debug.ts
+
+starting airbnb-pricing-debug v3 — externalId: 1610096526897460312
+
+══════ FETCH PDP HTML ════════════════════════════════════════════════════════
+PDP HTML fetch: 200 → length: 459883
+
+══════ PROBE D: SHAs from niobeClientData SSR payload ════════════════════════
+found 0 (operationName, sha) pairs in niobeClientData:
+
+══════ PROBE E: bundle URL hunt ══════════════════════════════════════════════
+found 52 candidate JS bundle URLs (showing first 8):
+  https://a0.muscache.com/airbnb/static/packages/web/common/frontend/hyperloop-browser/metroRequire.9062f15cf4.js
+  https://a0.muscache.com/airbnb/static/packages/web/common/frontend/hyperloop-browser/shims_post_modules.1a6868ebcb.js
+  https://a0.muscache.com/airbnb/static/packages/web/en/frontend/airmetro/browser/asyncRequire.de8ea3ca5b.js
+  https://a0.muscache.com/airbnb/static/packages/web/common/frontend/hyperloop-browser/coreV2.308fe7cf88.js
+  https://a0.muscache.com/airbnb/static/packages/web/common/c941.eb41d05318.js
+  https://a0.muscache.com/airbnb/static/packages/web/common/3dd93.505f1d184c.js
+  https://a0.muscache.com/airbnb/static/packages/web/common/frontend/core-guest-loop/routeHandler.cb1e8dd817.js
+  https://a0.muscache.com/airbnb/static/packages/web/en/995f.e7c6a58216.js
+
+bundle SHA results: 0
+
+══════ PROBE F: SKIPPED — no StaysPdpSections SHA discovered ═════════════════
+Next steps if this happens: increase bundle search depth, or try POST with full query inline.
+
+══════ DONE ══════════════════════════════════════════════════════════════════
+ryandolan@Ryans-Mac-mini vallartapulse % 
