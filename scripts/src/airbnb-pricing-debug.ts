@@ -16,8 +16,6 @@
  * the diagnostic would lie about what a real Mac mini run would see.
  */
 
-import { Pool } from "pg";
-
 const AIRBNB_API_KEY = "d306zoyjsyarp7ifhu67rjxn52tv0t20";
 const BOOTSTRAP_SHA =
   "8f08e03c7bd16fcad3c92a3592c19a8b559a0d0855a84028d1163d4733ed9ade";
@@ -51,36 +49,15 @@ function shapeOf(v: unknown, depth = 0, maxDepth = 4): string {
   return `{ ${inner}${more} }`;
 }
 
-async function pickListing(externalIdArg: string | undefined): Promise<{
-  id: number;
-  externalId: string;
-  url: string | null;
-}> {
-  if (externalIdArg) {
-    return { id: 0, externalId: externalIdArg, url: null };
-  }
-  const url = process.env.DATABASE_URL ?? process.env.RAILWAY_DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL or RAILWAY_DATABASE_URL not set");
-  const pool = new Pool({ connectionString: url });
-  try {
-    const r = await pool.query(
-      `SELECT id, external_id, listing_url
-         FROM rental_listings
-         WHERE source_platform = 'airbnb'
-           AND external_id IS NOT NULL
-         ORDER BY scraped_at DESC NULLS LAST
-         LIMIT 1`,
-    );
-    if (r.rows.length === 0) throw new Error("no airbnb listings in DB");
-    const row = r.rows[0];
-    return {
-      id: Number(row.id),
-      externalId: String(row.external_id),
-      url: row.listing_url ?? null,
-    };
-  } finally {
-    await pool.end();
-  }
+/**
+ * Default external_id is the most-recently scraped airbnb listing as of
+ * 2026-04-23 (pulled directly from the Railway DB). Any 18-19 digit
+ * airbnb listing id will work — pass one as argv[2] to override.
+ */
+const DEFAULT_EXTERNAL_ID = "1610096526897460312";
+
+function pickListing(externalIdArg: string | undefined): { externalId: string } {
+  return { externalId: externalIdArg ?? DEFAULT_EXTERNAL_ID };
 }
 
 async function probeCalendar(externalId: string): Promise<void> {
@@ -240,8 +217,8 @@ async function probeAlternativeQuote(externalId: string): Promise<void> {
 async function main(): Promise<void> {
   const externalIdArg = process.argv[2];
   console.log("starting airbnb-pricing-debug…");
-  const listing = await pickListing(externalIdArg);
-  console.log("listing:", listing);
+  const listing = pickListing(externalIdArg);
+  console.log("listing externalId:", listing.externalId);
   await probeCalendar(listing.externalId);
   await probeQuoteRest(listing.externalId);
   await probeAlternativeQuote(listing.externalId);
