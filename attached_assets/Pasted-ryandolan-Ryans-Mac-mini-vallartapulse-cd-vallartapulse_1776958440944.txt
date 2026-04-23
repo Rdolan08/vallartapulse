@@ -1,0 +1,140 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && AIRBNB_PRICING_MAX_LISTINGS=5 AIRBNB_PRICING_MAX_CHECKPOINTS_PER_LISTING=3 AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts run scrape:airbnb-pricing 2>&1 | tee /tmp/smoke.log
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":5,"dryRun":true,"ts":"2026-04-23T15:28:51.612Z"}
+[airbnb-pricing] listing 305 (1552402429): 3 checkpoints to quote
+[airbnb-pricing]   cp 1/3 2026-04-24→2026-04-26 total=— 21714ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing]   cp 2/3 2026-06-20→2026-06-22 total=— 21721ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing]   cp 3/3 2027-05-29→2027-06-02 total=— 22017ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing] listing 339 (787254975877): 3 checkpoints to quote
+[airbnb-pricing]   cp 1/3 2026-04-24→2026-04-26 total=— 22101ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing]   cp 2/3 2026-06-20→2026-06-22 total=— 21732ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing]   cp 3/3 2027-05-29→2027-06-02 total=— 21804ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing] listing 340 (53116610): 3 checkpoints to quote
+[airbnb-pricing]   cp 1/3 2026-04-24→2026-04-26 total=— 18846ms
+[airbnb-pricing]   cp 2/3 2026-06-20→2026-06-22 total=— 957ms
+[airbnb-pricing]   cp 3/3 2027-03-20→2027-03-27 total=— 1365ms
+[airbnb-pricing] listing 341 (110666190324): 3 checkpoints to quote
+[airbnb-pricing]   cp 1/3 2026-04-24→2026-04-26 total=— 21934ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing]   cp 2/3 2026-06-20→2026-06-22 total=— 21671ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing]   cp 3/3 2027-05-29→2027-06-02 total=— 21774ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing] listing 342 (119643620055): 3 checkpoints to quote
+[airbnb-pricing]   cp 1/3 2026-04-24→2026-04-26 total=— 21660ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing]   cp 2/3 2026-06-20→2026-06-22 total=— 21672ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing]   cp 3/3 2027-05-29→2027-06-02 total=— 21513ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+{
+  "event": "airbnb-pricing-refresh.done",
+  "elapsedMs": 285808,
+  "summary": {
+    "attempted": 5,
+    "ok": 5,
+    "failed": 0,
+    "totalQuotesWritten": 0,
+    "totalDaysWithPrice": 0,
+    "totalQuotesEnriched": 0,
+    "totalQuotesFailed": 15,
+    "totalFullyAvailableCheckpoints": 14,
+    "totalQuotesEnrichedFullyAvailable": 0,
+    "enrichmentRate": 0,
+    "shaSource": "fallback",
+    "quoteShaSource": "cache",
+    "shaRediscoveriesDuringRun": 0,
+    "quoteShaRediscoveriesDuringRun": 0,
+    "alertLevel": "ok",
+    "alertReason": ""
+  },
+  "listings": [
+    {
+      "listingId": 305,
+      "externalId": "1552402429",
+      "ok": true,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 3,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 3,
+      "fullyAvailableCheckpoints": 3,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "calendar: unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    },
+    {
+      "listingId": 339,
+      "externalId": "787254975877",
+      "ok": true,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 3,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 3,
+      "fullyAvailableCheckpoints": 3,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "calendar: unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    },
+    {
+      "listingId": 340,
+      "externalId": "53116610",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 3,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 3,
+      "fullyAvailableCheckpoints": 2,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    },
+    {
+      "listingId": 341,
+      "externalId": "110666190324",
+      "ok": true,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 3,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 3,
+      "fullyAvailableCheckpoints": 3,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "calendar: unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    },
+    {
+      "listingId": 342,
+      "externalId": "119643620055",
+      "ok": true,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 3,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 3,
+      "fullyAvailableCheckpoints": 3,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "calendar: unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    }
+  ]
+}
+WARN: zero listings processed (check the active Airbnb cohort)
