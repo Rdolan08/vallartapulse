@@ -29,6 +29,14 @@ interface PipelineFreshness {
   listingsQuotedEver?: number;
   listingsNeverQuoted?: number;
   newestQuoteAt?: string | null;
+  // Airbnb per-night quote activity over the last 24h. Surfaced in the
+  // tooltip so the unavailable rows the new fast-path now writes aren't
+  // misread as scrape failures, and so the booked-rate inference signal
+  // is visible at a glance.
+  quotesLast24h?: number;
+  quotesPricedLast24h?: number;
+  quotesUnavailableLast24h?: number;
+  presumedBookingsLast24h?: number;
   // VV-pricing-only:
   listingsCovered?: number;
   // VRBO + VV pricing:
@@ -97,6 +105,12 @@ const PIPELINES: PipelineCardConfig[] = [
     newestLabelEs: "Base más reciente",
   },
   {
+    // Airbnb per-night quotes — RE-ENABLED 2026-04-23. The GraphQL quote
+    // adapter shipped, the unavailable fast-path landed in 68475e8, and
+    // a daily cron at 09:00 UTC now feeds listing_price_quotes. The
+    // tooltip surfaces both the priced/unavailable split (so the new
+    // unavailable rows aren't misread as failures) and any presumed
+    // bookings inferred over the last 24h.
     endpoint: "/api/ingest/airbnb-pricing-freshness",
     labelEn: "Airbnb per-night quotes",
     labelEs: "Cotizaciones por noche de Airbnb",
@@ -104,13 +118,6 @@ const PIPELINES: PipelineCardConfig[] = [
     newestField: "newestQuoteAt",
     newestLabelEn: "Newest quote",
     newestLabelEs: "Cotización más reciente",
-    overrideStatus: {
-      kind: "paused",
-      reasonEn:
-        "GraphQL quote adapter is a stub. Calendar (availability + price) IS flowing — see 'Airbnb calendar' above.",
-      reasonEs:
-        "El adaptador GraphQL de cotización es un stub. El calendario (disponibilidad + precio) SÍ funciona — ver 'Calendario de Airbnb' arriba.",
-    },
   },
   {
     endpoint: "/api/ingest/pvrpv-pricing-freshness",
@@ -288,6 +295,24 @@ function PipelineStatusLight({
       tooltipLines.push(
         `${lang === "es" ? cfg.newestLabelEs : cfg.newestLabelEn}: ${newestText}`,
       );
+
+      // Airbnb per-night quote activity (only present on the
+      // /airbnb-pricing-freshness response). Surfaces the
+      // priced/unavailable split so the new fast-path's "unavailable"
+      // rows aren't misread as failures, plus today's booked-rate
+      // inferences.
+      if (typeof data.quotesLast24h === "number") {
+        const priced = data.quotesPricedLast24h ?? 0;
+        const unavailable = data.quotesUnavailableLast24h ?? 0;
+        tooltipLines.push(
+          `${t("Quotes (24h)", "Cotizaciones (24h)")}: ${data.quotesLast24h.toLocaleString()} (${priced.toLocaleString()} ${t("priced", "con precio")} · ${unavailable.toLocaleString()} ${t("unavailable", "no disponible")})`,
+        );
+      }
+      if (typeof data.presumedBookingsLast24h === "number") {
+        tooltipLines.push(
+          `${t("Inferred bookings (24h)", "Reservas inferidas (24h)")}: ${data.presumedBookingsLast24h.toLocaleString()}`,
+        );
+      }
     }
     if (data.alertReason) {
       tooltipLines.push(`${t("Underlying", "Subyacente")}: ${data.alertReason}`);
