@@ -1,0 +1,98 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && git pull && pnpm --filter @workspace/scripts exec tsx ./src/airbnb-quote-test.ts 53116610 2026-06-20 2026-06-22 2
+remote: Enumerating objects: 18, done.
+remote: Counting objects: 100% (18/18), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 10 (delta 7), reused 10 (delta 7), pack-reused 0 (from 0)
+Unpacking objects: 100% (10/10), 2.94 KiB | 430.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   23077fb..8a7f965  main       -> origin/main
+Updating 23077fb..8a7f965
+Fast-forward
+ artifacts/api-server/src/lib/ingest/airbnb-graphql-quote-adapter.ts                              | 28 ++++++++++++++++++++++++++++
+ attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776959634172.txt | 36 ++++++++++++++++++++++++++++++++++++
+ 2 files changed, 64 insertions(+)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776959634172.txt
+{"event":"quote-test.start","externalId":"53116610","checkin":"2026-06-20","checkout":"2026-06-22","guestCount":2,"ts":"2026-04-23T15:55:46.660Z"}
+{
+  "event": "quote-test.done",
+  "elapsedMs": 4079,
+  "result": {
+    "accommodationUsd": 265,
+    "cleaningFeeUsd": null,
+    "serviceFeeUsd": null,
+    "taxesUsd": null,
+    "totalPriceUsd": 265,
+    "currency": "USD",
+    "shaUsed": "playwright-dom-scrape",
+    "available": true,
+    "errors": [],
+    "staleSha": false
+  }
+}
+ryandolan@Ryans-Mac-mini vallartapulse % export RAILWAY_DATABASE_URL="<paste from your .env>" && \
+  AIRBNB_PRICING_MAX_LISTINGS=5 AIRBNB_PRICING_MAX_CHECKPOINTS_PER_LISTING=3 \
+  AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL=$RAILWAY_DATABASE_URL \
+  pnpm --filter @workspace/scripts run scrape:airbnb-pricing 2>&1 | tee /tmp/smoke.log
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":5,"dryRun":true,"ts":"2026-04-23T15:57:38.528Z"}
+DrizzleQueryError: Failed query: 
+    SELECT rl.id,
+           rl.external_id AS "externalId",
+           rl.source_url AS "sourceUrl"
+    FROM rental_listings rl
+    LEFT JOIN (
+      SELECT listing_id, MAX(collected_at) AS last_quoted
+      FROM listing_price_quotes
+      GROUP BY listing_id
+    ) q ON q.listing_id = rl.id
+    WHERE rl.source_platform = $1
+      AND rl.is_active = true
+      AND rl.external_id IS NOT NULL
+      AND rl.external_id ~ '^[0-9]+$'
+    ORDER BY q.last_quoted ASC NULLS FIRST, rl.id ASC
+    LIMIT $2
+  
+params: airbnb,5
+    at NodePgPreparedQuery.queryWithCache (/Users/ryandolan/vallartapulse/node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/src/pg-core/session.ts:73:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async loadStaleFirstListings (/Users/ryandolan/vallartapulse/artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts:187:18)
+    at async runAirbnbPricingRefresh (/Users/ryandolan/vallartapulse/artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts:428:20)
+    at async main (/Users/ryandolan/vallartapulse/scripts/src/airbnb-pricing-refresh.ts:92:14) {
+  query: '\n' +
+    '    SELECT rl.id,\n' +
+    '           rl.external_id AS "externalId",\n' +
+    '           rl.source_url AS "sourceUrl"\n' +
+    '    FROM rental_listings rl\n' +
+    '    LEFT JOIN (\n' +
+    '      SELECT listing_id, MAX(collected_at) AS last_quoted\n' +
+    '      FROM listing_price_quotes\n' +
+    '      GROUP BY listing_id\n' +
+    '    ) q ON q.listing_id = rl.id\n' +
+    '    WHERE rl.source_platform = $1\n' +
+    '      AND rl.is_active = true\n' +
+    '      AND rl.external_id IS NOT NULL\n' +
+    "      AND rl.external_id ~ '^[0-9]+$'\n" +
+    '    ORDER BY q.last_quoted ASC NULLS FIRST, rl.id ASC\n' +
+    '    LIMIT $2\n' +
+    '  ',
+  params: [ 'airbnb', 5 ],
+  cause: Error: getaddrinfo ENOTFOUND base
+      at /Users/ryandolan/vallartapulse/node_modules/.pnpm/pg-pool@3.13.0_pg@8.20.0/node_modules/pg-pool/index.js:45:11
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (/Users/ryandolan/vallartapulse/node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:149:14)
+      at async NodePgPreparedQuery.queryWithCache (/Users/ryandolan/vallartapulse/node_modules/.pnpm/drizzle-orm@0.45.1_@types+pg@8.18.0_pg@8.20.0/node_modules/src/pg-core/session.ts:71:12)
+      at async loadStaleFirstListings (/Users/ryandolan/vallartapulse/artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts:187:18)
+      at async runAirbnbPricingRefresh (/Users/ryandolan/vallartapulse/artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts:428:20)
+      at async main (/Users/ryandolan/vallartapulse/scripts/src/airbnb-pricing-refresh.ts:92:14) {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: 'base'
+  }
+}
+/Users/ryandolan/vallartapulse/scripts:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/scripts@0.0.0 scrape:airbnb-pricing: `tsx ./src/airbnb-pricing-refresh.ts`
+Exit status 1
