@@ -1,0 +1,177 @@
+ryandolan@Ryans-Mac-mini vallartapulse % git pull && pnpm --filter @workspace/scripts run debug:airbnb-pricing
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 7 (delta 4), reused 7 (delta 4), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 6.35 KiB | 1.06 MiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   64adb38..601b95c  main       -> origin/main
+Updating 64adb38..601b95c
+Fast-forward
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-pnpm-exec-playwr_1776918908580.txt |  34 ++++
+ scripts/src/airbnb-pricing-debug.ts                                             | 374 +++++++++++++++++++------------------
+ 2 files changed, 225 insertions(+), 183 deletions(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-pnpm-exec-playwr_1776918908580.txt
+
+> @workspace/scripts@0.0.0 debug:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-debug.ts
+
+starting airbnb-pricing-debug v7 (full /api/v3/ capture) — externalId: 1610096526897460312
+
+══════ PROBE [30d-out / 3 nights] ════════════════════════════════════════════
+navigating to https://www.airbnb.com/rooms/1610096526897460312?check_in=2026-05-23&check_out=2026-05-26&adults=2
+  ✓ GET Header                       status=200  req=(none)  res=2617B
+  ✓ GET StaysPdpBookItQuery          status=200  req=(none)  res=207B
+  ✓ GET GetConsentForUserQuery       status=200  req=(none)  res=232991B
+  ✓ GET NaviServerAnnouncementsQuery status=200  req=(none)  res=143B
+  ✓ POST SearchInputQuery             status=200  req=246B  res=35006B
+  ✓ GET AutoSuggestionsQuery         status=200  req=(none)  res=27609B
+  ✓ GET PdpAvailabilityCalendar      status=200  req=(none)  res=186554B
+  ✓ POST StaysPdpSections             status=200  req=3485B  res=51223B
+  ✓ GET StaysPdpReviewsQuery         status=200  req=(none)  res=6994B
+waiting 30000ms total for /api/v3/ traffic to settle…
+
+══════ SUMMARY: 9 /api/v3/ XHR(s) ════════════════════════════════════════════
+
+— [0] GET Header (status 200)
+  url: https://www.airbnb.com/api/v3/Header/bb590cf8c21b62e4b5122e1cd19969f1f1df72832040a335fd45af52597440e4?operationName=Header&locale=en&currency=USD&variables=%7B%22cdnCacheSafe%22%3Afalse%2C%22hasLoggedIn%22%3Afalse%2C%22i…
+  response shape: { data: { viewer: null, presentation: { __typename: string, header: {…}, supplyTypeSelector: {…} } }, extensions: { traceId: string } }
+  PRICE HITS: 0
+
+— [1] GET StaysPdpBookItQuery (status 200)
+  url: https://www.airbnb.com/api/v3/StaysPdpBookItQuery/2c2882ac0d31a542aa32fb1e7d288c938e617023608dc4273330f1d31b1f0014?operationName=StaysPdpBookItQuery&locale=en&currency=USD&variables=%7B%22id%22%3A%22RGVtYW5kU3RheUxpc3Rpb…
+  response shape: { data: { node: { __typename: string, pdpPresentation: {…} } }, extensions: { traceId: string } }
+  PRICE HITS: 0
+
+— [2] GET GetConsentForUserQuery (status 200)
+  url: https://www.airbnb.com/api/v3/GetConsentForUserQuery/a3a01cb92f67abf3565887799a72523309c26de8f351553e7976b2fb0b2d074d?operationName=GetConsentForUserQuery&locale=en&currency=USD&variables=%7B%22deviceId%22%3A%22177691905…
+  response shape: { data: { presentation: { __typename: string, showConsent: {…} } }, extensions: { traceId: string } }
+  PRICE HITS: 0
+
+— [3] GET NaviServerAnnouncementsQuery (status 200)
+  url: https://www.airbnb.com/api/v3/NaviServerAnnouncementsQuery/04821a0da9bd8bc9390c03372dd53aff1e8eecf1f4ce62ff987765907cbf2296?operationName=NaviServerAnnouncementsQuery&locale=en&currency=USD&variables=%7B%22appTarget%22%3…
+  response shape: { data: { presentation: { __typename: string, naviAnnouncements: [] } }, extensions: { traceId: string } }
+  PRICE HITS: 0
+
+— [4] POST SearchInputQuery (status 200)
+  url: https://www.airbnb.com/api/v3/SearchInputQuery/74f73e1e89604a53ba613f11e1e10bff9ca54dfb89ab500a7b692ac98278e6d0?operationName=SearchInputQuery&locale=en&currency=USD
+  request body (first 500): {"operationName":"SearchInputQuery","variables":{"treatmentFlags":["search_input_microflex_separate_checkin_checkout"]},"extensions":{"persistedQuery":{"version":1,"sha256Hash":"74f73e1e89604a53ba613f11e1e10bff9ca54dfb89ab500a7b692ac98278e6d0"}}}
+  response shape: { data: { presentation: { __typename: string, searchInputHeader: {…} } }, extensions: { traceId: string } }
+  PRICE HITS: 5
+    [staysSearchInput] $.data.presentation.searchInputHeader.searchInput.staysSearchInput
+      → {"__typename":"SearchInputData","clearParams":{"__typename":"ExploreSearchParams","locationSearch":null,"params":[{"__typename":"ExploreSearchParam","deleteBool":null,"inArray":false,"key":"search_mode","value":{"__typename":"StringValue","stringValu
+    [aggregateTotalMax] $.data.presentation.searchInputHeader.searchInput.staysSearchInput.guests.aggregateTotalMax
+      → {"__typename":"ExploreAggregateTotalMax","filterItemsToAggregate":["adults","children"],"maxValue":16}
+    [aggregateTotalMax] $.data.presentation.searchInputHeader.searchInput.experiencesSearchInput.guests.aggregateTotalMax
+      → {"__typename":"ExploreAggregateTotalMax","filterItemsToAggregate":["adults","children"],"maxValue":16}
+    [stays] $.data.presentation.searchInputHeader.searchInput.compactSearchInput.stays
+      → {"__typename":"SearchInputPanels","actionButtonText":"Search","clearButtonText":"Clear all","refinementPath":"/homes","title":"Stays","whenPanel":{"__typename":"WhenPanel","actionButtonText":"Next","clearButtonText":"Reset","collapsedTitle":"When","e
+    [stays] $.data.presentation.searchInputHeader.searchInput.wideSearchInput.stays
+      → {"__typename":"BigSearchInputsTab","datesInput":{"__typename":"BigSearchDatesInput","endDateLabel":"Check out","endDatePlaceholder":"Add dates","startDateLabel":"Check in","startDatePlaceholder":"Add dates"},"destinationInput":{"__typename":"BigSearc
+
+— [5] GET AutoSuggestionsQuery (status 200)
+  url: https://www.airbnb.com/api/v3/AutoSuggestionsQuery/149a45101ad29e78ce251ece5fe56311db44d4f0ba537b497e3840c2b2466a5d?operationName=AutoSuggestionsQuery&locale=en&currency=USD&variables=%7B%22autoSuggestionsRequest%22%3A%7…
+  response shape: { data: { presentation: { __typename: string, autoSuggestions: {…} } }, extensions: { traceId: string } }
+  PRICE HITS: 1
+    [staysAutoSuggestionResults] $.data.presentation.autoSuggestions.staysAutoSuggestionResults
+      → [{"__typename":"RecommendedDestinationResult","items":[{"__typename":"LocationSuggestionItem","iconUrl":"https://a0.muscache.com/im/pictures/airbnb-platform-assets/AirbnbPlatformAssets-hawaii-autosuggest-destination-icons-2/original/ea5e5ee3-e9d8-48a
+
+— [6] GET PdpAvailabilityCalendar (status 200)
+  url: https://www.airbnb.com/api/v3/PdpAvailabilityCalendar/b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914?operationName=PdpAvailabilityCalendar&locale=en&currency=USD&variables=%7B%22request%22%3A%7B%22count…
+  response shape: { data: { merlin: { __typename: string, pdpAvailabilityCalendar: {…} } }, extensions: { traceId: string } }
+  PRICE HITS: 120
+    [maxNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[0].maxNights
+      → 1125
+    [minNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[0].minNights
+      → 1
+    [price] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[0].price
+      → {"__typename":"MerlinCalendarDayPrice","localPriceFormatted":null}
+    [maxNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[1].maxNights
+      → 1125
+    [minNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[1].minNights
+      → 1
+    [price] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[1].price
+      → {"__typename":"MerlinCalendarDayPrice","localPriceFormatted":null}
+    [maxNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[2].maxNights
+      → 1125
+    [minNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[2].minNights
+      → 1
+    [price] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[2].price
+      → {"__typename":"MerlinCalendarDayPrice","localPriceFormatted":null}
+    [maxNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[3].maxNights
+      → 1125
+    [minNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[3].minNights
+      → 1
+    [price] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[3].price
+      → {"__typename":"MerlinCalendarDayPrice","localPriceFormatted":null}
+    [maxNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[4].maxNights
+      → 1125
+    [minNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[4].minNights
+      → 1
+    [price] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[4].price
+      → {"__typename":"MerlinCalendarDayPrice","localPriceFormatted":null}
+    [maxNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[5].maxNights
+      → 1125
+    [minNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[5].minNights
+      → 1
+    [price] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[5].price
+      → {"__typename":"MerlinCalendarDayPrice","localPriceFormatted":null}
+    [maxNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[6].maxNights
+      → 1125
+    [minNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[6].minNights
+      → 1
+    [price] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[6].price
+      → {"__typename":"MerlinCalendarDayPrice","localPriceFormatted":null}
+    [maxNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[7].maxNights
+      → 1125
+    [minNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[7].minNights
+      → 1
+    [price] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[7].price
+      → {"__typename":"MerlinCalendarDayPrice","localPriceFormatted":null}
+    [maxNights] $.data.merlin.pdpAvailabilityCalendar.calendarMonths[0].days[8].maxNights
+      → 1125
+    …+95 more
+
+— [7] POST StaysPdpSections (status 200)
+  url: https://www.airbnb.com/api/v3/StaysPdpSections/00d95994294488977bd6733f66775aa20d7b5fd209029587456ec80ebb31fffb?operationName=StaysPdpSections&locale=en&currency=USD
+  request body (first 500): {"operationName":"StaysPdpSections","variables":{"id":"U3RheUxpc3Rpbmc6MTYxMDA5NjUyNjg5NzQ2MDMxMg==","demandStayListingId":"RGVtYW5kU3RheUxpc3Rpbmc6MTYxMDA5NjUyNjg5NzQ2MDMxMg==","pdpSectionsRequest":{"adults":"2","amenityFilters":null,"bypassTargetings":false,"categoryTag":null,"causeId":null,"children":null,"disasterId":null,"discountedGuestFeeVersion":null,"federatedSearchId":null,"forceBoostPriorityMessageType":null,"hostPreview":false,"infants":null,"interactionType":null,"layouts":["SIDEBAR
+  response shape: { data: { presentation: { __typename: string, stayProductDetailPage: {…} }, node: { __typename: string, bnbProperty: null, pdpPresentation: {…} } }, extensions: { traceId: string } }
+  PRICE HITS: 8
+    [stayProductDetailPage] $.data.presentation.stayProductDetailPage
+      → {"__typename":"StayPDPPresentationContainer","sections":{"__typename":"StayPDPSections","sections":[{"__typename":"SectionContainer","id":"U2VjdGlvbkNvbnRhaW5lcjotMTI5MTU2MDk4NDk5NjMzMTgw","sectionComponentType":"BOOK_IT_CALENDAR_SHEET","sectionConte
+    [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[0].section.showPriceBreakdown
+      → false
+    [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[2].section.showPriceBreakdown
+      → true
+    [selectMaxNightsViolationDateLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[2].section.tripDetailsLoggingEventData.selectMaxNightsViolationDateLoggingEventData
+      → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.selectMaxNightsViolationDate","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":"bookItSidebar","component":"selectMaxNightsViolationDate"}
+    [selectMinNightsViolationDateLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[2].section.tripDetailsLoggingEventData.selectMinNightsViolationDateLoggingEventData
+      → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.selectMinNightsViolationDate","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":"bookItSidebar","component":"selectMinNightsViolationDate"}
+    [ratePlanLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[2].section.ratePlanLoggingEventData
+      → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.ratePlanInput","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":null,"component":null}
+    [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[4].section.showPriceBreakdown
+      → false
+    [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[5].section.showPriceBreakdown
+      → false
+
+— [8] GET StaysPdpReviewsQuery (status 200)
+  url: https://www.airbnb.com/api/v3/StaysPdpReviewsQuery/2ed951bfedf71b87d9d30e24a419e15517af9fbed7ac560a8d1cc7feadfa22e6?operationName=StaysPdpReviewsQuery&locale=en&currency=USD&variables=%7B%22id%22%3A%22U3RheUxpc3Rpbmc6MTY…
+  response shape: { data: { presentation: { __typename: string, stayProductDetailPage: {…} } }, extensions: { traceId: string } }
+  PRICE HITS: 1
+    [stayProductDetailPage] $.data.presentation.stayProductDetailPage
+      → {"__typename":"StayPDPPresentationContainer","reviews":{"__typename":"PdpReviews","reviews":[{"__typename":"PdpReviewForP3","collectionTag":null,"comments":"By far one of the best places we have stayed. The Condo itself was incredibly clean and updat
+
+══════ REPLAY: direct POST with captured body ════════════════════════════════
+HTTP 200, body bytes 64279, first 400: {"data":{"presentation":{"__typename":"RootPresentationContainer","stayProductDetailPage":{"__typename":"StayPDPPresentationContainer","sections":{"__typename":"StayPDPSections","sections":[{"__typename":"SectionContainer","id":"U2VjdGlvbkNvbnRhaW5lcjo3MTg1NDA5OTcxODI3MDM4MQ==","sectionComponentType":"CANCELLATION_POLICY_PICKER_MODAL","sectionContentStatus":"COMPLETE","sectionId":"CANCELLATION_POL
+replay PRICE HITS: 8
+  [stayProductDetailPage] $.data.presentation.stayProductDetailPage → {"__typename":"StayPDPPresentationContainer","sections":{"__typename":"StayPDPSections","sections":[{"__typename":"SectionContainer","id":"U2VjdGlvbkNvbnRhaW5lcjo3MTg1NDA5OTcxODI3MDM4MQ==","sectionComponentType":"CANCELLATION_POLICY_PICKER_MODAL","se
+  [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[1].section.showPriceBreakdown → false
+  [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[3].section.showPriceBreakdown → false
+  [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[4].section.showPriceBreakdown → true
+  [selectMaxNightsViolationDateLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[4].section.tripDetailsLoggingEventData.selectMaxNightsViolationDateLoggingEventData → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.selectMaxNightsViolationDate","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":"bookItSidebar","component":"selectMaxNightsViolationDate"}
+  [selectMinNightsViolationDateLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[4].section.tripDetailsLoggingEventData.selectMinNightsViolationDateLoggingEventData → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.selectMinNightsViolationDate","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":"bookItSidebar","component":"selectMinNightsViolationDate"}
+  [ratePlanLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[4].section.ratePlanLoggingEventData → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.ratePlanInput","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":null,"component":null}
+  [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[6].section.showPriceBreakdown → false
+
+══════ DONE ══════════════════════════════════════════════════════════════════
+ryandolan@Ryans-Mac-mini vallartapulse % 
