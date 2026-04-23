@@ -225,6 +225,19 @@ function pricesForStay(
   checkpoint: Checkpoint,
   index: Map<string, AirbnbGraphqlDay>,
 ): { perNight: number[]; nightsCovered: number; allAvailable: boolean; anyAvailable: boolean } {
+  // Empty calendar (Airbnb GraphQL shape changed / SHA stale / IP blocked) =>
+  // assume all nights available, no per-night price. The Playwright quote
+  // becomes the sole source of truth for price AND availability — if the
+  // window is unbookable the quote returns null and the row is dropped
+  // downstream.
+  if (index.size === 0) {
+    return {
+      perNight: [],
+      nightsCovered: checkpoint.stayNights,
+      allAvailable: true,
+      anyAvailable: true,
+    };
+  }
   const start = new Date(`${checkpoint.checkin}T00:00:00Z`);
   const perNight: number[] = [];
   let allAvailable = true;
@@ -468,10 +481,13 @@ export async function runAirbnbPricingRefresh(
       stat.daysReturned = result.daysReturned;
       stat.daysWithPrice = result.daysWithPrice;
 
+      // Calendar failure is no longer fatal — we record it as a note in
+      // stat.error but proceed to per-checkpoint Playwright quotes. The
+      // empty-index branch in pricesForStay above synthesizes "presumed
+      // available" checkpoints; the quote phase filters out actually-
+      // unbooked windows by returning null totals.
       if (result.errors.length > 0 && result.daysReturned === 0) {
-        stat.error = result.errors.join("; ").slice(0, 200);
-        perListing.push(stat);
-        continue;
+        stat.error = "calendar: " + result.errors.join("; ").slice(0, 180);
       }
 
       const checkpointRows = buildQuoteRows(l.id, result, new Date(), today);
