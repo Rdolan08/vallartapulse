@@ -263,6 +263,47 @@ export async function fetchAirbnbQuote(
       .waitFor({ state: "attached", timeout: SIDEBAR_WAIT_MS })
       .catch(() => {});
 
+    // FAST-PATH: "Those dates are not available".
+    //
+    // When Airbnb refuses to quote a specific stay window (host blocked
+    // it, already booked, min-stay violation, etc.) the booking sidebar
+    // STILL renders fully — but instead of a price summary it shows:
+    //
+    //   <div id="bookItTripDetailsError">Those dates are not available</div>
+    //
+    // and the CTA button changes from "Reserve" to "Change dates".
+    //
+    // Without this fast-path we would (a) waste ~18s waiting for a
+    // \$ that never appears, then (b) record the result as a parser
+    // failure — losing the genuine "unavailable" signal. This was
+    // validated 2026-04-23 against listings 1131262839989442604
+    // (cp 2026-04-24) and 873155792315908830 (cp 2027-03-20): both
+    // dumps contained #bookItTripDetailsError verbatim.
+    //
+    // Treat unavailable as a SUCCESSFUL outcome with totalPriceUsd=null
+    // and available=false. Downstream callers already understand this
+    // shape (line 163 returns the same baseResult for delisted pages),
+    // and the comp-pool reader will distinguish "checked + unavailable"
+    // from "never-checked" via the row's collected_at timestamp.
+    const unavailableMarker = page.locator("#bookItTripDetailsError");
+    const isUnavailable = await unavailableMarker
+      .first()
+      .waitFor({ state: "attached", timeout: 4000 })
+      .then(() => true)
+      .catch(() => false);
+    if (isUnavailable) {
+      await page.close().catch(() => {});
+      pageRef = null;
+      return {
+        ...baseResult,
+        available: false,
+        totalPriceUsd: null,
+        // No error string — this is a clean, expected outcome, not a
+        // failure. The runner's per-checkpoint logger should print
+        // "unavailable" in the total= column instead of the err= field.
+      };
+    }
+
     // Wait until the sidebar actually renders the REAL stay price.
     //
     // The previous version of this wait used /\$\d/ which matched the
