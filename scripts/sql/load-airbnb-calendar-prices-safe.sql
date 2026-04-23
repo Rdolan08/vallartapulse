@@ -58,14 +58,11 @@ SET
     ELSE EXCLUDED.availability_status
   END,
   minimum_nights = COALESCE(EXCLUDED.minimum_nights, rental_prices_by_date.minimum_nights),
-  scraped_at = GREATEST(
-    COALESCE(rental_prices_by_date.scraped_at, TIMESTAMP 'epoch'),
-    COALESCE(EXCLUDED.scraped_at, TIMESTAMP 'epoch')
-  )
+  scraped_at = GREATEST(rental_prices_by_date.scraped_at, EXCLUDED.scraped_at)
 WHERE
   -- Preserve realized/blocked outcomes for behavior modeling.
   rental_prices_by_date.availability_status NOT IN ('booked', 'blocked')
-  -- Do not apply older scrape snapshots over newer rows (NULL-safe).
-  AND COALESCE(EXCLUDED.scraped_at, TIMESTAMP 'epoch') >= COALESCE(rental_prices_by_date.scraped_at, TIMESTAMP 'epoch');
+  -- Do not apply older scrape snapshots over newer rows.
+  AND EXCLUDED.scraped_at >= rental_prices_by_date.scraped_at;
 
 COMMIT;
