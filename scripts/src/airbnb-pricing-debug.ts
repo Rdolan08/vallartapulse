@@ -1,46 +1,43 @@
 /**
  * scripts/src/airbnb-pricing-debug.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Diagnostic v5 — definitive: does the PDP HTML already contain the price?
+ * Diagnostic v6 — Playwright XHR interception.
  *
- * Findings carried forward (all the dead ends):
- *   v1: PdpAvailabilityCalendar = availability-only (no prices).
+ * All static-discovery paths are now confirmed dead:
+ *   v1: PdpAvailabilityCalendar = availability-only.
  *       v2 REST pdp_listing_booking_details = HTTP 404 retired.
- *   v2: StaysPdpSections is the right operation. PDP-blob structuredDisplayPrice
- *       fields are null (price hydrates client-side).
- *   v3: niobeClientData has 1 entry; my SHA extractor guessed wrong shape.
- *   v4: Verbatim niobeClientData[0][0] is NOT a JSON Apollo request — it's an
- *       Apollo CACHE KEY in the form `<operationName>:<canonicalVariablesJson>`.
- *       Contains operationName + variables but NO SHA. All 52 bundles searched
- *       exhaustively for `"<op>":"<64hex>"` — 0 hits. SHA is not statically
- *       discoverable from PDP HTML or top-level bundles.
+ *   v2: StaysPdpSections is the right operation; SHA is stale.
+ *   v3: niobeClientData[0][0] is the Apollo cache key (operationName +
+ *       canonical variables), not a request — no SHA inside.
+ *   v4: All 52 top-level bundles searched — 0 SHA mappings (chunks are
+ *       lazy-loaded via webpack asyncRequire, not in static <script src>s).
+ *   v5: PDP SSR response (niobeClientData[0][1]) has bookingPrefetchData.
+ *       barPrice = null and structuredDisplayPrice = null on every section.
+ *       Pricing is genuinely loaded client-side after hydration.
  *
- * BUT — niobeClientData[0][1] is the FULL response object Airbnb already
- * SSR'd into the page. It's exactly what the browser would have gotten back
- * from the GraphQL call. The previous "structuredDisplayPrice = null" hit
- * search only checked one field name. Modern Airbnb sometimes carries the
- * price under different keys (priceDisplayString, displayPrice, p3DisplayRate,
- * priceWithoutDiscount, displayPriceComponents, etc.).
+ * v6 — let real Airbnb JS execute and intercept the actual XHR:
+ *   1. Launch headless Chromium.
+ *   2. Register response listener for any URL matching /api/v3/StaysPdpSections/.
+ *   3. Navigate to the PDP with check_in/check_out.
+ *   4. Wait for the price XHR to land (or timeout).
+ *   5. Print:
+ *        - The request URL (contains live SHA in the path).
+ *        - The response status, top-level shape.
+ *        - Any non-null structuredDisplayPrice payload.
+ *        - The extracted SHA so we can use it for direct fetches.
+ *   6. As a follow-up bonus: with the SHA captured, do a direct fetch (no
+ *      browser) for a different window to prove the SHA is reusable.
  *
- * v5 probe — definitive answer:
- *   PROBE J: walk niobeClientData[0][1] and collect EVERY field whose key OR
- *     value (when stringified) contains "price", "total", "amount", "rate",
- *     "fee", "cost", "USD", "$", or matches a price-shaped number. Print
- *     each with path + value preview. If any non-null price-shaped field
- *     exists in the SSR response, we drop GraphQL entirely and scrape the
- *     PDP HTML directly — no SHA management, no auth, no anti-bot risk
- *     beyond the same load a browser makes.
- *
- *     If nothing useful is found, we have to escalate to a Playwright-based
- *     XHR interception adapter (capture the live SHA from the actual
- *     hydrated browser request).
+ * Mac mini setup (one-time):
+ *   pnpm install
+ *   pnpm exec playwright install chromium
  */
 
-const UA =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
-  "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+import { chromium, type Browser, type Page, type Response } from "playwright";
 
 const DEFAULT_EXTERNAL_ID = "1610096526897460312";
+const NAV_TIMEOUT_MS = 30_000;
+const PRICE_WAIT_MS = 25_000;
 
 function pad(label: string): string {
   return `\n══════ ${label} ${"═".repeat(Math.max(0, 70 - label.length))}`;
@@ -58,92 +55,43 @@ function makeWindow(daysOut: number, nights: number): { checkin: string; checkou
   return { checkin: fmtDate(ci), checkout: fmtDate(co) };
 }
 
-async function fetchPdpHtml(externalId: string, window: { checkin: string; checkout: string }): Promise<string> {
-  const url =
-    `https://www.airbnb.com/rooms/${encodeURIComponent(externalId)}?` +
-    `check_in=${window.checkin}&check_out=${window.checkout}&adults=2`;
-  console.log("URL:", url);
-  const res = await fetch(url, {
-    headers: {
-      "user-agent": UA,
-      "accept":
-        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-      "accept-language": "en-US,en;q=0.9",
-    },
-    redirect: "follow",
-  });
-  console.log("HTTP:", res.status);
-  return await res.text();
-}
-
-function extractNiobeResponse(html: string): unknown | null {
-  const m = /<script[^>]*id="data-deferred-state-0"[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/.exec(
-    html,
-  );
-  if (!m) return null;
-  let blob: unknown;
-  try {
-    blob = JSON.parse(m[1]);
-  } catch {
-    return null;
+function shapeOf(v: unknown, depth = 0, maxDepth = 3): string {
+  if (v === null) return "null";
+  if (v === undefined) return "undefined";
+  if (Array.isArray(v)) {
+    if (v.length === 0) return "[]";
+    if (depth >= maxDepth) return `[…${v.length}]`;
+    return `[${v.length} × ${shapeOf(v[0], depth + 1, maxDepth)}]`;
   }
-  const niobe = (blob as { niobeClientData?: unknown[] }).niobeClientData;
-  if (!Array.isArray(niobe) || niobe.length === 0) return null;
-  const entry = niobe[0];
-  if (!Array.isArray(entry) || entry.length < 2) return null;
-  return entry[1]; // the response object
+  const t = typeof v;
+  if (t !== "object") return t;
+  if (depth >= maxDepth) return "{…}";
+  const o = v as Record<string, unknown>;
+  const keys = Object.keys(o);
+  if (keys.length === 0) return "{}";
+  const inner = keys
+    .slice(0, 10)
+    .map((k) => `${k}: ${shapeOf(o[k], depth + 1, maxDepth)}`)
+    .join(", ");
+  const more = keys.length > 10 ? `, …+${keys.length - 10}` : "";
+  return `{ ${inner}${more} }`;
 }
 
-const PRICE_KEY_RE = /price|total|amount|rate|fee|cost|charge|payment|booking|usd|mxn/i;
-const PRICE_VALUE_RE = /\$|USD|MXN|MX\$|peso|priceless|dollar|night|guest|^\d{1,5}(?:[.,]\d{2})?$/i;
-
-interface PriceHit {
-  path: string;
-  key: string;
-  type: string;
-  preview: string;
-}
-
-function huntPriceFields(root: unknown, maxHits = 80): PriceHit[] {
-  const out: PriceHit[] = [];
-  function preview(v: unknown): string {
-    try {
-      const s = typeof v === "string" ? v : JSON.stringify(v);
-      return (s ?? "").slice(0, 200);
-    } catch {
-      return String(v).slice(0, 200);
-    }
-  }
+function findKeysAnywhere(
+  root: unknown,
+  wanted: string[],
+): Array<{ key: string; path: string; value: unknown }> {
+  const out: Array<{ key: string; path: string; value: unknown }> = [];
+  const wantedSet = new Set(wanted);
   function walk(v: unknown, path: string, depth: number): void {
-    if (out.length >= maxHits) return;
-    if (depth > 30) return;
-    if (v === null || v === undefined) return;
+    if (depth > 20 || out.length > 200) return;
+    if (v === null || typeof v !== "object") return;
     if (Array.isArray(v)) {
       for (let i = 0; i < Math.min(v.length, 100); i++) walk(v[i], `${path}[${i}]`, depth + 1);
       return;
     }
-    if (typeof v !== "object") return;
     for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
-      const keyMatches = PRICE_KEY_RE.test(k);
-      let valMatches = false;
-      if (typeof val === "string" && PRICE_VALUE_RE.test(val)) valMatches = true;
-      if (keyMatches || valMatches) {
-        // Only record if the value is non-null/non-empty and looks meaningful
-        const isMeaningful =
-          val !== null &&
-          val !== undefined &&
-          val !== "" &&
-          !(Array.isArray(val) && val.length === 0) &&
-          !(typeof val === "object" && Object.keys(val as object).length === 0);
-        if (isMeaningful) {
-          out.push({
-            path: `${path}.${k}`,
-            key: k,
-            type: Array.isArray(val) ? `array[${val.length}]` : typeof val,
-            preview: preview(val),
-          });
-        }
-      }
+      if (wantedSet.has(k)) out.push({ key: k, path: `${path}.${k}`, value: val });
       walk(val, `${path}.${k}`, depth + 1);
     }
   }
@@ -151,48 +99,189 @@ function huntPriceFields(root: unknown, maxHits = 80): PriceHit[] {
   return out;
 }
 
-async function probe(externalId: string, daysOut: number, nights: number, label: string): Promise<void> {
-  console.log(pad(`PROBE J [${label}]: search PDP SSR response for price fields`));
-  const window = makeWindow(daysOut, nights);
-  console.log(`window: ${window.checkin} → ${window.checkout} (${nights} nights)`);
-  const html = await fetchPdpHtml(externalId, window);
-  console.log("HTML length:", html.length);
-  const response = extractNiobeResponse(html);
-  if (!response) {
-    console.log("could not extract niobe response");
-    return;
-  }
-  console.log("niobe response top-level keys:", Object.keys(response as object).join(", "));
+interface CapturedXhr {
+  url: string;
+  status: number;
+  body: string;
+  sha: string | null;
+}
 
-  const hits = huntPriceFields(response);
-  console.log(`\nfound ${hits.length} price-shaped fields with non-empty values:`);
-  // Group by key for readability
-  const byKey = new Map<string, PriceHit[]>();
-  for (const h of hits) {
-    if (!byKey.has(h.key)) byKey.set(h.key, []);
-    byKey.get(h.key)!.push(h);
-  }
-  // Sort keys by hit count desc, show top hits
-  const sortedKeys = [...byKey.entries()].sort((a, b) => b[1].length - a[1].length);
-  for (const [key, list] of sortedKeys) {
-    console.log(`\n[${key}] ×${list.length}`);
-    for (const h of list.slice(0, 3)) {
-      console.log(`  ${h.path}`);
-      console.log(`    type=${h.type}  preview: ${h.preview}`);
+async function captureStaysPdpSectionsXhr(
+  page: Page,
+  pdpUrl: string,
+): Promise<CapturedXhr[]> {
+  const captured: CapturedXhr[] = [];
+
+  page.on("response", async (response: Response) => {
+    const url = response.url();
+    if (!url.includes("/api/v3/StaysPdpSections")) return;
+    try {
+      const body = await response.text();
+      const shaMatch = /\/api\/v3\/StaysPdpSections\/([a-f0-9]{64})/.exec(url);
+      captured.push({
+        url,
+        status: response.status(),
+        body,
+        sha: shaMatch ? shaMatch[1] : null,
+      });
+      console.log(
+        `  ✓ intercepted StaysPdpSections XHR — status=${response.status()}, ` +
+          `body bytes=${body.length}, sha=${shaMatch ? shaMatch[1].slice(0, 16) + "…" : "(none)"}`,
+      );
+    } catch (err) {
+      console.log(`  ✗ failed to read XHR body: ${(err as Error).message}`);
     }
-    if (list.length > 3) console.log(`  …+${list.length - 3} more`);
+  });
+
+  console.log(`navigating to ${pdpUrl}`);
+  await page.goto(pdpUrl, { waitUntil: "networkidle", timeout: NAV_TIMEOUT_MS }).catch((err) => {
+    console.log(`  navigation warning: ${(err as Error).message}`);
+  });
+
+  // Give XHRs a chance to fire after networkidle (price often lands a beat later)
+  console.log(`waiting up to ${PRICE_WAIT_MS}ms for StaysPdpSections XHR…`);
+  const start = Date.now();
+  while (captured.length === 0 && Date.now() - start < PRICE_WAIT_MS) {
+    await page.waitForTimeout(500);
+  }
+  return captured;
+}
+
+async function probeWithBrowser(
+  browser: Browser,
+  externalId: string,
+  daysOut: number,
+  nights: number,
+  label: string,
+): Promise<string | null> {
+  console.log(pad(`PROBE [${label}]`));
+  const { checkin, checkout } = makeWindow(daysOut, nights);
+  const pdpUrl =
+    `https://www.airbnb.com/rooms/${encodeURIComponent(externalId)}?` +
+    `check_in=${checkin}&check_out=${checkout}&adults=2`;
+
+  const context = await browser.newContext({
+    userAgent:
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+      "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    locale: "en-US",
+    viewport: { width: 1440, height: 900 },
+  });
+  const page = await context.newPage();
+
+  let foundSha: string | null = null;
+  try {
+    const captured = await captureStaysPdpSectionsXhr(page, pdpUrl);
+    console.log(`captured ${captured.length} StaysPdpSections XHR(s)`);
+    for (let i = 0; i < captured.length; i++) {
+      const x = captured[i];
+      console.log(`\n— XHR #${i + 1}`);
+      console.log(`  URL: ${x.url.slice(0, 200)}${x.url.length > 200 ? "…" : ""}`);
+      console.log(`  status: ${x.status}`);
+      console.log(`  sha: ${x.sha ?? "(not in URL — POST body?)"}`);
+      if (x.sha && !foundSha) foundSha = x.sha;
+      if (x.status >= 200 && x.status < 300) {
+        try {
+          const json = JSON.parse(x.body);
+          console.log(`  shape: ${shapeOf(json, 0, 3)}`);
+          const sdpHits = findKeysAnywhere(json, ["structuredDisplayPrice"]);
+          const nonNull = sdpHits.filter((h) => h.value !== null);
+          console.log(`  structuredDisplayPrice hits: ${sdpHits.length} (non-null: ${nonNull.length})`);
+          if (nonNull.length > 0) {
+            console.log(`\n  *** WORKING PRICE PAYLOAD (XHR #${i + 1}) ***`);
+            console.log(`  path: ${nonNull[0].path}`);
+            console.log(JSON.stringify(nonNull[0].value, null, 2).slice(0, 4000));
+          }
+        } catch (err) {
+          console.log(`  body preview (not JSON): ${x.body.slice(0, 300)}`);
+        }
+      } else {
+        console.log(`  body preview: ${x.body.slice(0, 300)}`);
+      }
+    }
+  } finally {
+    await context.close();
+  }
+  return foundSha;
+}
+
+async function tryDirectFetch(externalId: string, sha: string, daysOut: number, nights: number): Promise<void> {
+  console.log(pad(`DIRECT FETCH with captured SHA ${sha.slice(0, 12)}…`));
+  const { checkin, checkout } = makeWindow(daysOut, nights);
+  const variables = {
+    id: Buffer.from(`StayListing:${externalId}`).toString("base64"),
+    pdpSectionsRequest: {
+      adults: "2",
+      children: null,
+      infants: null,
+      pets: 0,
+      layouts: ["SIDEBAR", "SINGLE_COLUMN"],
+      sectionIds: ["BOOK_IT_FLOATING_FOOTER", "BOOK_IT_SIDEBAR"],
+      checkIn: checkin,
+      checkOut: checkout,
+    },
+  };
+  const extensions = { persistedQuery: { version: 1, sha256Hash: sha } };
+  const url =
+    `https://www.airbnb.com/api/v3/StaysPdpSections/${sha}?` +
+    `operationName=StaysPdpSections&locale=en&currency=USD&` +
+    `variables=${encodeURIComponent(JSON.stringify(variables))}&` +
+    `extensions=${encodeURIComponent(JSON.stringify(extensions))}`;
+  const res = await fetch(url, {
+    headers: {
+      "user-agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "accept": "*/*",
+      "accept-language": "en-US,en;q=0.9",
+      "x-airbnb-api-key": "d306zoyjsyarp7ifhu67rjxn52tv0t20",
+      "x-airbnb-graphql-platform": "web",
+      "x-airbnb-graphql-platform-client": "minimalist-niobe",
+    },
+  });
+  console.log("HTTP:", res.status);
+  const text = await res.text();
+  console.log("body bytes:", text.length, "first 400:", text.slice(0, 400));
+  if (res.ok) {
+    try {
+      const json = JSON.parse(text);
+      const nonNull = findKeysAnywhere(json, ["structuredDisplayPrice"]).filter((h) => h.value !== null);
+      console.log(`structuredDisplayPrice non-null hits: ${nonNull.length}`);
+      if (nonNull.length > 0) {
+        console.log("\n*** DIRECT FETCH SUCCESS — production adapter can use this exact pattern ***");
+        console.log(JSON.stringify(nonNull[0].value, null, 2).slice(0, 3000));
+      }
+    } catch (err) {
+      console.log("parse failed:", (err as Error).message);
+    }
   }
 }
 
 async function main(): Promise<void> {
   const externalIdArg = process.argv[2];
   const externalId = externalIdArg ?? DEFAULT_EXTERNAL_ID;
-  console.log("starting airbnb-pricing-debug v5 — externalId:", externalId);
-  // Two windows so we can confirm the price field actually changes with dates
-  // (proving it's a real per-window quote, not a static rate card)
-  await probe(externalId, 30, 3, "30d-out / 3 nights");
-  await probe(externalId, 60, 7, "60d-out / 7 nights");
-  console.log(pad("DONE"));
+  console.log("starting airbnb-pricing-debug v6 (Playwright) — externalId:", externalId);
+
+  let browser: Browser | null = null;
+  try {
+    browser = await chromium.launch({ headless: true });
+    console.log("chromium launched");
+
+    const sha1 = await probeWithBrowser(browser, externalId, 30, 3, "30d-out / 3 nights");
+
+    if (sha1) {
+      // Prove the captured SHA is reusable for direct fetches with a different window
+      await tryDirectFetch(externalId, sha1, 60, 7);
+    } else {
+      console.log(pad("NO SHA CAPTURED"));
+      console.log("Possible reasons: page didn't make XHR within timeout, Airbnb served");
+      console.log("a captcha/challenge, or operation name changed. Increase PRICE_WAIT_MS or");
+      console.log("inspect with headless: false locally to see what the page actually shows.");
+    }
+  } finally {
+    if (browser) await browser.close();
+    console.log(pad("DONE"));
+  }
 }
 
 main().catch((err) => {
