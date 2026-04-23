@@ -24,8 +24,7 @@
     "calibrate:pride": "tsx ./calibration/pride-2026-pre-post.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "og": "tsx ./src/generate-og.ts",
-    "scrape:airbnb-pricing-export": "tsx ./src/airbnb-pricing-export.ts",
-    "scrape:airbnb-pricing-sync": "bash ./run-airbnb-pricing-sync.sh"
+    "scrape:airbnb-pricing": "tsx ./src/airbnb-pricing-refresh.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
