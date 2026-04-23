@@ -1,0 +1,120 @@
+scheduling build on Metal builder "production-builderv3-us-west1-k4fg"
+unpacking archive
+46.9 MB
+234ms
+using build driver nixpacks-v1.41.0
+ 
+╔══════════════════════════════ Nixpacks v1.41.0 ══════════════════════════════╗
+║ setup      │ nodejs_20, pnpm                                                 ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ install    │ pnpm install --no-frozen-lockfile                               ║
+║            │ pnpm --filter @workspace/api-server exec playwright install     ║
+║            │ --with-deps chromium                                            ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ build      │ pnpm install --no-frozen-lockfile && pnpm --filter              ║
+║            │ @workspace/api-server exec playwright install --with-deps       ║
+║            │ chromium && pnpm --filter @workspace/api-server... build        ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ start      │ node --enable-source-maps artifacts/api-server/dist/index.mjs   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+ 
+ 
+Saved output to:
+  snapshot-target-unpack
+
+internal
+load build definition from Dockerfile
+0ms
+
+internal
+load metadata for ghcr.io/railwayapp/nixpacks:ubuntu-1745885067
+182ms
+
+internal
+load .dockerignore
+0ms
+SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "AWIN_API_TOKEN") (line 11)(https://docs.docker.com/go/dockerfile/rule/secrets-used-in-arg-or-env/)
+ details: Sensitive data should not be used in the ARG or ENV commands
+SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "GMAIL_CONTACT_FORM_PASSWORD") (line 11)(https://docs.docker.com/go/dockerfile/rule/secrets-used-in-arg-or-env/)
+ details: Sensitive data should not be used in the ARG or ENV commands
+SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ARG "INTERNAL_TRIGGER_TOKEN") (line 11)(https://docs.docker.com/go/dockerfile/rule/secrets-used-in-arg-or-env/)
+ details: Sensitive data should not be used in the ARG or ENV commands
+SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "AWIN_API_TOKEN") (line 12)(https://docs.docker.com/go/dockerfile/rule/secrets-used-in-arg-or-env/)
+ details: Sensitive data should not be used in the ARG or ENV commands
+SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "GMAIL_CONTACT_FORM_PASSWORD") (line 12)(https://docs.docker.com/go/dockerfile/rule/secrets-used-in-arg-or-env/)
+ details: Sensitive data should not be used in the ARG or ENV commands
+SecretsUsedInArgOrEnv: Do not use ARG or ENV instructions for sensitive data (ENV "INTERNAL_TRIGGER_TOKEN") (line 12)(https://docs.docker.com/go/dockerfile/rule/secrets-used-in-arg-or-env/)
+ details: Sensitive data should not be used in the ARG or ENV commands
+UndefinedVar: Usage of undefined variable '$NIXPACKS_PATH' (line 18)(https://docs.docker.com/go/dockerfile/rule/undefined-var/)
+ details: Variables should be defined before their use
+
+stage-0
+FROM ghcr.io/railwayapp/nixpacks:ubuntu-1745885067@sha256:d45c89d80e13d7ad0fd555b5130f22a866d9dd10e861f589932303ef2314c7de
+13ms
+
+internal
+load build context
+0ms
+
+stage-0
+RUN nix-env -if .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix && nix-collect-garbage -d cached
+0ms
+
+stage-0
+COPY .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix cached
+0ms
+
+stage-0
+WORKDIR /app/ cached
+0ms
+
+stage-0
+COPY . /app/.
+1s
+uploading snapshot
+38.1 MB
+1.4s
+
+stage-0
+RUN pnpm install --no-frozen-lockfile
+5s
+Done in 4.4s
+
+stage-0
+RUN pnpm --filter @workspace/api-server exec playwright install --with-deps chromium
+39s
+Chrome Headless Shell 147.0.7727.15 (playwright chromium-headless-shell v1217) downloaded to /root/.cache/ms-playwright/chromium_headless_shell-1217
+
+stage-0
+COPY . /app/.
+226ms
+
+stage-0
+RUN pnpm install --no-frozen-lockfile && pnpm --filter @workspace/api-server exec playwright install --with-deps chromium && pnpm --filter @workspace/api-server... build
+4s
+artifacts/api-server build: Done
+
+stage-0
+RUN printf '\nPATH=/app/node_modules/.bin:$PATH' >> /root/.profile
+99ms
+
+stage-0
+COPY . /app
+281ms
+
+exporting to docker image format
+8s
+containerimage.descriptor: eyJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvbi92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJkaWdlc3QiOiJzaGEyNTY6NjU0MjQ4MzA0MThmOGNhYTI3YjYzOGI1NzM5MzE1NjIxMjY5ZTIyYzM5ODZiNjFiYzUwMDQ2ZGI1YWFlMzM4NCIsInNpemUiOjI5NjQsImFubm90YXRpb25zIjp7Im9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0wNC0yM1QyMzoxMzowNFoifSwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYW1kNjQiLCJvcyI6ImxpbnV4In19
+containerimage.config.digest: sha256:78a1dc5eb15ef4ba5141725d1e72553591620d4796a51e3ba703a649c2b021d9
+containerimage.digest: sha256:65424830418f8caa27b638b5739315621269e22c3986b61bc50046db5aae3384
+image push
+885.1 MB / 885.2 MB
+52.8s
+ 
+====================
+Starting Healthcheck
+====================
+Path: /api/healthz
+Retry window: 30s
+ 
+[1/1] Healthcheck succeeded

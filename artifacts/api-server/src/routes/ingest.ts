@@ -1702,6 +1702,7 @@ router.get("/ingest/rental-prices-quality", async (req, res) => {
       rows: Array<{
         source_platform: string;
         total_rows: number;
+        distinct_listings: number;
         null_price: number;
         zero_price: number;
         low_price: number;
@@ -1724,6 +1725,7 @@ router.get("/ingest/rental-prices-quality", async (req, res) => {
       return {
         sourcePlatform: r.source_platform,
         totalRows: r.total_rows,
+        distinctListings: r.distinct_listings,
         nullPrice: r.null_price,
         zeroPrice: r.zero_price,
         lowPrice: r.low_price,
