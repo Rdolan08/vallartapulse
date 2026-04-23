@@ -487,22 +487,41 @@ function DataQualityPanel({
                 </tr>
               </thead>
               <tbody>
-                {perPlatform.map((p) => (
+                {perPlatform.map((p) => {
+                  const isAirbnb = p.sourcePlatform === "airbnb";
+                  return (
                   <tr key={p.sourcePlatform} className="border-b border-border/10 last:border-0">
                     <td className="py-1.5 pr-3 font-mono">{p.sourcePlatform}</td>
                     <td className="py-1.5 px-2 text-right tabular-nums font-medium text-foreground">
                       {typeof p.distinctListings === "number" ? p.distinctListings.toLocaleString() : "—"}
                     </td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{p.totalRows.toLocaleString()}</td>
-                    <td className="py-1.5 px-2 text-right tabular-nums text-emerald-400">{p.plausiblePrice.toLocaleString()}</td>
+                    <td
+                      className={cn(
+                        "py-1.5 px-2 text-right tabular-nums",
+                        isAirbnb ? "text-muted-foreground/60" : "text-emerald-400",
+                      )}
+                      title={isAirbnb ? "Airbnb's calendar feed returns availability only; nightly prices live in rental_price_quotes." : undefined}
+                    >
+                      {isAirbnb ? "—" : p.plausiblePrice.toLocaleString()}
+                    </td>
                     <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground">{p.nullPrice.toLocaleString()}</td>
-                    <td className={cn(
-                      "py-1.5 px-2 text-right tabular-nums font-medium",
-                      p.suspiciousTotal === 0 ? "text-muted-foreground" : "text-red-400",
-                    )}>
-                      {p.suspiciousTotal === 0
-                        ? "0"
-                        : `${p.zeroPrice}/${p.lowPrice}/${p.highPrice}`}
+                    <td
+                      className={cn(
+                        "py-1.5 px-2 text-right tabular-nums font-medium",
+                        isAirbnb
+                          ? "text-muted-foreground/60"
+                          : p.suspiciousTotal === 0
+                            ? "text-muted-foreground"
+                            : "text-red-400",
+                      )}
+                      title={isAirbnb ? "N/A — no nightly prices in this table for Airbnb (see tooltip on Plausible)." : undefined}
+                    >
+                      {isAirbnb
+                        ? "—"
+                        : p.suspiciousTotal === 0
+                          ? "0"
+                          : `${p.zeroPrice}/${p.lowPrice}/${p.highPrice}`}
                     </td>
                     <td className={cn(
                       "py-1.5 px-2 text-right tabular-nums",
@@ -522,7 +541,8 @@ function DataQualityPanel({
                         : "—"}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {all && (
                   <tr className="border-t-2 border-border/30 font-medium">
                     <td className="py-1.5 pr-3 font-mono">{all.sourcePlatform}</td>
