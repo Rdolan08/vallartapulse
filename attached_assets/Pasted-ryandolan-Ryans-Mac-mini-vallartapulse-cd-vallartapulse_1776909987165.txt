@@ -1,0 +1,175 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse
+git checkout main
+git pull
+DATABASE_URL=$RAILWAY_DATABASE_URL \
+  pnpm --filter @workspace/scripts run scrape:airbnb-pricing
+Switched to branch 'main'
+Your branch is behind 'origin/main' by 79 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+Updating ec2c374..99b4e56
+Fast-forward
+ .github/workflows/airbnb-enrich-refresh.yml                                     |   83 +-
+ .github/workflows/freshness-check.yml                                           |    9 +-
+ artifacts/api-server/src/lib/comps-engine-v2.ts                                 |   55 +-
+ artifacts/api-server/src/lib/comps-engine-v3.ts                                 |   56 +-
+ artifacts/api-server/src/lib/event-zone-overlay.ts                              |  137 ++
+ artifacts/api-server/src/lib/forward-demand.ts                                  |  524 +++++++
+ artifacts/api-server/src/lib/ingest/airbnb-search-adapter.ts                    |    2 +-
+ artifacts/api-server/src/lib/pv-seasonality.ts                                  |  696 +++++++--
+ artifacts/api-server/src/routes/comps.ts                                        |  594 +++++++-
+ artifacts/api-server/src/routes/forward-demand.ts                               |  119 ++
+ artifacts/api-server/src/routes/index.ts                                        |    2 +
+ artifacts/api-server/src/routes/ingest.ts                                       |  315 +++-
+ artifacts/pv-datastore/about/index.html                                         |    6 +-
+ artifacts/pv-datastore/contact/index.html                                       |    6 +-
+ artifacts/pv-datastore/economic/index.html                                      |    6 +-
+ artifacts/pv-datastore/index.html                                               |    6 +-
+ artifacts/pv-datastore/package.json                                             |    3 +
+ artifacts/pv-datastore/pricing-tool/index.html                                  |    6 +-
+ artifacts/pv-datastore/public/og/sources.png                                    |  Bin 107175 -> 104934 bytes
+ artifacts/pv-datastore/rental-market/index.html                                 |    6 +-
+ artifacts/pv-datastore/safety/index.html                                        |    6 +-
+ artifacts/pv-datastore/sources/index.html                                       |    6 +-
+ artifacts/pv-datastore/src/App.tsx                                              |    2 +
+ artifacts/pv-datastore/src/components/forward-demand-panel.tsx                  |  394 +++++
+ artifacts/pv-datastore/src/components/stay-rent-value-panel.tsx                 |  192 +++
+ artifacts/pv-datastore/src/lib/utils.ts                                         |    9 +-
+ artifacts/pv-datastore/src/pages/pricing-tool.tsx                               |  487 +++++--
+ artifacts/pv-datastore/src/pages/sources.tsx                                    |   18 +-
+ artifacts/pv-datastore/tourism/index.html                                       |    6 +-
+ artifacts/pv-datastore/weather/index.html                                       |    6 +-
+ .../Pasted--ingest-airbnb-search-adapter-ts--1776648318897_1776648318898.txt    |  391 +++++
+ ...ed--timestamp-2026-04-20T22-25-16-250Z-event-identity-chec_1776723978821.txt |   27 +
+ ...ed-Copy-Absolutely-I-took-a-first-pass-look-through-the-re_1776909200634.txt | 2830 ++++++++++++++++++++++++++++++++++++
+ ...ed-Here-s-a-clean-GitHub-issue-you-can-drop-in-as-is-Title_1776895182638.txt |  122 ++
+ ...ed-I-need-a-concrete-production-strategy-for-Airbnb-calend_1776746703606.txt |   86 ++
+ ...ed-Implement-Phase-B-as-a-structural-extension-of-the-exis_1776881696323.txt |  376 +++++
+ ...ed-Implement-the-Airbnb-discovery-scraper-as-a-new-file-at_1776703445315.txt |  291 ++++
+ ...ed-Phase-B-looks-good-Keep-it-exactly-as-implemented-expla_1776890938099.txt |   77 +
+ ...ed-Proceed-to-implementation-using-the-locked-spec-below-A_1776893528684.txt |   83 ++
+ ...ed-Proceed-with-the-next-phase-using-this-approach-We-shou_1776804894156.txt |   59 +
+ ...ed-Quick-Read-of-the-Codebase-This-is-a-pnpm-monorepo-with_1776896027424.txt |  277 ++++
+ ...ed-The-file-already-does-the-bucket-sweep-pacing-dedupe-id_1776704544251.txt |   23 +
+ ...ed-VallartaPulse-Airbnb-discovery-consolidate-the-current-_1776744291341.txt |  176 +++
+ ...ed-Yes-Below-is-a-comprehensive-first-pass-canonical-event_1776879308593.txt |  411 ++++++
+ ...ed-Your-premise-correction-is-right-The-real-issue-is-not-_1776747124249.txt |   37 +
+ ...ed-Your-read-is-right-The-proposal-was-directionally-stron_1776880272361.txt |  227 +++
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-cd-Users-ryandol_1776722891723.txt |  132 ++
+ attached_assets/Screenshot_2026-04-19_at_9.02.35_PM_1776650558453.png           |  Bin 0 -> 115790 bytes
+ attached_assets/Screenshot_2026-04-20_at_11.17.29_AM_1776701858322.png          |  Bin 0 -> 255265 bytes
+ attached_assets/Screenshot_2026-04-20_at_11.21.16_AM_1776702086350.png          |  Bin 0 -> 151865 bytes
+ attached_assets/Screenshot_2026-04-20_at_11.22.15_AM_1776702144284.png          |  Bin 0 -> 54522 bytes
+ attached_assets/Screenshot_2026-04-20_at_5.46.05_PM_1776725176901.png           |  Bin 0 -> 29854 bytes
+ attached_assets/Screenshot_2026-04-20_at_5.55.24_PM_1776725732342.png           |  Bin 0 -> 163763 bytes
+ attached_assets/Screenshot_2026-04-21_at_5.50.33_PM_1776811838835.png           |  Bin 0 -> 195389 bytes
+ attached_assets/Screenshot_2026-04-22_at_11.20.15_AM_1776874821001.png          |  Bin 0 -> 438688 bytes
+ attached_assets/Screenshot_2026-04-22_at_11.26.57_AM_1776875221069.png          |  Bin 0 -> 134847 bytes
+ attached_assets/Screenshot_2026-04-22_at_11.36.44_AM_1776875811390.png          |  Bin 0 -> 262125 bytes
+ attached_assets/Screenshot_2026-04-22_at_12.02.35_PM_1776877361290.png          |  Bin 0 -> 405471 bytes
+ attached_assets/Screenshot_2026-04-22_at_12.04.13_PM_1776877463452.png          |  Bin 0 -> 310653 bytes
+ attached_assets/Screenshot_2026-04-22_at_5.09.50_PM_1776895863147.png           |  Bin 0 -> 1108672 bytes
+ attached_assets/Screenshot_2026-04-22_at_5.10.05_PM_1776895866551.png           |  Bin 0 -> 1014535 bytes
+ attached_assets/bucket_report_latest_run_1776743777145.csv                      |    8 +
+ attached_assets/bucket_summary_latest_run_1776743777145.csv                     |    2 +
+ attached_assets/dead_buckets_latest_run_1776743777145.csv                       |    3 +
+ attached_assets/image_1776723298645.png                                         |  Bin 0 -> 964416 bytes
+ attached_assets/image_1776806548835.png                                         |  Bin 0 -> 993092 bytes
+ attached_assets/rejections_latest_run_1776743777145.csv                         |    3 +
+ attached_assets/run-discovery_1776703574319.sh                                  |   25 +
+ attached_assets/screenshots/vallartapulse_com_pricing-tool.png                  |  Bin 140853 -> 139833 bytes
+ attached_assets/screenshots/vallartapulse_com_sources.png                       |  Bin 217164 -> 210500 bytes
+ attached_assets/top_buckets_latest_run_1776743777145.csv                        |    8 +
+ diagnostics/calibration/pride-2026/2026-04-22T21-09-34-509Z.json                |  264 ++++
+ diagnostics/calibration/pride-2026/README.md                                    |   76 +
+ docs/AIRBNB_PRICING_PIPELINE.md                                                 |  142 ++
+ docs/PRICING_ENGINE_V3.4_ROADMAP.md                                             |  122 ++
+ docs/discovery-scraper-brief.md                                                 |  206 +++
+ lib/db/src/schema/discovery_rejected_candidates.ts                              |   94 ++
+ lib/db/src/schema/discovery_run_log.ts                                          |   72 +
+ lib/db/src/schema/forward_demand_observations.ts                                |   96 ++
+ lib/db/src/schema/index.ts                                                      |    3 +
+ lib/db/src/schema/rental_listings.ts                                            |   26 +
+ package.json                                                                    |    4 +-
+ pnpm-lock.yaml                                                                  |   43 +
+ scripts/calibration/pride-2026-pre-post.ts                                      |  388 +++++
+ scripts/package.json                                                            |    8 +-
+ scripts/src/_probe-bucket.ts                                                    |  197 +++
+ scripts/src/airbnb-discovery.ts                                                 | 1026 +++++++++++++
+ scripts/src/airbnb-pricing-refresh.ts                                           |  186 +++
+ scripts/src/lib/airbnb-detail-parser.ts                                         |  328 +++++
+ scripts/src/lib/airbnb-discovery-buckets.ts                                     |  453 ++++++
+ scripts/src/lib/airbnb-discovery-helpers.ts                                     |  302 ++++
+ scripts/src/lib/airbnb-residential-fetch.ts                                     |  133 ++
+ scripts/src/lib/airbnb-search-cards-extract.ts                                  |   74 +
+ 93 files changed, 13254 insertions(+), 420 deletions(-)
+ create mode 100644 artifacts/api-server/src/lib/event-zone-overlay.ts
+ create mode 100644 artifacts/api-server/src/lib/forward-demand.ts
+ create mode 100644 artifacts/api-server/src/routes/forward-demand.ts
+ create mode 100644 artifacts/pv-datastore/src/components/forward-demand-panel.tsx
+ create mode 100644 artifacts/pv-datastore/src/components/stay-rent-value-panel.tsx
+ create mode 100644 attached_assets/Pasted--ingest-airbnb-search-adapter-ts--1776648318897_1776648318898.txt
+ create mode 100644 attached_assets/Pasted--timestamp-2026-04-20T22-25-16-250Z-event-identity-chec_1776723978821.txt
+ create mode 100644 attached_assets/Pasted-Copy-Absolutely-I-took-a-first-pass-look-through-the-re_1776909200634.txt
+ create mode 100644 attached_assets/Pasted-Here-s-a-clean-GitHub-issue-you-can-drop-in-as-is-Title_1776895182638.txt
+ create mode 100644 attached_assets/Pasted-I-need-a-concrete-production-strategy-for-Airbnb-calend_1776746703606.txt
+ create mode 100644 attached_assets/Pasted-Implement-Phase-B-as-a-structural-extension-of-the-exis_1776881696323.txt
+ create mode 100644 attached_assets/Pasted-Implement-the-Airbnb-discovery-scraper-as-a-new-file-at_1776703445315.txt
+ create mode 100644 attached_assets/Pasted-Phase-B-looks-good-Keep-it-exactly-as-implemented-expla_1776890938099.txt
+ create mode 100644 attached_assets/Pasted-Proceed-to-implementation-using-the-locked-spec-below-A_1776893528684.txt
+ create mode 100644 attached_assets/Pasted-Proceed-with-the-next-phase-using-this-approach-We-shou_1776804894156.txt
+ create mode 100644 attached_assets/Pasted-Quick-Read-of-the-Codebase-This-is-a-pnpm-monorepo-with_1776896027424.txt
+ create mode 100644 attached_assets/Pasted-The-file-already-does-the-bucket-sweep-pacing-dedupe-id_1776704544251.txt
+ create mode 100644 attached_assets/Pasted-VallartaPulse-Airbnb-discovery-consolidate-the-current-_1776744291341.txt
+ create mode 100644 attached_assets/Pasted-Yes-Below-is-a-comprehensive-first-pass-canonical-event_1776879308593.txt
+ create mode 100644 attached_assets/Pasted-Your-premise-correction-is-right-The-real-issue-is-not-_1776747124249.txt
+ create mode 100644 attached_assets/Pasted-Your-read-is-right-The-proposal-was-directionally-stron_1776880272361.txt
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-Users-ryandol_1776722891723.txt
+ create mode 100644 attached_assets/Screenshot_2026-04-19_at_9.02.35_PM_1776650558453.png
+ create mode 100644 attached_assets/Screenshot_2026-04-20_at_11.17.29_AM_1776701858322.png
+ create mode 100644 attached_assets/Screenshot_2026-04-20_at_11.21.16_AM_1776702086350.png
+ create mode 100644 attached_assets/Screenshot_2026-04-20_at_11.22.15_AM_1776702144284.png
+ create mode 100644 attached_assets/Screenshot_2026-04-20_at_5.46.05_PM_1776725176901.png
+ create mode 100644 attached_assets/Screenshot_2026-04-20_at_5.55.24_PM_1776725732342.png
+ create mode 100644 attached_assets/Screenshot_2026-04-21_at_5.50.33_PM_1776811838835.png
+ create mode 100644 attached_assets/Screenshot_2026-04-22_at_11.20.15_AM_1776874821001.png
+ create mode 100644 attached_assets/Screenshot_2026-04-22_at_11.26.57_AM_1776875221069.png
+ create mode 100644 attached_assets/Screenshot_2026-04-22_at_11.36.44_AM_1776875811390.png
+ create mode 100644 attached_assets/Screenshot_2026-04-22_at_12.02.35_PM_1776877361290.png
+ create mode 100644 attached_assets/Screenshot_2026-04-22_at_12.04.13_PM_1776877463452.png
+ create mode 100644 attached_assets/Screenshot_2026-04-22_at_5.09.50_PM_1776895863147.png
+ create mode 100644 attached_assets/Screenshot_2026-04-22_at_5.10.05_PM_1776895866551.png
+ create mode 100644 attached_assets/bucket_report_latest_run_1776743777145.csv
+ create mode 100644 attached_assets/bucket_summary_latest_run_1776743777145.csv
+ create mode 100644 attached_assets/dead_buckets_latest_run_1776743777145.csv
+ create mode 100644 attached_assets/image_1776723298645.png
+ create mode 100644 attached_assets/image_1776806548835.png
+ create mode 100644 attached_assets/rejections_latest_run_1776743777145.csv
+ create mode 100644 attached_assets/run-discovery_1776703574319.sh
+ create mode 100644 attached_assets/top_buckets_latest_run_1776743777145.csv
+ create mode 100644 diagnostics/calibration/pride-2026/2026-04-22T21-09-34-509Z.json
+ create mode 100644 diagnostics/calibration/pride-2026/README.md
+ create mode 100644 docs/AIRBNB_PRICING_PIPELINE.md
+ create mode 100644 docs/PRICING_ENGINE_V3.4_ROADMAP.md
+ create mode 100644 docs/discovery-scraper-brief.md
+ create mode 100644 lib/db/src/schema/discovery_rejected_candidates.ts
+ create mode 100644 lib/db/src/schema/discovery_run_log.ts
+ create mode 100644 lib/db/src/schema/forward_demand_observations.ts
+ create mode 100644 scripts/calibration/pride-2026-pre-post.ts
+ create mode 100644 scripts/src/_probe-bucket.ts
+ create mode 100644 scripts/src/airbnb-discovery.ts
+ create mode 100644 scripts/src/airbnb-pricing-refresh.ts
+ create mode 100644 scripts/src/lib/airbnb-detail-parser.ts
+ create mode 100644 scripts/src/lib/airbnb-discovery-buckets.ts
+ create mode 100644 scripts/src/lib/airbnb-discovery-helpers.ts
+ create mode 100644 scripts/src/lib/airbnb-residential-fetch.ts
+ create mode 100644 scripts/src/lib/airbnb-search-cards-extract.ts
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":50,"dryRun":false,"ts":"2026-04-23T02:05:50.276Z"}
+ERROR: airbnb-graphql-pricing-adapter / airbnb-graphql-quote-adapter are still compile-only stubs. Implement them before running this script. See docs/AIRBNB_PRICING_PIPELINE.md > 'Known blocker' and issue #34. Underlying throw: airbnb-graphql-pricing-adapter is not implemented in this build. The PdpAvailabilityCalendar GraphQL replay code has not landed yet. Do not call /ingest/airbnb-pricing-refresh until this module is wired up.
+/Users/ryandolan/vallartapulse/scripts:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/scripts@0.0.0 scrape:airbnb-pricing: `tsx ./src/airbnb-pricing-refresh.ts`
+Exit status 4
+ryandolan@Ryans-Mac-mini vallartapulse % 
