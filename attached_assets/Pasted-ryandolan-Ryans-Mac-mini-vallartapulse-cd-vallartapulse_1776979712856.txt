@@ -1,0 +1,191 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && source .env && export DATABASE_URL=$RAILWAY_DATABASE_URL && \
+  AIRBNB_PRICING_MAX_LISTINGS=3 AIRBNB_PRICING_DRY_RUN=1 \
+  pnpm --filter @workspace/scripts run scrape:airbnb-pricing
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":3,"dryRun":true,"ts":"2026-04-23T21:24:49.260Z"}
+[airbnb-pricing] listing 4214 (1610096526897460312): 34 checkpoints to quote
+[airbnb-pricing]   cp 1/34 2026-04-24→2026-04-26 total=— 3445ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 2/34 2026-04-25→2026-04-27 total=— 667ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 3/34 2026-05-01→2026-05-03 total=— 638ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 4/34 2026-05-02→2026-05-04 total=unavailable 1450ms
+[airbnb-pricing]   cp 5/34 2026-05-08→2026-05-10 total=unavailable 1807ms
+[airbnb-pricing]   cp 6/34 2026-05-09→2026-05-11 total=— 796ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 7/34 2026-05-15→2026-05-17 total=— 645ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 8/34 2026-05-16→2026-05-18 total=unavailable 1728ms
+[airbnb-pricing]   cp 9/34 2026-05-22→2026-05-24 total=unavailable 1885ms
+[airbnb-pricing]   cp 10/34 2026-05-23→2026-05-25 total=unavailable 1657ms
+[airbnb-pricing]   cp 11/34 2026-05-29→2026-05-31 total=unavailable 1607ms
+[airbnb-pricing]   cp 12/34 2026-05-30→2026-06-01 total=unavailable 1700ms
+[airbnb-pricing]   cp 13/34 2026-06-05→2026-06-07 total=— 730ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 14/34 2026-06-06→2026-06-08 total=unavailable 2674ms
+[airbnb-pricing]   cp 15/34 2026-06-12→2026-06-14 total=unavailable 1586ms
+[airbnb-pricing]   cp 16/34 2026-06-13→2026-06-15 total=— 816ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 17/34 2026-06-19→2026-06-21 total=unavailable 1667ms
+[airbnb-pricing]   cp 18/34 2026-06-20→2026-06-22 total=— 22948ms err=parser found $ but no Total. sidebar="Skip to content Homes Homes NEW NEW Experi
+[airbnb-pricing]   cp 19/34 2026-06-26→2026-06-28 total=— 759ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 20/34 2026-06-27→2026-06-29 total=— 865ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 21/34 2026-07-03→2026-07-05 total=— 1044ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 22/34 2026-07-04→2026-07-06 total=— 761ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 23/34 2026-07-10→2026-07-12 total=— 784ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 24/34 2026-07-11→2026-07-13 total=— 901ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 25/34 2026-08-10→2026-08-13 total=— 831ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 26/34 2026-09-14→2026-09-17 total=— 832ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 27/34 2026-10-12→2026-10-15 total=unavailable 1605ms
+[airbnb-pricing]   cp 28/34 2026-11-09→2026-11-12 total=unavailable 1606ms
+[airbnb-pricing]   cp 29/34 2026-12-14→2026-12-17 total=unavailable 2092ms
+[airbnb-pricing]   cp 30/34 2026-12-24→2026-12-27 total=unavailable 1705ms
+[airbnb-pricing]   cp 31/34 2026-12-30→2027-01-02 total=— 982ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 32/34 2027-01-11→2027-01-14 total=unavailable 2078ms
+[airbnb-pricing]   cp 33/34 2027-01-16→2027-01-23 total=— 1119ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 34/34 2027-03-20→2027-03-27 total=— 787ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing] listing 4213 (1508818201576753078): 34 checkpoints to quote
+[airbnb-pricing]   cp 1/34 2026-04-24→2026-04-26 total=— 1032ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 2/34 2026-04-25→2026-04-27 total=— 884ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 3/34 2026-05-01→2026-05-03 total=— 943ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 4/34 2026-05-02→2026-05-04 total=— 907ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 5/34 2026-05-08→2026-05-10 total=— 762ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 6/34 2026-05-09→2026-05-11 total=— 780ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 7/34 2026-05-15→2026-05-17 total=— 1085ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 8/34 2026-05-16→2026-05-18 total=unavailable 1694ms
+[airbnb-pricing]   cp 9/34 2026-05-22→2026-05-24 total=— 606ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 10/34 2026-05-23→2026-05-25 total=unavailable 1594ms
+[airbnb-pricing]   cp 11/34 2026-05-29→2026-05-31 total=— 829ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 12/34 2026-05-30→2026-06-01 total=unavailable 1657ms
+[airbnb-pricing]   cp 13/34 2026-06-05→2026-06-07 total=unavailable 1525ms
+[airbnb-pricing]   cp 14/34 2026-06-06→2026-06-08 total=unavailable 1601ms
+[airbnb-pricing]   cp 15/34 2026-06-12→2026-06-14 total=unavailable 1579ms
+[airbnb-pricing]   cp 16/34 2026-06-13→2026-06-15 total=— 1392ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 17/34 2026-06-19→2026-06-21 total=unavailable 1871ms
+[airbnb-pricing]   cp 18/34 2026-06-20→2026-06-22 total=unavailable 1889ms
+[airbnb-pricing]   cp 19/34 2026-06-26→2026-06-28 total=unavailable 1715ms
+[airbnb-pricing]   cp 20/34 2026-06-27→2026-06-29 total=unavailable 1782ms
+[airbnb-pricing]   cp 21/34 2026-07-03→2026-07-05 total=unavailable 1671ms
+[airbnb-pricing]   cp 22/34 2026-07-04→2026-07-06 total=unavailable 1558ms
+[airbnb-pricing]   cp 23/34 2026-07-10→2026-07-12 total=unavailable 1763ms
+[airbnb-pricing]   cp 24/34 2026-07-11→2026-07-13 total=— 857ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 25/34 2026-08-10→2026-08-13 total=$211 4799ms
+[airbnb-pricing]   cp 26/34 2026-09-14→2026-09-17 total=— 753ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 27/34 2026-10-12→2026-10-15 total=$251 4707ms
+[airbnb-pricing]   cp 28/34 2026-11-09→2026-11-12 total=— 843ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 29/34 2026-12-14→2026-12-17 total=— 838ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 30/34 2026-12-24→2026-12-27 total=— 875ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 31/34 2026-12-30→2027-01-02 total=— 608ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 32/34 2027-01-11→2027-01-14 total=— 935ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 33/34 2027-01-16→2027-01-23 total=$1337 4852ms
+[airbnb-pricing]   cp 34/34 2027-03-20→2027-03-27 total=$1211 4917ms
+[airbnb-pricing] listing 4212 (1131262839989442604): 34 checkpoints to quote
+[airbnb-pricing]   cp 1/34 2026-04-24→2026-04-26 total=unavailable 1938ms
+[airbnb-pricing]   cp 2/34 2026-04-25→2026-04-27 total=unavailable 2433ms
+[airbnb-pricing]   cp 3/34 2026-05-01→2026-05-03 total=— 764ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 4/34 2026-05-02→2026-05-04 total=unavailable 1603ms
+[airbnb-pricing]   cp 5/34 2026-05-08→2026-05-10 total=$209 5139ms
+[airbnb-pricing]   cp 6/34 2026-05-09→2026-05-11 total=$216 4870ms
+[airbnb-pricing]   cp 7/34 2026-05-15→2026-05-17 total=unavailable 1708ms
+[airbnb-pricing]   cp 8/34 2026-05-16→2026-05-18 total=unavailable 2102ms
+[airbnb-pricing]   cp 9/34 2026-05-22→2026-05-24 total=— 757ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 10/34 2026-05-23→2026-05-25 total=— 839ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 11/34 2026-05-29→2026-05-31 total=— 852ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 12/34 2026-05-30→2026-06-01 total=unavailable 1590ms
+[airbnb-pricing]   cp 13/34 2026-06-05→2026-06-07 total=$215 5038ms
+[airbnb-pricing]   cp 14/34 2026-06-06→2026-06-08 total=$213 4788ms
+[airbnb-pricing]   cp 15/34 2026-06-12→2026-06-14 total=— 849ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 16/34 2026-06-13→2026-06-15 total=— 867ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 17/34 2026-06-19→2026-06-21 total=— 776ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 18/34 2026-06-20→2026-06-22 total=$213 4712ms
+[airbnb-pricing]   cp 19/34 2026-06-26→2026-06-28 total=$212 5099ms
+[airbnb-pricing]   cp 20/34 2026-06-27→2026-06-29 total=$212 4993ms
+[airbnb-pricing]   cp 21/34 2026-07-03→2026-07-05 total=$216 7907ms
+[airbnb-pricing]   cp 22/34 2026-07-04→2026-07-06 total=$214 4972ms
+[airbnb-pricing]   cp 23/34 2026-07-10→2026-07-12 total=unavailable 1645ms
+[airbnb-pricing]   cp 24/34 2026-07-11→2026-07-13 total=— 919ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 25/34 2026-08-10→2026-08-13 total=— 826ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 26/34 2026-09-14→2026-09-17 total=— 1018ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 27/34 2026-10-12→2026-10-15 total=unavailable 2050ms
+[airbnb-pricing]   cp 28/34 2026-11-09→2026-11-12 total=unavailable 2163ms
+[airbnb-pricing]   cp 29/34 2026-12-14→2026-12-17 total=unavailable 2141ms
+[airbnb-pricing]   cp 30/34 2026-12-24→2026-12-27 total=— 943ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 31/34 2026-12-30→2027-01-02 total=unavailable 1928ms
+[airbnb-pricing]   cp 32/34 2027-01-11→2027-01-14 total=— 867ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 33/34 2027-01-16→2027-01-23 total=— 976ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 34/34 2027-03-20→2027-03-27 total=unavailable 1766ms
+{
+  "event": "airbnb-pricing-refresh.done",
+  "elapsedMs": 206830,
+  "summary": {
+    "attempted": 3,
+    "ok": 3,
+    "failed": 0,
+    "totalQuotesWritten": 13,
+    "totalDaysWithPrice": 0,
+    "totalQuotesEnriched": 13,
+    "totalQuotesFailed": 89,
+    "totalFullyAvailableCheckpoints": 66,
+    "totalQuotesEnrichedFullyAvailable": 13,
+    "enrichmentRate": 0.19696969696969696,
+    "shaSource": "fallback",
+    "quoteShaSource": "cache",
+    "shaRediscoveriesDuringRun": 0,
+    "quoteShaRediscoveriesDuringRun": 0,
+    "alertLevel": "ok",
+    "alertReason": "",
+    "presumedBookingsInserted": null,
+    "presumedBookingsCandidatesEvaluated": null
+  },
+  "listings": [
+    {
+      "listingId": 4214,
+      "externalId": "1610096526897460312",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 34,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 34,
+      "fullyAvailableCheckpoints": 23,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    },
+    {
+      "listingId": 4213,
+      "externalId": "1508818201576753078",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 34,
+      "quotesEnriched": 4,
+      "quotesEnrichedFullyAvailable": 4,
+      "quotesFailed": 30,
+      "fullyAvailableCheckpoints": 31,
+      "quotesWritten": 4,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    },
+    {
+      "listingId": 4212,
+      "externalId": "1131262839989442604",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 34,
+      "quotesEnriched": 9,
+      "quotesEnrichedFullyAvailable": 9,
+      "quotesFailed": 25,
+      "fullyAvailableCheckpoints": 12,
+      "quotesWritten": 9,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    }
+  ]
+}
+WARN: zero listings processed (check the active Airbnb cohort)
