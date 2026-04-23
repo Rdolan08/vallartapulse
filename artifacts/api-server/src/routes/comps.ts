@@ -81,6 +81,7 @@ async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: numbe
 
   const listings: CompsListingV2[] = [];
   const freshnessAccum: Record<PriceSource, { sum: number; n: number }> = {
+    airbnb_quote: { sum: 0, n: 0 },
     pvrpv_daily: { sum: 0, n: 0 },
     static_displayed: { sum: 0, n: 0 },
   };
@@ -119,6 +120,9 @@ async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: numbe
     },
     sourceCounts: selection.sourceCounts,
     avgFreshnessDays: {
+      airbnb_quote: freshnessAccum.airbnb_quote.n > 0
+        ? Math.round(10 * freshnessAccum.airbnb_quote.sum / freshnessAccum.airbnb_quote.n) / 10
+        : null,
       pvrpv_daily: freshnessAccum.pvrpv_daily.n > 0
         ? Math.round(10 * freshnessAccum.pvrpv_daily.sum / freshnessAccum.pvrpv_daily.n) / 10
         : null,
@@ -518,7 +522,9 @@ router.post("/rental/comps", async (req, res) => {
       if (src === "static_displayed") {
         staticCount += 1;
         if (typeof fresh === "number") staticFreshSum += fresh;
-      } else if (src === "pvrpv_daily") {
+      } else if (src === "pvrpv_daily" || src === "airbnb_quote") {
+        // Both are real-rate sources kept fresh by scrapers — neither
+        // contributes to the static-staleness penalty.
         dailyCount += 1;
       } else {
         otherCount += 1;
