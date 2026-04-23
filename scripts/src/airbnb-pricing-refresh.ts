@@ -83,7 +83,29 @@ async function main(): Promise<number> {
   );
 
   const t0 = Date.now();
-  const result = await runAirbnbPricingRefresh({ maxListings, dryRun });
+  let result: Awaited<ReturnType<typeof runAirbnbPricingRefresh>>;
+  try {
+    result = await runAirbnbPricingRefresh({ maxListings, dryRun });
+  } catch (err) {
+    // The two GraphQL adapters (airbnb-graphql-pricing-adapter,
+    // airbnb-graphql-quote-adapter) currently throw "not implemented in
+    // this build" from getOrDiscoverSha — which the runner calls BEFORE
+    // the per-listing loop, so it bubbles all the way up here without
+    // ever returning a summary. Detect that case and emit one clear
+    // operator message + exit code 4. Any other error keeps the
+    // existing crash behavior (full stack, exit 1).
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/not implemented in this build/i.test(msg)) {
+      console.error(
+        "ERROR: airbnb-graphql-pricing-adapter / airbnb-graphql-quote-adapter " +
+          "are still compile-only stubs. Implement them before running this " +
+          "script. See docs/AIRBNB_PRICING_PIPELINE.md > 'Known blocker' and " +
+          "issue #34. Underlying throw: " + msg,
+      );
+      return 4;
+    }
+    throw err;
+  }
   const elapsedMs = Date.now() - t0;
 
   console.log(
