@@ -1,0 +1,65 @@
+ryandolan@Ryans-Mac-mini vallartapulse % launchctl print gui/$(id -u)/com.vallartapulse.airbnb-pricing 2>/dev/null | head -40
+# Or directly cat the plist:
+cat ~/Library/LaunchAgents/com.vallartapulse.airbnb-pricing.plist
+gui/501/com.vallartapulse.airbnb-pricing = {
+	active count = 0
+	path = /Users/ryandolan/Library/LaunchAgents/com.vallartapulse.airbnb-pricing.plist
+	type = LaunchAgent
+	state = not running
+
+	program = /bin/bash
+	arguments = {
+		/bin/bash
+		-lc
+		/Users/ryandolan/vallartapulse/scripts/run-airbnb-pricing-nightly.sh
+	}
+
+	stdout path = /Users/ryandolan/vallartapulse/logs/airbnb-pricing/launchd.out.log
+	stderr path = /Users/ryandolan/vallartapulse/logs/airbnb-pricing/launchd.err.log
+	inherited environment = {
+		SSH_AUTH_SOCK => /var/run/com.apple.launchd.etoHtQ3f31/Listeners
+	}
+
+	default environment = {
+		PATH => /usr/bin:/bin:/usr/sbin:/sbin
+	}
+
+	environment = {
+		OSLogRateLimit => 64
+		XPC_SERVICE_NAME => com.vallartapulse.airbnb-pricing
+	}
+
+	domain = gui/501 [100018]
+	asid = 100018
+	minimum runtime = 10
+	exit timeout = 5
+	runs = 2
+	last exit code = 127
+
+	event triggers = {
+		com.vallartapulse.airbnb-pricing.268435480 => {
+			keepalive = 0
+			service = com.vallartapulse.airbnb-pricing
+			stream = com.apple.launchd.calendarinterval
+zsh: command not found: #
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key><string>com.vallartapulse.airbnb-pricing</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>-lc</string>
+      <string>/Users/ryandolan/vallartapulse/scripts/run-airbnb-pricing-nightly.sh</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+      <key>Hour</key><integer>2</integer>
+      <key>Minute</key><integer>15</integer>
+    </dict>
+    <key>RunAtLoad</key><true/>
+    <key>StandardOutPath</key><string>/Users/ryandolan/vallartapulse/logs/airbnb-pricing/launchd.out.log</string>
+    <key>StandardErrorPath</key><string>/Users/ryandolan/vallartapulse/logs/airbnb-pricing/launchd.err.log</string>
+  </dict>
+</plist>
