@@ -42,13 +42,17 @@
  *   AIRBNB_PRICING_MAX_LISTINGS   default 50 (matches the in-process daily budget)
  *   AIRBNB_PRICING_DRY_RUN        truthy => skip DB writes
  *
- * KNOWN BLOCKER (as of 2026-04-23):
- *   The two GraphQL adapters this runner depends on
- *   (airbnb-graphql-pricing-adapter.ts and airbnb-graphql-quote-adapter.ts)
- *   are currently compile-only stubs that throw "not implemented in this
- *   build". Until they're implemented, every listing in the cohort will
- *   fail with that exact message and this script will exit with code 4.
- *   Tracked in docs/AIRBNB_PRICING_PIPELINE.md.
+ * STATUS (as of 2026-04-23):
+ *   Both GraphQL adapters (airbnb-graphql-pricing-adapter.ts +
+ *   airbnb-graphql-quote-adapter.ts) are fully implemented and the
+ *   in-process exit-code-4 stub-detection branch is now defensive-only.
+ *   This script is the canonical nightly entry point for the per-night
+ *   pricing pipeline and is invoked by the Mac mini launchd job
+ *   `com.vallartapulse.airbnb-pricing` at 17:00 PV (= 23:00 UTC).
+ *   Railway / GH Actions can no longer reach Airbnb's PDP endpoints from
+ *   datacenter IPs (the Decodo residential pool burned out 2026-04-22),
+ *   so the residential IP of the Mac mini is now the only viable runner
+ *   environment. See docs/AIRBNB_PRICING_PIPELINE.md.
  */
 
 import { pool } from "@workspace/db";

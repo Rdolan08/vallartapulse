@@ -1,0 +1,80 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cat ~/vallartapulse/scripts/run-airbnb-pricing-nightly.sh
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_DIR="/Users/ryandolan/vallartapulse"
+LOG_DIR="$REPO_DIR/logs/airbnb-pricing"
+TS="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+LOG_FILE="$LOG_DIR/run-$TS.log"
+
+CSV_FILE="$REPO_DIR/airbnb_calendar_prices.csv"
+LOADER_SQL="$REPO_DIR/load_airbnb_prices.sql"
+
+mkdir -p "$LOG_DIR"
+
+{
+  echo "===== Airbnb pricing nightly run ($TS UTC) ====="
+  cd "$REPO_DIR"
+
+  echo "[1/6] Loading env"
+  set -a
+  source .env
+  set +a
+  export DATABASE_URL="${RAILWAY_DATABASE_URL:?RAILWAY_DATABASE_URL missing}"
+
+  echo "[2/6] Running scraper (replace with your real command)"
+  echo "SCRAPER_PLACEHOLDER"
+
+  echo "[3/6] Verifying CSV exists"
+  if [[ ! -f "$CSV_FILE" ]]; then
+    echo "ERROR: CSV not found: $CSV_FILE"
+    exit 1
+  fi
+  wc -l "$CSV_FILE"
+  head -n 3 "$CSV_FILE"
+
+  echo "[4/6] Loading CSV -> Railway"
+  psql "$DATABASE_URL" -f "$LOADER_SQL"
+
+  echo "[5/6] Post-load metrics"
+  psql "$DATABASE_URL" -c "
+  SELECT
+    COUNT(*) AS priced_rows,
+    COUNT(DISTINCT rpbd.listing_id) AS listings_with_price,
+    MAX(rpbd.scraped_at) AS newest_scrape
+  FROM rental_prices_by_date rpbd
+  JOIN rental_listings rl ON rl.id = rpbd.listing_id
+  WHERE rl.source_platform='airbnb'
+    AND rpbd.nightly_price_usd IS NOT NULL;
+  "
+
+  echo "[6/6] Done"
+} | tee -a "$LOG_FILE"
+ryandolan@Ryans-Mac-mini vallartapulse % >....                                  
+
+REPO_DIR="/Users/ryandolan/vallartapulse"
+LOG_DIR="$REPO_DIR/logs/airbnb-pricing"
+TS="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+LOG_FILE="$LOG_DIR/run-$TS.log"
+
+mkdir -p "$LOG_DIR"
+
+{
+  echo "===== Airbnb pricing nightly run ($TS UTC) ====="
+  cd "$REPO_DIR"
+
+  echo "[1/4] Loading env"
+  set -a
+  source .env
+  set +a
+  export DATABASE_URL="${RAILWAY_DATABASE_URL:?RAILWAY_DATABASE_URL missing}"
+
+  echo "[2/4] Running pricing refresh (Drizzle direct, no CSV middleman)"
+  # Writes per-night quotes straight into listing_price_quotes and a
+  # run summary row into airbnb_pricing_run_summaries. Runner code:
+  #   artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts
+  # Default
+heredoc> 
+heredoc> 
+heredoc> EOF
+ryandolan@Ryans-Mac-mini vallartapulse % 
