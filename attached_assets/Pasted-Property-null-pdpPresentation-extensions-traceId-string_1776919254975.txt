@@ -1,0 +1,40 @@
+Property: null, pdpPresentation: {…} } }, extensions: { traceId: string } }
+  PRICE HITS: 8
+    [stayProductDetailPage] $.data.presentation.stayProductDetailPage
+      → {"__typename":"StayPDPPresentationContainer","sections":{"__typename":"StayPDPSections","sections":[{"__typename":"SectionContainer","id":"U2VjdGlvbkNvbnRhaW5lcjotMTI5MTU2MDk4NDk5NjMzMTgw","sectionComponentType":"BOOK_IT_CALENDAR_SHEET","sectionConte
+    [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[0].section.showPriceBreakdown
+      → false
+    [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[2].section.showPriceBreakdown
+      → true
+    [selectMaxNightsViolationDateLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[2].section.tripDetailsLoggingEventData.selectMaxNightsViolationDateLoggingEventData
+      → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.selectMaxNightsViolationDate","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":"bookItSidebar","component":"selectMaxNightsViolationDate"}
+    [selectMinNightsViolationDateLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[2].section.tripDetailsLoggingEventData.selectMinNightsViolationDateLoggingEventData
+      → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.selectMinNightsViolationDate","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":"bookItSidebar","component":"selectMinNightsViolationDate"}
+    [ratePlanLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[2].section.ratePlanLoggingEventData
+      → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.ratePlanInput","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":null,"component":null}
+    [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[4].section.showPriceBreakdown
+      → false
+    [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[5].section.showPriceBreakdown
+      → false
+
+— [8] GET StaysPdpReviewsQuery (status 200)
+  url: https://www.airbnb.com/api/v3/StaysPdpReviewsQuery/2ed951bfedf71b87d9d30e24a419e15517af9fbed7ac560a8d1cc7feadfa22e6?operationName=StaysPdpReviewsQuery&locale=en&currency=USD&variables=%7B%22id%22%3A%22U3RheUxpc3Rpbmc6MTY…
+  response shape: { data: { presentation: { __typename: string, stayProductDetailPage: {…} } }, extensions: { traceId: string } }
+  PRICE HITS: 1
+    [stayProductDetailPage] $.data.presentation.stayProductDetailPage
+      → {"__typename":"StayPDPPresentationContainer","reviews":{"__typename":"PdpReviews","reviews":[{"__typename":"PdpReviewForP3","collectionTag":null,"comments":"By far one of the best places we have stayed. The Condo itself was incredibly clean and updat
+
+══════ REPLAY: direct POST with captured body ════════════════════════════════
+HTTP 200, body bytes 64279, first 400: {"data":{"presentation":{"__typename":"RootPresentationContainer","stayProductDetailPage":{"__typename":"StayPDPPresentationContainer","sections":{"__typename":"StayPDPSections","sections":[{"__typename":"SectionContainer","id":"U2VjdGlvbkNvbnRhaW5lcjo3MTg1NDA5OTcxODI3MDM4MQ==","sectionComponentType":"CANCELLATION_POLICY_PICKER_MODAL","sectionContentStatus":"COMPLETE","sectionId":"CANCELLATION_POL
+replay PRICE HITS: 8
+  [stayProductDetailPage] $.data.presentation.stayProductDetailPage → {"__typename":"StayPDPPresentationContainer","sections":{"__typename":"StayPDPSections","sections":[{"__typename":"SectionContainer","id":"U2VjdGlvbkNvbnRhaW5lcjo3MTg1NDA5OTcxODI3MDM4MQ==","sectionComponentType":"CANCELLATION_POLICY_PICKER_MODAL","se
+  [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[1].section.showPriceBreakdown → false
+  [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[3].section.showPriceBreakdown → false
+  [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[4].section.showPriceBreakdown → true
+  [selectMaxNightsViolationDateLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[4].section.tripDetailsLoggingEventData.selectMaxNightsViolationDateLoggingEventData → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.selectMaxNightsViolationDate","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":"bookItSidebar","component":"selectMaxNightsViolationDate"}
+  [selectMinNightsViolationDateLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[4].section.tripDetailsLoggingEventData.selectMinNightsViolationDateLoggingEventData → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.selectMinNightsViolationDate","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":"bookItSidebar","component":"selectMinNightsViolationDate"}
+  [ratePlanLoggingEventData] $.data.presentation.stayProductDetailPage.sections.sections[4].section.ratePlanLoggingEventData → {"__typename":"LoggingEventData","loggingId":"pdp.bookItSidebar.ratePlanInput","experiments":null,"eventData":null,"eventDataSchemaName":null,"section":null,"component":null}
+  [showPriceBreakdown] $.data.presentation.stayProductDetailPage.sections.sections[6].section.showPriceBreakdown → false
+
+══════ DONE ══════════════════════════════════════════════════════════════════
+ryandolan@Ryans-Mac-mini vallartapulse % 

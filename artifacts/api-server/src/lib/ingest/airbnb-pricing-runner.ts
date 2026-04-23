@@ -47,6 +47,7 @@ import {
 import {
   fetchAirbnbQuote,
   getOrDiscoverQuoteSha,
+  shutdownQuoteBrowser,
   type AirbnbQuoteResult,
 } from "./airbnb-graphql-quote-adapter.js";
 import {
@@ -410,6 +411,7 @@ export async function runAirbnbPricingRefresh(
 
   const listings = await loadStaleFirstListings(maxListings);
 
+  try {
   // Discover the calendar SHA up front so all listings share one cache hit.
   const initial = await getOrDiscoverSha();
   let currentSha = initial.sha;
@@ -682,5 +684,11 @@ export async function runAirbnbPricingRefresh(
   }
 
   return result;
+  } finally {
+    // Always release the headless Chromium spawned by the quote adapter,
+    // even if the run threw partway through. Otherwise the cron process
+    // would hang on the live browser handle.
+    await shutdownQuoteBrowser();
+  }
 }
 
