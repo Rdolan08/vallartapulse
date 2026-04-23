@@ -1,0 +1,39 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && git pull && AIRBNB_PRICING_MAX_LISTINGS=5 AIRBNB_PRICING_MAX_CHECKPOINTS_PER_LISTING=2 AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts run scrape:airbnb-pricing 2>&1 | tee /tmp/smoke4.log
+remote: Enumerating objects: 29, done.
+remote: Counting objects: 100% (29/29), done.
+remote: Compressing objects: 100% (9/9), done.
+remote: Total 20 (delta 15), reused 16 (delta 11), pack-reused 0 (from 0)
+Unpacking objects: 100% (20/20), 169.43 KiB | 2.61 MiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   ea0a522..68475e8  main       -> origin/main
+Updating ea0a522..68475e8
+Fast-forward
+ artifacts/api-server/src/lib/ingest/airbnb-graphql-quote-adapter.ts                              |  41 +++++++++++++++++++++++++++++++++++++++++
+ artifacts/api-server/src/lib/ingest/airbnb-pricing-runner.ts                                     |  12 +++++++++++-
+ attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776960718840.txt | 157 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776961306078.txt | 139 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ attached_assets/airbnb-debug-1131262839989442604-2026-04-24-noparse-177696096_1776961501979.html |  17 +++++++++++++++++
+ attached_assets/airbnb-debug-873155792315908830-2027-03-20-noparse-1776961027_1776961519704.html |  17 +++++++++++++++++
+ 6 files changed, 382 insertions(+), 1 deletion(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776960718840.txt
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-cd-vallartapulse_1776961306078.txt
+ create mode 100644 attached_assets/airbnb-debug-1131262839989442604-2026-04-24-noparse-177696096_1776961501979.html
+ create mode 100644 attached_assets/airbnb-debug-873155792315908830-2027-03-20-noparse-1776961027_1776961519704.html
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+/Users/ryandolan/vallartapulse/lib/db/src/index.ts:8
+  throw new Error(
+        ^
+
+Error: DATABASE_URL must be set. Did you forget to provision a database?
+    at <anonymous> (/Users/ryandolan/vallartapulse/lib/db/src/index.ts:8:9)
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:639:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v25.9.0
+/Users/ryandolan/vallartapulse/scripts:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/scripts@0.0.0 scrape:airbnb-pricing: `tsx ./src/airbnb-pricing-refresh.ts`
+Exit status 1
