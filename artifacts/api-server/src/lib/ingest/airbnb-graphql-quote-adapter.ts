@@ -253,7 +253,23 @@ export async function fetchAirbnbQuote(
       .waitFor({ state: "attached", timeout: SIDEBAR_WAIT_MS })
       .catch(() => {});
 
-    // Wait until the sidebar actually renders dollars (not just skeleton).
+    // Wait until the sidebar actually renders the REAL stay price.
+    //
+    // The previous version of this wait used /\$\d/ which matched the
+    // "$0 today" deposit placeholder Airbnb renders FIRST while the
+    // pricing API is still in-flight. Result: we exited the wait early
+    // and scraped a sidebar that still had the literal text "loading"
+    // at the end (validated 2026-04-23 against listing 53116610).
+    //
+    // The fix: require BOTH conditions before we consider the sidebar
+    // ready —
+    //   (a) a non-zero dollar amount appears anywhere in the sidebar
+    //       (\$[1-9]\d* — must start with 1-9 so "$0 today" doesn't
+    //       satisfy it). The real stay price is always >=$10.
+    //   (b) the literal substring "loading" is GONE from the sidebar
+    //       (case-insensitive). This is Airbnb's skeleton placeholder
+    //       and disappears the instant the price API resolves.
+    //
     // Passed as a string so TS doesn't try to typecheck DOM globals here.
     await page
       .waitForFunction(
@@ -261,7 +277,8 @@ export async function fetchAirbnbQuote(
           const el = document.querySelector('[data-section-id*="BOOK_IT"]');
           if (!el) return false;
           const t = el.innerText || "";
-          return /\\$\\d/.test(t);
+          if (/loading/i.test(t)) return false;
+          return /\\$[1-9]\\d*/.test(t);
         })()`,
         null,
         { timeout: SIDEBAR_WAIT_MS },
