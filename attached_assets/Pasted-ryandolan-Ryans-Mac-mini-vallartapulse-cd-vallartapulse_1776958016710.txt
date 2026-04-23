@@ -1,0 +1,131 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse && AIRBNB_PRICING_MAX_LISTINGS=5 AIRBNB_PRICING_MAX_CHECKPOINTS_PER_LISTING=1 AIRBNB_PRICING_DRY_RUN=1 DATABASE_URL=$RAILWAY_DATABASE_URL pnpm --filter @workspace/scripts run scrape:airbnb-pricing 2>&1 | tee /tmp/smoke.log
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":5,"dryRun":true,"ts":"2026-04-23T15:24:15.881Z"}
+[airbnb-pricing] listing 305 (1552402429): 1 checkpoints to quote
+[airbnb-pricing]   cp 1/1 2026-04-24→2026-04-26 total=— 21701ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing] listing 339 (787254975877): 1 checkpoints to quote
+[airbnb-pricing]   cp 1/1 2026-04-24→2026-04-26 total=— 21732ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing] listing 340 (53116610): 1 checkpoints to quote
+[airbnb-pricing]   cp 1/1 2026-04-24→2026-04-26 total=— 18811ms
+[airbnb-pricing] listing 341 (110666190324): 1 checkpoints to quote
+[airbnb-pricing]   cp 1/1 2026-04-24→2026-04-26 total=— 21590ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+[airbnb-pricing] listing 342 (119643620055): 1 checkpoints to quote
+[airbnb-pricing]   cp 1/1 2026-04-24→2026-04-26 total=— 21593ms err=no price text rendered in booking sidebar title="Airbnb: Vacation Rentals, Cabin
+{
+  "event": "airbnb-pricing-refresh.done",
+  "elapsedMs": 107744,
+  "summary": {
+    "attempted": 5,
+    "ok": 5,
+    "failed": 0,
+    "totalQuotesWritten": 0,
+    "totalDaysWithPrice": 0,
+    "totalQuotesEnriched": 0,
+    "totalQuotesFailed": 5,
+    "totalFullyAvailableCheckpoints": 4,
+    "totalQuotesEnrichedFullyAvailable": 0,
+    "enrichmentRate": 0,
+    "shaSource": "fallback",
+    "quoteShaSource": "cache",
+    "shaRediscoveriesDuringRun": 0,
+    "quoteShaRediscoveriesDuringRun": 0,
+    "alertLevel": "ok",
+    "alertReason": ""
+  },
+  "listings": [
+    {
+      "listingId": 305,
+      "externalId": "1552402429",
+      "ok": true,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 1,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 1,
+      "fullyAvailableCheckpoints": 1,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "calendar: unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    },
+    {
+      "listingId": 339,
+      "externalId": "787254975877",
+      "ok": true,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 1,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 1,
+      "fullyAvailableCheckpoints": 1,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "calendar: unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    },
+    {
+      "listingId": 340,
+      "externalId": "53116610",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 1,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 1,
+      "fullyAvailableCheckpoints": 0,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    },
+    {
+      "listingId": 341,
+      "externalId": "110666190324",
+      "ok": true,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 1,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 1,
+      "fullyAvailableCheckpoints": 1,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "calendar: unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    },
+    {
+      "listingId": 342,
+      "externalId": "119643620055",
+      "ok": true,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 1,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 1,
+      "fullyAvailableCheckpoints": 1,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "calendar: unexpected response shape: missing data.merlin.pdpAvailabilityCalendar.calendarMonths (top-level keys: data,extensions)"
+    }
+  ]
+}
+WARN: zero listings processed (check the active Airbnb cohort)
+ryandolan@Ryans-Mac-mini vallartapulse % 
