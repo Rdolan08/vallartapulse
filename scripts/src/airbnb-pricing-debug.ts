@@ -1,27 +1,42 @@
 /**
  * scripts/src/airbnb-pricing-debug.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Diagnostic for the airbnb-pricing pipeline. Hits the two endpoints the
- * adapters use against ONE real listing and dumps the raw responses so we
- * can see exactly what Airbnb is returning vs what the adapter parsers
- * expect. Run from the Mac mini (residential IP).
+ * Diagnostic v2 for the airbnb-pricing pipeline.
+ *
+ * Findings from v1 (commit a09d6ab):
+ *   - PdpAvailabilityCalendar GraphQL returns availability-only — every
+ *     `price.localPriceFormatted` is null and there's no `localPrice` field.
+ *     Calendar adapter cannot ever produce nightly prices via this op.
+ *   - v2 REST pdp_listing_booking_details is RETIRED (HTTP 404
+ *     route_not_found, with or without `key=` param).
+ *
+ * v2 probe plan — find a working pricing path:
+ *   PROBE A (highest priority): scrape PDP HTML with check_in/check_out
+ *     query params. The booking-widget structured price is SSR'd into the
+ *     `<script id="data-deferred-state-0" type="application/json">` blob.
+ *     If we can parse fees/total out of this, we drop GraphQL entirely.
+ *
+ *   PROBE B: hit StaysPdpSections GraphQL with section_ids=BOOK_IT_FLOATING_FOOTER
+ *     and check check_in/check_out. The modern unauthenticated price-quote
+ *     path. Try with both raw numeric and base64-encoded listing IDs.
+ *
+ *   PROBE C: dump every 64-hex SHA referenced in the PDP HTML near a known
+ *     operation name. Tells us if SHA rediscovery from PDP-only is even
+ *     viable (vs needing a separate JS bundle fetch).
+ *
+ * Run from the Mac mini residential IP only. Replit/Railway will be IP-blocked
+ * and lie about what a real run sees.
  *
  *     pnpm --filter @workspace/scripts run debug:airbnb-pricing
- *
- * Optional: pass a specific external_id as the first arg.
- *
- *     pnpm --filter @workspace/scripts run debug:airbnb-pricing -- 12345...
- *
- * NEVER call this from Railway/CI — Airbnb IP-blocks datacenter ranges and
- * the diagnostic would lie about what a real Mac mini run would see.
+ *     pnpm --filter @workspace/scripts run debug:airbnb-pricing -- 1508818201576753078
  */
 
 const AIRBNB_API_KEY = "d306zoyjsyarp7ifhu67rjxn52tv0t20";
-const BOOTSTRAP_SHA =
-  "8f08e03c7bd16fcad3c92a3592c19a8b559a0d0855a84028d1163d4733ed9ade";
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
+const DEFAULT_EXTERNAL_ID = "1610096526897460312";
 
 function pad(label: string): string {
   return `\n══════ ${label} ${"═".repeat(Math.max(0, 70 - label.length))}`;
@@ -49,179 +64,229 @@ function shapeOf(v: unknown, depth = 0, maxDepth = 4): string {
   return `{ ${inner}${more} }`;
 }
 
+function fmtDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function makeWindow(daysOut: number, nights: number): { checkin: string; checkout: string } {
+  const ci = new Date();
+  ci.setUTCDate(ci.getUTCDate() + daysOut);
+  const co = new Date(ci);
+  co.setUTCDate(co.getUTCDate() + nights);
+  return { checkin: fmtDate(ci), checkout: fmtDate(co) };
+}
+
 /**
- * Default external_id is the most-recently scraped airbnb listing as of
- * 2026-04-23 (pulled directly from the Railway DB). Any 18-19 digit
- * airbnb listing id will work — pass one as argv[2] to override.
+ * PROBE A — PDP HTML with check_in/check_out. Look for the structured price
+ * in the SSR'd JSON blob.
  */
-const DEFAULT_EXTERNAL_ID = "1610096526897460312";
-
-function pickListing(externalIdArg: string | undefined): { externalId: string } {
-  return { externalId: externalIdArg ?? DEFAULT_EXTERNAL_ID };
-}
-
-async function probeCalendar(externalId: string): Promise<void> {
-  console.log(pad("CALENDAR: PdpAvailabilityCalendar GraphQL"));
-  const today = new Date();
-  const variables = {
-    request: {
-      count: 12,
-      listingId: externalId,
-      month: today.getUTCMonth() + 1,
-      year: today.getUTCFullYear(),
-    },
-  };
-  const extensions = {
-    persistedQuery: { version: 1, sha256Hash: BOOTSTRAP_SHA },
-  };
+async function probePdpHtml(externalId: string): Promise<void> {
+  console.log(pad("PROBE A: PDP HTML scrape (check_in/check_out)"));
+  const { checkin, checkout } = makeWindow(30, 3);
   const url =
-    `https://www.airbnb.com/api/v3/PdpAvailabilityCalendar/${BOOTSTRAP_SHA}?` +
-    `operationName=PdpAvailabilityCalendar&locale=en&currency=USD&` +
-    `variables=${encodeURIComponent(JSON.stringify(variables))}&` +
-    `extensions=${encodeURIComponent(JSON.stringify(extensions))}`;
-  console.log("URL:", url.slice(0, 180) + "…");
+    `https://www.airbnb.com/rooms/${encodeURIComponent(externalId)}?` +
+    `check_in=${checkin}&check_out=${checkout}&adults=2`;
+  console.log("URL:", url);
+  console.log("WINDOW:", checkin, "→", checkout);
   const res = await fetch(url, {
     headers: {
       "user-agent": UA,
-      "accept": "*/*",
+      "accept":
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
       "accept-language": "en-US,en;q=0.9",
-      "x-airbnb-api-key": AIRBNB_API_KEY,
-      "x-airbnb-graphql-platform": "web",
-      "x-airbnb-graphql-platform-client": "minimalist-niobe",
     },
+    redirect: "follow",
   });
-  console.log("HTTP:", res.status);
-  const text = await res.text();
-  console.log("BODY (first 800 chars):");
-  console.log(text.slice(0, 800));
+  console.log("HTTP:", res.status, "→", res.url);
+  if (!res.ok) {
+    console.log("BODY (first 400):", (await res.text()).slice(0, 400));
+    return;
+  }
+  const html = await res.text();
+  console.log("HTML length:", html.length);
+
+  // Look for the deferred-state JSON blob.
+  const blobMatch = /<script[^>]*id="data-deferred-state-0"[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/.exec(
+    html,
+  );
+  if (!blobMatch) {
+    console.log("NO data-deferred-state-0 blob found. Searching for any data-deferred-state…");
+    const anyBlob = /<script[^>]*id="(data-deferred-state[^"]*)"/g;
+    const ids: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = anyBlob.exec(html)) !== null) ids.push(m[1]);
+    console.log("found script IDs:", ids.slice(0, 10).join(", ") || "(none)");
+    return;
+  }
+  const raw = blobMatch[1];
+  console.log("blob length:", raw.length);
+
+  let blob: unknown;
   try {
-    const json = JSON.parse(text) as Record<string, unknown>;
-    console.log("\nTOP-LEVEL SHAPE:", shapeOf(json));
-    const pdc = (json as { data?: { merlin?: { pdpAvailabilityCalendar?: { calendarMonths?: Array<{ days?: unknown[] }> } } } })
-      .data?.merlin?.pdpAvailabilityCalendar;
-    if (pdc?.calendarMonths) {
-      console.log("CALENDAR MONTHS:", pdc.calendarMonths.length);
-      const firstMonth = pdc.calendarMonths[0];
-      const firstDay = firstMonth?.days?.[0];
-      console.log("FIRST DAY SHAPE:", shapeOf(firstDay));
-      console.log("FIRST DAY (raw):", JSON.stringify(firstDay, null, 2));
-      // Check across all days how many actually have a price
-      let withPrice = 0;
-      let availableCount = 0;
-      let total = 0;
-      for (const m of pdc.calendarMonths) {
-        for (const d of (m.days ?? []) as Array<{ available?: boolean; price?: unknown }>) {
-          total++;
-          if (d.available) availableCount++;
-          if (d.price && typeof d.price === "object") {
-            const p = d.price as Record<string, unknown>;
-            if (
-              (typeof p.localPrice === "number" && p.localPrice > 0) ||
-              (typeof p.localPriceFormatted === "string" && p.localPriceFormatted.length > 0)
-            ) {
-              withPrice++;
-            }
-          }
-        }
-      }
-      console.log(
-        `DAY STATS: total=${total} available=${availableCount} withPrice=${withPrice}`,
+    blob = JSON.parse(raw);
+  } catch (err) {
+    console.log("blob JSON parse failed:", (err as Error).message);
+    console.log("blob first 200:", raw.slice(0, 200));
+    return;
+  }
+  console.log("blob top-level shape:", shapeOf(blob, 0, 3));
+
+  // Hunt for fields that look like price breakdown — search the whole tree
+  // for keys we expect: structuredDisplayPrice, priceBreakdown, total, etc.
+  const hits = findKeysAnywhere(blob, [
+    "structuredDisplayPrice",
+    "priceBreakdown",
+    "explanationData",
+    "BOOK_IT_FLOATING_FOOTER",
+    "BOOK_IT_SIDEBAR",
+    "totalPrice",
+    "displayPrice",
+    "rate",
+    "cleaningFee",
+  ]);
+  console.log("\nKEY HITS in blob:");
+  for (const h of hits.slice(0, 20)) {
+    console.log(`  [${h.key}] at ${h.path} → ${shapeOf(h.value, 0, 2)}`);
+  }
+
+  // If we find structuredDisplayPrice, dump the first hit fully.
+  const sdp = hits.find((h) => h.key === "structuredDisplayPrice");
+  if (sdp) {
+    console.log("\nFULL structuredDisplayPrice (first found):");
+    console.log(JSON.stringify(sdp.value, null, 2).slice(0, 2500));
+  } else {
+    console.log("\nNO structuredDisplayPrice found — sample of blob keys:");
+    if (typeof blob === "object" && blob !== null) {
+      console.log(Object.keys(blob as Record<string, unknown>).slice(0, 20).join(", "));
+    }
+  }
+}
+
+/**
+ * PROBE B — StaysPdpSections GraphQL. Try a known-recent SHA bootstrap with
+ * both raw numeric and base64 ID encodings.
+ */
+async function probeStaysPdpSections(externalId: string): Promise<void> {
+  console.log(pad("PROBE B: StaysPdpSections GraphQL"));
+  // Known-recent (late 2025) bootstrap SHA. May be stale.
+  const sha = "f70b9f30bf25fa1b3b3937a7e6b5fa46905a6cda6fd25dcf71cf42c624a5cdaf";
+  const { checkin, checkout } = makeWindow(30, 3);
+
+  for (const idVariant of [
+    { label: "raw numeric", id: externalId },
+    { label: "base64", id: Buffer.from(`StayListing:${externalId}`).toString("base64") },
+  ]) {
+    console.log(`\n— variant: ${idVariant.label} (id=${idVariant.id.slice(0, 60)}…)`);
+    const variables = {
+      id: idVariant.id,
+      pdpSectionsRequest: {
+        adults: "2",
+        children: null,
+        infants: null,
+        pets: 0,
+        layouts: ["SIDEBAR", "SINGLE_COLUMN"],
+        sectionIds: ["BOOK_IT_FLOATING_FOOTER", "BOOK_IT_SIDEBAR"],
+        checkIn: checkin,
+        checkOut: checkout,
+      },
+    };
+    const extensions = { persistedQuery: { version: 1, sha256Hash: sha } };
+    const url =
+      `https://www.airbnb.com/api/v3/StaysPdpSections/${sha}?` +
+      `operationName=StaysPdpSections&locale=en&currency=USD&` +
+      `variables=${encodeURIComponent(JSON.stringify(variables))}&` +
+      `extensions=${encodeURIComponent(JSON.stringify(extensions))}`;
+    const res = await fetch(url, {
+      headers: {
+        "user-agent": UA,
+        "accept": "*/*",
+        "accept-language": "en-US,en;q=0.9",
+        "x-airbnb-api-key": AIRBNB_API_KEY,
+        "x-airbnb-graphql-platform": "web",
+        "x-airbnb-graphql-platform-client": "minimalist-niobe",
+      },
+    });
+    console.log("HTTP:", res.status);
+    const body = await res.text();
+    console.log("BODY (first 600):", body.slice(0, 600));
+  }
+}
+
+/**
+ * PROBE C — dump every 64-hex SHA found near operation names in PDP HTML.
+ */
+async function probeShaDiscovery(externalId: string): Promise<void> {
+  console.log(pad("PROBE C: SHA discovery from PDP HTML"));
+  const url = `https://www.airbnb.com/rooms/${encodeURIComponent(externalId)}`;
+  const res = await fetch(url, { headers: { "user-agent": UA } });
+  console.log("HTTP:", res.status);
+  if (!res.ok) return;
+  const html = await res.text();
+  const ops = ["PdpAvailabilityCalendar", "StaysPdpSections", "StaysPdpReservation", "StartStaysCheckout"];
+  for (const op of ops) {
+    const re = new RegExp(`"${op}"\\s*:\\s*"([a-f0-9]{64})"`);
+    const m = re.exec(html);
+    if (m) {
+      console.log(`  ${op}: ${m[1]}`);
+    } else {
+      // Try a looser search: the op name appearing within 200 chars of a 64-hex string
+      const loose = new RegExp(
+        `${op}[\\s\\S]{0,300}?([a-f0-9]{64})|([a-f0-9]{64})[\\s\\S]{0,300}?${op}`,
       );
+      const m2 = loose.exec(html);
+      if (m2) console.log(`  ${op}: ${m2[1] ?? m2[2]} (loose match)`);
+      else console.log(`  ${op}: NOT FOUND in PDP HTML`);
     }
-  } catch (err) {
-    console.log("not json or parse failed:", (err as Error).message);
   }
+
+  // Also: list any _next/static or similar JS bundle URLs we'd need to fetch
+  // for a deeper SHA hunt.
+  const bundles: string[] = [];
+  const bundleRe = /(https:\/\/[a-z0-9.-]+\/_next\/static\/[^"']+\.js|src="(\/static\/[^"]+\.js)")/gi;
+  let bm: RegExpExecArray | null;
+  while ((bm = bundleRe.exec(html)) !== null) {
+    bundles.push(bm[0]);
+    if (bundles.length >= 5) break;
+  }
+  console.log("first JS bundle refs (up to 5):", bundles.length ? bundles : "(none)");
 }
 
-async function probeQuoteRest(externalId: string): Promise<void> {
-  console.log(pad("QUOTE: v2 REST pdp_listing_booking_details"));
-  // pick a window 30-33 days from today (3 nights)
-  const checkin = new Date();
-  checkin.setUTCDate(checkin.getUTCDate() + 30);
-  const checkout = new Date(checkin);
-  checkout.setUTCDate(checkout.getUTCDate() + 3);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  const params = new URLSearchParams({
-    _format: "for_web_with_date",
-    check_in: fmt(checkin),
-    check_out: fmt(checkout),
-    number_of_adults: "2",
-    number_of_children: "0",
-    number_of_infants: "0",
-    number_of_pets: "0",
-    _intents: "p3",
-    currency: "USD",
-    locale: "en",
-    key: AIRBNB_API_KEY,
-  });
-  const url = `https://www.airbnb.com/api/v2/pdp_listing_booking_details/${encodeURIComponent(externalId)}?${params.toString()}`;
-  console.log("URL:", url.slice(0, 220) + "…");
-  console.log("WINDOW:", fmt(checkin), "→", fmt(checkout));
-  const res = await fetch(url, {
-    headers: {
-      "user-agent": UA,
-      "accept": "application/json, text/plain, */*",
-      "accept-language": "en-US,en;q=0.9",
-      "x-airbnb-api-key": AIRBNB_API_KEY,
-    },
-  });
-  console.log("HTTP:", res.status);
-  const text = await res.text();
-  console.log("BODY (first 1200 chars):");
-  console.log(text.slice(0, 1200));
-  try {
-    const json = JSON.parse(text) as Record<string, unknown>;
-    console.log("\nTOP-LEVEL SHAPE:", shapeOf(json));
-    const detail = (json as { pdp_listing_booking_details?: unknown[] }).pdp_listing_booking_details?.[0];
-    if (detail) {
-      console.log("DETAIL[0] SHAPE:", shapeOf(detail, 0, 5));
-      const d = detail as Record<string, unknown>;
-      if (d.price) {
-        console.log("price (raw):", JSON.stringify(d.price, null, 2).slice(0, 1500));
-      } else {
-        console.log("NO `price` field on detail[0]. Available keys:", Object.keys(d).join(", "));
+/**
+ * Walk an arbitrary JSON value and return locations of any keys matching
+ * `wanted`. Used to find pricing-shaped data in the deferred-state blob.
+ */
+function findKeysAnywhere(
+  root: unknown,
+  wanted: string[],
+): Array<{ key: string; path: string; value: unknown }> {
+  const out: Array<{ key: string; path: string; value: unknown }> = [];
+  const wantedSet = new Set(wanted);
+  function walk(v: unknown, path: string, depth: number): void {
+    if (depth > 18) return;
+    if (out.length > 60) return;
+    if (v === null || typeof v !== "object") return;
+    if (Array.isArray(v)) {
+      for (let i = 0; i < Math.min(v.length, 50); i++) walk(v[i], `${path}[${i}]`, depth + 1);
+      return;
+    }
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+      if (wantedSet.has(k)) {
+        out.push({ key: k, path: `${path}.${k}`, value: val });
       }
+      walk(val, `${path}.${k}`, depth + 1);
     }
-  } catch (err) {
-    console.log("not json or parse failed:", (err as Error).message);
   }
-}
-
-async function probeAlternativeQuote(externalId: string): Promise<void> {
-  console.log(pad("QUOTE: alternative — StaysPdpSections (v3 GraphQL)"));
-  // Airbnb's modern unauthenticated price-quote path is via the
-  // StaysPdpSections operation — section_ids includes BOOK_IT_FLOATING_FOOTER
-  // which carries the structured price even for unbooked windows. This is
-  // the fallback we'd migrate to if v2 REST is dead.
-  const checkin = new Date();
-  checkin.setUTCDate(checkin.getUTCDate() + 30);
-  const checkout = new Date(checkin);
-  checkout.setUTCDate(checkout.getUTCDate() + 3);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  const url =
-    `https://www.airbnb.com/api/v2/pdp_listing_booking_details/${encodeURIComponent(externalId)}?` +
-    `_format=for_web_with_date&check_in=${fmt(checkin)}&check_out=${fmt(checkout)}` +
-    `&number_of_adults=2&_intents=p3&currency=USD&locale=en`; // no key param
-  const res = await fetch(url, {
-    headers: {
-      "user-agent": UA,
-      "accept": "*/*",
-      "x-airbnb-api-key": AIRBNB_API_KEY,
-    },
-  });
-  console.log("v2 REST without `key=` query param — HTTP:", res.status);
-  const text = await res.text();
-  console.log("BODY (first 400 chars):", text.slice(0, 400));
+  walk(root, "$", 0);
+  return out;
 }
 
 async function main(): Promise<void> {
   const externalIdArg = process.argv[2];
-  console.log("starting airbnb-pricing-debug…");
-  const listing = pickListing(externalIdArg);
-  console.log("listing externalId:", listing.externalId);
-  await probeCalendar(listing.externalId);
-  await probeQuoteRest(listing.externalId);
-  await probeAlternativeQuote(listing.externalId);
+  const externalId = externalIdArg ?? DEFAULT_EXTERNAL_ID;
+  console.log("starting airbnb-pricing-debug v2 — externalId:", externalId);
+  await probePdpHtml(externalId);
+  await probeStaysPdpSections(externalId);
+  await probeShaDiscovery(externalId);
   console.log(pad("DONE"));
 }
 
