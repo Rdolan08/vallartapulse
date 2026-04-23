@@ -12,7 +12,7 @@ interface ListingRow {
 interface CsvRow {
   external_id: string;
   date: string;
-  nightly_price_usd: number | null;
+  nightly_price_usd: number;
   availability_status: "available" | "unavailable" | "unknown";
   minimum_nights: number | null;
   scraped_at: string;
@@ -86,7 +86,6 @@ async function main(): Promise<number> {
   const stats = {
     ok: 0,
     failed: 0,
-    listingsWithCalendarSignal: 0,
     listingsWithPricedDays: 0,
     daysSeen: 0,
     daysKept: 0,
@@ -103,12 +102,10 @@ async function main(): Promise<number> {
         });
 
         let listingHadPrice = false;
-        let listingHadCalendarSignal = false;
-
         for (const day of cal.days) {
           stats.daysSeen++;
+          if (day.nightlyPriceUsd == null) continue; // real-only
           if (!keepDate(day.date, today)) continue;
-          if (day.availabilityStatus === "unknown" && day.nightlyPriceUsd == null) continue;
 
           rows.push({
             external_id: listing.externalId,
@@ -118,13 +115,10 @@ async function main(): Promise<number> {
             minimum_nights: day.minimumNights,
             scraped_at: nowIso,
           });
-
           stats.daysKept++;
-          listingHadCalendarSignal = true;
-          if (day.nightlyPriceUsd != null) listingHadPrice = true;
+          listingHadPrice = true;
         }
 
-        if (listingHadCalendarSignal) stats.listingsWithCalendarSignal++;
         if (listingHadPrice) stats.listingsWithPricedDays++;
         stats.ok++;
       } catch (e) {
@@ -143,7 +137,7 @@ async function main(): Promise<number> {
     [
       r.external_id,
       r.date,
-      r.nightly_price_usd == null ? "" : String(r.nightly_price_usd),
+      String(r.nightly_price_usd),
       r.availability_status,
       r.minimum_nights == null ? "" : String(r.minimum_nights),
       r.scraped_at,
@@ -157,7 +151,6 @@ async function main(): Promise<number> {
       {
         out_file: outFile,
         scanned_listings: listings.length,
-        listings_with_calendar_signal: stats.listingsWithCalendarSignal,
         listings_with_priced_days: stats.listingsWithPricedDays,
         rows_written: rows.length,
         days_seen: stats.daysSeen,
