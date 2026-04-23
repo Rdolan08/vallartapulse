@@ -1,0 +1,40 @@
+ryandolan@Ryans-Mac-mini vallartapulse % git pull && pnpm --filter @workspace/scripts run debug:airbnb-pricing
+remote: Enumerating objects: 7, done.
+remote: Counting objects: 100% (7/7), done.
+remote: Compressing objects: 100% (2/2), done.
+remote: Total 7 (delta 5), reused 7 (delta 5), pack-reused 0 (from 0)
+Unpacking objects: 100% (7/7), 4.98 KiB | 728.00 KiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   04be785..c66c6af  main       -> origin/main
+Updating 04be785..c66c6af
+Fast-forward
+ ...ed-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776917952207.txt |  44 +++++
+ scripts/src/airbnb-pricing-debug.ts                                             | 367 ++++++++++++++++++++-----------------
+ 2 files changed, 244 insertions(+), 167 deletions(-)
+ create mode 100644 attached_assets/Pasted-ryandolan-Ryans-Mac-mini-vallartapulse-git-pull-pnpm-fi_1776917952207.txt
+
+> @workspace/scripts@0.0.0 debug:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-debug.ts
+
+starting airbnb-pricing-debug v4 — externalId: 1610096526897460312
+
+══════ FETCH PDP HTML ════════════════════════════════════════════════════════
+PDP HTML fetch: 200
+HTML length: 472326
+
+══════ PROBE G: niobeClientData verbatim + extraction ════════════════════════
+niobeClientData has 1 entries
+  [0] array of length 2; element types: string, object
+  [0][0] string, length 3141, first 800:
+    StaysPdpSections:{"amenityIds":null,"categoryTag":null,"dateRange":{"endDate":"2026-05-26","startDate":"2026-05-23"},"demandStayListingId":"RGVtYW5kU3RheUxpc3Rpbmc6MTYxMDA5NjUyNjg5NzQ2MDMxMg==","federatedSearchId":null,"federatedSearchSessionId":null,"guestCounts":{"numberOfAdults":2},"id":"U3RheUxpc3Rpbmc6MTYxMDA5NjUyNjg5NzQ2MDMxMg==","includeGpAmenitiesFragment":true,"includeGpBookItFragment":true,"includeGpBookItNonExperiencedGuestFragment":true,"includeGpDescriptionFragment":false,"includeGpHeroFragment":true,"includeGpHighlightsFragment":true,"includeGpLocationPdpFragment":true,"includeGpMarqueeBookItFloatingFooterFragment":true,"includeGpMarqueeBookItNavFragment":true,"includeGpMarqueeBookItSidebarFragment":true,"includeGpMeetYourHostFragment":true,"includeGpNavFragment":true,"includ
+
+niobe SHA extraction yielded: 0
+
+══════ PROBE H: exhaustive bundle search ═════════════════════════════════════
+searching 52 bundles for operation SHAs…
+bundle search total: 0 hits
+
+══════ PROBE I: SKIPPED — no StaysPdpSections SHA discovered ═════════════════
+If we reached this with all 52 bundles searched and niobe verbatim dumped, the next step is to run a headless browser (Playwright) to capture the real XHR Airbnb makes — there is no static-discovery path.
+
+══════ DONE ══════════════════════════════════════════════════════════════════
