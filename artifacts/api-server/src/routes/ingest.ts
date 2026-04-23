@@ -1031,27 +1031,53 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
       ? Math.floor((Date.now() - newestAt.getTime()) / 3_600_000)
       : null;
 
-    // Same vocabulary as the run summary so the dashboard can colour both
-    // signals consistently.
+    // Alert tiering philosophy (per ops):
+    //   RED    = no data         — pipeline is genuinely dead, nothing landing
+    //   YELLOW = partial issues  — quotes are landing but something's off
+    //                              (missing fees, cohort partially stale,
+    //                              newest quote getting old)
+    //   GREEN  = "we have gold"  — quotes landing freshly with full fee
+    //                              breakdowns and good cohort coverage
+    //
+    // The key inversion vs. the old logic: cohort staleness and parser-health
+    // overlay alerts no longer escalate to RED. A pipeline that's producing
+    // 2,900 healthy quotes a day is NOT "failing" just because the cohort
+    // hasn't fully cycled yet, or because an enrichment-rate threshold tripped
+    // on a small historical sample. RED is reserved for genuine outages.
     let alertLevel: "ok" | "warn" | "fail" = "ok";
-    let alertReason = "";
+    const reasons: string[] = [];
+
     if (row.listings_total === 0) {
+      // Edge case: nothing to quote. Yellow, not red — not a pipeline failure.
       alertLevel = "warn";
-      alertReason = "No active Airbnb listings in cohort";
-    } else if (ageHours === null || ageHours > 48) {
+      reasons.push("No active Airbnb listings in cohort");
+    } else if (
+      row.quotes_priced_last_24h === 0 &&
+      (ageHours === null || ageHours > 48)
+    ) {
+      // RED: no priced quotes in 24h AND newest historical quote is stale
+      // (or never existed). Pipeline is genuinely producing nothing usable.
       alertLevel = "fail";
-      alertReason = newestAt
-        ? `Newest quote is ${Math.round(ageHours! / 24)} days old`
-        : "No quotes have ever been collected";
-    } else if (row.listings_stale_14d * 2 >= row.listings_total) {
-      alertLevel = "fail";
-      alertReason = `${row.listings_stale_14d}/${row.listings_total} listings stale >14d`;
-    } else if (row.listings_stale_14d > 0) {
-      alertLevel = "warn";
-      alertReason = `${row.listings_stale_14d} listings stale >14d`;
-    } else if (ageHours > 30) {
-      alertLevel = "warn";
-      alertReason = `Newest quote is ${ageHours}h old`;
+      reasons.push(
+        ageHours === null
+          ? "No quotes have ever been collected"
+          : `No priced quotes in 24h; newest is ${Math.round(ageHours / 24)} days old`,
+      );
+    } else {
+      // We have SOME data — cap at YELLOW for any remaining issues.
+      if (ageHours !== null && ageHours > 48) {
+        alertLevel = "warn";
+        reasons.push(`Newest quote is ${Math.round(ageHours / 24)} days old`);
+      } else if (ageHours !== null && ageHours > 30) {
+        alertLevel = "warn";
+        reasons.push(`Newest quote is ${ageHours}h old`);
+      }
+      if (row.listings_stale_14d > 0) {
+        alertLevel = "warn";
+        reasons.push(
+          `${row.listings_stale_14d}/${row.listings_total} listings stale >14d`,
+        );
+      }
     }
 
     // ── Parser-health overlay ────────────────────────────────────────────
@@ -1075,12 +1101,13 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
       const dailyRecords = await loadRecentDailyRunRecords(7);
       parserAlert = evaluateEnrichmentAlert(dailyRecords);
       if (parserAlert.status === "alert") {
-        // Parser-keyword regression beats freshness "ok" — owners stop
-        // seeing fee data even though quotes are still landing.
-        alertLevel = "fail";
-        alertReason = alertReason
-          ? `${alertReason}; ${parserAlert.reason}`
-          : parserAlert.reason;
+        // Parser-keyword regression → YELLOW, not RED. Quotes are still
+        // landing; the fees just aren't enriching at the expected rate.
+        // Per ops tiering: missing fees is "we are missing fees and shit",
+        // not "no data". Don't downgrade an already-RED state (no-data),
+        // just escalate from green → yellow.
+        if (alertLevel === "ok") alertLevel = "warn";
+        reasons.push(parserAlert.reason);
       }
     } catch (overlayErr) {
       req.log.warn(
@@ -1094,6 +1121,8 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
         thresholds: { minRate: 0.5, consecutiveDays: 2, minDenominator: 5 },
       };
     }
+
+    const alertReason = reasons.join("; ");
 
     res.json({
       source: "airbnb_pricing",
