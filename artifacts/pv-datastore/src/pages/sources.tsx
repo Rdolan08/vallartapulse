@@ -386,6 +386,157 @@ interface QualityPlatform {
   alertLevel: "ok" | "warn" | "fail";
 }
 
+/**
+ * Pricing-coverage panel — listing-level health, NOT row counts.
+ *
+ * Source-of-truth: backend `/api/ingest/pricing-coverage` endpoint, which
+ * UNIONs both price tables (rental_prices_by_date + listing_price_quotes)
+ * to count distinct active listings priced in the last 7 days.
+ *
+ * Reads the only number that matters operationally: how many of the
+ * active listings I track actually have an actionable price right now?
+ *
+ * Future extension: same backend query reshaped with
+ * `GROUP BY normalized_neighborhood_bucket` for zone drill-down.
+ */
+interface CoveragePlatform {
+  sourcePlatform: string;
+  activeListings: number;
+  pricedCalendar: number;
+  pricedQuote: number;
+  pricedAny: number;
+  pctCovered: number;
+}
+
+function PricingCoveragePanel({
+  t,
+}: {
+  t: (en: string, es: string) => string;
+}) {
+  const [data, setData] = useState<{ window: string; platforms: CoveragePlatform[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await apiFetch("/api/ingest/pricing-coverage");
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const j = (await r.json()) as { window: string; platforms: CoveragePlatform[] };
+        if (!cancelled) setData(j);
+      } catch (e) {
+        if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const platforms = data?.platforms ?? [];
+  const all = platforms.find((p) => p.sourcePlatform === "ALL");
+  const perPlatform = platforms.filter((p) => p.sourcePlatform !== "ALL");
+
+  // Headline color: green ≥80%, amber 30–79%, red <30%
+  const headlineColor =
+    all == null
+      ? "text-muted-foreground"
+      : all.pctCovered >= 80
+        ? "text-emerald-400"
+        : all.pctCovered >= 30
+          ? "text-amber-400"
+          : "text-red-400";
+
+  return (
+    <div className="rounded-2xl border border-border/40 bg-card/30 p-4 mb-4">
+      <div className="flex items-baseline justify-between mb-3">
+        <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
+          <Database className="w-3.5 h-3.5" />
+          {t("Pricing coverage — active listings", "Cobertura de precios — anuncios activos")}
+        </div>
+        {all && (
+          <div className={cn("text-xs", headlineColor)}>
+            <span className="font-semibold tabular-nums">
+              {all.pricedAny.toLocaleString()}
+            </span>
+            <span className="text-muted-foreground"> {t("of", "de")} </span>
+            <span className="font-semibold tabular-nums">
+              {all.activeListings.toLocaleString()}
+            </span>
+            <span className="text-muted-foreground"> {t("priced", "con precio")} </span>
+            <span className="font-semibold tabular-nums">
+              ({all.pctCovered.toFixed(1)}%)
+            </span>
+            <span className="text-muted-foreground"> · {t("last 7d", "últimos 7d")}</span>
+          </div>
+        )}
+      </div>
+
+      {loading && (
+        <div className="text-xs text-muted-foreground py-2">
+          {t("Loading…", "Cargando…")}
+        </div>
+      )}
+      {err && (
+        <div className="text-xs text-red-400 py-2">
+          {t("Failed to load: ", "Error al cargar: ")}
+          {err}
+        </div>
+      )}
+
+      {!loading && !err && perPlatform.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px]">
+            <thead>
+              <tr className="text-muted-foreground border-b border-border/30">
+                <th className="text-left py-1 pr-3 font-medium">{t("Platform", "Plataforma")}</th>
+                <th className="text-right py-1 px-2 font-medium">{t("Active", "Activos")}</th>
+                <th className="text-right py-1 px-2 font-medium">{t("Priced (any source)", "Con precio (cualquier fuente)")}</th>
+                <th className="text-right py-1 px-2 font-medium">{t("% covered", "% cubierto")}</th>
+                <th className="text-right py-1 px-2 font-medium text-muted-foreground/70">{t("via calendar", "vía calendario")}</th>
+                <th className="text-right py-1 px-2 font-medium text-muted-foreground/70">{t("via quotes", "vía cotizaciones")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {perPlatform.map((p) => {
+                const rowColor =
+                  p.pctCovered >= 80
+                    ? "text-emerald-400"
+                    : p.pctCovered >= 30
+                      ? "text-amber-400"
+                      : "text-red-400";
+                return (
+                  <tr key={p.sourcePlatform} className="border-b border-border/10 last:border-0">
+                    <td className="py-1.5 pr-3 font-mono">{p.sourcePlatform}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-foreground">{p.activeListings.toLocaleString()}</td>
+                    <td className={cn("py-1.5 px-2 text-right tabular-nums font-medium", rowColor)}>{p.pricedAny.toLocaleString()}</td>
+                    <td className={cn("py-1.5 px-2 text-right tabular-nums font-medium", rowColor)}>{p.pctCovered.toFixed(1)}%</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground/70">{p.pricedCalendar.toLocaleString()}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground/70">{p.pricedQuote.toLocaleString()}</td>
+                  </tr>
+                );
+              })}
+              {all && (
+                <tr className="border-t-2 border-border/30 font-medium">
+                  <td className="py-1.5 pr-3 font-mono">{all.sourcePlatform}</td>
+                  <td className="py-1.5 px-2 text-right tabular-nums text-foreground">{all.activeListings.toLocaleString()}</td>
+                  <td className={cn("py-1.5 px-2 text-right tabular-nums", headlineColor)}>{all.pricedAny.toLocaleString()}</td>
+                  <td className={cn("py-1.5 px-2 text-right tabular-nums", headlineColor)}>{all.pctCovered.toFixed(1)}%</td>
+                  <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground/70">{all.pricedCalendar.toLocaleString()}</td>
+                  <td className="py-1.5 px-2 text-right tabular-nums text-muted-foreground/70">{all.pricedQuote.toLocaleString()}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DataQualityPanel({
   t,
   lang,
@@ -700,6 +851,8 @@ export default function Sources() {
 
       {/* ── Pipeline health banners (Airbnb / VRBO / VV) ───────────── */}
       <PipelinesHealth t={t} lang={lang as "en" | "es"} />
+
+      <PricingCoveragePanel t={t} />
 
       <DataQualityPanel t={t} lang={lang as "en" | "es"} />
 

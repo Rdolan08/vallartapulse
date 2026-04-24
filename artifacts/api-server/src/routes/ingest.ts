@@ -1749,6 +1749,120 @@ router.get("/ingest/rental-prices-quality", async (req, res) => {
   }
 });
 
+// ── GET /ingest/pricing-coverage ──────────────────────────────────────────
+//
+// LISTING-LEVEL pricing-coverage health, not row counts. Answers the only
+// question that matters operationally: "of the active listings I track,
+// how many actually have an actionable price right now?"
+//
+// A listing counts as "priced in window W" if it has at least one row with
+// non-null price in EITHER source-of-price table inside that window:
+//   - rental_prices_by_date.nightly_price_usd (calendar feed; populates
+//     for pvrpv + vacation_vallarta but NOT airbnb — Airbnb's calendar
+//     endpoint returns availability only)
+//   - listing_price_quotes.nightly_price_usd  (GraphQL quote feed; the
+//     real source of Airbnb prices, also populates for pvrpv)
+//
+// Per platform we report:
+//   - active_listings:           denominator (rental_listings WHERE is_active=true)
+//   - priced_calendar:           # of those listings with calendar price in window
+//   - priced_quote:              # of those listings with quote price in window
+//   - priced_any:                # priced in EITHER table (the headline number)
+//   - pct_covered:               priced_any / active_listings
+//
+// Plus an ALL row aggregating across platforms.
+//
+// Window: last 7 days (operational sweet-spot — daily churn shows up,
+// weekly cohort effects don't). 24h/30d windows can be added later if useful.
+//
+// Wired for future drill-down by zone: same query shape, just add
+// `GROUP BY normalized_neighborhood_bucket` (column already exists on
+// rental_listings).
+//
+// Read-only and unauthenticated — same posture as the *-freshness probes,
+// since the page that consumes it is public.
+router.get("/ingest/pricing-coverage", async (_req, res) => {
+  try {
+    const result = await db.execute(sql`
+      WITH active AS (
+        SELECT id, source_platform
+          FROM rental_listings
+         WHERE is_active = true
+      ),
+      priced_calendar AS (
+        SELECT DISTINCT listing_id
+          FROM rental_prices_by_date
+         WHERE nightly_price_usd IS NOT NULL
+           AND scraped_at > NOW() - INTERVAL '7 days'
+      ),
+      priced_quote AS (
+        SELECT DISTINCT listing_id
+          FROM listing_price_quotes
+         WHERE nightly_price_usd IS NOT NULL
+           AND collected_at > NOW() - INTERVAL '7 days'
+      ),
+      priced_any AS (
+        SELECT listing_id FROM priced_calendar
+        UNION
+        SELECT listing_id FROM priced_quote
+      ),
+      per_platform AS (
+        SELECT
+          a.source_platform,
+          COUNT(*)::int                                         AS active_listings,
+          COUNT(*) FILTER (WHERE pc.listing_id IS NOT NULL)::int AS priced_calendar,
+          COUNT(*) FILTER (WHERE pq.listing_id IS NOT NULL)::int AS priced_quote,
+          COUNT(*) FILTER (WHERE pa.listing_id IS NOT NULL)::int AS priced_any
+          FROM active a
+          LEFT JOIN priced_calendar pc ON pc.listing_id = a.id
+          LEFT JOIN priced_quote    pq ON pq.listing_id = a.id
+          LEFT JOIN priced_any      pa ON pa.listing_id = a.id
+         GROUP BY a.source_platform
+      ),
+      all_row AS (
+        SELECT
+          'ALL'                       AS source_platform,
+          SUM(active_listings)::int   AS active_listings,
+          SUM(priced_calendar)::int   AS priced_calendar,
+          SUM(priced_quote)::int      AS priced_quote,
+          SUM(priced_any)::int        AS priced_any
+          FROM per_platform
+      )
+      SELECT * FROM per_platform
+      UNION ALL
+      SELECT * FROM all_row
+      ORDER BY source_platform;
+    `);
+
+    const rows = (result as unknown as {
+      rows: Array<{
+        source_platform: string;
+        active_listings: number;
+        priced_calendar: number;
+        priced_quote: number;
+        priced_any: number;
+      }>;
+    }).rows;
+
+    const platforms = rows.map((r) => ({
+      sourcePlatform: r.source_platform,
+      activeListings: r.active_listings,
+      pricedCalendar: r.priced_calendar,
+      pricedQuote: r.priced_quote,
+      pricedAny: r.priced_any,
+      pctCovered:
+        r.active_listings === 0
+          ? 0
+          : Math.round((r.priced_any / r.active_listings) * 1000) / 10,
+    }));
+
+    res.json({ window: "7d", platforms });
+  } catch (err) {
+    req.log.error({ err }, "ingest/pricing-coverage failed");
+    res.status(500).json({ error: "Failed to compute pricing-coverage" });
+  }
+});
+
 // ── POST /ingest/rental-prices-retention-sweep ────────────────────────────
 //
 // Daily age-based purge of `rental_prices_by_date`. Two independent rules:
