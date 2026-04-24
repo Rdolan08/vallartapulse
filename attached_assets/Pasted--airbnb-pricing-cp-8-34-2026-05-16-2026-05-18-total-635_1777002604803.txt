@@ -1,0 +1,146 @@
+[airbnb-pricing]   cp 8/34 2026-05-16→2026-05-18 total=— 635ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 9/34 2026-05-22→2026-05-24 total=— 911ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 10/34 2026-05-23→2026-05-25 total=unavailable 1450ms
+[airbnb-pricing]   cp 11/34 2026-05-29→2026-05-31 total=unavailable 1779ms
+[airbnb-pricing]   cp 12/34 2026-05-30→2026-06-01 total=— 830ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 13/34 2026-06-05→2026-06-07 total=— 1133ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 14/34 2026-06-06→2026-06-08 total=unavailable 1686ms
+[airbnb-pricing]   cp 15/34 2026-06-12→2026-06-14 total=— 758ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 16/34 2026-06-13→2026-06-15 total=— 1035ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 17/34 2026-06-19→2026-06-21 total=unavailable 2028ms
+[airbnb-pricing]   cp 18/34 2026-06-20→2026-06-22 total=unavailable 2248ms
+[airbnb-pricing]   cp 19/34 2026-06-26→2026-06-28 total=unavailable 2110ms
+[airbnb-pricing]   cp 20/34 2026-06-27→2026-06-29 total=— 620ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 21/34 2026-07-03→2026-07-05 total=— 40342ms err=no price text rendered in booking sidebar title="503 Service Unavailable - Airbn
+[airbnb-pricing]   cp 22/34 2026-07-04→2026-07-06 total=— 1106ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 23/34 2026-07-10→2026-07-12 total=— 633ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 24/34 2026-07-11→2026-07-13 total=unavailable 1571ms
+[airbnb-pricing]   cp 25/34 2026-08-10→2026-08-13 total=unavailable 1840ms
+[airbnb-pricing]   cp 26/34 2026-09-14→2026-09-17 total=— 978ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 27/34 2026-10-12→2026-10-15 total=— 561ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 28/34 2026-11-09→2026-11-12 total=— 701ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 29/34 2026-12-14→2026-12-17 total=unavailable 1461ms
+[airbnb-pricing]   cp 30/34 2026-12-24→2026-12-27 total=— 689ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 31/34 2026-12-30→2027-01-02 total=unavailable 1909ms
+[airbnb-pricing]   cp 32/34 2027-01-11→2027-01-14 total=unavailable 1385ms
+[airbnb-pricing]   cp 33/34 2027-01-16→2027-01-23 total=unavailable 1416ms
+[airbnb-pricing]   cp 34/34 2027-03-20→2027-03-27 total=unavailable 1400ms
+[airbnb-pricing] fail-fast: 0 quotes written across first 5 listings (112 fully-available checkpoints available to enrich). Aborting remaining 995 listings — quote adapter is dark.
+{
+  "event": "airbnb-pricing-refresh.done",
+  "elapsedMs": 460740,
+  "summary": {
+    "attempted": 5,
+    "ok": 5,
+    "failed": 0,
+    "totalQuotesWritten": 0,
+    "totalDaysWithPrice": 0,
+    "totalQuotesEnriched": 0,
+    "totalQuotesFailed": 171,
+    "totalFullyAvailableCheckpoints": 112,
+    "totalQuotesEnrichedFullyAvailable": 0,
+    "enrichmentRate": 0,
+    "shaSource": "fallback",
+    "quoteShaSource": "cache",
+    "shaRediscoveriesDuringRun": 0,
+    "quoteShaRediscoveriesDuringRun": 0,
+    "alertLevel": "fail",
+    "alertReason": "0 quotes written despite a non-empty cohort",
+    "presumedBookingsInserted": 0,
+    "presumedBookingsCandidatesEvaluated": 0
+  },
+  "listings": [
+    {
+      "listingId": 4520,
+      "externalId": "1668273675182992624",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 34,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 34,
+      "fullyAvailableCheckpoints": 27,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    },
+    {
+      "listingId": 4508,
+      "externalId": "1061054801943752202",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 34,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 34,
+      "fullyAvailableCheckpoints": 28,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    },
+    {
+      "listingId": 4507,
+      "externalId": "651101206755862871",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 34,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 34,
+      "fullyAvailableCheckpoints": 22,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    },
+    {
+      "listingId": 4506,
+      "externalId": "1052754221762049460",
+      "ok": true,
+      "daysReturned": 0,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 35,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 35,
+      "fullyAvailableCheckpoints": 35,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape",
+      "error": "calendar: http 429 (likely IP-blocked — are you actually on the Mac mini residential IP?): <!DOCTYPE html>\r\n\r\n<html>\r\n<head>\r\n  <meta charset=\"utf-8\">\r\n  <title>503 Service Unavailable - Air"
+    },
+    {
+      "listingId": 4501,
+      "externalId": "25662902",
+      "ok": true,
+      "daysReturned": 365,
+      "daysWithPrice": 0,
+      "checkpointsAttempted": 34,
+      "quotesEnriched": 0,
+      "quotesEnrichedFullyAvailable": 0,
+      "quotesFailed": 34,
+      "fullyAvailableCheckpoints": 0,
+      "quotesWritten": 0,
+      "staleShaRetried": false,
+      "staleQuoteShaRetried": false,
+      "shaUsed": "b23335819df0dc391a338d665e2ee2f5d3bff19181d05c0b39bc6c5aac403914",
+      "quoteShaUsed": "playwright-dom-scrape"
+    }
+  ]
+}
+WARN: zero listings processed (check the active Airbnb cohort)
+[03:49:38.605] INFO (76101): airbnb-pricing-runner: presumed-bookings inference complete
+    inserted: 0
+    candidatesEvaluated: 0
+[3/3] Done (exit_rc=0)
+ryandolan@Ryans-Mac-mini vallartapulse % 
