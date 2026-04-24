@@ -1,0 +1,61 @@
+ryandolan@Ryans-Mac-mini vallartapulse % scrape-status() {
+  psql "$RAILWAY_DATABASE_URL" -c "
+SELECT
+  MIN(collected_at)          AS started,
+  MAX(collected_at)          AS most_recent,
+  NOW() - MAX(collected_at)  AS time_since_last,
+  COUNT(*)                   AS total_quotes,
+  COUNT(DISTINCT listing_id) AS distinct_listings_done
+FROM listing_price_quotes lpq
+JOIN rental_listings rl ON rl.id = lpq.listing_id
+WHERE rl.source_platform = 'airbnb'
+  AND collected_at > NOW() - INTERVAL '6 hours';
+"
+}
+ryandolan@Ryans-Mac-mini vallartapulse % scrape-status
+         started         |       most_recent       | time_since_last | total_quotes | distinct_listings_done 
+-------------------------+-------------------------+-----------------+--------------+------------------------
+ 2026-04-23 21:49:54.482 | 2026-04-23 23:25:48.335 | 00:51:59.674428 |          553 |                     57
+(1 row)
+
+ryandolan@Ryans-Mac-mini vallartapulse % scrape-alive() {
+  psql "$RAILWAY_DATABASE_URL" -t -c "
+SELECT
+  CASE
+    WHEN MAX(collected_at) > NOW() - INTERVAL '2 minutes'
+    THEN '<0001f7e2> ACTIVE'
+    ELSE '🔴 STALE'
+  END
+FROM listing_price_quotes lpq
+JOIN rental_listings rl ON rl.id = lpq.listing_id
+WHERE rl.source_platform = 'airbnb';
+"
+}
+ryandolan@Ryans-Mac-mini vallartapulse % scrape-rate() {
+  psql "$RAILWAY_DATABASE_URL" -c "
+SELECT
+  date_trunc('minute', collected_at) AS minute,
+  COUNT(*) AS quotes
+FROM listing_price_quotes lpq
+JOIN rental_listings rl ON rl.id = lpq.listing_id
+WHERE rl.source_platform = 'airbnb'
+  AND collected_at > NOW() - INTERVAL '15 minutes'
+GROUP BY 1
+ORDER BY 1 DESC;
+"
+}
+ryandolan@Ryans-Mac-mini vallartapulse % scrape-status
+scrape-alive
+scrape-rate
+         started         |       most_recent       | time_since_last | total_quotes | distinct_listings_done 
+-------------------------+-------------------------+-----------------+--------------+------------------------
+ 2026-04-23 21:49:54.482 | 2026-04-23 23:25:48.335 | 00:55:08.563954 |          553 |                     57
+(1 row)
+
+ 🔴 STALE
+
+ minute | quotes 
+--------+--------
+(0 rows)
+
+ryandolan@Ryans-Mac-mini vallartapulse % 
