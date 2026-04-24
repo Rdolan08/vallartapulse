@@ -1,0 +1,109 @@
+Last login: Fri Apr 24 16:06:31 on ttys001
+ryandolan@Ryans-Mac-mini ~ % cd vallartapulse
+ryandolan@Ryans-Mac-mini vallartapulse % launchctl unload ~/Library/LaunchAgents/com.vallartapulse.airbnb-pricing.plist 2>/dev/null
+launchctl load -w ~/Library/LaunchAgents/com.vallartapulse.airbnb-pricing.plist
+launchctl list | grep airbnb-pricing
+14639	0	com.vallartapulse.airbnb-pricing
+ryandolan@Ryans-Mac-mini vallartapulse % git pull
+Already up to date.
+ryandolan@Ryans-Mac-mini vallartapulse % tail -F "$(ls -t ~/vallartapulse/logs/airbnb-pricing/run-*.log | head -1)"
+
+> @workspace/scripts@0.0.0 scrape:airbnb-pricing /Users/ryandolan/vallartapulse/scripts
+> tsx ./src/airbnb-pricing-refresh.ts
+
+{"event":"airbnb-pricing-refresh.start","maxListings":250,"dryRun":false,"ts":"2026-04-24T23:15:37.479Z"}
+[airbnb-pricing] listing 4799 (1185678533533813531): 34 checkpoints to quote
+[airbnb-pricing]   cp 1/34 2026-04-24→2026-04-26 total=— 50465ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+[airbnb-pricing]   cp 2/34 2026-04-25→2026-04-27 total=— 21263ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 3/34 2026-05-01→2026-05-03 total=— 18865ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 4/34 2026-05-02→2026-05-04 total=— 15968ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 5/34 2026-05-08→2026-05-10 total=— 15166ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 6/34 2026-05-09→2026-05-11 total=— 35104ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+[airbnb-pricing]   cp 7/34 2026-05-15→2026-05-17 total=— 35082ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+[airbnb-pricing]   cp 8/34 2026-05-16→2026-05-18 total=— 18148ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 9/34 2026-05-22→2026-05-24 total=— 35077ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+[airbnb-pricing]   cp 10/34 2026-05-23→2026-05-25 total=— 35093ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+^C
+ryandolan@Ryans-Mac-mini vallartapulse % tail -F "$(ls -t ~/vallartapulse/logs/airbnb-pricing/run-*.log | head -1)"
+[airbnb-pricing]   cp 13/34 2026-06-05→2026-06-07 total=— 16264ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 14/34 2026-06-06→2026-06-08 total=— 12000ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 15/34 2026-06-12→2026-06-14 total=— 35073ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+[airbnb-pricing]   cp 16/34 2026-06-13→2026-06-15 total=— 27161ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 17/34 2026-06-19→2026-06-21 total=— 18565ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 18/34 2026-06-20→2026-06-22 total=— 21000ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 19/34 2026-06-26→2026-06-28 total=— 19436ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 20/34 2026-06-27→2026-06-29 total=— 23899ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 21/34 2026-07-03→2026-07-05 total=— 20699ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 22/34 2026-07-04→2026-07-06 total=— 16300ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 23/34 2026-07-10→2026-07-12 total=— 14068ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 24/34 2026-07-11→2026-07-13 total=— 17000ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+^C
+ryandolan@Ryans-Mac-mini vallartapulse % cho "=== Listing 4799 (1185678533533813531) ==="
+curl -sS -o /tmp/4799.html -w "HTTP %{http_code} | %{size_download} bytes | %{time_total}s\n" \
+  -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+  "https://www.airbnb.com/rooms/1185678533533813531"
+echo "Title: $(grep -oE '<title>[^<]+' /tmp/4799.html | head -1)"
+echo ""
+echo "=== Known-live control listing (MarshmallowTown 53116610) ==="
+curl -sS -o /tmp/control.html -w "HTTP %{http_code} | %{size_download} bytes | %{time_total}s\n" \
+  -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+  "https://www.airbnb.com/rooms/53116610"
+echo "Title: $(grep -oE '<title>[^<]+' /tmp/control.html | head -1)"
+
+
+zsh: command not found: cho
+HTTP 200 | 587042 bytes | 0.945443s
+Title: <title>Esmeralda Beachfront! - Condominiums for Rent in Puerto Vallarta, Jalisco, Mexico - Airbnb
+
+=== Known-live control listing (MarshmallowTown 53116610) ===
+HTTP 200 | 513844 bytes | 0.612245s
+Title: <title>“MarshmallowTown”,Jacuzzi, Hammocks &amp; Scenic Views - Condominiums for Rent in Puerto Vallarta, Jalisco, Mexico - Airbnb
+ryandolan@Ryans-Mac-mini vallartapulse % tail -F "$(ls -t ~/vallartapulse/logs/airbnb-pricing/run-*.log | head -1)"
+[airbnb-pricing]   cp 27/34 2026-10-12→2026-10-15 total=— 16800ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 28/34 2026-11-09→2026-11-12 total=— 35077ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+[airbnb-pricing]   cp 29/34 2026-12-14→2026-12-17 total=— 19157ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 30/34 2026-12-24→2026-12-27 total=— 13667ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 31/34 2026-12-30→2027-01-02 total=— 35082ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+[airbnb-pricing]   cp 32/34 2027-01-11→2027-01-14 total=— 18050ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 33/34 2027-01-16→2027-01-23 total=— 35099ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+[airbnb-pricing]   cp 34/34 2027-03-20→2027-03-27 total=— 18268ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing] listing 4798 (830289896596381120): 34 checkpoints to quote
+[airbnb-pricing]   cp 1/34 2026-04-24→2026-04-26 total=— 35126ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+^C
+ryandolan@Ryans-Mac-mini vallartapulse % tail -F "$(ls -t ~/vallartapulse/logs/airbnb-pricing/run-*.log | head -1)"
+  - navigating to
+[airbnb-pricing]   cp 32/34 2027-01-11→2027-01-14 total=— 18050ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 33/34 2027-01-16→2027-01-23 total=— 35099ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+[airbnb-pricing]   cp 34/34 2027-03-20→2027-03-27 total=— 18268ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing] listing 4798 (830289896596381120): 34 checkpoints to quote
+[airbnb-pricing]   cp 1/34 2026-04-24→2026-04-26 total=— 35126ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+[airbnb-pricing]   cp 2/34 2026-04-25→2026-04-27 total=— 35071ms err=playwright nav: page.goto: Timeout 35000ms exceeded.
+Call log:
+  - navigating to
+[airbnb-pricing]   cp 3/34 2026-05-01→2026-05-03 total=— 16524ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 4/34 2026-05-02→2026-05-04 total=— 18870ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[
