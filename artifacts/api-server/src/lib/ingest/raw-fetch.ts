@@ -23,6 +23,12 @@
 // ("invalid onRequestStart method"). undici.fetch keeps the contract
 // internal-consistent and is the supported usage path for ProxyAgent.
 import { fetch as undiciFetch, ProxyAgent } from "undici";
+import {
+  buildProxyUrl,
+  isBrightDataConfigured,
+  proxyAgentTlsOptions,
+  randomSession,
+} from "./proxy-config.js";
 
 /**
  * Realistic Chrome 124 macOS UA — matches the browser-fetch user-agent so
@@ -78,12 +84,28 @@ export async function fetchAirbnbRaw(
   url: string,
   opts: RawFetchOpts = {}
 ): Promise<RawFetchResult> {
-  const proxyUrl = opts.proxyUrl ?? process.env.PROXY_URL;
-  if (!proxyUrl) throw new Error("PROXY_URL not set — raw HTTP fetch unavailable");
+  // Per-call session token gives each listing a fresh Bright Data exit IP,
+  // breaking the "same source IP hits N listings in M seconds" pattern that
+  // Akamai uses to fast-wall scrapers. In legacy PROXY_URL (Decodo) mode
+  // the session arg is ignored and behavior is unchanged.
+  const proxyUrl =
+    opts.proxyUrl ?? buildProxyUrl({ session: randomSession() }) ?? undefined;
+  if (!proxyUrl) {
+    throw new Error(
+      "Proxy not configured — set BRIGHTDATA_ZONE_PASSWORD (preferred) or PROXY_URL.",
+    );
+  }
   const timeoutMs = opts.timeoutMs ?? 25_000;
 
   const t0 = Date.now();
-  const agent = new ProxyAgent(proxyUrl);
+  // Bright Data MITMs the TLS chain — without requestTls.rejectUnauthorized:false
+  // undici throws UNABLE_TO_VERIFY_LEAF_SIGNATURE on every HTTPS target. Scoped
+  // to this ProxyAgent only; does NOT affect process-wide TLS validation.
+  // No-op for legacy PROXY_URL mode.
+  const agent = new ProxyAgent({
+    uri: proxyUrl,
+    ...(isBrightDataConfigured() ? proxyAgentTlsOptions() : {}),
+  });
   const res = await undiciFetch(url, {
     dispatcher: agent,
     headers: defaultHeaders(),

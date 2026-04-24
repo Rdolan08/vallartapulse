@@ -37,6 +37,11 @@
  */
 
 import { chromium, type Browser, type BrowserContext } from "playwright";
+import {
+  buildProxyParts,
+  randomSession,
+  shouldIgnoreHttpsErrors,
+} from "./proxy-config.js";
 
 const REALISTIC_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
@@ -89,40 +94,19 @@ export async function getOrDiscoverQuoteSha(
 let browser: Browser | null = null;
 let context: BrowserContext | null = null;
 
-/** Parsed PROXY_URL split into Playwright's expected shape. */
-interface ParsedProxy {
-  server: string;
-  username?: string;
-  password?: string;
-}
-
-function parseProxyUrl(raw: string): ParsedProxy | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  try {
-    const u = new URL(trimmed);
-    const port = u.port ? `:${u.port}` : "";
-    return {
-      server: `${u.protocol}//${u.hostname}${port}`,
-      username: u.username ? decodeURIComponent(u.username) : undefined,
-      password: u.password ? decodeURIComponent(u.password) : undefined,
-    };
-  } catch {
-    return null;
-  }
-}
-
 async function getContext(): Promise<BrowserContext> {
   if (context) return context;
-  // Route Playwright through the residential proxy (Decodo) when PROXY_URL
-  // is configured. Without this every quote request goes out from
-  // Railway's raw datacenter IP, and Airbnb fast-walls it with an
-  // "Access Denied" interstitial after the first ~15 requests
-  // (validated 2026-04-23: cp 1-16 fine, cp 17+ all returned
-  // title="Access Denied"). The same residential proxy is already
-  // used by raw-fetch.ts and browser-fetch.ts; we mirror their parser
-  // here rather than coupling adapters.
-  const proxy = parseProxyUrl(process.env.PROXY_URL ?? "");
+  // Route Playwright through the residential proxy when configured.
+  // Without this every quote request goes out from Railway's raw
+  // datacenter IP, and Airbnb fast-walls it with an "Access Denied"
+  // interstitial after the first ~15 requests (validated 2026-04-23:
+  // cp 1-16 fine, cp 17+ all returned title="Access Denied").
+  //
+  // Session token is rotated per process launch (long-running quote
+  // browser is reused across the whole nightly cohort). Per-listing
+  // rotation here would force a context teardown which defeats the
+  // homepage cookie warmup below.
+  const proxy = buildProxyParts({ session: randomSession() });
   browser = await chromium.launch({
     headless: true,
     // Stealth args — without --disable-blink-features=AutomationControlled
@@ -147,6 +131,10 @@ async function getContext(): Promise<BrowserContext> {
     viewport: { width: 1280, height: 900 },
     locale: "en-US",
     timezoneId: "America/Los_Angeles",
+    // Bright Data MITMs the TLS chain — without this Playwright drops
+    // every navigation with net::ERR_CERT_AUTHORITY_INVALID. Only
+    // enabled when Bright Data is configured; legacy proxies stay strict.
+    ignoreHTTPSErrors: shouldIgnoreHttpsErrors(),
   });
   // Block heavy assets we don't need — speeds up navigation ~3x.
   await context.route("**/*", (route) => {

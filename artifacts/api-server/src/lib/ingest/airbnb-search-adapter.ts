@@ -21,8 +21,15 @@ import https from "https";
 import http from "http";
 import zlib from "zlib";
 import type { IncomingMessage } from "http";
+import { fetch as undiciFetch, ProxyAgent } from "undici";
 import type { NormalizedRentalListing } from "./types.js";
 import { normalizeNeighborhood } from "../rental-normalize.js";
+import {
+  buildProxyUrl,
+  isBrightDataConfigured,
+  proxyAgentTlsOptions,
+  randomSession,
+} from "./proxy-config.js";
 
 export const SOURCE = "airbnb" as const;
 
@@ -47,14 +54,25 @@ const BROWSER_HEADERS: Record<string, string> = {
   "Upgrade-Insecure-Requests": "1",
 };
 
-// Routes through PROXY_URL (Decodo residential) when set — Airbnb serves
-// stripped pages to datacenter IPs, so direct fetches from Railway return
-// 0 listings. Falls back to direct fetch when PROXY_URL is not configured
-// (e.g. ad-hoc local dev without proxy). Uses undici for native gzip/brotli/
-// deflate decompression and automatic redirect following.
+// Routes through the residential proxy when set — Airbnb serves stripped
+// pages to datacenter IPs, so direct fetches from Railway return 0 listings.
+// Falls back to direct fetch when no proxy is configured (e.g. ad-hoc local
+// dev). Uses undici for native gzip/brotli/deflate decompression and
+// automatic redirect following.
+//
+// Per-search-page session token gives each pagination request a fresh
+// Bright Data exit IP, avoiding the "one IP scrolls 20 search pages in
+// 15s" pattern. Legacy PROXY_URL mode ignores the session arg.
 async function get(url: string): Promise<string> {
-  const proxyUrl = process.env.PROXY_URL;
-  const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
+  const proxyUrl = buildProxyUrl({ session: randomSession() });
+  const dispatcher = proxyUrl
+    ? new ProxyAgent({
+        uri: proxyUrl,
+        // Bright Data MITMs the TLS chain — see proxy-config.ts for rationale.
+        // No-op for legacy PROXY_URL mode.
+        ...(isBrightDataConfigured() ? proxyAgentTlsOptions() : {}),
+      })
+    : undefined;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25_000);
