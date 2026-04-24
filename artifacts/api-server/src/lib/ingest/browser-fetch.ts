@@ -146,11 +146,16 @@ export async function fetchWithBrowser(
     });
     page = await context.newPage();
 
-    // Block heavy media to keep things snappy without changing the rendered
-    // DOM structure used by the extractors.
+    // Block image requests only to keep nav fast without tripping Akamai's
+    // bot detection. Validated 2026-04-24: blocking image+media+font together
+    // caused Airbnb to soft-redirect listing URLs to the homepage. The
+    // cumulative aborted-request count appears to be the bot signal —
+    // blocking a single resource type passes cleanly. Image alone wins most
+    // of the speedup since gallery photos dominate page bandwidth. Mirror in
+    // airbnb-graphql-quote-adapter.ts.
     await page.route("**/*", (route) => {
       const t = route.request().resourceType();
-      if (t === "image" || t === "media" || t === "font") {
+      if (t === "image") {
         return route.abort();
       }
       return route.continue();
