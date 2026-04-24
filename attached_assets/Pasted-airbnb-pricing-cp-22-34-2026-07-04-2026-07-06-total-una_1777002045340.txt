@@ -1,0 +1,44 @@
+airbnb-pricing]   cp 22/34 2026-07-04→2026-07-06 total=unavailable 1943ms
+[airbnb-pricing]   cp 23/34 2026-07-10→2026-07-12 total=unavailable 1359ms
+[airbnb-pricing]   cp 24/34 2026-07-11→2026-07-13 total=— 1713ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 25/34 2026-08-10→2026-08-13 total=unavailable 1840ms
+[airbnb-pricing]   cp 26/34 2026-09-14→2026-09-17 total=— 883ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 27/34 2026-10-12→2026-10-15 total=— 1517ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 28/34 2026-11-09→2026-11-12 total=— 1048ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 29/34 2026-12-14→2026-12-17 total=— 2242ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+[airbnb-pricing]   cp 30/34 2026-12-24→2026-12-27 total=— 1402ms err=delisted-or-blocked title="Airbnb: Vacation Rentals, Cabins, Beach Houses, Uniqu
+
+<--- Last few GCs --->
+
+[69664:0xb0f40c000]  6689791 ms: Mark-Compact 4075.1 (4105.3) -> 4067.0 (4103.4) MB, pooled: 0.0 MB, 602.57 / 0.01 ms (average mu = 0.153, current mu = 0.037) task; scavenge might not succeed
+[69664:0xb0f40c000]  6690417 ms: Mark-Compact 4073.9 (4104.2) -> 4068.5 (4105.2) MB, pooled: 0.0 MB, 616.60 / 0.01 ms (average mu = 0.087, current mu = 0.015) task; scavenge might not succeed
+
+FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 0x107d6ab14 node::OOMErrorHandler(char const*, v8::OOMDetails const&) [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+ 2: 0x1070f5cc8 v8::Utils::ReportOOMFailure(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+ 3: 0x1070f5c80 v8::internal::V8::FatalProcessOutOfMemory(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+ 4: 0x1072a0c7c v8::internal::Heap::ShouldOptimizeForLoadTime() const [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+ 5: 0x1072a321c v8::internal::Heap::OldGenerationConsumedBytes() const [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+ 6: 0x1072a30c4 v8::internal::Heap::RecomputeLimits(v8::internal::GarbageCollector, v8::base::TimeTicks) [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+ 7: 0x1072b04f4 v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags, v8::internal::PerformHeapLimitCheck)::$_1::operator()() const [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+ 8: 0x1072b0198 void heap::base::Stack::SetMarkerAndCallbackImpl<v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags, v8::internal::PerformHeapLimitCheck)::$_1>(heap::base::Stack*, void*, void const*) [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+ 9: 0x1078c3b54 PushAllRegistersAndIterateStack [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+10: 0x10729f304 v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags, v8::internal::PerformHeapLimitCheck) [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+11: 0x1072a1bd8 v8::internal::Heap::CollectGarbageWithRetry(v8::internal::AllocationSpace, v8::base::Flags<v8::internal::GCFlag, unsigned char, unsigned char>, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+12: 0x1072ed714 v8::internal::MinorGCJob::Task::RunInternal() [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+13: 0x106e30e78 node::PerIsolatePlatformData::RunForegroundTask(std::__1::unique_ptr<v8::Task, std::__1::default_delete<v8::Task>>) [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+14: 0x106e30018 node::PerIsolatePlatformData::FlushForegroundTasksInternal() [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+15: 0x1028c63cc uv__async_io [/opt/homebrew/Cellar/libuv/1.52.1/lib/libuv.1.0.0.dylib]
+16: 0x1028d51b0 uv__io_poll [/opt/homebrew/Cellar/libuv/1.52.1/lib/libuv.1.0.0.dylib]
+17: 0x1028c6b64 uv_run [/opt/homebrew/Cellar/libuv/1.52.1/lib/libuv.1.0.0.dylib]
+18: 0x106d3ced0 node::SpinEventLoopInternal(node::Environment*) [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+19: 0x106e0e37c node::NodeMainInstance::Run(node::ExitCode*, node::Environment*) [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+20: 0x106e0e0b0 node::NodeMainInstance::Run() [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+21: 0x106db1b98 node::Start(int, char**) [/opt/homebrew/Cellar/node/25.9.0_2/lib/libnode.141.dylib]
+22: 0x1851abe00 start [/usr/lib/dyld]
+/Users/ryandolan/vallartapulse/scripts:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/scripts@0.0.0 scrape:airbnb-pricing: `tsx ./src/airbnb-pricing-refresh.ts`
+Exit status 134
+ryandolan@Ryans-Mac-mini vallartapulse % 
