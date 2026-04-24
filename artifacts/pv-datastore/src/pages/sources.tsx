@@ -421,9 +421,9 @@ function PricingCoveragePanel({
     let cancelled = false;
     (async () => {
       try {
-        const r = await apiFetch("/api/ingest/pricing-coverage");
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const j = (await r.json()) as { window: string; platforms: CoveragePlatform[] };
+        const j = await apiFetch<{ window: string; platforms: CoveragePlatform[] }>(
+          "/api/ingest/pricing-coverage",
+        );
         if (!cancelled) setData(j);
       } catch (e) {
         if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
@@ -593,17 +593,17 @@ function DataQualityPanel({
                   )}
                 >
                   {all.suspiciousTotal === 0
-                    ? t("0 suspicious prices", "0 precios sospechosos")
+                    ? t("0 outlier prices", "0 precios atípicos")
                     : t(
-                        `${all.suspiciousTotal.toLocaleString()} suspicious prices`,
-                        `${all.suspiciousTotal.toLocaleString()} precios sospechosos`,
+                        `${all.suspiciousTotal.toLocaleString()} outlier prices`,
+                        `${all.suspiciousTotal.toLocaleString()} precios atípicos`,
                       )}
                 </span>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm text-xs">
                 {t(
-                  "Suspicious = zero-priced + under $20 + over $5,000. The healthy bucket ($20–$5,000) and null-price (Airbnb's calendar legitimately omits price for many days) are excluded.",
-                  "Sospechoso = precio cero + menos de $20 + más de $5,000. El rango sano ($20–$5,000) y los precios nulos (el calendario de Airbnb omite precio en muchos días, lo cual es legítimo) se excluyen.",
+                  "Outliers = zero-priced + under $20 + over $5,000. The healthy bucket ($20–$5,000) and null-price (Airbnb's calendar legitimately omits price for many days) are excluded.",
+                  "Atípicos = precio cero + menos de $20 + más de $5,000. El rango sano ($20–$5,000) y los precios nulos (el calendario de Airbnb omite precio en muchos días, lo cual es legítimo) se excluyen.",
                 )}
               </TooltipContent>
             </Tooltip>
@@ -631,7 +631,7 @@ function DataQualityPanel({
                   <th className="text-right py-1 px-2 font-medium">{t("Total rows", "Filas totales")}</th>
                   <th className="text-right py-1 px-2 font-medium">{t("Plausible", "Plausibles")}</th>
                   <th className="text-right py-1 px-2 font-medium">{t("Null price", "Precio nulo")}</th>
-                  <th className="text-right py-1 px-2 font-medium text-amber-400">{t("Suspicious", "Sospechosos")}</th>
+                  <th className="text-right py-1 px-2 font-medium text-amber-400">{t("Outliers", "Atípicos")}</th>
                   <th className="text-right py-1 px-2 font-medium">{t("Past-dated", "Fecha pasada")}</th>
                   <th className="text-right py-1 px-2 font-medium">{t(">30d / >60d / >90d", ">30d / >60d / >90d")}</th>
                   <th className="text-left py-1 pl-2 font-medium">{t("Oldest scrape", "Extracción más antigua")}</th>
