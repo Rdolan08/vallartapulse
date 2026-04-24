@@ -27,38 +27,24 @@
  */
 
 import type { Browser, BrowserContext, Page } from "playwright";
+import {
+  buildProxyParts,
+  randomSession,
+  shouldIgnoreHttpsErrors,
+} from "./proxy-config.js";
 
 let cachedBrowser: Browser | null = null;
 let launchPromise: Promise<Browser> | null = null;
-
-/** Parsed PROXY_URL split into Playwright's expected shape. */
-interface ParsedProxy {
-  server: string;
-  username?: string;
-  password?: string;
-}
-
-function parseProxyUrl(raw: string): ParsedProxy | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  try {
-    const u = new URL(trimmed);
-    const port = u.port ? `:${u.port}` : "";
-    return {
-      server: `${u.protocol}//${u.hostname}${port}`,
-      username: u.username ? decodeURIComponent(u.username) : undefined,
-      password: u.password ? decodeURIComponent(u.password) : undefined,
-    };
-  } catch {
-    return null;
-  }
-}
 
 async function getBrowser(): Promise<Browser> {
   if (cachedBrowser && cachedBrowser.isConnected()) return cachedBrowser;
   if (launchPromise) return launchPromise;
 
-  const proxy = parseProxyUrl(process.env.PROXY_URL ?? "");
+  // Browser-level proxy is set once at launch and reused across contexts.
+  // We rotate the Bright Data session token per browser launch (process
+  // restart) — finer-grained per-context rotation would defeat the
+  // homepage-warmed cookie pool that the cached browser is built around.
+  const proxy = buildProxyParts({ session: randomSession() });
 
   launchPromise = (async () => {
     // Lazy import keeps the dependency optional for callers that never use
@@ -153,6 +139,10 @@ export async function fetchWithBrowser(
       extraHTTPHeaders: {
         "Accept-Language": "en-US,en;q=0.9",
       },
+      // Bright Data MITMs the TLS chain — without this Playwright drops
+      // every navigation with net::ERR_CERT_AUTHORITY_INVALID. Only
+      // enabled when Bright Data is configured; legacy proxies stay strict.
+      ignoreHTTPSErrors: shouldIgnoreHttpsErrors(),
     });
     page = await context.newPage();
 
