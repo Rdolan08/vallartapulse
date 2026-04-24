@@ -136,10 +136,19 @@ async function getContext(): Promise<BrowserContext> {
     // enabled when Bright Data is configured; legacy proxies stay strict.
     ignoreHTTPSErrors: shouldIgnoreHttpsErrors(),
   });
-  // Block heavy assets we don't need — speeds up navigation ~3x.
+  // Block image requests only to keep navigation fast without tripping
+  // Akamai's bot detection. Validated 2026-04-24: blocking image+media+font
+  // together caused Airbnb to soft-redirect every /rooms/<id> request to
+  // the homepage (page.title became the generic "Airbnb: Vacation Rentals,
+  // Cabins, Beach Houses, Unique Homes & Experiences" landing title, which
+  // our delisted-or-blocked branch then catches). Cumulative aborted-request
+  // count appears to be the bot signal — blocking any single resource type
+  // (image OR media OR font) passes cleanly. Image alone wins most of the
+  // speedup since gallery photos are the bulk of page bandwidth. Keep this
+  // rule in sync with browser-fetch.ts.
   await context.route("**/*", (route) => {
     const t = route.request().resourceType();
-    if (t === "image" || t === "media" || t === "font") return route.abort();
+    if (t === "image") return route.abort();
     return route.continue();
   });
   // CRITICAL: warm the session by visiting the homepage once. Without this,
