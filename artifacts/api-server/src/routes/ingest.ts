@@ -1652,6 +1652,17 @@ router.get("/ingest/rental-prices-quality", async (req, res) => {
         INNER JOIN rental_listings rl
           ON rl.id = rpbd.listing_id
          AND rl.is_active = true
+        UNION ALL
+        SELECT
+          rl.source_platform,
+          lpq.listing_id,
+          lpq.nightly_price_usd,
+          lpq.checkin_date AS date,
+          lpq.collected_at AS scraped_at
+        FROM listing_price_quotes lpq
+        INNER JOIN rental_listings rl
+          ON rl.id = lpq.listing_id
+         AND rl.is_active = true
       ),
       grouped AS (
         SELECT
@@ -1742,7 +1753,7 @@ router.get("/ingest/rental-prices-quality", async (req, res) => {
       };
     });
 
-    res.json({ table: "rental_prices_by_date", platforms });
+    res.json({ table: "rental_prices_by_date + listing_price_quotes", platforms });
   } catch (err) {
     req.log.error({ err }, "ingest/rental-prices-quality failed");
     res.status(500).json({ error: "Failed to compute rental-prices quality" });
