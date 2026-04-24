@@ -579,7 +579,7 @@ function DataQualityPanel({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             <Database className="w-3.5 h-3.5" />
-            {t("Data quality — rental_prices_by_date", "Calidad de datos — rental_prices_by_date")}
+            {t("Data quality — pricing tables", "Calidad de datos — tablas de precios")}
           </div>
           {all && (
             <Tooltip>
