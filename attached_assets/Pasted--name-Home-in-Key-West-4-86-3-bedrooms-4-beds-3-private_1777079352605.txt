@@ -1,0 +1,745 @@
+[
+  {
+    "name": "Home in Key West · ★4.86 · 3 bedrooms · 4 beds · 3 private baths",
+    "price": {
+      "currency": "USD",
+      "value": 615.75
+    },
+    "image": "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/1b64c741-1371-42cb-bb79-3132041836a3.jpeg",
+    "description": "Charming 3-Bed, 3-Bath Home in Gated CommunitySpacious standalone home with stunning views of the free-form pool. Enjoy the breeze from your private porches in a secure, peaceful setting. A perfect blend of comfort and privacy!The spaceCoral Hammock – 3BR/3BA Home with Pool Views in Coral Hammock3 Bedrooms | 3 Full Bathrooms | Sleeps up to 8 | Backs to Community PoolWelcome to Coral Hammock, your home away from home in beautiful Key West! Built in 2004 and meticulously maintained, this spacious 3-bedroom, 3-bathroom home offers comfort, convenience, and unbeatable value—often for less than the price of a single hotel room.Located in the gated Coral Hammock community—home to just 55 properties—this detached home offers added privacy and direct access to the lushly landscaped community pool, right from your backyard.Inside You’ll Find:    A well-equipped kitchen with both Keurig and drip coffee makers    TVs in the living room and each bedroom    High-speed internet to keep you connected    Comfortable accommodations for up to six guests    Queen air mattress Outdoor Perks:    Two spacious decks—perfect for lounging, dining, or just enjoying the breeze    Complimentary beach chairs and umbrella    Easy access to the community pool and clubhouse, including a small fitness centerThis is the perfect setting for families, couples, or friends looking to explore Key West while enjoying the peace of a residential-style stay.",
+    "category": "Key West",
+    "availability": "true",
+    "discount": null,
+    "reviews": [
+      "Julia’s place was great. Close enough to the center of Key West, but in a great location for some rest and relaxation. Loved the pool. Very accommodating as well. Would come back.",
+      "We thoroughly enjoyed our family vacation for 6 at Julia's home. The location was perfect and the walkable bakery and restaurant nearby were excellent. The highlights of our stay in the home were coffee in the mornings on the quiet patio, morning swims in the heated pool, and family game nights at the dining room table. For future guests, bring bug spray because the no see ums are out. <br/>The host was very responsive, we had a toilet that needed maintenance and someone came right away and fixed it. We will be back!"
+    ],
+    "ratings": 4.86,
+    "seller_info": {
+      "seller_id": "16792473",
+      "url": "https://www.airbnb.com/users/show/16792473"
+    },
+    "breadcrumbs": "Key West, Florida, United States",
+    "location": "Key West, Florida, United States",
+    "lat": 24.5731,
+    "long": -81.73733,
+    "guests": 8,
+    "pets_allowed": false,
+    "description_items": [
+      "Entire home",
+      "4 beds",
+      "3 baths"
+    ],
+    "category_rating": [
+      {
+        "name": "Cleanliness",
+        "value": "4.8"
+      },
+      {
+        "name": "Accuracy",
+        "value": "4.9"
+      },
+      {
+        "name": "Check-in",
+        "value": "4.9"
+      },
+      {
+        "name": "Communication",
+        "value": "4.9"
+      },
+      {
+        "name": "Location",
+        "value": "4.8"
+      },
+      {
+        "name": "Value",
+        "value": "4.7"
+      }
+    ],
+    "house_rules": [
+      "Check-in after 4:00 PM",
+      "Checkout before 10:00 AM",
+      "8 guests maximum"
+    ],
+    "details": [
+      "8 guests",
+      "3 bedrooms",
+      "4 beds",
+      "3 baths"
+    ],
+    "highlights": [
+      {
+        "name": "Ready for meals at home",
+        "value": "This home has what you need to cook and dine in."
+      },
+      {
+        "name": "Self check-in",
+        "value": "Check yourself in with the smartlock."
+      },
+      {
+        "name": "Extra spacious",
+        "value": "Guests love this home’s spaciousness for a comfortable stay."
+      }
+    ],
+    "arrangement_details": [
+      {
+        "name": "Bedroom 1",
+        "value": "1 queen bed"
+      },
+      {
+        "name": "Bedroom 2",
+        "value": "2 single beds"
+      },
+      {
+        "name": "Bedroom 3",
+        "value": "1 king bed"
+      }
+    ],
+    "amenities": [
+      {
+        "group_name": "Scenic views",
+        "items": [
+          {
+            "name": "Pool view",
+            "value": "SYSTEM_POOL"
+          }
+        ]
+      },
+      {
+        "group_name": "Bathroom",
+        "items": [
+          {
+            "name": "Bathtub",
+            "value": "SYSTEM_BATHTUB"
+          },
+          {
+            "name": "Hair dryer",
+            "value": "SYSTEM_HAIRDRYER"
+          },
+          {
+            "name": "Body soap",
+            "value": "SYSTEM_SOAP"
+          }
+        ]
+      },
+      {
+        "group_name": "Bedroom and laundry",
+        "items": [
+          {
+            "name": "Washer",
+            "value": "SYSTEM_WASHER"
+          },
+          {
+            "name": "Essentials",
+            "value": "Towels, bed sheets, soap, and toilet paper"
+          },
+          {
+            "name": "Iron",
+            "value": "SYSTEM_IRON"
+          }
+        ]
+      },
+      {
+        "group_name": "Entertainment",
+        "items": [
+          {
+            "name": "TV",
+            "value": "SYSTEM_TV"
+          }
+        ]
+      },
+      {
+        "group_name": "Family",
+        "items": [
+          {
+            "name": "Crib",
+            "value": "SYSTEM_CRIB"
+          }
+        ]
+      },
+      {
+        "group_name": "Heating and cooling",
+        "items": [
+          {
+            "name": "Ceiling fan",
+            "value": "SYSTEM_FAN_CEILING"
+          }
+        ]
+      },
+      {
+        "group_name": "Home safety",
+        "items": [
+          {
+            "name": "Fire extinguisher",
+            "value": "SYSTEM_FIRE_EXTINGUISHER"
+          }
+        ]
+      },
+      {
+        "group_name": "Internet and office",
+        "items": [
+          {
+            "name": "Wifi",
+            "value": "SYSTEM_WI_FI"
+          }
+        ]
+      },
+      {
+        "group_name": "Kitchen and dining",
+        "items": [
+          {
+            "name": "Kitchen",
+            "value": "Space where guests can cook their own meals"
+          },
+          {
+            "name": "Refrigerator",
+            "value": "SYSTEM_REFRIGERATOR"
+          },
+          {
+            "name": "Microwave",
+            "value": "SYSTEM_MICROWAVE"
+          },
+          {
+            "name": "Cooking basics",
+            "value": "Pots and pans, oil, salt and pepper"
+          },
+          {
+            "name": "Dishes and silverware",
+            "value": "Bowls, chopsticks, plates, cups, etc."
+          },
+          {
+            "name": "Dishwasher",
+            "value": "SYSTEM_DISHWASHER"
+          },
+          {
+            "name": "Stove",
+            "value": "SYSTEM_STOVE"
+          },
+          {
+            "name": "Oven",
+            "value": "SYSTEM_OVEN"
+          },
+          {
+            "name": "Hot water kettle",
+            "value": "SYSTEM_WATER_KETTLE"
+          },
+          {
+            "name": "Coffee maker: drip coffee maker, Keurig coffee machine",
+            "value": "SYSTEM_COFFEE_MAKER"
+          },
+          {
+            "name": "Toaster",
+            "value": "SYSTEM_TOASTER"
+          },
+          {
+            "name": "Barbecue utensils",
+            "value": "Grill, charcoal, bamboo skewers/iron skewers, etc."
+          },
+          {
+            "name": "Dining table",
+            "value": "SYSTEM_DINING_TABLE"
+          },
+          {
+            "name": "Coffee",
+            "value": "SYSTEM_COFFEE_MAKER"
+          }
+        ]
+      },
+      {
+        "group_name": "Outdoor",
+        "items": [
+          {
+            "name": "Patio or balcony",
+            "value": "SYSTEM_PATIO_BALCONY"
+          },
+          {
+            "name": "Backyard",
+            "value": "An open space on the property usually covered in grass"
+          },
+          {
+            "name": "Outdoor dining area",
+            "value": "SYSTEM_ROOFTOP_DECK"
+          }
+        ]
+      },
+      {
+        "group_name": "Parking and facilities",
+        "items": [
+          {
+            "name": "Free driveway parking on premises – 2 spaces",
+            "value": "SYSTEM_MAPS_CAR_RENTAL"
+          },
+          {
+            "name": "Shared pool",
+            "value": "SYSTEM_POOL"
+          },
+          {
+            "name": "Gym",
+            "value": "SYSTEM_GYM"
+          }
+        ]
+      },
+      {
+        "group_name": "Services",
+        "items": [
+          {
+            "name": "Self check-in",
+            "value": "SYSTEM_KEY"
+          },
+          {
+            "name": "Smart lock",
+            "value": "SYSTEM_LOCK_ON_DOOR"
+          }
+        ]
+      },
+      {
+        "group_name": "Not included",
+        "items": [
+          {
+            "name": "Central air conditioning",
+            "value": "SYSTEM_NO_AIR_CONDITIONING"
+          },
+          {
+            "name": "Smoke alarm",
+            "value": "There is no smoke alarm on the property."
+          },
+          {
+            "name": "Carbon monoxide alarm",
+            "value": "There is no carbon monoxide detector on the property."
+          },
+          {
+            "name": "Shampoo",
+            "value": "SYSTEM_NO_SHAMPOO"
+          },
+          {
+            "name": "Private entrance",
+            "value": "SYSTEM_NO_PRIVATE_ENTRANCE"
+          },
+          {
+            "name": "Central heating",
+            "value": "SYSTEM_NO_HEATER"
+          }
+        ]
+      }
+    ],
+    "images": [
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/1b64c741-1371-42cb-bb79-3132041836a3.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/568ffb33-861f-43e0-87be-6c7226610e79.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/364934a6-7e7f-4225-a9e0-c87121631a95.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/ee84bbcc-72ba-4ec0-8bd6-1fde893d9b77.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/825a532a-e8f6-46d5-a893-3eda03414d75.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/127f8ee1-9cac-42a3-bd1a-c23c381a6bb7.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/38004ff1-ce2b-4eb8-9c8c-7af11c4eb90d.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/3f616f16-088f-4336-bcef-1cb2243479b7.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/5618e377-98ea-46cb-86df-05dff51ac941.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/1cfc351c-f629-42c9-98fb-49f36dd76f2d.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/ba6da96e-5b30-4237-8e84-713169cc14df.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/8eee73c3-b2af-486d-9061-e0c2c8c22282.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/5cf74e14-aba4-4d13-b624-2181c8d9569a.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/2a0bf507-7902-4cd8-8b4b-871d027f75a8.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/2fa5fc4c-788a-4090-9737-5c41f47b60fd.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/3b4125c1-7b2b-463c-b4d6-effa70c4b680.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/850f7ed4-0649-4d8a-a18d-653e1baa504e.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/756376fa-d2ad-4e45-8682-115c22352961.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/862ec0b1-90c9-48d4-9089-6664e427c30c.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/4d170e53-d6b6-4b0d-bf54-58ed5c20b9bf.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/d50d21d4-cb07-4d12-a7fd-fe773fda5b1f.jpeg",
+      "https://a0.muscache.com/im/pictures/prohost-api/Hosting-16687383/original/74fda6d3-58d1-40c6-a8c4-2276121effd4.jpeg"
+    ],
+    "available_dates": [
+      "2026-06-01",
+      "2026-06-02",
+      "2026-06-19",
+      "2026-06-20",
+      "2026-06-21",
+      "2026-06-22",
+      "2026-06-23",
+      "2026-06-24",
+      "2026-06-25",
+      "2026-06-26",
+      "2026-07-01",
+      "2026-07-02",
+      "2026-07-09",
+      "2026-07-10",
+      "2026-07-11",
+      "2026-07-19",
+      "2026-07-20",
+      "2026-07-21",
+      "2026-08-07",
+      "2026-08-08",
+      "2026-08-09",
+      "2026-08-10",
+      "2026-08-11",
+      "2026-08-12",
+      "2026-08-13",
+      "2026-08-14",
+      "2026-08-15",
+      "2026-08-16",
+      "2026-08-17",
+      "2026-08-18",
+      "2026-08-19",
+      "2026-08-20",
+      "2026-08-21",
+      "2026-08-22",
+      "2026-08-23",
+      "2026-08-24",
+      "2026-08-25",
+      "2026-08-26",
+      "2026-08-27",
+      "2026-08-28",
+      "2026-08-29",
+      "2026-08-30",
+      "2026-08-31",
+      "2026-09-01",
+      "2026-09-02",
+      "2026-09-03",
+      "2026-09-04",
+      "2026-09-05",
+      "2026-09-06",
+      "2026-09-07",
+      "2026-09-08",
+      "2026-09-09",
+      "2026-09-13",
+      "2026-09-14",
+      "2026-09-15",
+      "2026-09-16",
+      "2026-09-17",
+      "2026-09-18",
+      "2026-09-19",
+      "2026-09-20",
+      "2026-09-21",
+      "2026-09-22",
+      "2026-09-23",
+      "2026-09-24",
+      "2026-09-25",
+      "2026-09-26",
+      "2026-09-27",
+      "2026-09-28",
+      "2026-09-29",
+      "2026-09-30",
+      "2026-10-01",
+      "2026-10-02",
+      "2026-10-03",
+      "2026-10-04",
+      "2026-10-05",
+      "2026-10-06",
+      "2026-10-07",
+      "2026-10-08",
+      "2026-10-09",
+      "2026-10-10",
+      "2026-10-11",
+      "2026-10-12",
+      "2026-10-13",
+      "2026-10-14",
+      "2026-10-15",
+      "2026-10-16",
+      "2026-10-17",
+      "2026-10-18",
+      "2026-10-19",
+      "2026-10-20",
+      "2026-10-21",
+      "2026-10-22",
+      "2026-10-23",
+      "2026-10-24",
+      "2026-10-25",
+      "2026-10-26",
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31",
+      "2026-11-04",
+      "2026-11-05",
+      "2026-11-06",
+      "2026-11-07",
+      "2026-11-08",
+      "2026-11-09",
+      "2026-11-10",
+      "2026-11-11",
+      "2026-11-12",
+      "2026-11-13",
+      "2026-11-14",
+      "2026-11-15",
+      "2026-11-16",
+      "2026-11-17",
+      "2026-11-18",
+      "2026-11-19",
+      "2026-11-20",
+      "2026-11-21",
+      "2026-11-22",
+      "2026-11-23",
+      "2026-11-24",
+      "2026-11-25",
+      "2026-11-26",
+      "2026-11-27",
+      "2026-11-28",
+      "2026-11-29",
+      "2026-11-30",
+      "2026-12-01",
+      "2026-12-07",
+      "2026-12-08",
+      "2026-12-09",
+      "2026-12-10",
+      "2026-12-11",
+      "2026-12-12",
+      "2026-12-13",
+      "2026-12-14",
+      "2026-12-15",
+      "2026-12-16",
+      "2026-12-17",
+      "2026-12-18",
+      "2026-12-19",
+      "2026-12-20",
+      "2026-12-21",
+      "2026-12-22",
+      "2026-12-23",
+      "2026-12-24",
+      "2026-12-25",
+      "2026-12-26",
+      "2026-12-27",
+      "2027-01-02",
+      "2027-01-03",
+      "2027-01-04",
+      "2027-01-05",
+      "2027-01-06",
+      "2027-01-07",
+      "2027-01-08",
+      "2027-01-09",
+      "2027-01-10",
+      "2027-01-11",
+      "2027-01-12",
+      "2027-01-13",
+      "2027-01-14",
+      "2027-01-15",
+      "2027-01-16",
+      "2027-01-17",
+      "2027-01-18",
+      "2027-01-19",
+      "2027-01-20",
+      "2027-01-21",
+      "2027-01-22",
+      "2027-01-23",
+      "2027-01-24",
+      "2027-01-25",
+      "2027-01-26",
+      "2027-01-27",
+      "2027-01-28",
+      "2027-01-29",
+      "2027-01-30",
+      "2027-01-31",
+      "2027-02-01",
+      "2027-02-02",
+      "2027-02-03",
+      "2027-02-04",
+      "2027-02-05",
+      "2027-02-06",
+      "2027-02-07",
+      "2027-02-08",
+      "2027-02-09",
+      "2027-02-10",
+      "2027-02-11",
+      "2027-02-12",
+      "2027-02-13",
+      "2027-02-14",
+      "2027-02-15",
+      "2027-02-16",
+      "2027-02-17",
+      "2027-02-18",
+      "2027-02-19",
+      "2027-02-20",
+      "2027-02-21",
+      "2027-02-22",
+      "2027-02-23",
+      "2027-02-24",
+      "2027-02-25",
+      "2027-02-26",
+      "2027-02-27",
+      "2027-02-28",
+      "2027-03-01",
+      "2027-03-02",
+      "2027-03-03",
+      "2027-03-04",
+      "2027-03-05",
+      "2027-03-06",
+      "2027-03-07",
+      "2027-03-08",
+      "2027-03-09",
+      "2027-03-10",
+      "2027-03-11",
+      "2027-03-12",
+      "2027-03-13",
+      "2027-03-14",
+      "2027-03-15",
+      "2027-03-16",
+      "2027-03-17",
+      "2027-03-18",
+      "2027-03-19",
+      "2027-03-20",
+      "2027-03-21",
+      "2027-03-22",
+      "2027-03-23",
+      "2027-03-24",
+      "2027-03-25",
+      "2027-03-26",
+      "2027-03-27",
+      "2027-03-28",
+      "2027-03-29",
+      "2027-03-30",
+      "2027-03-31",
+      "2027-04-01",
+      "2027-04-02",
+      "2027-04-03",
+      "2027-04-04",
+      "2027-04-05",
+      "2027-04-06",
+      "2027-04-07",
+      "2027-04-08",
+      "2027-04-09",
+      "2027-04-10",
+      "2027-04-11",
+      "2027-04-12",
+      "2027-04-13",
+      "2027-04-14",
+      "2027-04-15",
+      "2027-04-16",
+      "2027-04-17",
+      "2027-04-18",
+      "2027-04-19",
+      "2027-04-20",
+      "2027-04-21",
+      "2027-04-22",
+      "2027-04-23",
+      "2027-04-24",
+      "2027-04-25",
+      "2027-04-26",
+      "2027-04-27",
+      "2027-04-28",
+      "2027-04-29",
+      "2027-04-30",
+      "2027-05-01",
+      "2027-05-02",
+      "2027-05-03",
+      "2027-05-04",
+      "2027-05-05",
+      "2027-05-06",
+      "2027-05-07",
+      "2027-05-08",
+      "2027-05-09",
+      "2027-05-10",
+      "2027-05-11",
+      "2027-05-12",
+      "2027-05-13",
+      "2027-05-14",
+      "2027-05-15",
+      "2027-05-16",
+      "2027-05-17",
+      "2027-05-18",
+      "2027-05-19",
+      "2027-05-20",
+      "2027-05-21",
+      "2027-05-22",
+      "2027-05-23",
+      "2027-05-24",
+      "2027-05-25",
+      "2027-05-26",
+      "2027-05-27",
+      "2027-05-28",
+      "2027-05-29",
+      "2027-05-30",
+      "2027-05-31"
+    ],
+    "url": "https://www.airbnb.com/rooms/16687383?search_mode=regular_search&previous_page_section_name=1000&locale=en&currency=USD&adults=8&check_in=2026-10-15&check_out=2026-10-19",
+    "final_url": "https://www.airbnb.com/rooms/16687383?search_mode=regular_search&locale=en&currency=USD&adults=8&check_in=2026-10-15&check_out=2026-10-19&source_impression_id=p3_1777038132_P3f__tXteVtv48CZ",
+    "listing_title": "Coral Hammock Poolside Home 3 bdrm 3 bath10 minute",
+    "property_id": "16687383",
+    "listing_name": "Entire home in Key West, Florida, United States",
+    "location_details": [],
+    "description_by_sections": [
+      {
+        "title": null,
+        "value": "Charming 3-Bed, 3-Bath Home in Gated CommunitySpacious standalone home with stunning views of the free-form pool. Enjoy the breeze from your private porches in a secure, peaceful setting. A perfect blend of comfort and privacy!"
+      },
+      {
+        "title": "The space",
+        "value": "Coral Hammock – 3BR/3BA Home with Pool Views in Coral Hammock3 Bedrooms | 3 Full Bathrooms | Sleeps up to 8 | Backs to Community PoolWelcome to Coral Hammock, your home away from home in beautiful Key West! Built in 2004 and meticulously maintained, this spacious 3-bedroom, 3-bathroom home offers comfort, convenience, and unbeatable value—often for less than the price of a single hotel room.Located in the gated Coral Hammock community—home to just 55 properties—this detached home offers added privacy and direct access to the lushly landscaped community pool, right from your backyard.Inside You’ll Find:    A well-equipped kitchen with both Keurig and drip coffee makers    TVs in the living room and each bedroom    High-speed internet to keep you connected    Comfortable accommodations for up to six guests    Queen air mattress Outdoor Perks:    Two spacious decks—perfect for lounging, dining, or just enjoying the breeze    Complimentary beach chairs and umbrella    Easy access to the community pool and clubhouse, including a small fitness centerThis is the perfect setting for families, couples, or friends looking to explore Key West while enjoying the peace of a residential-style stay."
+      }
+    ],
+    "description_html": "\n<span class=\"l1h825yc atm_kd_adww2_24z95b dir dir-ltr\">\nCharming 3-Bed, 3-Bath Home in Gated Community\n<br>\nSpacious standalone home with stunning views of the free-form pool. Enjoy the breeze from your private porches in a secure, peaceful setting. A perfect blend of comfort and privacy!\n<br>\n<br>\n<span class=\"_g5uevq\">The space</span>\n<br>\nCoral Hammock &#x2013; 3BR/3BA Home with Pool Views in Coral Hammock\n<br>\n<br>\n3 Bedrooms | 3 Full Bathrooms | Sleeps up to 8 | Backs to Community Pool\n<br>\n<br>\nWelcome to Coral Hammock, your home away from home in beautiful Key West! Built in 2004 and meticulously maintained, this spacious 3-bedroom, 3-bathroom home offers comfort, convenience, and unbeatable value&#x2014;often for less than the price of a single hotel room.\n<br>\n<br>\nLocated in the gated Coral Hammock community&#x2014;home to just 55 properties&#x2014;this detached home offers added privacy and direct access to the lushly landscaped community pool, right from your backyard.\n<br>\nInside You&#x2019;ll Find:\n<br>\n<br>\n    A well-equipped kitchen with both Keurig and drip coffee makers\n<br>\n    TVs in the living room and each bedroom\n<br>\n    High-speed internet to keep you connected\n<br>\n    Comfortable accommodations for up to six guests\n<br>\n    Queen air mattress \n<br>\n<br>\nOutdoor Perks:\n<br>\n<br>\n    Two spacious decks&#x2014;perfect for lounging, dining, or just enjoying the breeze\n<br>\n    Complimentary beach chairs and umbrella\n<br>\n    Easy access to the community pool and clubhouse, including a small fitness center\n<br>\n<br>\nThis is the perfect setting for families, couples, or friends looking to explore Key West while enjoying the peace of a residential-style stay.\n</span>\n",
+    "location_details_html": null,
+    "is_supperhost": true,
+    "host_number_of_reviews": 1908,
+    "host_rating": 4.77,
+    "hosts_year": 12,
+    "host_response_rate": 97,
+    "is_guest_favorite": true,
+    "travel_details": {
+      "check_in": "2026-10-15T00:00:00.000Z",
+      "check_out": "2026-10-19T00:00:00.000Z",
+      "num_of_adults": 8,
+      "num_of_children": null,
+      "num_of_infants": null,
+      "num_of_pets": null
+    },
+    "pricing_details": {
+      "airbnb_service_fee": null,
+      "cleaning_fee": null,
+      "initial_price_per_night": 615.75,
+      "num_of_nights": 4,
+      "price_per_night": 615.75,
+      "price_without_fees": 2462.99,
+      "special_offer": null,
+      "taxes": null
+    },
+    "total_price": 2462.99,
+    "currency": "USD",
+    "cancellation_policy": [
+      {
+        "cancellation_name": "Full r****d",
+        "cancellation_value": "Full refund if cancel within 24 hours after booking. Get back 100% of what you paid.."
+      },
+      {
+        "cancellation_name": "Partial r****d",
+        "cancellation_value": "09/15/2026"
+      },
+      {
+        "cancellation_name": "No r****d",
+        "cancellation_value": "09/15/2026"
+      }
+    ],
+    "property_number_of_reviews": 167,
+    "host_image": "https://a0.muscache.com/im/pictures/user/User-16792473/original/e4801a70-ffa3-4ec6-8d8f-8cc57e1f801d.jpeg",
+    "host_details": {
+      "host_id": "16792473",
+      "image": "https://a0.muscache.com/im/pictures/user/User-16792473/original/e4801a70-ffa3-4ec6-8d8f-8cc57e1f801d.jpeg",
+      "my_work": "Property Management",
+      "name": "Julia",
+      "rating": 4.77,
+      "response_rate": "Response rate: 97%",
+      "response_time": "Responds within an hour",
+      "reviews": 1908,
+      "url": "https://www.airbnb.com/users/show/16792473",
+      "years_hosting": 12
+    },
+    "reviews_details": [
+      {
+        "guest_name": "JaM***us",
+        "guest_time_on_airbnb": "Atlanta, Georgia",
+        "host_response": null,
+        "rating": 5,
+        "review": "Julia’s place was great. Close enough to the center of Key West, but in a great location for some rest and relaxation. Loved the pool. Very accommodating as well. Would come back.",
+        "review_date": "2026-04-06T19:05:58Z",
+        "stayed_for": "Stayed a few nights"
+      },
+      {
+        "guest_name": "******",
+        "guest_time_on_airbnb": "Two Harbors, Minnesota",
+        "host_response": null,
+        "rating": 5,
+        "review": "We thoroughly enjoyed our family vacation for 6 at Julia's home. The location was perfect and the walkable bakery and restaurant nearby were excellent. The highlights of our stay in the home were coffee in the mornings on the quiet patio, morning swims in the heated pool, and family game nights at the dining room table. For future guests, bring bug spray because the no see ums are out. <br/>The host was very responsive, we had a toilet that needed maintenance and someone came right away and fixed it. We will be back!",
+        "review_date": "2026-01-16T20:23:19Z",
+        "stayed_for": null
+      }
+    ],
+    "is_exact_location": false
+  }
+]
