@@ -1,0 +1,115 @@
+Use this as the clean Mac mini setup guide.
+
+Purpose
+Run Airbnb pricing from the Mac mini via launchd, using Bright Data residential proxy credentials from:
+
+/Users/ryandolan/vallartapulse/.env
+Do not run this job from Replit or Railway.
+
+1. Go To Repo
+
+cd /Users/ryandolan/vallartapulse
+git pull
+corepack enable
+pnpm install
+pnpm exec playwright install chromium
+2. Fix .env
+Open:
+
+nano /Users/ryandolan/vallartapulse/.env
+Use this format:
+
+RAILWAY_DATABASE_URL=postgresql://...
+
+BRIGHTDATA_CUSTOMER_ID=hl_1fc05a26
+BRIGHTDATA_ZONE=residential_proxy1
+BRIGHTDATA_ZONE_PASSWORD=YOUR_ACTUAL_BRIGHTDATA_PASSWORD
+BRIGHTDATA_HOST=brd.superproxy.io
+BRIGHTDATA_PORT=33335
+Important: do not put the full Bright Data username in BRIGHTDATA_CUSTOMER_ID.
+
+Correct:
+
+BRIGHTDATA_CUSTOMER_ID=hl_1fc05a26
+BRIGHTDATA_ZONE=residential_proxy1
+Wrong:
+
+BRIGHTDATA_CUSTOMER_ID=brd-customer-hl_1fc05a26-zone-residential_proxy1
+Also remove or comment out PROXY_URL for now, so there is only one proxy config path.
+
+3. Verify Env Without Showing Secrets
+
+cd /Users/ryandolan/vallartapulse
+set -a
+source .env
+set +a
+
+test -n "$RAILWAY_DATABASE_URL" || echo "missing RAILWAY_DATABASE_URL"
+test -n "$BRIGHTDATA_CUSTOMER_ID" || echo "missing BRIGHTDATA_CUSTOMER_ID"
+test -n "$BRIGHTDATA_ZONE" || echo "missing BRIGHTDATA_ZONE"
+test -n "$BRIGHTDATA_ZONE_PASSWORD" || echo "missing BRIGHTDATA_ZONE_PASSWORD"
+
+echo "$BRIGHTDATA_CUSTOMER_ID"
+echo "$BRIGHTDATA_ZONE"
+Expected:
+
+hl_1fc05a26
+residential_proxy1
+4. Verify Wrapper
+Open:
+
+nano scripts/run-airbnb-pricing-nightly.sh
+Make sure it contains this pattern:
+
+cd /Users/ryandolan/vallartapulse
+
+set -a
+source .env
+set +a
+
+export DATABASE_URL="${RAILWAY_DATABASE_URL:?RAILWAY_DATABASE_URL missing}"
+
+AIRBNB_PRICING_MAX_LISTINGS="${AIRBNB_PRICING_MAX_LISTINGS:-250}" \
+  pnpm --filter @workspace/scripts run scrape:airbnb-pricing
+That defaulting form matters. It lets you run a 10-listing canary like this:
+
+AIRBNB_PRICING_MAX_LISTINGS=10 ./scripts/run-airbnb-pricing-nightly.sh
+5. Canary Run
+
+cd /Users/ryandolan/vallartapulse
+AIRBNB_PRICING_MAX_LISTINGS=10 ./scripts/run-airbnb-pricing-nightly.sh
+Check log:
+
+tail -120 "$(ls -t logs/airbnb-pricing/run-*.log | head -1)"
+Look for:
+
+airbnb-pricing-refresh.start
+maxListings: 10
+quotesWritten > 0
+exit_rc=0
+6. Scale Up
+Only after the 10-listing run succeeds:
+
+AIRBNB_PRICING_MAX_LISTINGS=200 ./scripts/run-airbnb-pricing-nightly.sh
+AIRBNB_PRICING_MAX_LISTINGS=500 ./scripts/run-airbnb-pricing-nightly.sh
+7. launchd
+Check the job:
+
+launchctl list | grep vallartapulse
+Reload if needed:
+
+launchctl unload ~/Library/LaunchAgents/com.vallartapulse.airbnb-pricing.plist 2>/dev/null || true
+launchctl load ~/Library/LaunchAgents/com.vallartapulse.airbnb-pricing.plist
+Manual run is always:
+
+/Users/ryandolan/vallartapulse/scripts/run-airbnb-pricing-nightly.sh
+Most Common Error
+If you see a proxy auth failure, check that the password is the actual Bright Data password:
+
+Correct legacy URL, if ever needed:
+
+PROXY_URL=http://brd-customer-hl_1fc05a26-zone-residential_proxy1:YOUR_ACTUAL_PASSWORD@brd.superproxy.io:33335
+Wrong:
+
+PROXY_URL=http://brd-customer-hl_1fc05a26-zone-residential_proxy1:BRIGHTDATA_ZONE_PASSWORD@brd.superproxy.io:33335
+But preferred setup is the separate BRIGHTDATA_* vars, not PROXY_URL.
