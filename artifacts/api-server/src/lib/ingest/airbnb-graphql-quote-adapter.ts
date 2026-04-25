@@ -107,8 +107,14 @@ async function getContext(): Promise<BrowserContext> {
   // rotation here would force a context teardown which defeats the
   // homepage cookie warmup below.
   const proxy = buildProxyParts({ session: randomSession() });
+  // Headful toggle: set AIRBNB_PRICING_HEADFUL=1 from the mini to launch
+  // a visible Chromium window. Useful for diagnosing fingerprint-layer bot
+  // detection — a real visible browser passes some checks that headless
+  // does not (window dimensions vs screen, plugin enumeration, etc.).
+  // Default stays headless so cron runs unattended. Mirror in browser-fetch.ts.
+  const headful = process.env.AIRBNB_PRICING_HEADFUL === "1";
   browser = await chromium.launch({
-    headless: true,
+    headless: !headful,
     // Stealth args — without --disable-blink-features=AutomationControlled
     // navigator.webdriver evaluates to true and Airbnb soft-redirects every
     // /rooms/<id> request to the homepage (page title becomes "Airbnb:
@@ -146,11 +152,18 @@ async function getContext(): Promise<BrowserContext> {
   // (image OR media OR font) passes cleanly. Image alone wins most of the
   // speedup since gallery photos are the bulk of page bandwidth. Keep this
   // rule in sync with browser-fetch.ts.
-  await context.route("**/*", (route) => {
-    const t = route.request().resourceType();
-    if (t === "image") return route.abort();
-    return route.continue();
-  });
+  //
+  // Escape hatch: AIRBNB_DISABLE_IMAGE_BLOCKER=1 lets every request through.
+  // Use when diagnosing whether the image abort itself is part of the bot
+  // signal that's stalling the BookItSidebar hydration on listing pages.
+  const disableImageBlocker = process.env.AIRBNB_DISABLE_IMAGE_BLOCKER === "1";
+  if (!disableImageBlocker) {
+    await context.route("**/*", (route) => {
+      const t = route.request().resourceType();
+      if (t === "image") return route.abort();
+      return route.continue();
+    });
+  }
   // CRITICAL: warm the session by visiting the homepage once. Without this,
   // every subsequent /rooms/<id> hit looks like a brand-new no-cookie bot
   // session and Airbnb fast-paths it to the homepage redirect (we proved
