@@ -267,14 +267,40 @@ export async function fetchAirbnbQuote(
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: PAGE_NAV_TIMEOUT_MS });
     pageTitle = await page.title().catch(() => "");
 
-    // Fast-path: if the title is the generic Airbnb homepage / "Oops!" 404
-    // page, the listing has been delisted (or we got soft-blocked into a
-    // redirect). Bail immediately — no point waiting 18s for a sidebar
-    // that will never render.
+    // Read og:url from the SSR'd HTML. For real listing pages this meta
+    // tag contains the listing URL (`/rooms/<externalId>`) regardless of
+    // how Airbnb's client-side hydration treats document.title. For
+    // homepage soft-redirects, true delistings, and bot walls this is
+    // either missing or points at airbnb.com root / a different room id
+    // — so it's a far more reliable signal than <title>.
+    //
+    // 2026-04-25: validated against listing 1185678533533813531 dump —
+    // 538KB HTML, og:url="https://www.airbnb.com/rooms/1185678533533813531",
+    // BookingPanel section present, BUT <title> still the generic
+    // "Airbnb: Vacation Rentals..." default. Airbnb's listing-page SSR
+    // ships the generic title and only swaps it client-side after
+    // hydration — well after our domcontentloaded handler resolves. The
+    // previous title-only fast-path was therefore mis-classifying real
+    // listing payloads as "delisted-or-blocked" on EVERY checkpoint.
+    const ogUrl =
+      (await page
+        .locator('meta[property="og:url"]')
+        .getAttribute("content")
+        .catch(() => "")) || "";
+    const isRealListing = ogUrl.includes(`/rooms/${externalId}`);
+
+    // Fast-path: only treat as delisted-or-blocked when BOTH (a) the
+    // title is the generic Airbnb fallback / 404 AND (b) the SSR'd
+    // og:url does NOT point at our target listing. Either condition
+    // alone is insufficient — see the og:url comment above for why
+    // title alone over-fires, and why og:url alone under-fires (a
+    // properly delisted page may still echo the requested room id in
+    // its og:url before redirecting).
     if (
-      /^Airbnb: Vacation Rentals/i.test(pageTitle) ||
-      /Oops/i.test(pageTitle) ||
-      /Page not found/i.test(pageTitle)
+      !isRealListing &&
+      (/^Airbnb: Vacation Rentals/i.test(pageTitle) ||
+        /Oops/i.test(pageTitle) ||
+        /Page not found/i.test(pageTitle))
     ) {
       bodyPreview = (
         await page.locator("body").innerText({ timeout: 2000 }).catch(() => "")
