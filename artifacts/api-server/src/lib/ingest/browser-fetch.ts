@@ -50,8 +50,15 @@ async function getBrowser(): Promise<Browser> {
     // Lazy import keeps the dependency optional for callers that never use
     // the browser mode (e.g. the api-server itself).
     const { chromium } = await import("playwright");
+    // Headful toggle: set AIRBNB_PRICING_HEADFUL=1 from the mini to launch
+    // a visible Chromium window. Useful for diagnosing fingerprint-layer
+    // bot detection — a real visible browser passes some checks that
+    // headless does not (window dimensions vs screen, plugin enumeration,
+    // etc.). Default stays headless so cron runs unattended. Keep in sync
+    // with airbnb-graphql-quote-adapter.ts.
+    const headful = process.env.AIRBNB_PRICING_HEADFUL === "1";
     const browser = await chromium.launch({
-      headless: true,
+      headless: !headful,
       args: [
         "--no-sandbox",
         "--disable-dev-shm-usage",
@@ -153,13 +160,20 @@ export async function fetchWithBrowser(
     // blocking a single resource type passes cleanly. Image alone wins most
     // of the speedup since gallery photos dominate page bandwidth. Mirror in
     // airbnb-graphql-quote-adapter.ts.
-    await page.route("**/*", (route) => {
-      const t = route.request().resourceType();
-      if (t === "image") {
-        return route.abort();
-      }
-      return route.continue();
-    });
+    //
+    // Escape hatch: AIRBNB_DISABLE_IMAGE_BLOCKER=1 lets every request through.
+    // Use when diagnosing whether the image abort itself is part of the bot
+    // signal that's stalling the BookItSidebar hydration on listing pages.
+    const disableImageBlocker = process.env.AIRBNB_DISABLE_IMAGE_BLOCKER === "1";
+    if (!disableImageBlocker) {
+      await page.route("**/*", (route) => {
+        const t = route.request().resourceType();
+        if (t === "image") {
+          return route.abort();
+        }
+        return route.continue();
+      });
+    }
 
     // Race networkidle against an optional selector wait.
     const navPromise = page.goto(url, {

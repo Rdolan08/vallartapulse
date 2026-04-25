@@ -177,6 +177,18 @@ What's currently in the paused state — **do not "fix" any of these without thi
 
 To unpause once the adapters are real: revert the `if: false` gates and the commented-out cron in `airbnb-pricing-refresh.yml`, redeploy Railway, manually dispatch the workflow once with `max_listings=10` to confirm, then let the daily cron resume.
 
+## Airbnb adapter diagnostic env toggles
+
+Opt-in env vars for diagnosing fingerprint-layer bot detection on `/rooms/<id>`. All default OFF — cron stays headless with image-blocker on, current behavior unchanged. Set on the mini in `~/vallartapulse/.env` (use the `set -a; source .env; set +a` pattern that the calendar wrapper uses, NOT bare `source .env`).
+
+Both adapter files kept in sync — `artifacts/api-server/src/lib/ingest/browser-fetch.ts` and `artifacts/api-server/src/lib/ingest/airbnb-graphql-quote-adapter.ts`.
+
+- `AIRBNB_PRICING_HEADFUL=1` — launch a visible Chromium window. Tests whether the headless fingerprint is part of what stalls BookItSidebar hydration. Cannot run under launchd (no display); use for interactive runs from the mini's logged-in shell.
+- `AIRBNB_DISABLE_IMAGE_BLOCKER=1` — pass every request through (no image abort). Tests whether the cumulative route-abort count is itself part of the bot signal that stalls hydration.
+- (planned) `AIRBNB_USE_STEALTH=1` — wires `playwright-extra` + `puppeteer-extra-plugin-stealth`. Pending dependency add.
+
+Test one knob at a time so any success-rate change is attributable. Existing `AIRBNB_PRICING_DUMP=0` to disable the failure-artifact dump still works.
+
 ## VRBO pipelines — PAUSED
 
 As of 2026-04-19, **both VRBO workflows are on hold**: `vrbo-scrape.yml` (listing discovery) and `vrbo-pricing-refresh.yml` (per-night fee quotes). Reason: the Decodo residential proxy has not been able to defeat VRBO's PerimeterX "Bot or Not?" challenge, so daily discovery runs returned 0 listings every time. Without listings to quote, the pricing pipeline has nothing to do either. See `vrbo-search-adapter.ts` header for tried approaches.
