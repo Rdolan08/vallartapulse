@@ -157,14 +157,16 @@ export interface CompsResult {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+type ScoringWeights = ScoreBreakdown["effectiveWeights"];
+
 /** Base scoring weights when all fields are present. Must sum to 100. */
-const BASE_WEIGHTS = {
+const BASE_WEIGHTS: ScoringWeights = {
   beachDistance: 25,
   sqft:          20,
   bathrooms:     15,
   amenities:     25,
   rating:        15,
-} as const;
+};
 
 /** Beach distance scale: 400m separation → beach score = 0. */
 const BEACH_SCALE_M = 400;
@@ -237,7 +239,7 @@ function jaccardSimilarity(a: string[], b: string[]): number {
 function effectiveWeights(
   target: TargetProperty,
   comp: CompsListing
-): typeof BASE_WEIGHTS {
+): ScoringWeights {
   let { beachDistance, sqft, bathrooms, amenities, rating } = { ...BASE_WEIGHTS };
 
   const hasSqft = target.sqft != null && comp.sqft != null;

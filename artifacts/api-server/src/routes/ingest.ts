@@ -169,6 +169,12 @@ router.post("/ingest/run", async (req, res) => {
         : source === "vacation_vallarta"
         ? await fetchVacationVallartaListing(url)
         : await fetchVrboListing(url);
+    if (!normalized) {
+      return res.status(404).json({
+        error: "Listing not found",
+        message: `No normalized listing returned for ${url}`,
+      });
+    }
 
     let result: { listing_id?: number; warnings: string[]; persisted: boolean; error?: string } = {
       persisted: false,
@@ -185,10 +191,10 @@ router.post("/ingest/run", async (req, res) => {
       };
     }
 
-    res.json({ source, url, normalized, ...result });
+    return res.json({ source, url, normalized, ...result });
   } catch (err) {
     req.log.error({ err, url, source }, "ingest/run failed");
-    res.status(500).json({
+    return res.status(500).json({
       error: "Adapter failed",
       message: err instanceof Error ? err.message : String(err),
     });
@@ -216,10 +222,10 @@ router.post("/ingest/ical", async (req, res) => {
         ? await fetchAndParseICal(parsed.data.url)
         : parseICalText(parsed.data.raw);
 
-    res.json(result);
+    return res.json(result);
   } catch (err) {
     req.log.error({ err }, "ingest/ical failed");
-    res.status(500).json({ error: "iCal parse failed", message: String(err) });
+    return res.status(500).json({ error: "iCal parse failed", message: String(err) });
   }
 });
 
@@ -270,7 +276,7 @@ router.post("/ingest/inject", async (req, res) => {
   try {
     req.log.info({ source: normalized.source, source_listing_id: normalized.source_listing_id }, "ingest/inject: persisting");
     const result = await persistNormalized(normalized);
-    res.json({
+    return res.json({
       ok: result.ok,
       source: normalized.source,
       listing_id: result.listing_id,
@@ -280,7 +286,7 @@ router.post("/ingest/inject", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "ingest/inject failed");
-    res.status(500).json({ error: "Persist failed", message: String(err) });
+    return res.status(500).json({ error: "Persist failed", message: String(err) });
   }
 });
 
@@ -392,6 +398,7 @@ router.post("/ingest/scrape-all", async (req, res) => {
     return res.json({ source, total: results.length, succeeded, results });
   }
 
+  return res.status(400).json({ error: "Unsupported source" });
 });
 
 // ── POST /ingest/discover ─────────────────────────────────────────────────
@@ -505,7 +512,7 @@ router.post("/ingest/discover", async (req, res) => {
   }
 
   req.log.info({ source, dry_run }, "ingest/discover: complete");
-  res.json({ source, dry_run, persist, summary });
+  return res.json({ source, dry_run, persist, summary });
 });
 
 // ── GET /ingest/sync-status ───────────────────────────────────────────────
@@ -862,7 +869,7 @@ router.post("/ingest/enrich-airbnb-detail", async (req, res) => {
       byPriority,
     };
 
-    res.json({
+    return res.json({
       mode: process.env["AIRBNB_DETAIL_FETCH_MODE"] ?? "browser",
       dryRun,
       bucketRestrictor,
@@ -871,7 +878,7 @@ router.post("/ingest/enrich-airbnb-detail", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "ingest/enrich-airbnb-detail failed");
-    res.status(500).json({
+    return res.status(500).json({
       error: "Enrichment loop failed",
       message: err instanceof Error ? err.message : String(err),
     });
@@ -1792,7 +1799,7 @@ router.get("/ingest/rental-prices-quality", async (req, res) => {
 //
 // Read-only and unauthenticated — same posture as the *-freshness probes,
 // since the page that consumes it is public.
-router.get("/ingest/pricing-coverage", async (_req, res) => {
+router.get("/ingest/pricing-coverage", async (req, res) => {
   try {
     const result = await db.execute(sql`
       WITH active AS (
@@ -1867,10 +1874,10 @@ router.get("/ingest/pricing-coverage", async (_req, res) => {
           : Math.round((r.priced_any / r.active_listings) * 1000) / 10,
     }));
 
-    res.json({ window: "7d", platforms });
+    return res.json({ window: "7d", platforms });
   } catch (err) {
     req.log.error({ err }, "ingest/pricing-coverage failed");
-    res.status(500).json({ error: "Failed to compute pricing-coverage" });
+    return res.status(500).json({ error: "Failed to compute pricing-coverage" });
   }
 });
 
@@ -2000,10 +2007,10 @@ router.post("/ingest/rental-prices-retention-sweep", async (req, res) => {
       `rental-prices retention sweep: pastDate=${pastDateDeleted} stale=${staleScrapeDeleted}${dryRun ? " (dry-run)" : ""}`,
     );
 
-    res.json(summary);
+    return res.json(summary);
   } catch (err) {
     req.log.error({ err }, "ingest/rental-prices-retention-sweep failed");
-    res.status(500).json({ error: "Retention sweep failed" });
+    return res.status(500).json({ error: "Retention sweep failed" });
   }
 });
 
@@ -2043,10 +2050,10 @@ router.post("/ingest/airbnb-pricing-refresh", async (req, res) => {
   try {
     req.log.info({ maxListings, dryRun }, "ingest/airbnb-pricing-refresh: starting");
     const result = await runAirbnbPricingRefresh({ maxListings, dryRun });
-    res.json({ dryRun, ...result });
+    return res.json({ dryRun, ...result });
   } catch (err) {
     req.log.error({ err }, "ingest/airbnb-pricing-refresh failed");
-    res.status(500).json({
+    return res.status(500).json({
       error: "Airbnb pricing refresh failed",
       message: err instanceof Error ? err.message : String(err),
     });
@@ -2089,10 +2096,10 @@ router.post("/ingest/pvrpv-pricing-refresh", async (req, res) => {
   try {
     req.log.info({ maxListings, dryRun }, "ingest/pvrpv-pricing-refresh: starting");
     const result = await runPvrpvPricingRefresh({ maxListings, dryRun });
-    res.json({ dryRun, ...result });
+    return res.json({ dryRun, ...result });
   } catch (err) {
     req.log.error({ err }, "ingest/pvrpv-pricing-refresh failed");
-    res.status(500).json({
+    return res.status(500).json({
       error: "PVRPV pricing refresh failed",
       message: err instanceof Error ? err.message : String(err),
     });
@@ -2133,10 +2140,10 @@ router.post("/ingest/vrbo-pricing-refresh", async (req, res) => {
   try {
     req.log.info({ maxListings, dryRun }, "ingest/vrbo-pricing-refresh: starting");
     const result = await runVrboPricingRefresh({ maxListings, dryRun });
-    res.json({ dryRun, ...result });
+    return res.json({ dryRun, ...result });
   } catch (err) {
     req.log.error({ err }, "ingest/vrbo-pricing-refresh failed");
-    res.status(500).json({
+    return res.status(500).json({
       error: "VRBO pricing refresh failed",
       message: err instanceof Error ? err.message : String(err),
     });

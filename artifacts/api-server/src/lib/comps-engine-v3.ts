@@ -42,6 +42,7 @@ import {
   type TargetPropertyV2,
   type CompResultV2,
   type BeachTier,
+  type PriceTier,
 } from "./comps-engine-v2";
 import { getSeasonalContext, type SeasonalContext } from "./pv-seasonality";
 
@@ -136,7 +137,7 @@ export interface CompsResultV3 {
   adjacentNeighborhood: boolean;
   adjacentNeighborhoodsUsed: string[];
   targetBeachTier: BeachTier;
-  targetPriceTier: "low" | "mid" | "high" | null;
+  targetPriceTier: PriceTier | null;
   targetBuildingNormalized: string | null;
   targetBuildingPremiumFactor: number | null;
   segmentMedian: number;
@@ -231,7 +232,7 @@ export class CompsEngineV3 {
     const { factor: rooftopFactor, note: rooftopNote } =
       computeRooftopPoolFactor(target.rooftopPool, target.amenitiesNormalized);
     const { factor: qualityFactor, ratingNote, yearNote } =
-      computeQualityFactor(target.ratingOverall, target.yearBuilt);
+      computeQualityFactor(target.ratingOverall ?? null, target.yearBuilt);
 
     const buildingFactor =
       recommendation.buildingAdjustmentPct != null
@@ -464,7 +465,7 @@ export class CompsEngineV3 {
       targetPriceTier: v2Result.targetPriceTier,
       targetBuildingNormalized: v2Result.targetBuildingNormalized,
       targetBuildingPremiumFactor: v2Result.targetBuildingPremiumFactor,
-      segmentMedian: v2Result.segmentMedian,
+      segmentMedian: v2Result.segmentMedian ?? baseCompMedian,
       target,
       baseCompMedian, v2Conservative, v2Stretch,
       buildingAdjustmentPct: recommendation.buildingAdjustmentPct,
