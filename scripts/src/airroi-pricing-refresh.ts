@@ -112,6 +112,30 @@ const ORDER = (process.env.AIRROI_ORDER ?? "id").toLowerCase();
  * timeout). Set to the count of already-processed listings.
  */
 const OFFSET = parseInt(process.env.AIRROI_OFFSET ?? "0", 10);
+/**
+ * Allowed external_id character lengths. AirROI returns 404 for some
+ * Airbnb ID formats (the new "host-migration" IDs introduced ~2024),
+ * and AirROI bills 404s same as successful calls. Without a
+ * pre-flight length filter, ~49% of the filtered cohort (841 of 1,703
+ * listings as of 2026-04-26) is pure burn.
+ *
+ * Observed AirROI coverage by ID length (2026-04-26 sample):
+ *   7  digits — 100% callable (42 listings in cohort, 10/10 tested OK)
+ *   8  digits — 100% callable (572 listings in cohort, 31/31 tested OK)
+ *   12 digits — 0% callable   (264 listings, 15/15 tested → 404)
+ *   18 digits — partial:      (248 listings, only 1/1 tested OK so far)
+ *   19 digits — unknown:      (577 listings, 0 tested — assume 404)
+ *
+ * Default "7,8" = the known-safe set (614 listings).
+ * Set to "18" to probe the 18-digit subset specifically.
+ * Set to empty string ("") to disable the filter entirely.
+ */
+const ID_LENGTHS = (process.env.AIRROI_ID_LENGTHS ?? "7,8")
+  .split(",")
+  .map((s) => s.trim())
+  .filter((s) => s.length > 0)
+  .map((s) => parseInt(s, 10))
+  .filter((n) => Number.isFinite(n) && n > 0);
 
 interface ListingRow {
   id: number;
@@ -152,6 +176,14 @@ async function loadActiveListings(): Promise<ListingRow[]> {
         // commercial inventory. Saves AirROI burn proportionally on any
         // "full cohort" pass without losing analytically-meaningful data.
         sql`COALESCE(${rentalListingsTable.reviewCount}, 0) >= 3`,
+        // ID-length filter: skips listings whose external_id is in an
+        // Airbnb format AirROI doesn't support (404s, billed). See
+        // ID_LENGTHS const above for the coverage map. Default "7,8"
+        // narrows to the known-callable subset; safe values are
+        // injected as integers (parsed in JS), so sql.raw is safe here.
+        ID_LENGTHS.length > 0
+          ? sql`LENGTH(${rentalListingsTable.externalId}) IN (${sql.raw(ID_LENGTHS.join(", "))})`
+          : undefined,
       ),
     )
     .orderBy(
