@@ -27,6 +27,7 @@
     "scrape:airbnb-pricing": "tsx ./src/airbnb-pricing-refresh.ts",
     "debug:airbnb-pricing": "tsx ./src/airbnb-pricing-debug.ts",
     "quote:test": "tsx ./src/airbnb-quote-test.ts",
+    "airroi:test": "tsx ./src/airroi-quote-test.ts",
     "discover:airbnb": "tsx ./src/airbnb-discovery.ts",
     "discover:str": "tsx ./src/str-discovery.ts"
   },
