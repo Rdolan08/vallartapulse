@@ -29,6 +29,7 @@
     "quote:test": "tsx ./src/airbnb-quote-test.ts",
     "airroi:test": "tsx ./src/airroi-quote-test.ts",
     "airroi:ingest:one": "tsx ./src/airroi-ingest-one.ts",
+    "airroi:refresh": "tsx ./src/airroi-pricing-refresh.ts",
     "discover:airbnb": "tsx ./src/airbnb-discovery.ts",
     "discover:str": "tsx ./src/str-discovery.ts"
   },
