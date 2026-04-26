@@ -78,6 +78,14 @@ const MIN_DELAY_MS = 500;
 const FAILURE_RATE_FAIL_THRESHOLD = 0.75;
 const CURRENCY = process.env.AIRROI_CURRENCY ?? "usd";
 const DRY_RUN = process.env.AIRROI_DRY_RUN === "1";
+/**
+ * Listing ordering for the cohort selection. Two modes:
+ *   "id"      — ORDER BY id ASC (default; deterministic for repeatable smoke tests)
+ *   "reviews" — ORDER BY review_count DESC NULLS LAST, id ASC
+ *               (popular-first; maximizes coverage hit-rate against AirROI,
+ *                and produces the "top-N daily refresh" cohort directly)
+ */
+const ORDER = (process.env.AIRROI_ORDER ?? "id").toLowerCase();
 
 interface ListingRow {
   id: number;
@@ -113,7 +121,11 @@ async function loadActiveListings(): Promise<ListingRow[]> {
         isNotNull(rentalListingsTable.externalId),
       ),
     )
-    .orderBy(asc(rentalListingsTable.id));
+    .orderBy(
+      ...(ORDER === "reviews"
+        ? [sql`${rentalListingsTable.reviewCount} DESC NULLS LAST`, asc(rentalListingsTable.id)]
+        : [asc(rentalListingsTable.id)]),
+    );
   // Numeric externalId only — AirROI requires it.
   const out: ListingRow[] = [];
   for (const r of rows) {
