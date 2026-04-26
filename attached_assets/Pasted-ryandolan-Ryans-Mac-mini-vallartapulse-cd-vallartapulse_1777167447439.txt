@@ -1,0 +1,39 @@
+ryandolan@Ryans-Mac-mini vallartapulse % cd ~/vallartapulse
+git pull
+pnpm --filter @workspace/scripts run airroi:test -- 53116610
+remote: Enumerating objects: 63, done.
+remote: Counting objects: 100% (63/63), done.
+remote: Compressing objects: 100% (15/15), done.
+remote: Total 63 (delta 42), reused 60 (delta 39), pack-reused 0 (from 0)
+Unpacking objects: 100% (63/63), 5.09 MiB | 14.08 MiB/s, done.
+From https://github.com/Rdolan08/vallartapulse
+   6207faf..a34f55a  main       -> origin/main
+Updating 6207faf..a34f55a
+Fast-forward
+ artifacts/api-server/src/lib/ingest/airbnb-graphql-quote-adapter.ts                             |  25 +-
+ artifacts/api-server/src/lib/ingest/browser-fetch.ts                                            |  30 +-
+ artifacts/pv-datastore/about/index.html                                                         |   6 +-
+ artifacts/pv-datastore/contact/index.html                                                       |   6 +-
+ artifacts/pv-datastore/economic/index.html                                                      |   6 +-
+ artifacts/pv-datastore/index.html                                                               |   6 +-
+ artifacts/pv-datastore/pricing-tool/index.html                                                  |   6 +-
+ artifacts/pv-datastore/public/og/pricing-tool.png                                               | Bin 197509 -> 198884 bytes
+ artifacts/pv-datastore/public/og/sources.png                                                    | Bin 106916 -> 94509 bytes
+ artifacts/pv-datastore/rental-market/index.html                                                 |   6 +-
+ artifacts/pv-datastore/safety/index.html                                                        |   6 +-
+ artifacts/pv-datastore/sources/index.html                                                       |   6 +-
+ artifacts/pv-datastore/tourism/index.html                                                       |   6 +-
+ artifacts/pv-datastore/weather/index.html                                                       |   6 +-
+ attached_assets/IMG_3609_1777086962225.jpeg                                                     | Bin 0 -> 4105156 bytes
+ .../Pasted--name-Home-in-Key-West-4-86-3-bedrooms-4-beds-3-private_1777079352605.txt            | 745 +++++++++++++++++++++++++++++++++++++++++++++++
+ attached_assets/Screenshot_2026-04-24_at_7.45.01_PM_1777077920393.png                           | Bin 0 -> 329862 bytes
+ attached_assets/Screenshot_2026-04-24_at_8.04.22_PM_1777079068971.png                           | Bin 0 -> 797939 bytes
+ replit.md                                                                                       |  17 +-
+ scripts/package.json                                                                            |   1 +
+ 20 files changed, 832 insertions(+), 46 deletions(-)
+ create mode 100644 attached_assets/IMG_3609_1777086962225.jpeg
+ create mode 100644 attached_assets/Pasted--name-Home-in-Key-West-4-86-3-bedrooms-4-beds-3-private_1777079352605.txt
+ create mode 100644 attached_assets/Screenshot_2026-04-24_at_7.45.01_PM_1777077920393.png
+ create mode 100644 attached_assets/Screenshot_2026-04-24_at_8.04.22_PM_1777079068971.png
+ ERR_PNPM_RECURSIVE_RUN_NO_SCRIPT  None of the selected packages has a "airroi:test" script
+ryandolan@Ryans-Mac-mini vallartapulse % 
