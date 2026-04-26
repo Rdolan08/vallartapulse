@@ -86,6 +86,14 @@ const DRY_RUN = process.env.AIRROI_DRY_RUN === "1";
  *                and produces the "top-N daily refresh" cohort directly)
  */
 const ORDER = (process.env.AIRROI_ORDER ?? "id").toLowerCase();
+/**
+ * Skip the first N listings of the ordered cohort. Used to chunk a large
+ * cohort across multiple invocations (Replit's session manager kills
+ * detached background processes within ~90s, so a 50-listing run must
+ * be split into foreground chunks that each fit in the 120s bash
+ * timeout). Set to the count of already-processed listings.
+ */
+const OFFSET = parseInt(process.env.AIRROI_OFFSET ?? "0", 10);
 
 interface ListingRow {
   id: number;
@@ -125,7 +133,8 @@ async function loadActiveListings(): Promise<ListingRow[]> {
       ...(ORDER === "reviews"
         ? [sql`${rentalListingsTable.reviewCount} DESC NULLS LAST`, asc(rentalListingsTable.id)]
         : [asc(rentalListingsTable.id)]),
-    );
+    )
+    .offset(OFFSET);
   // Numeric externalId only — AirROI requires it.
   const out: ListingRow[] = [];
   for (const r of rows) {
