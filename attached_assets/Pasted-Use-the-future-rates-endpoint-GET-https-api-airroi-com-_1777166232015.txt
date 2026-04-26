@@ -1,0 +1,97 @@
+Use the future rates endpoint:
+
+GET https://api.airroi.com/listings/future/rates?id=LISTING_ID&currency=usd
+
+Header:
+
+x-api-key: your-airroi-api-key
+
+AirROI says this returns up to 365 days of future nightly rates with date, available, rate, and min_nights.  ￼
+
+So if your CSV has:
+
+listing_id,url,date
+43036533,,2026-12-24
+43036533,,2026-12-25
+,https://www.airbnb.com/rooms/123456789,2026-12-31
+
+You would:
+
+1. Extract the Airbnb listing ID from either listing_id or the URL.
+2. Call AirROI once per unique listing ID.
+3. Filter the returned rates[] array down to only the dates in your CSV.
+
+Example Node/TypeScript pattern:
+
+import fs from "fs";
+import Papa from "papaparse";
+const API_KEY = process.env.AIRROI_API_KEY!;
+function extractListingId(row: any): string | null {
+  if (row.listing_id) return String(row.listing_id).trim();
+  const url = String(row.url || "");
+  const match = url.match(/rooms\/(\d+)/);
+  return match?.[1] ?? null;
+}
+async function getFutureRates(listingId: string) {
+  const url = `https://api.airroi.com/listings/future/rates?id=${listingId}&currency=usd`;
+  const res = await fetch(url, {
+    headers: {
+      "x-api-key": API_KEY,
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`AirROI failed for ${listingId}: ${res.status} ${await res.text()}`);
+  }
+  return res.json();
+}
+const csv = fs.readFileSync("input.csv", "utf8");
+const parsed = Papa.parse(csv, { header: true, skipEmptyLines: true });
+const rows = parsed.data as any[];
+const wantedDatesByListing = new Map<string, Set<string>>();
+for (const row of rows) {
+  const listingId = extractListingId(row);
+  if (!listingId || !row.date) continue;
+  if (!wantedDatesByListing.has(listingId)) {
+    wantedDatesByListing.set(listingId, new Set());
+  }
+  wantedDatesByListing.get(listingId)!.add(row.date);
+}
+const output: any[] = [];
+for (const [listingId, wantedDates] of wantedDatesByListing.entries()) {
+  const data = await getFutureRates(listingId);
+  for (const rate of data.rates || []) {
+    if (wantedDates.has(rate.date)) {
+      output.push({
+        listing_id: listingId,
+        date: rate.date,
+        available: rate.available,
+        rate: rate.rate,
+        min_nights: rate.min_nights,
+        currency: data.currency,
+      });
+    }
+  }
+}
+fs.writeFileSync("airroi_future_rates_output.json", JSON.stringify(output, null, 2));
+console.log(`Wrote ${output.length} matching date rows`);
+
+For basic listing details, use:
+
+GET https://api.airroi.com/listings?id=43036533&currency=usd
+
+For up to 25 listing detail records at once, use:
+
+POST https://api.airroi.com/listings/batch
+
+with:
+
+{
+  "listing_ids": [43036533, 123456789],
+  "currency": "usd"
+}
+
+But for your “listing ID/URL + available dates” use case, the money endpoint is:
+
+/listings/future/rates
+
+That is the one that gives daily availability and rates.
