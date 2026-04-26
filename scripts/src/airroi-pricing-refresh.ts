@@ -11,11 +11,21 @@
  * fee breakdowns, so `listing_price_quotes` continues to be owned by
  * the GraphQL quote pipeline whenever that's restored).
  *
- * Cost model (April 2026 observed): ~$0.015 per successful call.
- *   - Full 504-listing refresh ≈ $7.56 / run
- *   - Daily   = ~$227/mo  (NOT recommended for hobby budget)
- *   - Weekly  = ~$32/mo   (sustainable; recommended baseline)
- *   - Top-50 daily + weekly full = ~$54/mo (hybrid)
+ * Cost model (April 2026 observed against AirROI Active tier dashboard):
+ *   ~$0.10 per call (NOT $0.015 as earlier docs claimed — that was an
+ *   estimation error before we cross-checked the dashboard balance).
+ *   Effective with ~10% retry overhead: ~$0.11/listing.
+ *
+ *   Cohort sizes (after zombie filter `review_count >= 3`):
+ *     - Filtered cohort: 1,703 listings (was 2,393 unfiltered)
+ *     - Top-50 daily refresh    ≈ $165/mo
+ *     - Top-100 daily refresh   ≈ $330/mo
+ *     - Top-100 daily + monthly full snapshot ≈ $595/mo
+ *     - Full filtered cohort daily ≈ $5,600/mo (NOT viable)
+ *
+ *   The "weekly full = $32/mo" figure in earlier docs is fiction.
+ *   Real numbers gate on whether AirROI offers a batch endpoint or
+ *   volume discount (open question; pending email).
  *
  * Defaults err on the side of cheap-and-safe:
  *   AIRROI_MAX_LISTINGS=10
@@ -79,11 +89,19 @@ const FAILURE_RATE_FAIL_THRESHOLD = 0.75;
 const CURRENCY = process.env.AIRROI_CURRENCY ?? "usd";
 const DRY_RUN = process.env.AIRROI_DRY_RUN === "1";
 /**
- * Listing ordering for the cohort selection. Two modes:
+ * Listing ordering for the cohort selection. Three modes:
  *   "id"      — ORDER BY id ASC (default; deterministic for repeatable smoke tests)
  *   "reviews" — ORDER BY review_count DESC NULLS LAST, id ASC
- *               (popular-first; maximizes coverage hit-rate against AirROI,
- *                and produces the "top-N daily refresh" cohort directly)
+ *               (popular-first; produces the "top-N daily refresh" cohort
+ *                directly. Caveat: review_count ties at the deeper ranks
+ *                make the OFFSET page boundary slightly unstable across
+ *                runs, which caused ~25% re-processing during 2026-04-26
+ *                cohort fill. Prefer "stale" when filling out coverage.)
+ *   "stale"   — ORDER BY MAX(rental_prices_by_date.scraped_at) ASC NULLS FIRST
+ *               (per-listing least-recently-refreshed first. Listings with
+ *                no rental_prices_by_date row at all sort first. Idempotent
+ *                across chunked runs — no overlap. Recommended for cohort
+ *                fill / coverage backfill.)
  */
 const ORDER = (process.env.AIRROI_ORDER ?? "id").toLowerCase();
 /**
@@ -127,10 +145,29 @@ async function loadActiveListings(): Promise<ListingRow[]> {
         eq(rentalListingsTable.sourcePlatform, SOURCE_PLATFORM),
         eq(rentalListingsTable.isActive, true),
         isNotNull(rentalListingsTable.externalId),
+        // Zombie filter: drops listings with <3 reviews. Per cohort
+        // analysis on 2026-04-26, this cuts 2,393 → 1,703 (29%).
+        // Removed inventory is overwhelmingly: owners who tried Airbnb,
+        // never gained traction, and are now stale listings — not real
+        // commercial inventory. Saves AirROI burn proportionally on any
+        // "full cohort" pass without losing analytically-meaningful data.
+        sql`COALESCE(${rentalListingsTable.reviewCount}, 0) >= 3`,
       ),
     )
     .orderBy(
-      ...(ORDER === "reviews"
+      ...(ORDER === "stale"
+        ? [
+            // Per-listing least-recently-refreshed first. Listings with no
+            // rental_prices_by_date row at all (NULL MAX) sort first, so
+            // brand-new cohort additions get prioritized. Idempotent across
+            // chunked runs — once a listing is refreshed, it sinks to the
+            // bottom of the queue. Index `idx_rpbd_listing_date` covers the
+            // correlated lookup; full SELECT runs in <2s on the current
+            // 743k-row table.
+            sql`(SELECT MAX(${rentalPricesByDateTable.scrapedAt}) FROM ${rentalPricesByDateTable} WHERE ${rentalPricesByDateTable.listingId} = ${rentalListingsTable.id}) ASC NULLS FIRST`,
+            asc(rentalListingsTable.id),
+          ]
+        : ORDER === "reviews"
         ? [sql`${rentalListingsTable.reviewCount} DESC NULLS LAST`, asc(rentalListingsTable.id)]
         : [asc(rentalListingsTable.id)]),
     )
