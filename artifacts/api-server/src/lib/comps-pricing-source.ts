@@ -8,7 +8,11 @@
  *   Rank 0: Airbnb quote        — listing_price_quotes (booking-sidebar
  *                                 scrape, all-in nightly rate Airbnb
  *                                 quotes a guest TODAY)
- *   Rank 1: PVRPV daily         — rental_prices_by_date, forward 30–90d window
+ *   Rank 1: Per-day daily rate  — rental_prices_by_date, forward 30–90d window.
+ *                                 Tagged airbnb_daily / pvrpv_daily /
+ *                                 vacation_vallarta_daily based on the source
+ *                                 listing's source_platform (each platform's
+ *                                 calendar scraper writes to this table).
  *   Rank 2: Static displayed    — rental_listings.nightly_price_usd
  *
  * Rank 0 was added 2026-04-23 once the Playwright DOM scraper started
@@ -39,7 +43,12 @@
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
-export type PriceSource = "airbnb_quote" | "pvrpv_daily" | "static_displayed";
+export type PriceSource =
+  | "airbnb_quote"
+  | "airbnb_daily"
+  | "pvrpv_daily"
+  | "vacation_vallarta_daily"
+  | "static_displayed";
 
 export type FreshnessWeight = 0 | 0.25 | 0.5 | 1;
 
@@ -99,10 +108,34 @@ export function freshnessWeightForAgeDays(ageDays: number): FreshnessWeight {
   return 0;
 }
 
+/**
+ * Map a rental_listings.source_platform value to its corresponding
+ * per-day-rate PriceSource tag for Rank 1 of the comp waterfall.
+ * Defaults to pvrpv_daily so unknown future platforms still land in
+ * the dailyCount bucket (real-rate) rather than being mis-classified
+ * as "other" (which would incorrectly trigger the static-staleness
+ * penalty in routes/comps.ts).
+ *
+ * Pre-2026-04-26 the Rank-1 tag was hardcoded to pvrpv_daily because
+ * PVRPV was the only writer of rental_prices_by_date. AirROI now
+ * writes Airbnb rows there too, and vacation_vallarta is on deck.
+ */
+export function platformToDailySource(
+  sourcePlatform: string | null | undefined,
+): PriceSource {
+  switch (sourcePlatform) {
+    case "airbnb":            return "airbnb_daily";
+    case "pvrpv":             return "pvrpv_daily";
+    case "vacation_vallarta": return "vacation_vallarta_daily";
+    default:                  return "pvrpv_daily";
+  }
+}
+
 interface StaticListingRow {
   id: number;
   nightly_price_usd: number | null;
   scraped_at: Date | null;
+  source_platform: string | null;
 }
 
 interface DailyPriceAggRow {
@@ -137,7 +170,9 @@ export async function selectCompPriceSources(
   };
   const sourceCounts: Record<PriceSource, number> = {
     airbnb_quote: 0,
+    airbnb_daily: 0,
     pvrpv_daily: 0,
+    vacation_vallarta_daily: 0,
     static_displayed: 0,
   };
 
@@ -197,7 +232,8 @@ export async function selectCompPriceSources(
     SELECT
       rl.id                AS id,
       rl.nightly_price_usd AS nightly_price_usd,
-      rl.scraped_at        AS scraped_at
+      rl.scraped_at        AS scraped_at,
+      rl.source_platform   AS source_platform
     FROM rental_listings rl
     WHERE rl.id = ANY(${sql.raw(`ARRAY[${listingIds.map((n) => Number(n)).filter(Number.isFinite).join(",") || "NULL"}]::int[]`)})
   `)).rows as unknown as StaticListingRow[];
@@ -240,15 +276,22 @@ export async function selectCompPriceSources(
         excludedReasons.stale_beyond_60d += 1;
         continue;
       }
+      // Derive priceSource from the source listing's platform so per-day
+      // rates from each scraper (Airbnb via AirROI, PVRPV, vacation_vallarta)
+      // get tagged correctly in source_counts and freshness breakdowns.
+      // Pre-2026-04-26 this was hardcoded to "pvrpv_daily" because PVRPV
+      // was the only writer of rental_prices_by_date.
+      const platform = staticByListing.get(listingId)?.source_platform ?? null;
+      const priceSource = platformToDailySource(platform);
       chosen.set(listingId, {
         listingId,
         nightlyPriceUsd: daily.avg_price,
-        priceSource: "pvrpv_daily",
+        priceSource,
         priceObservedAt: observedAt,
         priceFreshnessDays: ageDays,
         priceFreshnessWeight: weight,
       });
-      sourceCounts.pvrpv_daily += 1;
+      sourceCounts[priceSource] += 1;
       continue;
     }
 

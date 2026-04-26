@@ -82,7 +82,9 @@ async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: numbe
   const listings: CompsListingV2[] = [];
   const freshnessAccum: Record<PriceSource, { sum: number; n: number }> = {
     airbnb_quote: { sum: 0, n: 0 },
+    airbnb_daily: { sum: 0, n: 0 },
     pvrpv_daily: { sum: 0, n: 0 },
+    vacation_vallarta_daily: { sum: 0, n: 0 },
     static_displayed: { sum: 0, n: 0 },
   };
 
@@ -123,8 +125,14 @@ async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: numbe
       airbnb_quote: freshnessAccum.airbnb_quote.n > 0
         ? Math.round(10 * freshnessAccum.airbnb_quote.sum / freshnessAccum.airbnb_quote.n) / 10
         : null,
+      airbnb_daily: freshnessAccum.airbnb_daily.n > 0
+        ? Math.round(10 * freshnessAccum.airbnb_daily.sum / freshnessAccum.airbnb_daily.n) / 10
+        : null,
       pvrpv_daily: freshnessAccum.pvrpv_daily.n > 0
         ? Math.round(10 * freshnessAccum.pvrpv_daily.sum / freshnessAccum.pvrpv_daily.n) / 10
+        : null,
+      vacation_vallarta_daily: freshnessAccum.vacation_vallarta_daily.n > 0
+        ? Math.round(10 * freshnessAccum.vacation_vallarta_daily.sum / freshnessAccum.vacation_vallarta_daily.n) / 10
         : null,
       static_displayed: freshnessAccum.static_displayed.n > 0
         ? Math.round(10 * freshnessAccum.static_displayed.sum / freshnessAccum.static_displayed.n) / 10
@@ -522,9 +530,17 @@ router.post("/rental/comps", async (req, res) => {
       if (src === "static_displayed") {
         staticCount += 1;
         if (typeof fresh === "number") staticFreshSum += fresh;
-      } else if (src === "pvrpv_daily" || src === "airbnb_quote") {
-        // Both are real-rate sources kept fresh by scrapers — neither
-        // contributes to the static-staleness penalty.
+      } else if (
+        src === "pvrpv_daily" ||
+        src === "airbnb_daily" ||
+        src === "vacation_vallarta_daily" ||
+        src === "airbnb_quote"
+      ) {
+        // All four are real-rate sources kept fresh by scrapers — none
+        // contributes to the static-staleness penalty. The three *_daily
+        // tags share one per-day-rate table (rental_prices_by_date) and
+        // are distinguished by the listing's source_platform; see
+        // platformToDailySource() in lib/comps-pricing-source.ts.
         dailyCount += 1;
       } else {
         otherCount += 1;
