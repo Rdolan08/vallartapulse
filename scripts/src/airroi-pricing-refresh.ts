@@ -137,6 +137,27 @@ const ID_LENGTHS = (process.env.AIRROI_ID_LENGTHS ?? "7,8")
   .map((s) => parseInt(s, 10))
   .filter((n) => Number.isFinite(n) && n > 0);
 
+/**
+ * Region scope filter — restricts the cohort to specific
+ * `parent_region_bucket` values. Useful when budget-constrained burns
+ * need to prioritize Puerto Vallarta proper over the Riviera Nayarit
+ * (Bucerías, Sayulita, San Pancho, Punta Mita, La Cruz, Nuevo Vallarta)
+ * which together represent ~25% of the safe-callable cohort.
+ *
+ * Observed bucket values (2026-04-26):
+ *   "puerto_vallarta"  — 640 listings safe-callable
+ *   "riviera_nayarit"  — 212 listings safe-callable
+ *   (NULL bucket)      —  10 listings (un-mappable raw neighborhoods)
+ *
+ * Default "" = no region filter (all regions including NULL).
+ * Set to "puerto_vallarta" for PV-only burns.
+ * Set to "puerto_vallarta,riviera_nayarit" for the full Banderas Bay.
+ */
+const PARENT_REGIONS = (process.env.AIRROI_PARENT_REGIONS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter((s) => s.length > 0);
+
 interface ListingRow {
   id: number;
   externalId: string;
@@ -183,6 +204,17 @@ async function loadActiveListings(): Promise<ListingRow[]> {
         // injected as integers (parsed in JS), so sql.raw is safe here.
         ID_LENGTHS.length > 0
           ? sql`LENGTH(${rentalListingsTable.externalId}) IN (${sql.raw(ID_LENGTHS.join(", "))})`
+          : undefined,
+        // Region filter: scopes the cohort to specific
+        // parent_region_bucket values. Empty PARENT_REGIONS = no filter
+        // (all regions including NULL bucket). Index `idx_rl_parent_region`
+        // covers this lookup. See PARENT_REGIONS const above.
+        // Each value is parameter-bound via sql`${r}` to avoid SQL injection.
+        PARENT_REGIONS.length > 0
+          ? sql`${rentalListingsTable.parentRegionBucket} IN (${sql.join(
+              PARENT_REGIONS.map((r) => sql`${r}`),
+              sql`, `,
+            )})`
           : undefined,
       ),
     )
@@ -304,8 +336,9 @@ async function main(): Promise<number> {
 
   const all = await loadActiveListings();
   const listings = all.slice(0, MAX_LISTINGS);
+  const regionTag = PARENT_REGIONS.length > 0 ? `  region=${PARENT_REGIONS.join(",")}` : "";
   console.log(
-    `[airroi-refresh] selected ${listings.length} of ${all.length} active Airbnb listings (cap=${MAX_LISTINGS})`,
+    `[airroi-refresh] selected ${listings.length} of ${all.length} active Airbnb listings (cap=${MAX_LISTINGS})${regionTag}`,
   );
   if (listings.length === 0) {
     console.error("[airroi-refresh] no listings to process");
@@ -350,7 +383,7 @@ async function main(): Promise<number> {
   console.log(`  rows_written       : ${totalRows}${DRY_RUN ? "  (DRY_RUN; nothing actually written)" : ""}`);
   console.log(`  days_available     : ${totalAvail}`);
   console.log(`  days_with_rate     : ${totalRated}`);
-  console.log(`  airroi_attempts    : ${totalAttempts}  (≈$${(totalAttempts * 0.015).toFixed(2)} burn @ $0.015/call)`);
+  console.log(`  airroi_attempts    : ${totalAttempts}  (≈$${(totalAttempts * 0.10).toFixed(2)} burn @ $0.10/call — confirmed from AirROI dashboard 2026-04-26)`);
   console.log(`  total_fetch_secs   : ${(totalElapsedMs / 1000).toFixed(1)}s (sum across listings)`);
   if (failed.length > 0) {
     console.log(`  failures (first 10):`);
