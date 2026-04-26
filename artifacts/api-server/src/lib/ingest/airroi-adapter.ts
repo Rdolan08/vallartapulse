@@ -30,8 +30,10 @@
  *
  * Pure parser / fetch + retry. No I/O beyond HTTPS. No DB writes.
  *
- * Cost (April 2026 observed): ~$0.015 per successful call. Caller is
- * responsible for budget enforcement (e.g. AIRROI_MAX_LISTINGS cap).
+ * Cost: $0.10 per successful call (confirmed from AirROI usage
+ * dashboard 2026-04-26 — earlier `$0.015/call` figure was a stale
+ * pre-billing estimate). Caller is responsible for budget enforcement
+ * (e.g. AIRROI_MAX_LISTINGS cap).
  */
 
 const AIRROI_BASE = "https://api.airroi.com";
