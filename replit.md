@@ -45,7 +45,7 @@ Drift is corrected by re-ingesting the CSV, not by row-level SQL patches.
 - Safety/crime data (SESNSP): incident counts by category — 2021–2024 monthly
 - Weather/climate (NOAA): temperature, rainfall, sea temp, humidity — 2020–2024 monthly
 - Data sources registry: 10 sources with status, sync timestamps, record counts
-- **Listing-level rental data** (multi-source): 192 real scraped listings across 8 neighborhoods — PVRPV (161), Vacation Vallarta (24), Airbnb (4), VRBO (3); tables: `rental_listings`, `rental_prices_by_date`, `rental_amenities_lookup`
+- **Listing-level rental data** (multi-source): 168 real scraped listings across 8 neighborhoods — PVRPV (161), Airbnb (4), VRBO (3); tables: `rental_listings`, `rental_prices_by_date`, `rental_amenities_lookup`
 
 ## Pages
 
@@ -68,7 +68,7 @@ Normalization logic: `artifacts/api-server/src/lib/rental-normalize.ts`
 Ingestion pipeline: `artifacts/api-server/src/lib/rental-ingest.ts`
 Scraper: `scripts/src/pvrpv-scrape.ts` (run with `pnpm --filter @workspace/scripts run scrape:pvrpv`)
 
-**Current data**: 192 listings — PVRPV (161), Vacation Vallarta (24), Airbnb (4), VRBO (3) — across 8 PV neighborhoods. Beach distances back-filled for Hotel Zone (300m), Centro (500m), 5 de Dic (250m), Old Town (300m), Versalles (1200m) using neighborhood centroids.
+**Current data**: 168 listings — PVRPV (161), Airbnb (4), VRBO (3) — across 8 PV neighborhoods. Beach distances back-filled for Hotel Zone (300m), Centro (500m), 5 de Dic (250m), Old Town (300m), Versalles (1200m) using neighborhood centroids.
 
 ## Comps Engine V2 — Rental Pricing Tool
 
@@ -88,7 +88,7 @@ Internal comparable-property pricing engine covering **8 neighborhoods** across 
 
 **Eligibility thresholds**:
 - ZR/Amapas: `dataConfidenceScore >= 0.85`, beach distance required, price $1–$5000, bedrooms 1–6
-- All other neighborhoods: `dataConfidenceScore >= 0.70` (VV adapter yields fewer fields → lower base score)
+- All other neighborhoods: `dataConfidenceScore >= 0.70`
 
 **Key design decisions**:
 - Beach tier bucketing: Tier A ≤100m, B 101–500m, C >500m
@@ -203,9 +203,6 @@ What's currently in the paused state:
 
 To unpause once VRBO discovery is unblocked: revert the `if: false` gates and uncommented the cron blocks in both workflow files, then remove the `overrideStatus` blocks from the VRBO entries in `PIPELINES` in `sources.tsx`.
 
-## Vacation Vallarta calendar pricing — PLANNED (not paused, not built)
-
-`vacation-vallarta-calendar-adapter.ts` exists in `artifacts/api-server/src/lib/ingest/` but no GitHub workflow is wired to it. 24 VV listings are seeded in `rental_listings` but `rental_prices_by_date` has zero VV rows. The freshness endpoint reports `alertLevel=fail` ("No Vacation Vallarta calendar pricing has ever been collected") which is also the truth. The Sources page renders this as a yellow "Planned" pill (override in `PIPELINES`). To go live: add a `vacation-vallarta-calendar-scrape.yml` workflow modeled on `airbnb-calendar-scrape.yml`, and remove the `overrideStatus` block from the VV entry in `PIPELINES`.
 
 ## Recurring Pitfalls — read before changing anything
 

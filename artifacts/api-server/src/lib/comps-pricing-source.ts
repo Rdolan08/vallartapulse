@@ -9,10 +9,10 @@
  *                                 scrape, all-in nightly rate Airbnb
  *                                 quotes a guest TODAY)
  *   Rank 1: Per-day daily rate  — rental_prices_by_date, forward 30–90d window.
- *                                 Tagged airbnb_daily / pvrpv_daily /
- *                                 vacation_vallarta_daily based on the source
- *                                 listing's source_platform (each platform's
- *                                 calendar scraper writes to this table).
+ *                                 Tagged airbnb_daily / pvrpv_daily based on
+ *                                 the source listing's source_platform (each
+ *                                 platform's calendar scraper writes to this
+ *                                 table).
  *   Rank 2: Static displayed    — rental_listings.nightly_price_usd
  *
  * Rank 0 was added 2026-04-23 once the Playwright DOM scraper started
@@ -47,7 +47,6 @@ export type PriceSource =
   | "airbnb_quote"
   | "airbnb_daily"
   | "pvrpv_daily"
-  | "vacation_vallarta_daily"
   | "static_displayed";
 
 export type FreshnessWeight = 0 | 0.25 | 0.5 | 1;
@@ -118,7 +117,7 @@ export function freshnessWeightForAgeDays(ageDays: number): FreshnessWeight {
  *
  * Pre-2026-04-26 the Rank-1 tag was hardcoded to pvrpv_daily because
  * PVRPV was the only writer of rental_prices_by_date. AirROI now
- * writes Airbnb rows there too, and vacation_vallarta is on deck.
+ * writes Airbnb rows there too.
  */
 export function platformToDailySource(
   sourcePlatform: string | null | undefined,
@@ -126,7 +125,6 @@ export function platformToDailySource(
   switch (sourcePlatform) {
     case "airbnb":            return "airbnb_daily";
     case "pvrpv":             return "pvrpv_daily";
-    case "vacation_vallarta": return "vacation_vallarta_daily";
     default:                  return "pvrpv_daily";
   }
 }
@@ -172,7 +170,6 @@ export async function selectCompPriceSources(
     airbnb_quote: 0,
     airbnb_daily: 0,
     pvrpv_daily: 0,
-    vacation_vallarta_daily: 0,
     static_displayed: 0,
   };
 
@@ -277,8 +274,8 @@ export async function selectCompPriceSources(
         continue;
       }
       // Derive priceSource from the source listing's platform so per-day
-      // rates from each scraper (Airbnb via AirROI, PVRPV, vacation_vallarta)
-      // get tagged correctly in source_counts and freshness breakdowns.
+      // rates from each scraper (Airbnb via AirROI, PVRPV) get tagged
+      // correctly in source_counts and freshness breakdowns.
       // Pre-2026-04-26 this was hardcoded to "pvrpv_daily" because PVRPV
       // was the only writer of rental_prices_by_date.
       const platform = staticByListing.get(listingId)?.source_platform ?? null;

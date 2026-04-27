@@ -9,7 +9,7 @@
  * POST /ingest/run              — run adapter on a single URL (live fetch)
  * POST /ingest/ical             — parse an iCal feed URL or raw string
  * POST /ingest/inject           — accept a pre-scraped NormalizedRentalListing
- * POST /ingest/scrape-all       — bulk-scrape a source (vacation_vallarta | vrbo_batch)
+ * POST /ingest/scrape-all       — bulk-scrape a source (vrbo_batch)
  * POST /ingest/discover         — discover & bulk-scrape Airbnb/VRBO search results for PV
  * POST /ingest/sync-all         — trigger immediate refresh of all automated sources
  * POST /ingest/sync/:source     — trigger immediate refresh of one source
@@ -23,10 +23,6 @@ import { z } from "zod/v4";
 import { fetchPvrpvListing } from "../lib/ingest/pvrpv-adapter.js";
 import { fetchAirbnbListing } from "../lib/ingest/airbnb-adapter.js";
 import { fetchVrboListing } from "../lib/ingest/vrbo-adapter.js";
-import {
-  fetchAllVacationVallartaListings,
-  fetchVacationVallartaListing,
-} from "../lib/ingest/vacation-vallarta-adapter.js";
 import { persistNormalized } from "../lib/ingest/persist.js";
 import { fetchAndParseICal, parseICalText } from "../lib/ingest/ical-parser.js";
 import { syncAll, syncSource, getSyncStatus } from "../lib/ingest/sync-scheduler.js";
@@ -138,7 +134,6 @@ function detectSource(url: string): SourceKey | null {
   if (url.includes("pvrpv.com")) return "pvrpv";
   if (url.includes("airbnb.com")) return "airbnb";
   if (url.includes("vrbo.com") || url.includes("homeaway.com")) return "vrbo";
-  if (url.includes("vacationvallarta.com")) return "vacation_vallarta";
   return null;
 }
 
@@ -166,8 +161,6 @@ router.post("/ingest/run", async (req, res) => {
         ? await fetchPvrpvListing(url)
         : source === "airbnb"
         ? await fetchAirbnbListing(url)
-        : source === "vacation_vallarta"
-        ? await fetchVacationVallartaListing(url)
         : await fetchVrboListing(url);
 
     let result: { listing_id?: number; warnings: string[]; persisted: boolean; error?: string } = {
@@ -228,7 +221,7 @@ router.post("/ingest/ical", async (req, res) => {
 // scraper, residential-proxy agent, or CSV import) and persists it.
 // This is the production path for sources that require JS rendering.
 
-const VALID_SOURCES = ["airbnb", "vrbo", "pvrpv", "vacation_vallarta", "local_agency", "owner_direct", "manual", "csv"] as const;
+const VALID_SOURCES = ["airbnb", "vrbo", "pvrpv", "local_agency", "owner_direct", "manual", "csv"] as const;
 
 const InjectSchema = z.object({
   source: z.enum(VALID_SOURCES),
@@ -286,11 +279,10 @@ router.post("/ingest/inject", async (req, res) => {
 
 // ── POST /ingest/scrape-all ───────────────────────────────────────────────
 // Bulk-scrapes an entire source platform and persists all discovered listings.
-// Supports:  vacation_vallarta  (discovers all listings from the VV website)
-//            vrbo_batch         (tries a list of VRBO listing IDs with retry)
+// Supports:  vrbo_batch         (tries a list of VRBO listing IDs with retry)
 
 const ScrapeAllSchema = z.object({
-  source: z.enum(["vacation_vallarta", "vrbo_batch"]),
+  source: z.enum(["vrbo_batch"]),
   // For vrbo_batch: provide listing IDs (numeric strings or ints)
   vrbo_ids: z.array(z.union([z.string(), z.number()])).optional(),
   delay_ms: z.number().int().min(500).max(60_000).optional().default(1_000),
@@ -306,42 +298,6 @@ router.post("/ingest/scrape-all", async (req, res) => {
   const { source, delay_ms, persist, dry_run } = parsed.data;
 
   req.log.info({ source, persist, dry_run }, "ingest/scrape-all: starting");
-
-  // ── Vacation Vallarta ─────────────────────────────────────────────────────
-  if (source === "vacation_vallarta") {
-    try {
-      const listings = await fetchAllVacationVallartaListings({ delayMs: delay_ms });
-      const results = [];
-
-      for (const listing of listings) {
-        if (dry_run) {
-          results.push({ ok: true, source_listing_id: listing.source_listing_id, title: listing.title, dry_run: true });
-          continue;
-        }
-        if (persist) {
-          const r = await persistNormalized(listing);
-          results.push({
-            ok: r.ok,
-            source_listing_id: listing.source_listing_id,
-            title: listing.title,
-            listing_id: r.listing_id,
-            warnings: r.warnings,
-            error: r.error,
-          });
-        } else {
-          results.push({ ok: true, source_listing_id: listing.source_listing_id, title: listing.title, normalized: listing });
-        }
-      }
-
-      const succeeded = results.filter(r => r.ok).length;
-      req.log.info({ succeeded, total: results.length }, "ingest/scrape-all: vacation_vallarta done");
-      return res.json({ source, total: results.length, succeeded, results });
-
-    } catch (err) {
-      req.log.error({ err }, "ingest/scrape-all vacation_vallarta failed");
-      return res.status(500).json({ error: "Scrape failed", message: String(err) });
-    }
-  }
 
   // ── VRBO Batch with exponential backoff ───────────────────────────────────
   if (source === "vrbo_batch") {
@@ -1415,91 +1371,6 @@ router.get("/ingest/vrbo-scrape-freshness", async (req, res) => {
   }
 });
 
-// ── GET /ingest/vacation-vallarta-pricing-freshness ───────────────────────
-//
-// Pipeline-health probe for the daily Vacation Vallarta calendar pricing
-// refresh (scripts/src/calendar-scrape.ts → rental_prices_by_date rows
-// joined to rental_listings where source_platform='vacation_vallarta').
-router.get("/ingest/vacation-vallarta-pricing-freshness", async (req, res) => {
-  try {
-    const result = await db.execute(sql`
-      WITH cohort AS (
-        SELECT id
-        FROM rental_listings
-        WHERE source_platform = 'vacation_vallarta'
-          AND is_active = true
-      ),
-      last_price AS (
-        SELECT listing_id, MAX(scraped_at) AS last_scraped
-        FROM rental_prices_by_date
-        GROUP BY listing_id
-      )
-      SELECT
-        (SELECT COUNT(*) FROM cohort)::int                                     AS listings_total,
-        (SELECT COUNT(*) FROM cohort c JOIN last_price q ON q.listing_id = c.id)::int
-                                                                               AS listings_covered,
-        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_price q ON q.listing_id = c.id
-         WHERE q.last_scraped IS NULL OR q.last_scraped < NOW() - INTERVAL '7 days')::int
-                                                                               AS listings_stale_7d,
-        (SELECT COUNT(*) FROM cohort c LEFT JOIN last_price q ON q.listing_id = c.id
-         WHERE q.last_scraped IS NULL OR q.last_scraped < NOW() - INTERVAL '14 days')::int
-                                                                               AS listings_stale_14d,
-        (SELECT MAX(last_scraped) FROM last_price q
-         WHERE q.listing_id IN (SELECT id FROM cohort))                        AS newest_scrape_at
-    `);
-    const row = (result as unknown as {
-      rows: Array<{
-        listings_total: number;
-        listings_covered: number;
-        listings_stale_7d: number;
-        listings_stale_14d: number;
-        newest_scrape_at: string | null;
-      }>;
-    }).rows[0];
-
-    const newestAt = row.newest_scrape_at ? new Date(row.newest_scrape_at) : null;
-    const ageHours = newestAt
-      ? Math.floor((Date.now() - newestAt.getTime()) / 3_600_000)
-      : null;
-
-    let alertLevel: "ok" | "warn" | "fail" = "ok";
-    let alertReason = "";
-    if (row.listings_total === 0) {
-      alertLevel = "warn";
-      alertReason = "No active Vacation Vallarta listings in cohort";
-    } else if (ageHours === null || ageHours > 48) {
-      alertLevel = "fail";
-      alertReason = newestAt
-        ? `Newest VV calendar refresh is ${Math.round(ageHours! / 24)} days old`
-        : "No Vacation Vallarta calendar pricing has ever been collected";
-    } else if (row.listings_stale_14d * 2 >= row.listings_total) {
-      alertLevel = "fail";
-      alertReason = `${row.listings_stale_14d}/${row.listings_total} VV listings stale >14d`;
-    } else if (row.listings_stale_14d > 0) {
-      alertLevel = "warn";
-      alertReason = `${row.listings_stale_14d} VV listings stale >14d`;
-    } else if (ageHours > 36) {
-      alertLevel = "warn";
-      alertReason = `Newest VV calendar refresh is ${ageHours}h old`;
-    }
-
-    res.json({
-      source: "vacation_vallarta_pricing",
-      listingsTotal: row.listings_total,
-      listingsCovered: row.listings_covered,
-      listingsStale7d: row.listings_stale_7d,
-      listingsStale14d: row.listings_stale_14d,
-      newestScrapeAt: newestAt?.toISOString() ?? null,
-      newestScrapeAgeHours: ageHours,
-      alertLevel,
-      alertReason,
-    });
-  } catch (err) {
-    req.log.error({ err }, "ingest/vacation-vallarta-pricing-freshness failed");
-    res.status(500).json({ error: "Failed to compute VV pricing freshness" });
-  }
-});
-
 // ── GET /ingest/airbnb-calendar-freshness ─────────────────────────────────
 //
 // Pipeline-health probe for the daily Airbnb CALENDAR scrape (separate
@@ -1769,8 +1640,8 @@ router.get("/ingest/rental-prices-quality", async (req, res) => {
 // A listing counts as "priced in window W" if it has at least one row with
 // non-null price in EITHER source-of-price table inside that window:
 //   - rental_prices_by_date.nightly_price_usd (calendar feed; populates
-//     for pvrpv + vacation_vallarta but NOT airbnb — Airbnb's calendar
-//     endpoint returns availability only)
+//     for pvrpv but NOT airbnb — Airbnb's calendar endpoint returns
+//     availability only)
 //   - listing_price_quotes.nightly_price_usd  (GraphQL quote feed; the
 //     real source of Airbnb prices, also populates for pvrpv)
 //

@@ -145,7 +145,6 @@ export interface CompsListingV2 {
     | "airbnb_quote"
     | "airbnb_daily"
     | "pvrpv_daily"
-    | "vacation_vallarta_daily"
     | "static_displayed";
   priceObservedAt?: string;            // ISO timestamp
   priceFreshnessDays?: number;
@@ -368,7 +367,7 @@ export function isEligibleV2(listing: CompsListingV2): boolean {
   if (listing.distanceToBeachM == null) return false;
   if (listing.sqft != null && listing.sqft < 200) return false;
   // ZR/Amapas (primary calibrated neighborhoods) keep the 0.85 bar;
-  // other neighborhoods use 0.70 since some sources (Vacation Vallarta) yield fewer fields.
+  // other neighborhoods use 0.70 since some sources yield fewer fields.
   const confThreshold = (listing.neighborhoodNormalized === "Zona Romantica" || listing.neighborhoodNormalized === "Amapas") ? 0.85 : 0.70;
   if (listing.dataConfidenceScore < confThreshold) return false;
   return true;

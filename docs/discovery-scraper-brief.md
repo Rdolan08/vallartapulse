@@ -89,7 +89,7 @@ quickly.
 - TypeScript scrapers in a Node.js workspace under `scripts/src/`
 - The discovery write path is `rental_listings` table with these columns I
   care about: `external_id` (text, unique-per-platform), `source_platform`
-  (`'airbnb' | 'vrbo' | 'pvrpv' | 'vacation_vallarta'`), `source_url`,
+  (`'airbnb' | 'vrbo' | 'pvrpv'`), `source_url`,
   `title`, `bedrooms`, `bathrooms`, `latitude`, `longitude`,
   `neighborhood_normalized`, `last_seen_at`, `created_at`
 - Existing search adapter: fetches Airbnb search HTML, regex-parses

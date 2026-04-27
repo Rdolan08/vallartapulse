@@ -84,7 +84,6 @@ async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: numbe
     airbnb_quote: { sum: 0, n: 0 },
     airbnb_daily: { sum: 0, n: 0 },
     pvrpv_daily: { sum: 0, n: 0 },
-    vacation_vallarta_daily: { sum: 0, n: 0 },
     static_displayed: { sum: 0, n: 0 },
   };
 
@@ -130,9 +129,6 @@ async function getEngine(): Promise<{ engine: CompsEngineV3; listingCount: numbe
         : null,
       pvrpv_daily: freshnessAccum.pvrpv_daily.n > 0
         ? Math.round(10 * freshnessAccum.pvrpv_daily.sum / freshnessAccum.pvrpv_daily.n) / 10
-        : null,
-      vacation_vallarta_daily: freshnessAccum.vacation_vallarta_daily.n > 0
-        ? Math.round(10 * freshnessAccum.vacation_vallarta_daily.sum / freshnessAccum.vacation_vallarta_daily.n) / 10
         : null,
       static_displayed: freshnessAccum.static_displayed.n > 0
         ? Math.round(10 * freshnessAccum.static_displayed.sum / freshnessAccum.static_displayed.n) / 10
@@ -523,7 +519,7 @@ router.post("/rental/comps", async (req, res) => {
     let staticCount = 0;          // Airbnb baseline (rental_listings.nightly_price_usd)
     let staticFreshSum = 0;
     let dailyCount = 0;            // PVRPV daily quotes — freshest source
-    let otherCount = 0;            // anything else (vrbo scrape, vacation_vallarta, ...)
+    let otherCount = 0;            // anything else (vrbo scrape, ...)
     for (const c of comps) {
       const src = c.listing.priceSource;
       const fresh = c.listing.priceFreshnessDays;
@@ -533,11 +529,10 @@ router.post("/rental/comps", async (req, res) => {
       } else if (
         src === "pvrpv_daily" ||
         src === "airbnb_daily" ||
-        src === "vacation_vallarta_daily" ||
         src === "airbnb_quote"
       ) {
-        // All four are real-rate sources kept fresh by scrapers — none
-        // contributes to the static-staleness penalty. The three *_daily
+        // All three are real-rate sources kept fresh by scrapers — none
+        // contributes to the static-staleness penalty. The two *_daily
         // tags share one per-day-rate table (rental_prices_by_date) and
         // are distinguished by the listing's source_platform; see
         // platformToDailySource() in lib/comps-pricing-source.ts.
@@ -1039,7 +1034,7 @@ router.post("/rental/comps", async (req, res) => {
     const explanation = [
       `Recommendation based on ${poolSize} comparable listings in ${neighborhoodScope}.`,
       result.adjustmentExplanation,
-      "Data scope: multi-source (PVRPV, Vacation Vallarta, Airbnb, VRBO).",
+      "Data scope: multi-source (PVRPV, Airbnb, VRBO).",
     ].filter(Boolean).join(" ");
 
     const modelLimitations = [
@@ -1054,7 +1049,7 @@ router.post("/rental/comps", async (req, res) => {
 
     res.json({
       model_version: "v3.1",
-      source_scope: `Multi-source (PVRPV + Vacation Vallarta + Airbnb + VRBO) — ${input.neighborhood_normalized}`,
+      source_scope: `Multi-source (PVRPV + Airbnb + VRBO) — ${input.neighborhood_normalized}`,
       eligible_listing_count: engine.eligibleCount,
       db_listing_count: listingCount,
       // Comp Model Contract v1 — provenance + freshness diagnostics

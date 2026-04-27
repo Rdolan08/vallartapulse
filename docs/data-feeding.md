@@ -36,13 +36,11 @@ nobody can explain a week later.
 | Airbnb — detail enrichment (new) | A | daily 06:00 UTC | `.github/workflows/airbnb-enrich-refresh.yml` (mode=new) | shipped |
 | Airbnb — detail refresh (stale >24h) | A | daily 06:00 UTC | same workflow (mode=stale) | shipped |
 | PVRPV | B | daily 07:00 UTC | `.github/workflows/pvrpv-scrape.yml` | shipped |
-| Vacation Vallarta | A | daily 07:30 UTC | `.github/workflows/sources-sync-refresh.yml` (vacation_vallarta step) | shipped |
 | VRBO — discovery + refresh | B | daily 07:15 UTC | `.github/workflows/vrbo-scrape.yml` — script tries to discover PV listings then upserts the union of (new ∪ existing). **Discovery currently blocked by VRBO's PerimeterX bot challenge** (see vrbo-search-adapter.ts header for tried approaches). Refresh of existing rows works the moment any get seeded. | wired, discovery blocked |
 | OG screenshots | B | every other day 09:00 UTC | `.github/workflows/og-refresh.yml` | shipped |
 | **Rental calendar — PVRPV (full 365-day window)** | B | daily 07:05 UTC | `.github/workflows/pvrpv-calendar-scrape.yml` → `pnpm --filter @workspace/scripts run scrape:calendar` → `rental_prices_by_date` | shipped |
 | **Rental calendar — Airbnb (availability, 365-day window)** | B | daily 07:10 UTC | `.github/workflows/airbnb-calendar-scrape.yml` → `rental_prices_by_date` (price=null, availability filled) | shipped — see "Airbnb pricing — pivot resolved" below |
 | ~~**Airbnb per-night pricing (GraphQL replay)**~~ | ~~A~~ | ~~daily 07:20 UTC~~ | **REMOVED 2026-04-19** — see "Airbnb pricing — path 2 reverted" below. Airbnb prices arrive later via the Mac mini scraper. | reverted |
-| **Rental calendar — Vacation Vallarta** | B *(planned)* | daily | `vacation-vallarta-calendar-adapter.ts` → `rental_prices_by_date` | **not built** |
 
 ---
 
@@ -483,11 +481,11 @@ discovery has populated `rental_listings` rows.
 | Table | Cohort | Mac writes | Railway/GHA writes |
 |---|---|---|---|
 | `rental_listings` | NEW rows where `source_platform IN ('airbnb','vrbo')` | ✅ INSERT only, conflict = DO NOTHING | ❌ |
-| `rental_listings` | NEW rows for `pvrpv`, `vacation_vallarta` | ❌ | ✅ |
+| `rental_listings` | NEW rows for `pvrpv` | ❌ | ✅ |
 | `rental_listings` | `is_active`, `lifecycle_status`, `last_seen_at` for EXISTING rows | ❌ never touch | ✅ (prune; currently paused) |
 | `listing_details` | enrichment fields | ❌ never write | ✅ Pattern A endpoint |
 | `rental_prices_by_date` | rows for Airbnb/VRBO listings | ✅ UPSERT on `(listing_id, date)` | ❌ |
-| `rental_prices_by_date` | rows for PVRPV/VV listings | ❌ | ✅ |
+| `rental_prices_by_date` | rows for PVRPV listings | ❌ | ✅ |
 | `listing_price_quotes` | Airbnb/VRBO checkpoint quotes | ✅ INSERT only (history table — never UPDATE) | ❌ |
 
 **The single hard rule**: for any (table × cohort) cell above, exactly
