@@ -133,18 +133,13 @@ const PIPELINES: PipelineCardConfig[] = [
   // preserved for future re-enablement; just not surfaced on /sources
   // until VRBO discovery + pricing actually resume.
   {
-    endpoint: "/api/ingest/vacation-vallarta-pricing-freshness",
-    labelEn: "Vacation Vallarta pricing",
-    labelEs: "Precios de Vacation Vallarta",
+    endpoint: "/api/ingest/pvr-properties-pricing-freshness",
+    labelEn: "PVR Properties pricing",
+    labelEs: "Precios de PVR Properties",
     mode: "cohort",
     newestField: "newestScrapeAt",
     newestLabelEn: "Newest refresh",
     newestLabelEs: "Actualización más reciente",
-    overrideStatus: {
-      kind: "planned",
-      reasonEn: "Calendar adapter exists; no scheduled job wired yet",
-      reasonEs: "El adaptador de calendario existe; aún no hay tarea programada",
-    },
   },
   {
     endpoint: "/api/health/pricing-tool",
