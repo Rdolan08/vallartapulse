@@ -14,6 +14,7 @@
     "ingest:sources": "tsx ./ingest/sources.ts",
     "ingest:events": "tsx ./ingest/events.ts",
     "scrape:pvrpv": "tsx ./src/pvrpv-scrape.ts",
+    "scrape:pvr-properties": "tsx ./src/pvr-properties-scrape.ts",
     "scrape:vrbo": "tsx ./src/vrbo-scrape.ts",
     "scrape:calendar": "tsx ./src/calendar-scrape.ts",
     "scrape:airbnb-calendar": "tsx ./src/airbnb-calendar-scrape.ts",
