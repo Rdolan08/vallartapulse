@@ -1,0 +1,686 @@
+[
+  {
+    "name": "Hotel in Vienna · ★5.0 · 1 bedroom · 2 beds · 1 private bath",
+    "price": null,
+    "image": "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/bdd9ec36-49ec-4ae0-894d-52978199afb7.jpeg",
+    "description": "Spacious room for 4 in a prime central area—right by Schottentor (U2) 🛏️✨A great pick for families or groups who want a central base and everyone in a proper bed.🛏️ Sleeps 4: 2 queen-size double bedsThe spaceComfortable hotel-style room with a simple, practical setup.✅ Private en-suite bathroom🏠 Ground floor🛏️ Sleeping setup: 2 queen-size double beds📶 Fast & free Wi-Fi🧺 Linens & towels included🧊 Mini fridge + ♨️ electric kettleGuest accessYou will have the entire room to yourself throughout your stay.Other things to notePlease note: no on-site reception and no breakfast service. ✅ Self check-in and support via messaging.",
+    "category": "Vienna",
+    "availability": "true",
+    "discount": null,
+    "reviews": [
+      "The place is about a 15-minute walk to the center, like mentioned. It looked just like the photos, the bed was really comfy, and everything was clean. The host was super responsive and always quick to help with any questions. Overall, it was great value for money. I’d happily stay here again if I visit again. Thanks a lot!",
+      "Wonderful area, so many places nearby! Check-in was very smooth, the hosts are so helpful and respond really quickly! Definitely recommend!",
+      "Lovely place and close to all the areas we wanted to explore!",
+      "Amazing housing!!!! The best location.",
+      "BrS",
+      "Overall, we enjoyed the accommodation very much. The location is ideal – you can get to all the major attractions quickly and easily. The transport connections were also very good, so we could be flexible at all times.<br/>The room itself was clean and well maintained, and everything made a neat impression. Check-in and communication were smooth and easy.<br/>Overall, we had a very pleasant stay and can definitely recommend the place.",
+      "Hanna was very friendly and attentive, she allowed me to leave my luggage before check-in time.<br/>would come back",
+      "Everything excellent"
+    ],
+    "ratings": 5,
+    "seller_info": {
+      "seller_id": "547677118",
+      "url": "https://www.airbnb.com/users/show/547677118"
+    },
+    "breadcrumbs": "Vienna, Austria",
+    "location": "Vienna, Austria",
+    "lat": 48.218272137840266,
+    "long": 16.35795134208532,
+    "guests": 4,
+    "pets_allowed": false,
+    "description_items": [
+      "Room in hotel",
+      "2 beds",
+      "1 private bath"
+    ],
+    "category_rating": [
+      {
+        "name": "Cleanliness",
+        "value": "4.9"
+      },
+      {
+        "name": "Accuracy",
+        "value": "5.0"
+      },
+      {
+        "name": "Check-in",
+        "value": "5.0"
+      },
+      {
+        "name": "Communication",
+        "value": "5.0"
+      },
+      {
+        "name": "Location",
+        "value": "4.9"
+      },
+      {
+        "name": "Value",
+        "value": "5.0"
+      }
+    ],
+    "house_rules": [
+      "Check-in: 4:00 PM - 9:00 PM",
+      "Checkout before 10:00 AM",
+      "4 guests maximum"
+    ],
+    "details": [
+      "4 guests",
+      "1 bedroom",
+      "2 beds",
+      "1 private bath"
+    ],
+    "highlights": [
+      {
+        "name": "Exceptional check-in experience",
+        "value": "Recent guests gave the check-in process a 5-star rating."
+      },
+      {
+        "name": "Dedicated workspace",
+        "value": "A room with wifi that’s well-suited for working."
+      }
+    ],
+    "arrangement_details": [
+      {
+        "name": "Bedroom",
+        "value": "2 queen beds"
+      }
+    ],
+    "amenities": [
+      {
+        "group_name": "Bathroom",
+        "items": [
+          {
+            "name": "Hair dryer",
+            "value": "SYSTEM_HAIRDRYER"
+          },
+          {
+            "name": "Shampoo",
+            "value": "SYSTEM_SHAMPOO"
+          },
+          {
+            "name": "Body soap",
+            "value": "SYSTEM_SOAP"
+          },
+          {
+            "name": "Hot water",
+            "value": "SYSTEM_HOT_WATER"
+          },
+          {
+            "name": "Shower gel",
+            "value": "SYSTEM_SOAP"
+          }
+        ]
+      },
+      {
+        "group_name": "Bedroom and laundry",
+        "items": [
+          {
+            "name": "Essentials",
+            "value": "Towels, bed sheets, soap, and toilet paper"
+          },
+          {
+            "name": "Hangers",
+            "value": "SYSTEM_HANGERS"
+          },
+          {
+            "name": "Bed linens",
+            "value": "SYSTEM_BLANKETS"
+          },
+          {
+            "name": "Room-darkening shades",
+            "value": "SYSTEM_BLACKOUT_SHADES"
+          },
+          {
+            "name": "Clothing storage",
+            "value": "SYSTEM_WARDROBE"
+          }
+        ]
+      },
+      {
+        "group_name": "Entertainment",
+        "items": [
+          {
+            "name": "TV",
+            "value": "SYSTEM_TV"
+          }
+        ]
+      },
+      {
+        "group_name": "Heating and cooling",
+        "items": [
+          {
+            "name": "Portable fans",
+            "value": "SYSTEM_FAN_PORTABLE"
+          },
+          {
+            "name": "Heating",
+            "value": "SYSTEM_THERMOMETER"
+          }
+        ]
+      },
+      {
+        "group_name": "Home safety",
+        "items": [
+          {
+            "name": "Smoke alarm",
+            "value": "SYSTEM_DETECTOR_SMOKE"
+          },
+          {
+            "name": "Carbon monoxide alarm",
+            "value": "SYSTEM_DETECTOR_CO"
+          }
+        ]
+      },
+      {
+        "group_name": "Internet and office",
+        "items": [
+          {
+            "name": "Wifi",
+            "value": "SYSTEM_WI_FI"
+          },
+          {
+            "name": "Dedicated workspace",
+            "value": "In a room with a door"
+          }
+        ]
+      },
+      {
+        "group_name": "Kitchen and dining",
+        "items": [
+          {
+            "name": "Mini fridge",
+            "value": "SYSTEM_MINI_BAR"
+          },
+          {
+            "name": "Hot water kettle",
+            "value": "SYSTEM_WATER_KETTLE"
+          },
+          {
+            "name": "Coffee",
+            "value": "SYSTEM_COFFEE_MAKER"
+          }
+        ]
+      },
+      {
+        "group_name": "Parking and facilities",
+        "items": [
+          {
+            "name": "Single level home",
+            "value": "No stairs in home"
+          }
+        ]
+      },
+      {
+        "group_name": "Services",
+        "items": [
+          {
+            "name": "Long term stays allowed",
+            "value": "Allow stay for 28 days or more"
+          }
+        ]
+      },
+      {
+        "group_name": "Not included",
+        "items": [
+          {
+            "name": "Exterior security cameras on property",
+            "value": "SYSTEM_NO_SURVEILLANCE"
+          },
+          {
+            "name": "Kitchen",
+            "value": "SYSTEM_NO_KITCHEN"
+          },
+          {
+            "name": "Washer",
+            "value": "SYSTEM_NO_WASHER"
+          },
+          {
+            "name": "Air conditioning",
+            "value": "SYSTEM_NO_AIR_CONDITIONING"
+          },
+          {
+            "name": "Private entrance",
+            "value": "SYSTEM_NO_PRIVATE_ENTRANCE"
+          }
+        ]
+      }
+    ],
+    "images": [
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/bdd9ec36-49ec-4ae0-894d-52978199afb7.jpeg",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/9ef7a628-58eb-4b73-b165-673703e3d51f.jpeg",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/482e5909-4154-426b-bc64-71f9332d94ef.jpeg",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/48a2e5cb-683d-404c-a372-c479e12a5141.jpeg",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/b5e5b9f9-194e-4b0a-98c4-ce05797494e7.jpeg",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/404ae1a6-04b2-4a47-9d7a-cc2c799213d8.jpeg",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/309c5e3b-4cbd-457c-b5bf-defe4d621a94.jpeg",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/882d7787-b5dd-4145-97e9-5bbc0b882014.jpeg",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/5eedef5d-2200-4f8a-8b47-e14729b6e991.jpeg",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/ea8da227-9612-4de8-9f9a-bacd56184e75.jpeg",
+      "https://a0.muscache.com/im/pictures/hosting/Hosting-1606523960341307978/original/eab12222-1ca7-4963-917f-e543be9d7c18.jpeg"
+    ],
+    "available_dates": [
+      "2026-04-28",
+      "2026-04-29",
+      "2026-05-09",
+      "2026-05-10",
+      "2026-05-11",
+      "2026-05-12",
+      "2026-05-13",
+      "2026-05-14",
+      "2026-05-15",
+      "2026-05-18",
+      "2026-05-19",
+      "2026-05-29",
+      "2026-06-03",
+      "2026-06-07",
+      "2026-06-08",
+      "2026-06-09",
+      "2026-06-17",
+      "2026-06-18",
+      "2026-06-19",
+      "2026-06-25",
+      "2026-06-30",
+      "2026-07-01",
+      "2026-07-02",
+      "2026-07-03",
+      "2026-07-08",
+      "2026-07-09",
+      "2026-07-10",
+      "2026-07-11",
+      "2026-07-12",
+      "2026-07-13",
+      "2026-07-16",
+      "2026-07-17",
+      "2026-07-20",
+      "2026-07-21",
+      "2026-07-22",
+      "2026-07-23",
+      "2026-07-24",
+      "2026-07-25",
+      "2026-07-26",
+      "2026-07-27",
+      "2026-07-28",
+      "2026-07-29",
+      "2026-07-30",
+      "2026-07-31",
+      "2026-08-01",
+      "2026-08-02",
+      "2026-08-03",
+      "2026-08-04",
+      "2026-08-05",
+      "2026-08-06",
+      "2026-08-07",
+      "2026-08-08",
+      "2026-08-09",
+      "2026-08-10",
+      "2026-08-11",
+      "2026-08-12",
+      "2026-08-13",
+      "2026-08-14",
+      "2026-08-15",
+      "2026-08-16",
+      "2026-08-17",
+      "2026-08-18",
+      "2026-08-19",
+      "2026-08-20",
+      "2026-08-21",
+      "2026-08-22",
+      "2026-08-23",
+      "2026-08-24",
+      "2026-08-25",
+      "2026-08-26",
+      "2026-08-27",
+      "2026-08-28",
+      "2026-08-29",
+      "2026-08-30",
+      "2026-08-31",
+      "2026-09-01",
+      "2026-09-02",
+      "2026-09-03",
+      "2026-09-04",
+      "2026-09-05",
+      "2026-09-06",
+      "2026-09-07",
+      "2026-09-08",
+      "2026-09-09",
+      "2026-09-10",
+      "2026-09-11",
+      "2026-09-12",
+      "2026-09-13",
+      "2026-09-14",
+      "2026-09-15",
+      "2026-09-16",
+      "2026-09-17",
+      "2026-09-18",
+      "2026-09-19",
+      "2026-09-20",
+      "2026-09-21",
+      "2026-09-22",
+      "2026-09-23",
+      "2026-09-24",
+      "2026-09-25",
+      "2026-09-26",
+      "2026-09-27",
+      "2026-09-28",
+      "2026-09-29",
+      "2026-09-30",
+      "2026-10-01",
+      "2026-10-02",
+      "2026-10-03",
+      "2026-10-04",
+      "2026-10-05",
+      "2026-10-06",
+      "2026-10-07",
+      "2026-10-08",
+      "2026-10-09",
+      "2026-10-10",
+      "2026-10-11",
+      "2026-10-12",
+      "2026-10-13",
+      "2026-10-14",
+      "2026-10-15",
+      "2026-10-16",
+      "2026-10-17",
+      "2026-10-18",
+      "2026-10-19",
+      "2026-10-20",
+      "2026-10-21",
+      "2026-10-22",
+      "2026-10-23",
+      "2026-10-24",
+      "2026-10-25",
+      "2026-10-26",
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31",
+      "2026-11-01",
+      "2026-11-02",
+      "2026-11-03",
+      "2026-11-04",
+      "2026-11-05",
+      "2026-11-06",
+      "2026-11-07",
+      "2026-11-08",
+      "2026-11-09",
+      "2026-11-10",
+      "2026-11-11",
+      "2026-11-12",
+      "2026-11-13",
+      "2026-11-14",
+      "2026-11-15",
+      "2026-11-16",
+      "2026-11-17",
+      "2026-11-18",
+      "2026-11-19",
+      "2026-11-20",
+      "2026-11-21",
+      "2026-11-22",
+      "2026-11-23",
+      "2026-11-24",
+      "2026-11-25",
+      "2026-11-26",
+      "2026-11-27",
+      "2026-11-28",
+      "2026-11-29",
+      "2026-11-30",
+      "2026-12-01",
+      "2026-12-02",
+      "2026-12-03",
+      "2026-12-04",
+      "2026-12-05",
+      "2026-12-06",
+      "2026-12-07",
+      "2026-12-08",
+      "2026-12-09",
+      "2026-12-10",
+      "2026-12-11",
+      "2026-12-12",
+      "2026-12-13",
+      "2026-12-14",
+      "2026-12-15",
+      "2026-12-16",
+      "2026-12-17",
+      "2026-12-18",
+      "2026-12-19",
+      "2026-12-20",
+      "2026-12-21",
+      "2026-12-22",
+      "2026-12-23",
+      "2026-12-24",
+      "2026-12-25",
+      "2026-12-26",
+      "2026-12-27",
+      "2026-12-28",
+      "2026-12-29",
+      "2026-12-30",
+      "2026-12-31",
+      "2027-01-01",
+      "2027-01-02",
+      "2027-01-03",
+      "2027-01-04",
+      "2027-01-05",
+      "2027-01-06",
+      "2027-01-07",
+      "2027-01-08",
+      "2027-01-09",
+      "2027-01-10",
+      "2027-01-11",
+      "2027-01-12",
+      "2027-01-13",
+      "2027-01-14",
+      "2027-01-15",
+      "2027-01-16",
+      "2027-01-17",
+      "2027-01-18",
+      "2027-01-19",
+      "2027-01-20",
+      "2027-01-21",
+      "2027-01-22",
+      "2027-01-23",
+      "2027-01-24",
+      "2027-01-25",
+      "2027-01-26",
+      "2027-01-27",
+      "2027-01-28",
+      "2027-01-29",
+      "2027-01-30",
+      "2027-01-31",
+      "2027-02-01",
+      "2027-02-02",
+      "2027-02-03",
+      "2027-02-04",
+      "2027-02-05",
+      "2027-02-06",
+      "2027-02-07",
+      "2027-02-08",
+      "2027-02-09",
+      "2027-02-10",
+      "2027-02-11",
+      "2027-02-12",
+      "2027-02-13",
+      "2027-02-14",
+      "2027-02-15",
+      "2027-02-16",
+      "2027-02-17",
+      "2027-02-18",
+      "2027-02-19",
+      "2027-02-20",
+      "2027-02-21",
+      "2027-02-22",
+      "2027-02-23",
+      "2027-02-24",
+      "2027-02-25",
+      "2027-02-26",
+      "2027-02-27",
+      "2027-02-28",
+      "2027-03-01",
+      "2027-03-02",
+      "2027-03-03",
+      "2027-03-04",
+      "2027-03-05",
+      "2027-03-06",
+      "2027-03-07",
+      "2027-03-08",
+      "2027-03-09",
+      "2027-03-10",
+      "2027-03-11",
+      "2027-03-12",
+      "2027-03-13",
+      "2027-03-14",
+      "2027-03-15",
+      "2027-03-16",
+      "2027-03-17"
+    ],
+    "url": "https://www.airbnb.com/rooms/1606523960341307978",
+    "final_url": "https://www.airbnb.com/rooms/1606523960341307978?check_in=2026-04-28&check_out=2026-04-29&enable_auto_translate=true&locale=en&currency=USD&source_impression_id=p3_1777277049_P3aTQ9b9S_GjlAeu",
+    "listing_title": "Steps from U2 Schottentor | Close to City Centre",
+    "property_id": "1606523960341307978",
+    "listing_name": "Room in hotel in Vienna, Austria",
+    "location_details": [
+      {
+        "title": "Neighborhood highlights",
+        "value": "You’re staying in Vienna’s 9th district (Alsergrund), right by the University quarter / Schottentor—one of the most central and walkable areas for sightseeing, cafés, and classic Vienna architecture. The iconic Votivkirche is just a few minutes away on foot and is also perfectly connected via Schottentor (U2).For a green break, Sigmund Freud Park & Votivpark are right in the same area (great for a quick walk).Food & coffee nearby:  705 Coffee  and Angolo N°22"
+      },
+      {
+        "title": "Getting around",
+        "value": "You’re basically in the heart of Vienna. 🚇✨From here, most of the city’s highlights are either walkable or just a short hop by public transport. With Schottentor (U2) right nearby—one of Vienna’s main transport hubs—you can reach the Inner City, museums, and popular neighbourhoods quickly and without hassle.Trams, buses, and the U-Bahn are all close, so getting around is easy at any time of day. For the fastest connection, guests can simply use the Wiener Linien route planner."
+      }
+    ],
+    "description_by_sections": [
+      {
+        "title": null,
+        "value": "Spacious room for 4 in a prime central area—right by Schottentor (U2) 🛏️✨A great pick for families or groups who want a central base and everyone in a proper bed.🛏️ Sleeps 4: 2 queen-size double beds"
+      },
+      {
+        "title": "The space",
+        "value": "Comfortable hotel-style room with a simple, practical setup.✅ Private en-suite bathroom🏠 Ground floor🛏️ Sleeping setup: 2 queen-size double beds📶 Fast & free Wi-Fi🧺 Linens & towels included🧊 Mini fridge + ♨️ electric kettle"
+      },
+      {
+        "title": "Guest access",
+        "value": "You will have the entire room to yourself throughout your stay."
+      },
+      {
+        "title": "Other things to note",
+        "value": "Please note: no on-site reception and no breakfast service. ✅ Self check-in and support via messaging."
+      }
+    ],
+    "description_html": "\n<span class=\"l1h825yc atm_kd_adww2_24z95b dir dir-ltr\">\nSpacious room for 4 in a prime central area&#x2014;right by Schottentor (U2) &#x1F6CF;&#xFE0F;&#x2728;\n<br>\nA great pick for families or groups who want a central base and everyone in a proper bed.\n<br>\n<br>\n&#x1F6CF;&#xFE0F; Sleeps 4: 2 queen-size double beds\n<br>\n<br>\n<span class=\"_g5uevq\">The space</span>\n<br>\nComfortable hotel-style room with a simple, practical setup.\n<br>\n<br>\n&#x2705; Private en-suite bathroom\n<br>\n&#x1F3E0; Ground floor\n<br>\n&#x1F6CF;&#xFE0F; Sleeping setup: 2 queen-size double beds\n<br>\n&#x1F4F6; Fast &amp; free Wi-Fi\n<br>\n&#x1F9FA; Linens &amp; towels included\n<br>\n&#x1F9CA; Mini fridge + &#x2668;&#xFE0F; electric kettle\n<br>\n<br>\n<span class=\"_g5uevq\">Guest access</span>\n<br>\nYou will have the entire room to yourself throughout your stay.\n<br>\n<br>\n<span class=\"_g5uevq\">Other things to note</span>\n<br>\nPlease note: no on-site reception and no breakfast service. &#x2705; Self check-in and support via messaging.\n</span>\n",
+    "location_details_html": "\n<span class=\"l1h825yc atm_kd_adww2_24z95b dir dir-ltr\">\nYou&#x2019;re staying in Vienna&#x2019;s 9th district (Alsergrund), right by the University quarter / Schottentor&#x2014;one of the most central and walkable areas for sightseeing, caf&#xE9;s, and classic Vienna architecture. The iconic Votivkirche is just a few minutes away on foot and is also perfectly connected via Schottentor (U2).\n<br>\nFor a green break, Sigmund Freud Park &amp; Votivpark are right in the same area (great for a quick walk).\n<br>\n<br>\nFood &amp; coffee nearby:  705 Coffee  and Angolo N&#xB0;22\n</span>\n",
+    "is_supperhost": false,
+    "host_number_of_reviews": 9319,
+    "host_rating": 4.4,
+    "hosts_year": 2,
+    "host_response_rate": 100,
+    "is_guest_favorite": true,
+    "travel_details": null,
+    "pricing_details": {
+      "airbnb_service_fee": null,
+      "cleaning_fee": null,
+      "initial_price_per_night": 85.45,
+      "num_of_nights": 1,
+      "price_per_night": 85.45,
+      "price_without_fees": 85.45,
+      "special_offer": 85.45,
+      "taxes": null
+    },
+    "total_price": 86,
+    "currency": "",
+    "cancellation_policy": [
+      {
+        "cancellation_name": "No r****d",
+        "cancellation_value": "04/27/2026"
+      }
+    ],
+    "property_number_of_reviews": 8,
+    "host_image": "https://a0.muscache.com/im/pictures/user/User/original/fb1b35a5-558e-4b79-8c08-133bc2b5cb6d.jpeg",
+    "host_details": {
+      "host_id": "547677118",
+      "image": "https://a0.muscache.com/im/pictures/user/User/original/fb1b35a5-558e-4b79-8c08-133bc2b5cb6d.jpeg",
+      "name": "Hanna",
+      "rating": 4.4,
+      "response_rate": "Response rate: 100%",
+      "response_time": "Responds within an hour",
+      "reviews": 9319,
+      "url": "https://www.airbnb.com/users/show/547677118",
+      "years_hosting": 2
+    },
+    "reviews_details": [
+      {
+        "guest_name": "******",
+        "guest_time_on_airbnb": "Turkey",
+        "host_response": null,
+        "rating": 5,
+        "review": "The place is about a 15-minute walk to the center, like mentioned. It looked just like the photos, the bed was really comfy, and everything was clean. The host was super responsive and always quick to help with any questions. Overall, it was great value for money. I’d happily stay here again if I visit again. Thanks a lot!",
+        "review_date": "2026-03-22T15:01:56Z",
+        "stayed_for": null
+      },
+      {
+        "guest_name": "Tre***re",
+        "guest_time_on_airbnb": "2 years on Airbnb",
+        "host_response": null,
+        "rating": 5,
+        "review": "Wonderful area, so many places nearby! Check-in was very smooth, the hosts are so helpful and respond really quickly! Definitely recommend!",
+        "review_date": "2026-03-28T13:02:10Z",
+        "stayed_for": null
+      },
+      {
+        "guest_name": "******",
+        "guest_time_on_airbnb": "4 years on Airbnb",
+        "host_response": null,
+        "rating": 5,
+        "review": "Lovely place and close to all the areas we wanted to explore!",
+        "review_date": "2026-03-27T13:39:47Z",
+        "stayed_for": null
+      },
+      {
+        "guest_name": "Adr***a",
+        "guest_time_on_airbnb": "Madrid, Spain",
+        "host_response": null,
+        "rating": 5,
+        "review": "Amazing housing!!!! The best location.",
+        "review_date": "2026-04-03T14:17:36Z",
+        "stayed_for": null
+      },
+      {
+        "guest_name": "Gab***l",
+        "guest_time_on_airbnb": "3 years on Airbnb",
+        "host_response": null,
+        "rating": 5,
+        "review": "BrS",
+        "review_date": "2026-04-21T12:18:51Z",
+        "stayed_for": null
+      },
+      {
+        "guest_name": "Süm***a",
+        "guest_time_on_airbnb": "2 years on Airbnb",
+        "host_response": null,
+        "rating": 5,
+        "review": "Die Unterkunft hat uns insgesamt sehr gut gefallen. Die Lage ist ideal – man erreicht alle wichtigen Sehenswürdigkeiten schnell und unkompliziert. Auch die Anbindung war sehr gut, sodass wir jederzeit flexibel unterwegs sein konnten.<br/>Zimmer selbst war sauber und gepflegt, und alles hat einen ordentlichen Eindruck gemacht. Der Check-in sowie die Kommunikation verliefen reibungslos und einfach.<br/>Insgesamt hatten wir einen sehr angenehmen Aufenthalt und können die Unterkunft auf jeden Fall weiterempfehlen.",
+        "review_date": "2026-04-04T13:58:33Z",
+        "stayed_for": null
+      },
+      {
+        "guest_name": "******",
+        "guest_time_on_airbnb": "Posadas, Argentina",
+        "host_response": null,
+        "rating": 5,
+        "review": "Hanna fue muy cordial y atenta, me permitió dejar antes del horario del checkin los equipaje.<br/>volveria",
+        "review_date": "2026-02-25T15:44:04Z",
+        "stayed_for": "Stayed with kids"
+      },
+      {
+        "guest_name": "Lup***aa",
+        "guest_time_on_airbnb": "Uruapan, Mexico",
+        "host_response": null,
+        "rating": 5,
+        "review": "Todo excelente",
+        "review_date": "2026-04-07T14:55:05Z",
+        "stayed_for": null
+      }
+    ],
+    "is_exact_location": true
+  }
+]
