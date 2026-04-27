@@ -24,8 +24,8 @@ name: Airbnb Calendar Scrape (daily)
 #   RAILWAY_DATABASE_URL   prod Postgres connection string
 
 on:
-  schedule:
-    - cron: "10 7 * * *"   # daily 07:10 UTC
+#  schedule:
+#    - cron: "10 7 * * *"   # daily 07:10 UTC
   workflow_dispatch:
 
 permissions:
