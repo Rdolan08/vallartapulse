@@ -24,15 +24,8 @@ name: Airbnb Calendar Scrape (daily)
 #   RAILWAY_DATABASE_URL   prod Postgres connection string
 
 on:
-  # PAUSED 2026-04-27: this cron was nulling AirROI nightly_price_usd values
-  # via the upsert at scripts/src/airbnb-calendar-scrape.ts (the calendar
-  # endpoint never carries per-day prices, so EXCLUDED.nightly_price_usd
-  # was always NULL and was overwriting good AirROI prices). The script's
-  # upsert has been COALESCE-guarded so re-enabling is safe, but leave
-  # disabled until manual confirmation that COALESCE behaves as expected.
-  # To re-enable: uncomment the schedule block below.
-  # schedule:
-  #   - cron: "10 7 * * *"   # daily 07:10 UTC
+#  schedule:
+#    - cron: "10 7 * * *"   # daily 07:10 UTC
   workflow_dispatch:
 
 permissions:
