@@ -135,7 +135,11 @@ async function upsertDays(rows: InsertRentalPriceByDate[]): Promise<number> {
       .onConflictDoUpdate({
         target: [rentalPricesByDateTable.listingId, rentalPricesByDateTable.date],
         set: {
-          nightlyPriceUsd: sql`EXCLUDED.nightly_price_usd`,
+          // COALESCE: only overwrite price if Airbnb returned a non-null value.
+          // Airbnb's public calendar strips prices, so EXCLUDED.nightly_price_usd
+          // is null today — without COALESCE this scrape would wipe out
+          // AirROI-sourced prices on every run.
+          nightlyPriceUsd: sql`COALESCE(EXCLUDED.nightly_price_usd, ${rentalPricesByDateTable.nightlyPriceUsd})`,
           availabilityStatus: sql`EXCLUDED.availability_status`,
           minimumNights: sql`EXCLUDED.minimum_nights`,
           scrapedAt: sql`EXCLUDED.scraped_at`,
