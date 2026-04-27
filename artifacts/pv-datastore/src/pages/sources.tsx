@@ -132,15 +132,20 @@ const PIPELINES: PipelineCardConfig[] = [
   // cannot defeat the anti-bot challenge). The freshness endpoint is
   // preserved for future re-enablement; just not surfaced on /sources
   // until VRBO discovery + pricing actually resume.
-  {
-    endpoint: "/api/ingest/pvr-properties-pricing-freshness",
-    labelEn: "PVR Properties pricing",
-    labelEs: "Precios de PVR Properties",
-    mode: "cohort",
-    newestField: "newestScrapeAt",
-    newestLabelEn: "Newest refresh",
-    newestLabelEs: "Actualización más reciente",
-  },
+  //
+  // PVR Properties pill intentionally NOT surfaced (2026-04-27). The
+  // 147 listings scraped from pvrproperties.mx's public Supabase view
+  // are coverage + luxury-baseline signal only — not a trusted forward-
+  // date pricing feed. rental_listings.nightly_price_usd is populated
+  // for 111/147 (some MXN-converted at a fixed rate, some "on request"),
+  // so the comp engine consumes them as priceSource='static_displayed'
+  // rough baselines. Forward-date pricing comes from AirROI + PVRPV
+  // daily feeds, not this source.
+  //
+  // Listing-level scrape is ad-hoc today (`pnpm scrape:pvr-properties`);
+  // a weekly cadence would be appropriate if scheduled later. Do NOT
+  // add pvr_properties to calendar-scrape.ts or create a calendar
+  // workflow — there is no daily-rate feed to refresh.
   {
     endpoint: "/api/health/pricing-tool",
     labelEn: "Pricing tool",
