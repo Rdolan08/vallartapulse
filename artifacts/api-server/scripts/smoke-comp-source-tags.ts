@@ -2,9 +2,8 @@
  * One-off smoke for the 2026-04-26 multi-platform daily-rate tagging fix
  * in src/lib/comps-pricing-source.ts. Calls selectCompPriceSources()
  * directly against whatever DATABASE_URL points at and prints the
- * resulting sourceCounts so we can confirm the new airbnb_daily and
- * vacation_vallarta_daily tags are populated correctly (and pvrpv_daily
- * is no longer over-counted).
+ * resulting sourceCounts so we can confirm the new airbnb_daily tag
+ * is populated correctly (and pvrpv_daily is no longer over-counted).
  *
  * Read-only by construction — selectCompPriceSources runs only SELECT
  * queries. Safe to point at $RAILWAY_DATABASE_URL.

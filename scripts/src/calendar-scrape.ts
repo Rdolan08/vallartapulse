@@ -5,9 +5,6 @@
  *
  * Sources covered:
  *   - "pvrpv"             — full calendar grid (rates + minicalendar)
- *   - "vacation_vallarta" — seasonal text brackets parsed from Squarespace
- *                           listing pages (no calendar grid → all days emit
- *                           availabilityStatus = "unknown")
  *
  * For every active listing in `rental_listings` whose source_platform is one
  * of the supported sources, fetches its calendar and UPSERTs one row per day
@@ -24,9 +21,8 @@
  * Env:
  *   DATABASE_URL              required
  *   CALENDAR_MAX_LISTINGS     optional cap (default: all active listings, applied per source)
- *   CALENDAR_CONCURRENCY      override worker pool size; defaults differ per
- *                             source (PVRPV=3, VV=2 — Squarespace is rate-sensitive)
- *   CALENDAR_SOURCES          comma list, default "pvrpv,vacation_vallarta"
+ *   CALENDAR_CONCURRENCY      override worker pool size; default 3 (PVRPV)
+ *   CALENDAR_SOURCES          comma list, default "pvrpv"
  */
 
 import { writeFileSync } from "node:fs";
@@ -42,13 +38,9 @@ import {
   fetchPvrpvCalendar,
   type PvrpvCalendarResult,
 } from "../../artifacts/api-server/src/lib/ingest/pvrpv-calendar-adapter.js";
-import {
-  fetchVacationVallartaCalendar,
-  type VvCalendarResult,
-} from "../../artifacts/api-server/src/lib/ingest/vacation-vallarta-calendar-adapter.js";
 import { runPool } from "./lib/concurrency.js";
 
-const SUPPORTED_SOURCES = ["pvrpv", "vacation_vallarta"] as const;
+const SUPPORTED_SOURCES = ["pvrpv"] as const;
 type SupportedSource = (typeof SUPPORTED_SOURCES)[number];
 const RAW_SOURCES =
   process.env.CALENDAR_SOURCES?.split(",").map((s) => s.trim()).filter(Boolean) ??
@@ -99,7 +91,6 @@ function emitCalendarSummary(s: CalendarSummary): void {
 /** Per-source default worker-pool size; CALENDAR_CONCURRENCY env overrides for all sources. */
 const DEFAULT_CONCURRENCY: Record<SupportedSource, number> = {
   pvrpv: 3,
-  vacation_vallarta: 2,
 };
 const CONCURRENCY_OVERRIDE = process.env.CALENDAR_CONCURRENCY
   ? parseInt(process.env.CALENDAR_CONCURRENCY, 10)
@@ -182,17 +173,6 @@ function unifyPvrpv(r: PvrpvCalendarResult): UnifiedCalendarResult {
   };
 }
 
-function unifyVv(r: VvCalendarResult): UnifiedCalendarResult {
-  return {
-    days: r.days,
-    daysReturned: r.daysReturned,
-    daysWithPrice: r.daysWithPrice,
-    daysAvailable: 0,
-    daysUnavailable: 0,
-    errors: r.errors,
-  };
-}
-
 function toInsertRows(
   listingId: number,
   result: UnifiedCalendarResult,
@@ -246,16 +226,14 @@ async function processOne(listing: ListingRow): Promise<PerListingStats> {
     rowsWritten: 0,
   };
   try {
+    // Only PVRPV is wired into calendar-scrape today. SUPPORTED_SOURCES
+    // gates the load step so listing.sourcePlatform is always "pvrpv" here;
+    // the explicit branch keeps room for future calendar sources to plug in.
     let result: UnifiedCalendarResult;
     if (listing.sourcePlatform === "pvrpv") {
       result = unifyPvrpv(await fetchPvrpvCalendar(listing.sourceUrl));
     } else {
-      // vacation_vallarta — pass bedroom count for multi-variant bracket selection
-      result = unifyVv(
-        await fetchVacationVallartaCalendar(listing.sourceUrl, {
-          bedrooms: listing.bedrooms ?? undefined,
-        }),
-      );
+      throw new Error(`Unsupported calendar source: ${listing.sourcePlatform}`);
     }
     stats.daysReturned = result.daysReturned;
     stats.daysWithPrice = result.daysWithPrice;
@@ -313,9 +291,7 @@ async function runForSource(
       stats.push(s);
       done++;
       const tag = s.ok ? "ok " : "ERR";
-      const url = l.sourceUrl
-        .replace("https://www.pvrpv.com", "")
-        .replace("https://www.vacationvallarta.com", "");
+      const url = l.sourceUrl.replace("https://www.pvrpv.com", "");
       console.log(
         `[${source} ${done}/${listings.length}] ${tag} listing=${l.id}  days=${s.daysReturned}` +
           `  price=${s.daysWithPrice}  avail=${s.daysAvailable}  unavail=${s.daysUnavailable}` +

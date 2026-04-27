@@ -9,7 +9,6 @@
  *
  * Source refresh intervals (configurable via env vars):
  *   SYNC_INTERVAL_PVRPV_H          default 6   hours
- *   SYNC_INTERVAL_VACATION_VALLARTA_H default 24  hours
  *   SYNC_INTERVAL_BOOKING_H         default 12  hours
  *
  * All intervals have a minimum floor of 1 hour to avoid hammering sources.
@@ -180,31 +179,6 @@ let schedulerStarted = false;
 export async function startScheduler(): Promise<void> {
   if (schedulerStarted) return;
   schedulerStarted = true;
-
-  // Lazy imports to avoid circular deps
-  const [{ fetchAllVacationVallartaListings }, { persistNormalized }] =
-    await Promise.all([
-      import("./vacation-vallarta-adapter.js"),
-      import("./persist.js"),
-    ]);
-
-  // ── Vacation Vallarta (HTML scraper) ─────────────────────────────────────
-  const vvIntervalH = envHours("SYNC_INTERVAL_VACATION_VALLARTA_H", 24);
-  registerSource(
-    "vacation_vallarta",
-    "Vacation Vallarta",
-    vvIntervalH * 60 * 60 * 1000,
-    [],
-    async () => {
-      const listings = await fetchAllVacationVallartaListings({ delayMs: 2000 });
-      let saved = 0;
-      for (const l of listings) {
-        const r = await persistNormalized(l);
-        if (r.ok) saved++;
-      }
-      return { ok: true, count: saved };
-    },
-  );
 
   // Note: PVRPV is run via an external script (scripts/src/pvrpv-scrape.ts)
   // rather than from within the server process, because it requires crawling
