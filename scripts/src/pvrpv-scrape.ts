@@ -3,19 +3,26 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * PVRPV listing scraper for VallartaPulse.
  *
- * Fetches up to MAX_LISTINGS listings from pvrpv.com, parses each detail page,
- * normalizes the data, and upserts into rental_listings via Drizzle.
+ * Fetches up to PVRPV_MAX_LISTINGS listings from pvrpv.com, parses each detail
+ * page, normalizes the data, and upserts into rental_listings via Drizzle.
  * Idempotent: re-running updates existing rows.
  *
  * Usage:
  *   pnpm --filter @workspace/scripts run scrape:pvrpv
  *
- * Target neighborhoods (PVRPV URL segments → canonical):
- *   old-town, los-muertos-beach  → Zona Romantica
- *   amapas, conchas-chinas       → Amapas
- *   marina-vallarta              → Marina Vallarta
+ * Target filters mirror PVRPV's public search UI:
+ *   Areas: 5-de-diciembre, alta-vista, amapas, conchas-chinas, downtown,
+ *          gringo-gulch, los-muertos-beach, marina-vallarta,
+ *          north-hotel-zone, old-town, punta-negra, versalles
+ *   Types: condo, house, penthouse, studio, villa
  *
- * Limits: MAX_LISTINGS total, MIN_DELAY_MS between HTTP requests.
+ * Optional env knobs:
+ *   PVRPV_MAX_LISTINGS          total listing cap (default: 500)
+ *   PVRPV_MAX_PAGES_PER_ROOT    pagination cap per search root (default: 10)
+ *   PVRPV_MIN_DELAY_MS          courtesy delay between requests (default: 700)
+ *   PVRPV_DRY_RUN=1             parse + QA only; skip DB writes
+ *   PVRPV_TARGET_AREAS          comma-separated area slugs; default all UI areas
+ *   PVRPV_TARGET_TYPES          comma-separated type slugs; default all UI types
  */
 
 import { sql } from "drizzle-orm";
@@ -25,16 +32,56 @@ import { db, rentalListingsTable } from "@workspace/db";
 
 const BASE_URL = "https://www.pvrpv.com";
 const SOURCE_PLATFORM = "pvrpv";
-const MAX_LISTINGS = 100;
-const MIN_DELAY_MS = 700; // courtesy delay between requests
+const DEFAULT_MAX_LISTINGS = 500;
+const DEFAULT_MAX_PAGES_PER_ROOT = 10;
+const DEFAULT_MIN_DELAY_MS = 700;
 
-const TARGET_NEIGHBORHOODS = new Set([
-  "old-town",
-  "los-muertos-beach",
+const DEFAULT_TARGET_AREAS = [
+  "5-de-diciembre",
+  "alta-vista",
   "amapas",
   "conchas-chinas",
+  "downtown",
+  "gringo-gulch",
+  "los-muertos-beach",
   "marina-vallarta",
-]);
+  "north-hotel-zone",
+  "old-town",
+  "punta-negra",
+  "versalles",
+];
+
+const DEFAULT_TARGET_TYPES = ["condo", "house", "penthouse", "studio", "villa"];
+
+function parsePositiveIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseSlugListEnv(name: string, fallback: string[]): string[] {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const values = raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  return values.length > 0 ? values : fallback;
+}
+
+const MAX_LISTINGS = parsePositiveIntEnv("PVRPV_MAX_LISTINGS", DEFAULT_MAX_LISTINGS);
+const MAX_PAGES_PER_ROOT = parsePositiveIntEnv(
+  "PVRPV_MAX_PAGES_PER_ROOT",
+  DEFAULT_MAX_PAGES_PER_ROOT,
+);
+const MIN_DELAY_MS = parsePositiveIntEnv("PVRPV_MIN_DELAY_MS", DEFAULT_MIN_DELAY_MS);
+const DRY_RUN = process.env.PVRPV_DRY_RUN === "1";
+
+const TARGET_AREAS = parseSlugListEnv("PVRPV_TARGET_AREAS", DEFAULT_TARGET_AREAS);
+const TARGET_TYPES = parseSlugListEnv("PVRPV_TARGET_TYPES", DEFAULT_TARGET_TYPES);
+const TARGET_NEIGHBORHOODS = new Set(TARGET_AREAS);
+const TARGET_PROPERTY_TYPES = new Set(TARGET_TYPES);
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
@@ -405,14 +452,19 @@ function extractMeta(html: string, property: string): string | null {
 
 function extractListingUrls(html: string): string[] {
   const matches = html.matchAll(
-    /href="(https:\/\/www\.pvrpv\.com\/puerto-vallarta\/([^/"?]+)\/[^/"?]+\/[^/"?]+)"/g
+    /href="((?:https:\/\/www\.pvrpv\.com)?\/puerto-vallarta\/([^/"?]+)\/([^/"?]+)\/[^/"?]+)"/g
   );
   const seen = new Set<string>();
   const urls: string[] = [];
   for (const m of matches) {
-    const url = m[1];
+    const url = m[1].startsWith("http") ? m[1] : `${BASE_URL}${m[1]}`;
     const neighborhood = m[2];
-    if (!seen.has(url) && TARGET_NEIGHBORHOODS.has(neighborhood)) {
+    const propertyType = m[3];
+    if (
+      !seen.has(url) &&
+      TARGET_NEIGHBORHOODS.has(neighborhood) &&
+      TARGET_PROPERTY_TYPES.has(propertyType)
+    ) {
       seen.add(url);
       urls.push(url);
     }
@@ -590,42 +642,79 @@ interface IngestResult {
 
 // ── Listing URL collection ────────────────────────────────────────────────────
 
+function buildSearchRoots(): string[] {
+  const roots = new Set<string>();
+  roots.add(`${BASE_URL}/puerto-vallarta/`);
+  for (const area of TARGET_AREAS) {
+    roots.add(`${BASE_URL}/puerto-vallarta/${area}`);
+  }
+  return Array.from(roots);
+}
+
+function pagedUrl(root: string, pageIndex: number): string {
+  const offset = pageIndex * 30;
+  const separator = root.includes("?") ? "&" : "?";
+  return `${root}${separator}page=${offset}`;
+}
+
 async function collectListingUrls(): Promise<string[]> {
   const allUrls: string[] = [];
   const seen = new Set<string>();
-  let page = 1;
 
-  console.log("Collecting listing URLs from index pages...");
+  console.log("Collecting listing URLs from PVRPV search roots...");
 
-  // Fetch enough pages to exceed MAX_LISTINGS (30 listings/page)
-  const maxPages = Math.ceil((MAX_LISTINGS * 2) / 30) + 2;
+  const roots = buildSearchRoots();
+  console.log(
+    `  Search roots: ${roots.length} (${TARGET_AREAS.length} area roots + broad root; property types filtered from listing URLs)`,
+  );
 
-  while (allUrls.length < MAX_LISTINGS * 2 && page <= maxPages) {
-    const indexUrl = `${BASE_URL}/puerto-vallarta/?page=${(page - 1) * 30}`;
-    console.log(`  Fetching index page ${page}: ${indexUrl}`);
+  for (const root of roots) {
+    if (allUrls.length >= MAX_LISTINGS * 2) break;
+    let consecutiveEmpty = 0;
+    console.log(`  Root: ${root}`);
 
-    try {
-      const html = await fetchHtml(indexUrl);
-      const urls = extractListingUrls(html);
-      let added = 0;
-      for (const u of urls) {
-        if (!seen.has(u)) {
-          seen.add(u);
-          allUrls.push(u);
-          added++;
+    for (let page = 0; page < MAX_PAGES_PER_ROOT; page++) {
+      if (allUrls.length >= MAX_LISTINGS * 2) break;
+      const indexUrl = pagedUrl(root, page);
+      console.log(`    Fetching page ${page + 1}: ${indexUrl}`);
+
+      try {
+        const html = await fetchHtml(indexUrl);
+        const urls = extractListingUrls(html);
+        let added = 0;
+        for (const u of urls) {
+          if (!seen.has(u)) {
+            seen.add(u);
+            allUrls.push(u);
+            added++;
+          }
         }
+        console.log(`      → Found ${urls.length} target listings (+${added} new). Total: ${allUrls.length}`);
+        consecutiveEmpty = added === 0 ? consecutiveEmpty + 1 : 0;
+      } catch (e) {
+        console.warn(`      ⚠ Failed to fetch page ${page + 1}: ${e}`);
+        consecutiveEmpty++;
       }
-      console.log(`    → Found ${urls.length} target listings (+${added} new). Total: ${allUrls.length}`);
-    } catch (e) {
-      console.warn(`    ⚠ Failed to fetch page ${page}: ${e}`);
-    }
 
-    await sleep(MIN_DELAY_MS);
-    page++;
+      await sleep(MIN_DELAY_MS);
+      if (consecutiveEmpty >= 2) break;
+    }
   }
 
-  // Prioritize: marina-vallarta first (least represented), then amapas/ZR
-  const PRIO = ["marina-vallarta", "amapas", "conchas-chinas", "old-town", "los-muertos-beach"];
+  const PRIO = [
+    "old-town",
+    "los-muertos-beach",
+    "amapas",
+    "conchas-chinas",
+    "5-de-diciembre",
+    "alta-vista",
+    "downtown",
+    "gringo-gulch",
+    "marina-vallarta",
+    "north-hotel-zone",
+    "punta-negra",
+    "versalles",
+  ];
   allUrls.sort((a, b) => {
     const na = extractNeighborhoodSlug(a);
     const nb = extractNeighborhoodSlug(b);
@@ -738,6 +827,8 @@ async function scrapeListing(url: string): Promise<IngestResult> {
   result.confidence = confidence;
   result.warnings = warnings;
 
+  if (DRY_RUN) return result;
+
   // ── Upsert into DB ──
   try {
     const [row] = await db
@@ -809,7 +900,9 @@ async function scrapeListing(url: string): Promise<IngestResult> {
 // ── QA report ─────────────────────────────────────────────────────────────────
 
 function printQAReport(results: IngestResult[]): void {
-  const succeeded = results.filter((r) => r.dbId != null);
+  const succeeded = DRY_RUN
+    ? results.filter((r) => r.error == null)
+    : results.filter((r) => r.dbId != null);
   const failed = results.filter((r) => r.error != null);
   const n = succeeded.length;
   const pct = (k: number) => `${k}/${n} (${n > 0 ? Math.round((k / n) * 100) : 0}%)`;
@@ -817,8 +910,9 @@ function printQAReport(results: IngestResult[]): void {
   console.log("\n" + "═".repeat(70));
   console.log("PVRPV SCRAPE — QA REPORT");
   console.log("═".repeat(70));
+  if (DRY_RUN) console.log("Mode: DRY RUN — no DB writes were attempted");
   console.log(`Total attempted:         ${results.length}`);
-  console.log(`Successfully ingested:   ${n}`);
+  console.log(`${DRY_RUN ? "Successfully parsed:" : "Successfully ingested:"}   ${n}`);
   console.log(`Failed (fetch/DB error): ${failed.length}`);
 
   // ── By neighborhood ──────────────────────────────────────────────────────
@@ -986,7 +1080,10 @@ async function main(): Promise<void> {
   console.log("╔══════════════════════════════════════════════════════════════╗");
   console.log("║  PVRPV Scraper — VallartaPulse                              ║");
   console.log("╚══════════════════════════════════════════════════════════════╝");
-  console.log(`Target: up to ${MAX_LISTINGS} listings from: old-town, los-muertos-beach, amapas, conchas-chinas, marina-vallarta`);
+  console.log(`Target: up to ${MAX_LISTINGS} listings${DRY_RUN ? " (dry-run)" : ""}`);
+  console.log(`Areas: ${TARGET_AREAS.join(", ")}`);
+  console.log(`Types: ${TARGET_TYPES.join(", ")}`);
+  console.log(`Pagination: max ${MAX_PAGES_PER_ROOT} pages/search root, delay ${MIN_DELAY_MS}ms`);
   console.log(`Amenity alias map: ${Object.keys(AMENITY_ALIAS_MAP).length} entries`);
   console.log(`Beach reference points: ${BEACH_POINTS.length}`);
   console.log();

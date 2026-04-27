@@ -27,8 +27,8 @@ name: Rental Prices Retention Sweep (daily)
 #   INTERNAL_TRIGGER_TOKEN   matches the Railway env var of the same name
 
 on:
-  schedule:
-    - cron: "0 8 * * *"     # daily 08:00 UTC
+#  schedule:
+#    - cron: "0 8 * * *"     # daily 08:00 UTC
   workflow_dispatch:
     inputs:
       dry_run:
