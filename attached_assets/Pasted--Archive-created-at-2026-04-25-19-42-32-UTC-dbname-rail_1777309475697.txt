@@ -1,0 +1,60 @@
+ Archive created at 2026-04-25 19:42:32 UTC
+;     dbname: railway
+;     TOC Entries: 49
+;     Compression: gzip
+;     Dump Version: 1.16-0
+;     Format: CUSTOM
+;     Integer: 4 bytes
+;     Offset: 8 bytes
+;     Dumped from database version: 18.3 (Debian 18.3-1.pgdg13+1)
+;     Dumped by pg_dump version: 18.3 (Homebrew)
+;
+;
+; Selected TOC Entries:
+;
+263; 1259 16734 TABLE public listing_price_quotes postgres
+262; 1259 16733 SEQUENCE public listing_price_quotes_id_seq postgres
+3584; 0 0 SEQUENCE OWNED BY public listing_price_quotes_id_seq postgres
+250; 1259 16526 TABLE public rental_listings postgres
+249; 1259 16525 SEQUENCE public rental_listings_id_seq postgres
+3585; 0 0 SEQUENCE OWNED BY public rental_listings_id_seq postgres
+252; 1259 16552 TABLE public rental_prices_by_date postgres
+251; 1259 16551 SEQUENCE public rental_prices_by_date_id_seq postgres
+3586; 0 0 SEQUENCE OWNED BY public rental_prices_by_date_id_seq postgres
+3391; 2604 16737 DEFAULT public listing_price_quotes id postgres
+3382; 2604 16529 DEFAULT public rental_listings id postgres
+3389; 2604 16555 DEFAULT public rental_prices_by_date id postgres
+3577; 0 16734 TABLE DATA public listing_price_quotes postgres
+3573; 0 16526 TABLE DATA public rental_listings postgres
+3575; 0 16552 TABLE DATA public rental_prices_by_date postgres
+3587; 0 0 SEQUENCE SET public listing_price_quotes_id_seq postgres
+3588; 0 0 SEQUENCE SET public rental_listings_id_seq postgres
+3589; 0 0 SEQUENCE SET public rental_prices_by_date_id_seq postgres
+3422; 2606 16753 CONSTRAINT public listing_price_quotes listing_price_quotes_pkey postgres
+3409; 2606 16550 CONSTRAINT public rental_listings rental_listings_pkey postgres
+3415; 2606 16565 CONSTRAINT public rental_prices_by_date rental_prices_by_date_pkey postgres
+3416; 1259 16804 INDEX public idx_lpq_availability postgres
+3417; 1259 16802 INDEX public idx_lpq_checkin_date postgres
+3418; 1259 16803 INDEX public idx_lpq_collected_at postgres
+3419; 1259 16801 INDEX public idx_lpq_listing_checkin postgres
+3420; 1259 16800 INDEX public idx_lpq_listing_collected postgres
+3395; 1259 16586 INDEX public idx_rl_active postgres
+3396; 1259 16583 INDEX public idx_rl_bedrooms postgres
+3397; 1259 16808 INDEX public idx_rl_identity_key postgres
+3398; 1259 16813 INDEX public idx_rl_identity_key_unique postgres
+3399; 1259 16811 INDEX public idx_rl_last_seen postgres
+3400; 1259 16807 INDEX public idx_rl_lifecycle postgres
+3401; 1259 16582 INDEX public idx_rl_neighborhood postgres
+3402; 1259 16809 INDEX public idx_rl_parent_region postgres
+3403; 1259 16584 INDEX public idx_rl_platform postgres
+3404; 1259 17138 INDEX public idx_rl_platform_external_unique postgres
+3405; 1259 16585 INDEX public idx_rl_price postgres
+3406; 1259 16810 INDEX public idx_rl_pricing_bucket postgres
+3407; 1259 16587 INDEX public idx_rl_source_unique postgres
+3410; 1259 16589 INDEX public idx_rpbd_date postgres
+3411; 1259 16588 INDEX public idx_rpbd_listing_date postgres
+3412; 1259 16590 INDEX public idx_rpbd_status postgres
+3413; 1259 16591 INDEX public idx_rpbd_unique postgres
+3424; 2606 16778 FK CONSTRAINT public listing_price_quotes listing_price_quotes_listing_id_rental_listings_id_fk postgres
+3423; 2606 16577 FK CONSTRAINT public rental_prices_by_date rental_prices_by_date_listing_id_rental_listings_id_fk postgres
+ryandolan@Ryans-Mac-mini vallartapulse % 
