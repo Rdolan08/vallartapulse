@@ -341,7 +341,7 @@ function PipelinesHealth({
           <Activity className="w-3.5 h-3.5" />
           {t("Pipeline status", "Estado de pipelines")}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2">
+        <div className="flex flex-wrap gap-x-8 gap-y-2">
           {PIPELINES.map((cfg) => (
             <PipelineStatusLight key={cfg.endpoint} cfg={cfg} t={t} lang={lang} />
           ))}
@@ -436,9 +436,42 @@ function PricingCoveragePanel({
     };
   }, []);
 
-  const platforms = data?.platforms ?? [];
-  const all = platforms.find((p) => p.sourcePlatform === "ALL");
-  const perPlatform = platforms.filter((p) => p.sourcePlatform !== "ALL");
+  // Exclude pvr_properties from this view: 147 active listings but no
+  // daily-pricing feed (no rows in rental_prices_by_date or
+  // listing_price_quotes), so leaving it in the denominator deflates
+  // coverage % for a source that structurally cannot be priced. We
+  // recompute the ALL row from the visible platforms so headline math
+  // matches the table.
+  const HIDDEN_PLATFORMS = new Set(["pvr_properties"]);
+  const visible = (data?.platforms ?? []).filter(
+    (p) => !HIDDEN_PLATFORMS.has(p.sourcePlatform),
+  );
+  const perPlatform = visible.filter((p) => p.sourcePlatform !== "ALL");
+  const all: CoveragePlatform | null =
+    perPlatform.length === 0
+      ? null
+      : (() => {
+          const sum = perPlatform.reduce(
+            (acc, p) => ({
+              activeListings: acc.activeListings + p.activeListings,
+              pricedCalendar: acc.pricedCalendar + p.pricedCalendar,
+              pricedQuote: acc.pricedQuote + p.pricedQuote,
+              pricedAny: acc.pricedAny + p.pricedAny,
+            }),
+            { activeListings: 0, pricedCalendar: 0, pricedQuote: 0, pricedAny: 0 },
+          );
+          return {
+            sourcePlatform: "ALL",
+            activeListings: sum.activeListings,
+            pricedCalendar: sum.pricedCalendar,
+            pricedQuote: sum.pricedQuote,
+            pricedAny: sum.pricedAny,
+            pctCovered:
+              sum.activeListings > 0
+                ? (sum.pricedAny / sum.activeListings) * 100
+                : 0,
+          };
+        })();
 
   // Headline color: green ≥80%, amber 30–79%, red <30%
   const headlineColor =
