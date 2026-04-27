@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # scripts/backup-railway-db.sh
 # ─────────────────────────────────────────────────────────────────────────────
 # Daily full backup of the Railway production database to local disk on the
@@ -12,20 +12,25 @@
 # Output:  ~/vallartapulse-backups/vallartapulse-YYYY-MM-DD-HHMMSS.dump
 # Logs:    ~/vallartapulse-data/logs/db-backup.{out,err}.log (via launchd)
 #
+# Env access pattern matches scripts/run-discovery.sh: cd to repo root,
+# `set -a; source .env; set +a` to inherit RAILWAY_DATABASE_URL from the
+# Mac-local .env file. Under launchd this is the ONLY way the script sees
+# the DB URL — launchd does not inherit shell env vars.
+#
 # REQUIREMENTS on the Mac mini:
 #   1. pg_dump v18 or newer (Railway runs PostgreSQL 18.3). Check with:
 #        pg_dump --version
 #      If older, install via: brew install postgresql@18
-#      Then ensure /opt/homebrew/opt/postgresql@18/bin is in PATH.
-#   2. RAILWAY_DATABASE_URL exported in the launchd plist environment, or
-#      a ~/.vallartapulse.env file containing it (this script will source
-#      that file if present).
+#      The script adds /opt/homebrew/opt/postgresql@18/bin to PATH so
+#      keg-only installs work without `brew link --force`.
+#   2. .env file at the repo root containing RAILWAY_DATABASE_URL=...
+#      (same .env that run-discovery.sh and run-airbnb-pricing-nightly.sh
+#      already source).
 #
 # ONE-TIME INSTALL on the Mac mini (after `git pull` brings this script):
 #
 #   chmod +x ~/vallartapulse/scripts/backup-railway-db.sh
-#   mkdir -p ~/vallartapulse-backups
-#   mkdir -p ~/vallartapulse-data/logs
+#   mkdir -p ~/vallartapulse-backups ~/vallartapulse-data/logs
 #
 #   cat > ~/Library/LaunchAgents/com.vallartapulse.db-backup.daily.plist <<'PLIST'
 #   <?xml version="1.0" encoding="UTF-8"?>
@@ -62,27 +67,44 @@
 # Schedule: 02:00 local Mac time (75 min buffer before the 03:15 discovery
 # cron mutates the DB — backup captures the prior day's terminal state).
 #
-# Disk math: DB is ~233 MB; -Fc compression typically yields 30-80 MB per
-# dump. 365 dumps/year ≈ 18 GB/year. No retention is enforced by this
-# script — Ryan asked for "keeping a copy daily not replacing the previous
-# backup". Manual cleanup or a separate retention script can be added later.
+# Disk math: DB is ~233 MB; -Fc compression typically yields ~10 MB per
+# dump (measured 9.1 MB on first run). 365 dumps/year ≈ 3.5 GB/year. No
+# retention is enforced — Ryan asked for "keeping a copy daily not
+# replacing the previous backup". Manual cleanup can be added later.
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
-# ── load env ────────────────────────────────────────────────────────────────
-# launchd does NOT inherit shell env, so prefer EnvironmentVariables in the
-# plist OR source a known env file here. Try the env file first; fall back
-# to whatever's already in the environment.
-if [[ -f "$HOME/.vallartapulse.env" ]]; then
-  # shellcheck disable=SC1091
-  source "$HOME/.vallartapulse.env"
+# ── locate repo root (script-relative, not hard-coded) ──────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
+# ── PATH for launchd (mirrors run-discovery.sh + adds postgresql@18) ────────
+# launchd inherits a minimal PATH (/usr/bin:/bin:/usr/sbin:/sbin) which
+# does not include homebrew binaries. postgresql@18 is keg-only on
+# Apple Silicon brew so it doesn't symlink into /opt/homebrew/bin
+# unless `brew link --force` was run — adding the keg's bin dir
+# explicitly avoids that requirement.
+export PATH="/opt/homebrew/opt/postgresql@18/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+# ── load env from repo .env (same pattern as run-discovery.sh) ──────────────
+# `set -a; source; set +a` lets bash itself parse the file, which handles
+# values with spaces, quotes, '&', '=' correctly — unlike the
+# `export $(grep -v '^#' .env | xargs)` trick.
+if [[ ! -f .env ]]; then
+  echo "[backup-railway-db] FATAL: ${REPO_ROOT}/.env not found." >&2
+  echo "[backup-railway-db] Expected RAILWAY_DATABASE_URL=... in the repo .env (same file run-discovery.sh sources)." >&2
+  exit 1
 fi
+set -a
+# shellcheck disable=SC1091
+source .env
+set +a
 
 DB_URL="${RAILWAY_DATABASE_URL:-${DATABASE_URL:-}}"
 if [[ -z "$DB_URL" ]]; then
-  echo "[backup-railway-db] FATAL: RAILWAY_DATABASE_URL (or DATABASE_URL) not set." >&2
-  echo "[backup-railway-db] Either export it in the launchd plist or put it in ~/.vallartapulse.env" >&2
+  echo "[backup-railway-db] FATAL: RAILWAY_DATABASE_URL not set in ${REPO_ROOT}/.env" >&2
   exit 1
 fi
 
@@ -91,7 +113,8 @@ fi
 # not supported and will refuse to run. Fail loudly rather than silently
 # producing a partial dump.
 if ! command -v pg_dump >/dev/null 2>&1; then
-  echo "[backup-railway-db] FATAL: pg_dump not on PATH. Install with: brew install postgresql@18" >&2
+  echo "[backup-railway-db] FATAL: pg_dump not on PATH (looked in: $PATH)." >&2
+  echo "[backup-railway-db] Install with: brew install postgresql@18" >&2
   exit 1
 fi
 PG_DUMP_MAJOR=$(pg_dump --version | awk '{print $3}' | cut -d. -f1)
