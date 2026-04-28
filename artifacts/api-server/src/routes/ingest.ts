@@ -954,18 +954,30 @@ router.get("/ingest/airbnb-pricing-freshness", async (req, res) => {
         -- 24h activity counters: distinguish priced vs. unavailable rows so
         -- the dashboard tooltip can show "N priced · M unavailable" instead
         -- of misreading the new fast-path's unavailable rows as failures.
-        (SELECT COUNT(*) FROM listing_price_quotes lpq
-         WHERE lpq.collected_at >= NOW() - INTERVAL '24 hours')::int           AS quotes_last_24h,
+        --
+        -- IMPORTANT: listing_price_quotes and presumed_bookings are shared
+        -- across source platforms (airbnb / pvrpv / vrbo all insert here).
+        -- Every counter below MUST be cohort-filtered so this Airbnb tooltip
+        -- doesn't accidentally report PVRPV's daily run as "Airbnb activity"
+        -- — that's what made the dashboard look healthy while the Airbnb
+        -- parser had silently been dead for days.
         (SELECT COUNT(*) FROM listing_price_quotes lpq
          WHERE lpq.collected_at >= NOW() - INTERVAL '24 hours'
-           AND lpq.total_price_usd IS NOT NULL)::int                           AS quotes_priced_last_24h,
+           AND lpq.listing_id IN (SELECT id FROM cohort))::int                 AS quotes_last_24h,
         (SELECT COUNT(*) FROM listing_price_quotes lpq
          WHERE lpq.collected_at >= NOW() - INTERVAL '24 hours'
-           AND lpq.availability_status = 'unavailable')::int                   AS quotes_unavailable_last_24h,
+           AND lpq.total_price_usd IS NOT NULL
+           AND lpq.listing_id IN (SELECT id FROM cohort))::int                 AS quotes_priced_last_24h,
+        (SELECT COUNT(*) FROM listing_price_quotes lpq
+         WHERE lpq.collected_at >= NOW() - INTERVAL '24 hours'
+           AND lpq.availability_status = 'unavailable'
+           AND lpq.listing_id IN (SELECT id FROM cohort))::int                 AS quotes_unavailable_last_24h,
         -- Booked-rate inference signal — count rows the post-scrape
-        -- inference step wrote in the last 24h.
+        -- inference step wrote in the last 24h. Cohort-filtered for the
+        -- same reason as above.
         (SELECT COUNT(*) FROM presumed_bookings pb
-         WHERE pb.inferred_at >= NOW() - INTERVAL '24 hours')::int             AS presumed_bookings_last_24h
+         WHERE pb.inferred_at >= NOW() - INTERVAL '24 hours'
+           AND pb.listing_id IN (SELECT id FROM cohort))::int                  AS presumed_bookings_last_24h
     `);
     const row = (result as unknown as {
       rows: Array<{
