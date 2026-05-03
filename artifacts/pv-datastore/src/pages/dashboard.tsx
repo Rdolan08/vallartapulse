@@ -10,6 +10,7 @@ import { StatCard } from "@/components/stat-card";
 import { useLanguage } from "@/contexts/language-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
+import { LiveMarketSnapshot } from "@/components/live-market-snapshot";
 import {
   ArrowRight,
   Building2,
@@ -255,6 +256,9 @@ export default function Dashboard() {
           </div>
         </div>
       </Link>
+
+      {/* ── Live Market Snapshot — pulls /api/metrics/rental-market-live ── */}
+      <LiveMarketSnapshot />
 
       {/* Header + Filters */}
       <div className="flex flex-col gap-5">
