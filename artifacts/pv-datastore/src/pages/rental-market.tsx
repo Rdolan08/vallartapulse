@@ -21,6 +21,20 @@ interface NeighborhoodRow {
   availabilityLevel: Level;
 }
 
+interface BySourceRow {
+  source: string;
+  listingsPriced: number;
+  avgPriceUsd: number | null;
+}
+
+interface BedBathRow {
+  bedrooms: number;
+  bathrooms: number;
+  listingCount: number;
+  avgPriceUsd: number | null;
+  mostPopular: boolean;
+}
+
 interface RentalMarketLive {
   generatedAt: string;
   recent: {
@@ -49,6 +63,8 @@ interface RentalMarketLive {
     pricingTrendPct: number | null;
   };
   neighborhoods: NeighborhoodRow[];
+  bySource: BySourceRow[];
+  byBedBath: BedBathRow[];
   tourism: {
     currentYear: number;
     currentMonth: number;
@@ -172,6 +188,8 @@ export default function RentalMarket() {
             <PricingSignal data={data} t={t} />
             <TourismImpact data={data} t={t} lang={lang} />
           </div>
+
+          <PricingBreakdown data={data} t={t} />
 
           <ActionableGuidance data={data} t={t} />
           <MarketSegmentation data={data} t={t} lang={lang} />
@@ -377,8 +395,8 @@ function PricingSignal({
         <div className="text-3xl font-bold text-primary">{fmtUsd(data.recent.avgPriceUsd)}</div>
         <p className="text-sm text-muted-foreground mt-2">
           {t(
-            `Average nightly rate across listings with active pricing data (${fmtPct(cov, 0)} of cohort).`,
-            `Tarifa promedio por noche en anuncios con datos de precio activos (${fmtPct(cov, 0)} de la cohorte).`,
+            `Blended average nightly rate across Airbnb + PVRPV listings with active pricing data (${fmtPct(cov, 0)} of cohort). Per-source and per-configuration breakdown shown below.`,
+            `Tarifa promedio combinada por noche en anuncios de Airbnb + PVRPV con datos de precio activos (${fmtPct(cov, 0)} de la cohorte). Desglose por fuente y configuración abajo.`,
           )}
         </p>
         <div className="flex items-center gap-2 mt-3 text-sm">
@@ -399,6 +417,112 @@ function PricingSignal({
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+function PricingBreakdown({
+  data, t,
+}: {
+  data: RentalMarketLive;
+  t: (en: string, es: string) => string;
+}) {
+  if (data.bySource.length === 0 && data.byBedBath.length === 0) return null;
+
+  const sourceLabel = (s: string) =>
+    s === "airbnb" ? "Airbnb" : s === "pvrpv" ? "PVRPV" : s === "vrbo" ? "VRBO" : s;
+
+  const top = data.byBedBath.find((b) => b.mostPopular) ?? data.byBedBath[0];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* By source */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="font-display">
+            {t("Pricing by Source", "Precios por Fuente")}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {t(
+              "Average nightly rate split across the platforms feeding the cohort.",
+              "Tarifa promedio por noche separada por las plataformas que alimentan la cohorte.",
+            )}
+          </p>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase text-muted-foreground border-b">
+              <tr>
+                <th className="py-2 text-left">{t("Source", "Fuente")}</th>
+                <th className="py-2 text-right">{t("Listings priced", "Anuncios con precio")}</th>
+                <th className="py-2 text-right">{t("Avg nightly", "Promedio noche")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.bySource.map((row) => (
+                <tr key={row.source} className="border-b last:border-0">
+                  <td className="py-3 font-medium">{sourceLabel(row.source)}</td>
+                  <td className="py-3 text-right">{fmtNumber(row.listingsPriced)}</td>
+                  <td className="py-3 text-right font-semibold text-primary">{fmtUsd(row.avgPriceUsd)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      {/* By configuration */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="font-display">
+            {t("Pricing by Configuration", "Precios por Configuración")}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {t(
+              "Most common bed/bath combinations in the priced cohort, ranked by listing count.",
+              "Combinaciones más comunes de recámara/baño en la cohorte con precio, ordenadas por cantidad de anuncios.",
+            )}
+          </p>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {top && (
+            <div className="mb-4 p-3 rounded-xl bg-primary/5 border border-primary/20">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                {t("Most popular configuration", "Configuración más popular")}
+              </div>
+              <div className="mt-1 flex items-baseline gap-3 flex-wrap">
+                <span className="text-2xl font-bold text-primary">
+                  {top.bedrooms} {t("BR", "Rec")} / {top.bathrooms} {t("BA", "Baño")}
+                </span>
+                <span className="text-lg font-semibold">{fmtUsd(top.avgPriceUsd)}/{t("night", "noche")}</span>
+                <span className="text-xs text-muted-foreground">
+                  {fmtNumber(top.listingCount)} {t("listings", "anuncios")}
+                </span>
+              </div>
+            </div>
+          )}
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase text-muted-foreground border-b">
+              <tr>
+                <th className="py-2 text-left">{t("Configuration", "Configuración")}</th>
+                <th className="py-2 text-right">{t("Listings", "Anuncios")}</th>
+                <th className="py-2 text-right">{t("Avg nightly", "Promedio noche")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.byBedBath.map((row) => (
+                <tr key={`${row.bedrooms}-${row.bathrooms}`} className="border-b last:border-0">
+                  <td className="py-3 font-medium">
+                    {row.bedrooms} {t("BR", "Rec")} / {row.bathrooms} {t("BA", "Baño")}
+                  </td>
+                  <td className="py-3 text-right">{fmtNumber(row.listingCount)}</td>
+                  <td className="py-3 text-right font-semibold">{fmtUsd(row.avgPriceUsd)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

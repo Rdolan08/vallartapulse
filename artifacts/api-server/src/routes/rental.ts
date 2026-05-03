@@ -65,7 +65,7 @@ router.get("/metrics/rental-market", async (req, res) => {
  */
 router.get("/metrics/rental-market-live", async (req, res) => {
   try {
-    const [aggRows, neighborhoodRows, tourismRows] = await Promise.all([
+    const [aggRows, neighborhoodRows, tourismRows, sourceRows, bedBathRows] = await Promise.all([
       db.execute(sql`
         WITH recent_window AS (
           SELECT listing_id, nightly_price_usd, availability_status
@@ -141,6 +141,36 @@ router.get("/metrics/rental-market-live", async (req, res) => {
         FROM airport_metrics
         ORDER BY year DESC, month DESC
         LIMIT 24;
+      `),
+      db.execute(sql`
+        SELECT
+          rl.source_platform                                                          AS source,
+          COUNT(DISTINCT rpbd.listing_id)::bigint                                     AS distinct_listings,
+          AVG(rpbd.nightly_price_usd)                                                 AS avg_price
+        FROM rental_prices_by_date rpbd
+        JOIN rental_listings rl ON rl.id = rpbd.listing_id
+        WHERE rpbd.date >= CURRENT_DATE
+          AND rpbd.date <  CURRENT_DATE + INTERVAL '30 days'
+          AND rpbd.nightly_price_usd IS NOT NULL
+        GROUP BY rl.source_platform
+        ORDER BY distinct_listings DESC;
+      `),
+      db.execute(sql`
+        SELECT
+          rl.bedrooms,
+          rl.bathrooms,
+          COUNT(DISTINCT rpbd.listing_id)::bigint                                     AS distinct_listings,
+          AVG(rpbd.nightly_price_usd)                                                 AS avg_price
+        FROM rental_prices_by_date rpbd
+        JOIN rental_listings rl ON rl.id = rpbd.listing_id
+        WHERE rpbd.date >= CURRENT_DATE
+          AND rpbd.date <  CURRENT_DATE + INTERVAL '30 days'
+          AND rpbd.nightly_price_usd IS NOT NULL
+          AND rl.bedrooms IS NOT NULL
+          AND rl.bathrooms IS NOT NULL
+        GROUP BY rl.bedrooms, rl.bathrooms
+        ORDER BY distinct_listings DESC
+        LIMIT 6;
       `),
     ]);
 
@@ -258,6 +288,26 @@ router.get("/metrics/rental-market-live", async (req, res) => {
       }
     }
 
+    const bySource = sourceRows.rows.map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        source: String(row.source),
+        listingsPriced: num(row.distinct_listings) ?? 0,
+        avgPriceUsd: num(row.avg_price),
+      };
+    });
+
+    const byBedBath = bedBathRows.rows.map((r, i) => {
+      const row = r as Record<string, unknown>;
+      return {
+        bedrooms: num(row.bedrooms) ?? 0,
+        bathrooms: num(row.bathrooms) ?? 0,
+        listingCount: num(row.distinct_listings) ?? 0,
+        avgPriceUsd: num(row.avg_price),
+        mostPopular: i === 0,
+      };
+    });
+
     res.json({
       generatedAt: new Date().toISOString(),
       recent: {
@@ -286,6 +336,8 @@ router.get("/metrics/rental-market-live", async (req, res) => {
         pricingTrendPct,
       },
       neighborhoods,
+      bySource,
+      byBedBath,
       tourism,
       freshness: {
         newestScrapeAt: newestScrape ? newestScrape.toISOString() : null,
