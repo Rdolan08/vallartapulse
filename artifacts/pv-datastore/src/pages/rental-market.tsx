@@ -1,240 +1,618 @@
-import { useState } from "react";
-import { useGetRentalMarketMetrics } from "@workspace/api-client-react";
+import { useEffect, useState } from "react";
+import { Link } from "wouter";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { useLanguage } from "@/contexts/language-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
-import { ExternalLink } from "lucide-react";
-import {
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-} from "recharts";
+import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/api-base";
+import { AlertTriangle, ArrowRight, Clock, TrendingDown, TrendingUp, Minus } from "lucide-react";
 
-import { MONTHLY_DATA_YEARS, LAST_COMPLETED_YEAR, yearLabel } from "@/lib/data-availability";
-import { CHART_TOOLTIP, TOOLTIP_CURSOR } from "@/lib/chart-theme";
+type Level = "high" | "moderate" | "low" | "unknown";
+type DemandTrend = "increasing" | "stable" | "decreasing" | "unknown";
+type PricingTrend = "increasing" | "stable" | "softening" | "unknown";
+type TourismLabel = "higher" | "in_line" | "slightly_lower" | "lower";
 
-const YEARS = [...MONTHLY_DATA_YEARS].reverse();
+interface NeighborhoodRow {
+  neighborhood: string;
+  listingCount: number;
+  availabilityRate: number | null;
+  avgPriceUsd: number | null;
+  availabilityLevel: Level;
+}
 
-const NEIGHBORHOODS = [
-  { value: "Zona Romántica", label: "Zona Romántica (Old Town / Emiliano Zapata)" },
-  { value: "Centro", label: "Centro (El Centro / Downtown)" },
-  { value: "Conchas Chinas / Amapas", label: "Conchas Chinas / Amapas (South Zone)" },
-  { value: "Versalles", label: "Versalles" },
-  { value: "Hotel Zone", label: "Hotel Zone (Las Glorias / Zona Hotelera)" },
-  { value: "Marina Vallarta", label: "Marina Vallarta" },
-  { value: "5 de Diciembre", label: "5 de Diciembre" },
+interface RentalMarketLive {
+  generatedAt: string;
+  recent: {
+    totalRows: number;
+    availableRows: number;
+    distinctListings: number;
+    availabilityRate: number | null;
+    avgPriceUsd: number | null;
+    listingsWithPrice: number;
+  };
+  prior: {
+    totalRows: number;
+    availableRows: number;
+    availabilityRate: number | null;
+    avgPriceUsd: number | null;
+  };
+  cohort: {
+    distinctListings: number;
+    priceCoverage: number | null;
+  };
+  signals: {
+    availabilityLevel: Level;
+    availabilityRateDelta: number | null;
+    demandTrend: DemandTrend;
+    pricingTrend: PricingTrend;
+    pricingTrendPct: number | null;
+  };
+  neighborhoods: NeighborhoodRow[];
+  tourism: {
+    currentYear: number;
+    currentMonth: number;
+    currentPassengers: number;
+    priorYear: number;
+    priorPassengers: number;
+    yoyChangePct: number;
+    label: TourismLabel;
+  } | null;
+  freshness: {
+    newestScrapeAt: string | null;
+    ageHours: number | null;
+    isStale: boolean;
+  };
+}
+
+const MONTH_NAMES_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
+const MONTH_NAMES_ES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+function fmtPct(v: number | null, digits = 1): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return `${(v * 100).toFixed(digits)}%`;
+}
+function fmtSignedPct(v: number | null, digits = 1): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  const sign = v > 0 ? "+" : "";
+  return `${sign}${(v * 100).toFixed(digits)}%`;
+}
+function fmtUsd(v: number | null): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return `$${Math.round(v).toLocaleString()}`;
+}
+function fmtNumber(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return Math.round(v).toLocaleString();
+}
+function fmtAge(hours: number | null): { en: string; es: string } {
+  if (hours == null || !Number.isFinite(hours)) return { en: "unknown", es: "desconocido" };
+  if (hours < 1) return { en: "just now", es: "justo ahora" };
+  if (hours < 24) {
+    const h = Math.round(hours);
+    return { en: `${h}h ago`, es: `hace ${h}h` };
+  }
+  const d = Math.round(hours / 24);
+  return { en: `${d}d ago`, es: `hace ${d}d` };
+}
 
 export default function RentalMarket() {
   const { t, lang } = useLanguage();
-  const [year, setYear] = useState<number>(LAST_COMPLETED_YEAR);
-  const [neighborhood, setNeighborhood] = useState<string>("Zona Romántica");
+  const [data, setData] = useState<RentalMarketLive | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const { data, isLoading, error } = useGetRentalMarketMetrics({ year, neighborhood });
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    apiFetch<RentalMarketLive>("/api/metrics/rental-market-live")
+      .then((d) => {
+        if (cancelled) return;
+        setData(d);
+        setError(null);
+      })
+      .catch((e: Error) => {
+        if (cancelled) return;
+        setError(e.message ?? "Failed to load");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
-  const chartData = data?.map((row) => ({
-    name: row.monthName.slice(0, 3),
-    [t("Avg Rate", "Tarifa Prom.")]: parseFloat(String(row.avgNightlyRateUsd)),
-    [t("Median Rate", "Tarifa Mediana")]: row.medianNightlyRateUsd != null ? parseFloat(String(row.medianNightlyRateUsd)) : null,
-    [t("Occupancy %", "Ocupación %")]: parseFloat(String(row.occupancyRate)),
-    [t("Listings", "Anuncios")]: row.activeListings,
-  }));
-
-  const latestRow = data?.[data.length - 1];
+  const now = new Date();
+  const currentMonthLabel =
+    lang === "es"
+      ? `${MONTH_NAMES_ES[now.getMonth()]} ${now.getFullYear()}`
+      : `${MONTH_NAMES_EN[now.getMonth()]} ${now.getFullYear()}`;
 
   return (
     <PageWrapper>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
-            {t("Rental Market", "Mercado de Renta")}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {lang === "es" ? "Análisis de rentas a corto plazo de " : "Short-term rental analytics from "}
-            <a
-              href="https://www.airbnb.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline inline-flex items-center gap-0.5"
-            >
-              Airbnb <ExternalLink className="w-3 h-3" />
-            </a>
-            {" "}{lang === "es" ? "y" : "and"}{" "}
-            <a
-              href="https://www.vrbo.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline inline-flex items-center gap-0.5"
-            >
-              VRBO <ExternalLink className="w-3 h-3" />
-            </a>.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <select
-            value={neighborhood}
-            onChange={(e) => setNeighborhood(e.target.value)}
-            className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary max-w-[280px]"
-          >
-            {NEIGHBORHOODS.map((n) => (
-              <option key={n.value} value={n.value}>{n.label}</option>
-            ))}
-          </select>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="glass-panel px-4 py-2 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            {YEARS.map((y) => (
-              <option key={y} value={y}>{yearLabel(y)}</option>
-            ))}
-          </select>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
+          {t("Rental Market", "Mercado de Renta")} — {currentMonthLabel}
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          {t(
+            "Live availability, pricing, and demand signals computed in real time from the tracked Puerto Vallarta short-term rental cohort.",
+            "Disponibilidad, precios y señales de demanda en tiempo real, calculados directamente sobre la cohorte rastreada de rentas a corto plazo en Puerto Vallarta.",
+          )}
+        </p>
       </div>
 
-      {isLoading ? (
+      {loading ? (
         <div className="space-y-6">
+          <Skeleton className="h-32 w-full rounded-2xl" />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
           </div>
-          <Skeleton className="h-[300px] w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
-      ) : error ? (
+      ) : error || !data ? (
         <div className="p-12 text-center bg-secondary/30 rounded-3xl border border-dashed">
-          <div className="text-muted-foreground font-medium">{t("Failed to load data.", "Error al cargar datos.")}</div>
-        </div>
-      ) : data && data.length > 0 ? (
-        <div className="space-y-8">
-
-          {/* Summary KPI strip */}
-          {latestRow && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[
-                { label: t("Avg Nightly Rate", "Tarifa Noche Prom."), value: formatCurrency(latestRow.avgNightlyRateUsd), sub: t("latest month", "último mes") },
-                { label: t("Occupancy Rate", "Tasa de Ocupación"), value: formatPercent(latestRow.occupancyRate), sub: t("latest month", "último mes") },
-                { label: t("Active Listings", "Anuncios Activos"), value: formatNumber(latestRow.activeListings), sub: t("latest month", "último mes") },
-                { label: t("Avg Review Score", "Puntuación Promedio"), value: latestRow.avgReviewScore ? `${latestRow.avgReviewScore} / 5` : "—", sub: t("latest month", "último mes") },
-              ].map((kpi) => (
-                <Card key={kpi.label} className="glass-card">
-                  <CardContent className="pt-5">
-                    <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{kpi.label}</div>
-                    <div className="text-2xl font-bold text-primary mt-1">{kpi.value}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{kpi.sub}</div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {/* Nightly rate trend */}
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="font-display">{t("Nightly Rate Trend", "Tendencia de Tarifa Noche")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(v) => `$${v}`}
-                    domain={[
-                      (min: number) => Math.floor(min * 0.88),
-                      (max: number) => Math.ceil(max * 1.06),
-                    ]}
-                  />
-                  <Tooltip {...CHART_TOOLTIP} formatter={(v: number, name: string) => [`$${Number(v).toLocaleString()}`, name]} />
-                  <Legend />
-                  <Line type="monotone" dataKey={t("Avg Rate", "Tarifa Prom.")} stroke="#00C2A8" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey={t("Median Rate", "Tarifa Mediana")} stroke="#00D1FF" strokeWidth={2} dot={false} strokeDasharray="4 2" />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Occupancy + listings */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="font-display">{t("Occupancy Rate", "Tasa de Ocupación")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis
-                      unit="%"
-                      tick={{ fontSize: 12 }}
-                      domain={[
-                        (min: number) => Math.max(0, Math.floor(min - 10)),
-                        100,
-                      ]}
-                    />
-                    <Tooltip {...CHART_TOOLTIP} cursor={TOOLTIP_CURSOR} formatter={(v: number, name: string) => [`${v}%`, name]} />
-                    <Bar dataKey={t("Occupancy %", "Ocupación %")} fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="font-display">{t("Active Listings", "Anuncios Activos")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip {...CHART_TOOLTIP} cursor={TOOLTIP_CURSOR} formatter={(v: number, name: string) => [formatNumber(v), name]} />
-                    <Bar dataKey={t("Listings", "Anuncios")} fill="#6366F1" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          <div className="text-muted-foreground font-medium">
+            {t("Failed to load live market data.", "Error al cargar datos del mercado en vivo.")}
           </div>
-
-          {/* Detail table */}
-          <Card className="glass-card overflow-hidden">
-            <CardHeader>
-              <CardTitle className="font-display">{t("Monthly Breakdown", "Detalle Mensual")}</CardTitle>
-            </CardHeader>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase bg-secondary/50 text-muted-foreground border-b">
-                  <tr>
-                    <th className="px-6 py-4">{t("Month", "Mes")}</th>
-                    <th className="px-6 py-4">{t("Listings", "Anuncios")}</th>
-                    <th className="px-6 py-4">{t("Avg Rate", "Tarifa Prom.")}</th>
-                    <th className="px-6 py-4">{t("Median Rate", "Tarifa Mediana")}</th>
-                    <th className="px-6 py-4">{t("Occupancy", "Ocupación")}</th>
-                    <th className="px-6 py-4">{t("Avg Score", "Puntuación")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((row) => (
-                    <tr key={row.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                      <td className="px-6 py-4 font-medium">{row.monthName}</td>
-                      <td className="px-6 py-4">{formatNumber(row.activeListings)}</td>
-                      <td className="px-6 py-4 font-semibold text-primary">{formatCurrency(row.avgNightlyRateUsd)}</td>
-                      <td className="px-6 py-4">{row.medianNightlyRateUsd ? formatCurrency(row.medianNightlyRateUsd) : "—"}</td>
-                      <td className="px-6 py-4">{formatPercent(row.occupancyRate)}</td>
-                      <td className="px-6 py-4">{row.avgReviewScore ? `${row.avgReviewScore} ★` : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          {error && <div className="text-xs text-muted-foreground mt-2">{error}</div>}
         </div>
       ) : (
-        <div className="p-12 text-center text-muted-foreground bg-white/50 rounded-2xl border border-dashed">
-          {t("No data available for these filters.", "No hay datos disponibles para estos filtros.")}
+        <div className="space-y-8">
+          <FreshnessBanner data={data} t={t} lang={lang} />
+          <CurrentMarketSignal data={data} t={t} lang={lang} currentMonthLabel={currentMonthLabel} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <MarketAvailability data={data} t={t} />
+            <PricingSignal data={data} t={t} />
+            <TourismImpact data={data} t={t} lang={lang} />
+          </div>
+
+          <ActionableGuidance data={data} t={t} />
+          <MarketSegmentation data={data} t={t} lang={lang} />
+          <CTASection t={t} />
         </div>
       )}
     </PageWrapper>
   );
+}
+
+/* ─────────────────────────── Section components ─────────────────────────── */
+
+function FreshnessBanner({
+  data, t, lang,
+}: {
+  data: RentalMarketLive;
+  t: (en: string, es: string) => string;
+  lang: "en" | "es";
+}) {
+  const age = fmtAge(data.freshness.ageHours);
+  if (data.freshness.isStale) {
+    return (
+      <div className="flex items-start gap-3 p-4 rounded-2xl border border-amber-300/60 bg-amber-50 dark:bg-amber-900/20">
+        <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+        <div>
+          <div className="font-semibold text-amber-900 dark:text-amber-200">
+            {t("Data refresh lag detected", "Retraso en la actualización de datos detectado")}
+          </div>
+          <div className="text-sm text-amber-800/80 dark:text-amber-200/80">
+            {t("Newest scrape: ", "Última captura: ")}{lang === "es" ? age.es : age.en}
+            {data.freshness.newestScrapeAt &&
+              ` · ${new Date(data.freshness.newestScrapeAt).toLocaleString(lang === "es" ? "es-MX" : "en-US")}`}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <Clock className="w-3.5 h-3.5" />
+      {t("Data updated: ", "Datos actualizados: ")}
+      {data.freshness.newestScrapeAt
+        ? new Date(data.freshness.newestScrapeAt).toLocaleString(lang === "es" ? "es-MX" : "en-US")
+        : "—"}
+      <span>·</span>
+      <span>{lang === "es" ? age.es : age.en}</span>
+    </div>
+  );
+}
+
+function CurrentMarketSignal({
+  data, t, lang, currentMonthLabel,
+}: {
+  data: RentalMarketLive;
+  t: (en: string, es: string) => string;
+  lang: "en" | "es";
+  currentMonthLabel: string;
+}) {
+  const { availabilityLevel, demandTrend, availabilityRateDelta } = data.signals;
+
+  const levelLabelEn = {
+    high: "higher availability (soft demand)",
+    moderate: "moderate availability",
+    low: "low availability (strong demand)",
+    unknown: "insufficient data to classify availability",
+  }[availabilityLevel];
+  const levelLabelEs = {
+    high: "alta disponibilidad (demanda débil)",
+    moderate: "disponibilidad moderada",
+    low: "baja disponibilidad (demanda fuerte)",
+    unknown: "datos insuficientes para clasificar disponibilidad",
+  }[availabilityLevel];
+
+  const trendEn = {
+    increasing: "demand is increasing",
+    stable: "demand is stable",
+    decreasing: "demand is decreasing",
+    unknown: "demand trend is undetermined",
+  }[demandTrend];
+  const trendEs = {
+    increasing: "la demanda está aumentando",
+    stable: "la demanda es estable",
+    decreasing: "la demanda está disminuyendo",
+    unknown: "la tendencia de la demanda es indeterminada",
+  }[demandTrend];
+
+  const interpEn = {
+    high: "owners face more competition and softer pricing power",
+    moderate: "the market is broadly balanced",
+    low: "owners can hold or push rates with confidence",
+    unknown: "more data is needed before drawing a conclusion",
+  }[availabilityLevel];
+  const interpEs = {
+    high: "los propietarios enfrentan más competencia y menor poder para subir precios",
+    moderate: "el mercado está en general equilibrado",
+    low: "los propietarios pueden mantener o subir tarifas con confianza",
+    unknown: "se necesitan más datos antes de concluir",
+  }[availabilityLevel];
+
+  return (
+    <Card className="glass-card">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground mb-2">
+          <TrendIcon trend={demandTrend} />
+          {t("Current Market Signal", "Señal Actual del Mercado")}
+        </div>
+        <p className="text-lg leading-relaxed">
+          {t(
+            `For ${currentMonthLabel}, ${trendEn}. Availability across the tracked cohort is ${levelLabelEn}, indicating that ${interpEn}.`,
+            `Para ${currentMonthLabel}, ${trendEs}. La disponibilidad en la cohorte rastreada es ${levelLabelEs}, lo que indica que ${interpEs}.`,
+          )}
+        </p>
+        <div className="text-xs text-muted-foreground mt-3">
+          {t(
+            `Based on ${fmtNumber(data.recent.distinctListings)} listings · ${fmtNumber(data.recent.totalRows)} listing-nights in the next 30 days · `,
+            `Basado en ${fmtNumber(data.recent.distinctListings)} anuncios · ${fmtNumber(data.recent.totalRows)} noches-anuncio en los próximos 30 días · `,
+          )}
+          {availabilityRateDelta != null
+            ? t(
+                `availability shifted ${fmtSignedPct(availabilityRateDelta)} vs the following 30-day window.`,
+                `la disponibilidad cambió ${fmtSignedPct(availabilityRateDelta)} vs la ventana de 30 días siguiente.`,
+              )
+            : t("trend baseline unavailable.", "línea base de tendencia no disponible.")}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MarketAvailability({
+  data, t,
+}: {
+  data: RentalMarketLive;
+  t: (en: string, es: string) => string;
+}) {
+  const rate = data.recent.availabilityRate;
+  const interpEn = rate == null
+    ? "Insufficient data to assess market conditions."
+    : rate > 0.65
+      ? "This indicates a relatively soft market."
+      : rate < 0.5
+        ? "This indicates strong demand conditions."
+        : "This indicates balanced market conditions.";
+  const interpEs = rate == null
+    ? "Datos insuficientes para evaluar condiciones del mercado."
+    : rate > 0.65
+      ? "Esto indica un mercado relativamente suave."
+      : rate < 0.5
+        ? "Esto indica condiciones de demanda fuerte."
+        : "Esto indica condiciones de mercado equilibradas.";
+
+  return (
+    <Card className="glass-card">
+      <CardHeader>
+        <CardTitle className="font-display text-base">
+          {t("Market Availability", "Disponibilidad del Mercado")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold text-primary">{fmtPct(rate, 1)}</div>
+        <p className="text-sm text-muted-foreground mt-2">
+          {t(
+            `~${fmtPct(rate, 0)} of nights across tracked listings are currently available in the next 30 days.`,
+            `~${fmtPct(rate, 0)} de las noches en los anuncios rastreados están actualmente disponibles en los próximos 30 días.`,
+          )}
+        </p>
+        <p className="text-sm mt-3">{t(interpEn, interpEs)}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PricingSignal({
+  data, t,
+}: {
+  data: RentalMarketLive;
+  t: (en: string, es: string) => string;
+}) {
+  const { pricingTrend, pricingTrendPct } = data.signals;
+  const cov = data.cohort.priceCoverage;
+
+  const trendLabelEn = {
+    increasing: "Pricing is increasing",
+    stable: "Pricing is stable",
+    softening: "Pricing is softening",
+    unknown: "Trend baseline unavailable",
+  }[pricingTrend];
+  const trendLabelEs = {
+    increasing: "Los precios están subiendo",
+    stable: "Los precios son estables",
+    softening: "Los precios están bajando",
+    unknown: "Línea base de tendencia no disponible",
+  }[pricingTrend];
+
+  return (
+    <Card className="glass-card">
+      <CardHeader>
+        <CardTitle className="font-display text-base">
+          {t("Pricing Signal", "Señal de Precios")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold text-primary">{fmtUsd(data.recent.avgPriceUsd)}</div>
+        <p className="text-sm text-muted-foreground mt-2">
+          {t(
+            `Average nightly rate across listings with active pricing data (${fmtPct(cov, 0)} of cohort).`,
+            `Tarifa promedio por noche en anuncios con datos de precio activos (${fmtPct(cov, 0)} de la cohorte).`,
+          )}
+        </p>
+        <div className="flex items-center gap-2 mt-3 text-sm">
+          <TrendIcon
+            trend={
+              pricingTrend === "increasing" ? "increasing"
+                : pricingTrend === "softening" ? "decreasing"
+                  : pricingTrend === "stable" ? "stable" : "unknown"
+            }
+          />
+          <span className="font-semibold">{t(trendLabelEn, trendLabelEs)}</span>
+          {pricingTrendPct != null && (
+            <span className="text-muted-foreground">({fmtSignedPct(pricingTrendPct)})</span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {t("Relative to the 30-day window beyond.", "Relativo a la ventana de 30 días posterior.")}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TourismImpact({
+  data, t, lang,
+}: {
+  data: RentalMarketLive;
+  t: (en: string, es: string) => string;
+  lang: "en" | "es";
+}) {
+  const tour = data.tourism;
+  if (!tour) {
+    return (
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="font-display text-base">
+            {t("Tourism Impact", "Impacto Turístico")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            {t(
+              "Year-over-year airport-passenger comparison unavailable for the latest reported month.",
+              "Comparación interanual de pasajeros del aeropuerto no disponible para el último mes reportado.",
+            )}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const labelEn = {
+    higher: "higher",
+    in_line: "broadly in line with",
+    slightly_lower: "slightly lower than",
+    lower: "meaningfully lower than",
+  }[tour.label];
+  const labelEs = {
+    higher: "mayor",
+    in_line: "en general en línea con",
+    slightly_lower: "ligeramente menor que",
+    lower: "significativamente menor que",
+  }[tour.label];
+
+  const interpEn = {
+    higher: "This is supporting stronger rental demand.",
+    in_line: "Demand is broadly in line with prior year.",
+    slightly_lower: "Slightly softer than last year, with mild downward pressure.",
+    lower: "This is contributing to softer rental demand.",
+  }[tour.label];
+  const interpEs = {
+    higher: "Esto está apoyando una demanda de renta más fuerte.",
+    in_line: "La demanda está en general en línea con el año anterior.",
+    slightly_lower: "Ligeramente más suave que el año pasado, con presión a la baja moderada.",
+    lower: "Esto está contribuyendo a una demanda de renta más suave.",
+  }[tour.label];
+
+  const monthName =
+    lang === "es" ? MONTH_NAMES_ES[tour.currentMonth - 1] : MONTH_NAMES_EN[tour.currentMonth - 1];
+
+  return (
+    <Card className="glass-card">
+      <CardHeader>
+        <CardTitle className="font-display text-base">
+          {t("Tourism Impact", "Impacto Turístico")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold text-primary">{fmtSignedPct(tour.yoyChangePct, 1)}</div>
+        <p className="text-sm text-muted-foreground mt-2">
+          {t(
+            `${monthName} ${tour.currentYear} airport passengers ${labelEn} ${monthName} ${tour.priorYear} (${fmtNumber(tour.currentPassengers)} vs ${fmtNumber(tour.priorPassengers)}).`,
+            `Pasajeros del aeropuerto en ${monthName} ${tour.currentYear} ${labelEs} ${monthName} ${tour.priorYear} (${fmtNumber(tour.currentPassengers)} vs ${fmtNumber(tour.priorPassengers)}).`,
+          )}
+        </p>
+        <p className="text-sm mt-3">{t(interpEn, interpEs)}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ActionableGuidance({
+  data, t,
+}: {
+  data: RentalMarketLive;
+  t: (en: string, es: string) => string;
+}) {
+  const lvl = data.signals.availabilityLevel;
+  const itemsEn = {
+    high: ["Expect longer booking windows", "Pricing pressure trends downward", "Higher competition for guests"],
+    moderate: ["Balanced market conditions", "Stable pricing expected", "Maintain current strategy"],
+    low: ["Strong demand environment", "Pricing power increases", "Consider rate increases for unbooked nights"],
+    unknown: ["Insufficient data for guidance", "Check back as more listings are scanned"],
+  }[lvl];
+  const itemsEs = {
+    high: ["Espere ventanas de reserva más largas", "Presión a la baja en precios", "Mayor competencia por huéspedes"],
+    moderate: ["Condiciones de mercado equilibradas", "Precios estables esperados", "Mantenga estrategia actual"],
+    low: ["Entorno de demanda fuerte", "Mayor poder de fijación de precios", "Considere subir tarifas en noches no reservadas"],
+    unknown: ["Datos insuficientes para guía", "Vuelva cuando se hayan escaneado más anuncios"],
+  }[lvl];
+
+  return (
+    <Card className="glass-card">
+      <CardHeader>
+        <CardTitle className="font-display">
+          {t("Actionable Guidance", "Guía Práctica")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-2">
+          {itemsEn.map((en, i) => (
+            <li key={en} className="flex items-start gap-2 text-sm">
+              <span className="text-primary mt-1">•</span>
+              <span>{t(en, itemsEs[i])}</span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MarketSegmentation({
+  data, t, lang,
+}: {
+  data: RentalMarketLive;
+  t: (en: string, es: string) => string;
+  lang: "en" | "es";
+}) {
+  if (data.neighborhoods.length === 0) {
+    return null;
+  }
+
+  const labelEn = (lvl: Level) =>
+    ({ high: "Soft demand", moderate: "Balanced", low: "Strong demand", unknown: "—" }[lvl]);
+  const labelEs = (lvl: Level) =>
+    ({ high: "Demanda débil", moderate: "Equilibrada", low: "Demanda fuerte", unknown: "—" }[lvl]);
+
+  return (
+    <Card className="glass-card overflow-hidden">
+      <CardHeader>
+        <CardTitle className="font-display">
+          {t("Market Segmentation", "Segmentación del Mercado")}
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {t(
+            "Top neighborhoods by tracked listing count, with the same demand classification applied locally.",
+            "Principales colonias por número de anuncios rastreados, con la misma clasificación de demanda aplicada localmente.",
+          )}
+        </p>
+      </CardHeader>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs uppercase bg-secondary/50 text-muted-foreground border-b">
+            <tr>
+              <th className="px-6 py-3">{t("Neighborhood", "Colonia")}</th>
+              <th className="px-6 py-3 text-right">{t("Listings", "Anuncios")}</th>
+              <th className="px-6 py-3 text-right">{t("Availability", "Disponibilidad")}</th>
+              <th className="px-6 py-3 text-right">{t("Avg Nightly", "Promedio Noche")}</th>
+              <th className="px-6 py-3">{t("Signal", "Señal")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.neighborhoods.map((n) => (
+              <tr key={n.neighborhood} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                <td className="px-6 py-4 font-medium">{n.neighborhood}</td>
+                <td className="px-6 py-4 text-right">{fmtNumber(n.listingCount)}</td>
+                <td className="px-6 py-4 text-right">{fmtPct(n.availabilityRate, 1)}</td>
+                <td className="px-6 py-4 text-right">{fmtUsd(n.avgPriceUsd)}</td>
+                <td className="px-6 py-4">
+                  <span className={
+                    n.availabilityLevel === "low" ? "text-emerald-600 font-semibold"
+                      : n.availabilityLevel === "high" ? "text-amber-600 font-semibold"
+                        : "text-muted-foreground"
+                  }>
+                    {lang === "es" ? labelEs(n.availabilityLevel) : labelEn(n.availabilityLevel)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+function CTASection({ t }: { t: (en: string, es: string) => string }) {
+  return (
+    <Card className="glass-card bg-gradient-to-br from-primary/10 to-primary/5">
+      <CardContent className="pt-6">
+        <h3 className="text-xl font-display font-bold">
+          {t("Apply this to your property", "Aplica esto a tu propiedad")}
+        </h3>
+        <p className="text-sm text-muted-foreground mt-2 max-w-xl">
+          {t(
+            "Use the pricing tool to generate a rate based on real-time demand, comparable listings, and availability trends.",
+            "Usa la herramienta de precios para generar una tarifa basada en demanda en tiempo real, anuncios comparables y tendencias de disponibilidad.",
+          )}
+        </p>
+        <Link href="/pricing-tool">
+          <Button className="mt-4 gap-2">
+            {t("Use Pricing Tool", "Usar Herramienta de Precios")}
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TrendIcon({ trend }: { trend: DemandTrend }) {
+  if (trend === "increasing") return <TrendingUp className="w-4 h-4 text-emerald-600" />;
+  if (trend === "decreasing") return <TrendingDown className="w-4 h-4 text-amber-600" />;
+  if (trend === "stable") return <Minus className="w-4 h-4 text-muted-foreground" />;
+  return <Minus className="w-4 h-4 text-muted-foreground" />;
 }
