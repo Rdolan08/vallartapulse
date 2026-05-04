@@ -608,7 +608,7 @@ export default function Dashboard() {
                     {t("View all", "Ver todo")} <ChevronRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
-                <p className="text-xs text-muted-foreground">Airbnb / VRBO</p>
+                <p className="text-xs text-muted-foreground">Airbnb/PVRPV</p>
               </CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
