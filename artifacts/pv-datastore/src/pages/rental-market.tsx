@@ -1121,6 +1121,7 @@ function AvailabilityTrendChart({
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        )}
       </CardContent>
     </Card>
   );
