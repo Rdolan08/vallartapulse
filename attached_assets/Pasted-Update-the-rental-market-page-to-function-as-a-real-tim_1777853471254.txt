@@ -1,0 +1,220 @@
+Update the /rental-market page to function as a real-time market briefing using live database data.
+
+This is NOT a report page. This is a decision-support page.
+
+All values must be dynamically computed from the database. No hardcoded numbers.
+
+Primary table:
+rental_prices_by_date
+
+Columns:
+- listing_id
+- date
+- nightly_price_usd
+- availability_status
+- scraped_at
+
+Optional:
+JOIN rental_listings for neighborhood segmentation
+
+---
+
+SECTION 1 — CURRENT MARKET (TOP OF PAGE)
+
+Query:
+Compute availability_rate (last 30 days):
+COUNT(*) FILTER (WHERE availability_status = 'available') / COUNT(*)
+
+Compare to prior 30 days to determine trend.
+
+Render:
+
+Title:
+Current Rental Market — {{current_month}}
+
+Body (dynamic):
+
+Demand is currently {{increasing / stable / decreasing}}.
+
+Availability across the market is {{low / moderate / high}}, indicating {{strong / balanced / soft}} demand conditions.
+
+Subline:
+Based on real-time availability across {{COUNT DISTINCT listing_id}} listings.
+
+Rules:
+availability_rate > 0.65 → "high availability (soft demand)"
+0.50–0.65 → "moderate availability"
+<0.50 → "low availability (strong demand)"
+
+Trend:
+>+5% availability → demand decreasing
+±5% → stable
+<-5% → demand increasing
+
+---
+
+SECTION 2 — MARKET AVAILABILITY
+
+Query:
+availability_rate last 30 days
+
+Render:
+
+Market Availability
+
+~{{availability_rate * 100}}% of nights are currently available across tracked listings.
+
+IF >65%:
+"This indicates a relatively soft market compared to peak season."
+IF <50%:
+"This indicates strong demand conditions."
+ELSE:
+"This indicates balanced market conditions."
+
+---
+
+SECTION 3 — PRICING SIGNAL
+
+Query:
+price_coverage =
+COUNT(DISTINCT listing_id WHERE nightly_price_usd IS NOT NULL) /
+COUNT(DISTINCT listing_id)
+
+price_trend =
+AVG(nightly_price_usd last 30 days) vs prior 30 days
+
+Render:
+
+Pricing Signal
+
+Pricing data is currently available for ~{{price_coverage * 100}}% of listings.
+
+Recent trends show:
+• {{pricing increasing / stable / softening}} relative to prior period
+
+Rules:
+>+5% → increasing
+±5% → stable
+<-5% → softening
+
+---
+
+SECTION 4 — TOURISM IMPACT (OPTIONAL IF DATA EXISTS)
+
+Use airport_metrics table if available.
+
+Compare current month estimate vs prior year.
+
+Render:
+
+Tourism Impact
+
+Tourism demand is currently {{higher / slightly lower / lower}} compared to the same period last year.
+
+Rules:
+<-10% → "lower"
+±5% → "in line"
+>+5% → "higher"
+
+Add line:
+"This is contributing to {{stronger / stable / softer}} rental demand."
+
+---
+
+SECTION 5 — WHAT THIS MEANS (RULE-BASED OUTPUT)
+
+Based on availability_rate:
+
+IF >0.65:
+• Expect longer booking windows  
+• Increased competition  
+• Pricing pressure downward  
+
+IF 0.50–0.65:
+• Balanced conditions  
+• Stable pricing  
+
+IF <0.50:
+• Strong demand  
+• Pricing power increases  
+
+---
+
+SECTION 6 — MARKET SEGMENTATION (JOIN rental_listings)
+
+Group by neighborhood:
+
+Compute:
+availability_rate + avg nightly_price_usd
+
+Render top 3:
+
+Zona Romántica:
+{{strong / moderate / soft}} demand
+
+Amapas:
+{{strong / moderate / soft}}
+
+Centro:
+{{strong / moderate / soft}}
+
+Use same thresholds as global availability.
+
+---
+
+SECTION 7 — CHART INTERPRETATION (MANDATORY)
+
+Every chart MUST have a dynamic sentence above it.
+
+Examples:
+
+Availability chart:
+"Availability has {{increased / decreased / stabilized}} over the past 30 days."
+
+Pricing chart:
+"Pricing is {{increasing / stable / declining}} relative to the prior period."
+
+No chart should appear without interpretation text.
+
+---
+
+SECTION 8 — DATA FRESHNESS
+
+Query:
+SELECT MAX(scraped_at)
+
+Render:
+
+Data updated: {{timestamp}}
+
+IF older than 48 hours:
+Show warning:
+"Data refresh lag detected"
+
+---
+
+SECTION 9 — CTA
+
+Add at bottom:
+
+Title:
+Apply this to your property
+
+Body:
+Use the pricing tool to generate a rate based on:
+• real-time demand  
+• comparable listings  
+• availability trends  
+
+Button:
+Use Pricing Tool
+
+---
+
+FINAL REQUIREMENTS
+
+- No hardcoded numbers
+- All language must be derived from computed data
+- No passive phrases ("may indicate", "could suggest")
+- Must read like a real-time system, not a report
+- Must answer: "What is happening right now and what should I do?"
