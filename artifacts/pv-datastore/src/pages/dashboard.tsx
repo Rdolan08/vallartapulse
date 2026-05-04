@@ -73,16 +73,69 @@ export default function Dashboard() {
 
   // Real chart data for the selected year
   const { data: airportYear } = useGetAirportMetrics({ year });
+  const { data: airportPrevYear } = useGetAirportMetrics({ year: year - 1 });
   const { data: rentalYear } = useGetRentalMarketMetrics({ year });
 
   // Build airport passengers trend — official GAP bars (teal) + estimate bars (amber)
-  const airportTrend = (airportYear ?? [])
-    .sort((a, b) => a.month - b.month)
-    .map((row) => ({
-      month: MONTH_SHORT[row.month - 1],
-      passengers: row.totalPassengers,
-      isEstimate: row.source.toLowerCase().includes("est"),
-    }));
+  // Real GAP rows first; then synthesize amber estimate bars for any missing
+  // months up through the current calendar month, using a YoY-growth model
+  // calibrated on the months we DO have for this year vs prior year.
+  const airportTrend = (() => {
+    const real = (airportYear ?? [])
+      .slice()
+      .sort((a, b) => a.month - b.month)
+      .map((row) => ({
+        monthNum: row.month,
+        month: MONTH_SHORT[row.month - 1],
+        passengers: row.totalPassengers,
+        isEstimate: row.source.toLowerCase().includes("est"),
+      }));
+
+    // Only project for the current calendar year (don't fabricate past years)
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-12
+    if (year !== currentYear) return real;
+
+    // Build prior-year lookup
+    const prevByMonth = new Map<number, number>();
+    for (const r of airportPrevYear ?? []) prevByMonth.set(r.month, r.totalPassengers);
+
+    // Compute average YoY ratio across the months that have BOTH real
+    // current-year data AND a prior-year baseline.
+    const realRealOnly = real.filter((r) => !r.isEstimate);
+    const ratios: number[] = [];
+    for (const r of realRealOnly) {
+      const prev = prevByMonth.get(r.monthNum);
+      if (prev && prev > 0) ratios.push(r.passengers / prev);
+    }
+    const avgYoY = ratios.length > 0
+      ? ratios.reduce((a, b) => a + b, 0) / ratios.length
+      : 1.0;
+
+    const maxRealMonth = realRealOnly.length > 0
+      ? Math.max(...realRealOnly.map((r) => r.monthNum))
+      : 0;
+
+    // Synthesize estimate rows for (maxRealMonth+1) through currentMonth.
+    // If we have no prior-year baseline for a given month, skip — better to
+    // omit than guess wildly.
+    const estimates: typeof real = [];
+    for (let m = maxRealMonth + 1; m <= currentMonth; m++) {
+      const prev = prevByMonth.get(m);
+      if (!prev || prev <= 0) continue;
+      // Don't overwrite a real row if one already exists at this month
+      if (real.some((r) => r.monthNum === m)) continue;
+      estimates.push({
+        monthNum: m,
+        month: MONTH_SHORT[m - 1],
+        passengers: Math.round(prev * avgYoY),
+        isEstimate: true,
+      });
+    }
+
+    return [...real, ...estimates].sort((a, b) => a.monthNum - b.monthNum);
+  })();
 
   // Build avg nightly rate trend: average across neighborhoods per month
   const rateByMonth: Record<number, { sum: number; count: number }> = {};
