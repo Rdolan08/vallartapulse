@@ -233,7 +233,7 @@ export default function Dashboard() {
               <div className="flex flex-wrap gap-4 mt-4">
                 {[
                   { icon: <Building2 className="w-3.5 h-3.5" />, en: "16 PV neighborhoods", es: "16 colonias de PV" },
-                  { icon: <TrendingUp className="w-3.5 h-3.5" />, en: "Live Airbnb & VRBO comps", es: "Comparables en vivo" },
+                  { icon: <TrendingUp className="w-3.5 h-3.5" />, en: "Refreshed daily from live listings", es: "Actualizado diariamente con anuncios en vivo" },
                   { icon: <DollarSign className="w-3.5 h-3.5" />, en: "Seasonal multipliers", es: "Multiplicadores estacionales" },
                 ].map(({ icon, en, es }) => (
                   <span
