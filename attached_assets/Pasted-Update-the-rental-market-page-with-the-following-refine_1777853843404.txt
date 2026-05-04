@@ -1,0 +1,115 @@
+Update the /rental-market page with the following refinements. Do NOT overbuild. Keep it fast, clean, and data-driven.
+
+---
+
+1. SECTION 6 — NEIGHBORHOODS (KEEP 8)
+
+Keep showing the top 8 neighborhoods (do NOT reduce to 3).
+
+UX CHANGE:
+- Show top 5 by default
+- Add a toggle:
+  "Show more" → expands to full 8
+  "Show less" → collapses back to 5
+
+Do not change the underlying data logic.
+
+---
+
+2. SECTION 7 — ADD ONE CHART (ONLY ONE)
+
+Add a single time-series chart:
+
+Title:
+30-Day Availability Trend
+
+Placement:
+Directly under the "Market Availability" section
+
+---
+
+3. NEW ENDPOINT (REQUIRED)
+
+Create an endpoint that returns daily availability rates:
+
+Query:
+
+SELECT
+  date,
+  COUNT(*) FILTER (WHERE availability_status = 'available')::float
+    / COUNT(*) AS availability_rate
+FROM rental_prices_by_date
+WHERE date >= NOW() - INTERVAL '30 days'
+GROUP BY date
+ORDER BY date;
+
+Return JSON:
+
+[
+  { "date": "YYYY-MM-DD", "availability_rate": 0.65 }
+]
+
+---
+
+4. CHART REQUIREMENTS
+
+- Line chart
+- X-axis: date (last 30 days)
+- Y-axis: availability_rate (0–1 or %)
+- Clean, minimal styling
+- No extra overlays, no comparisons
+
+---
+
+5. REQUIRED INTERPRETATION (ABOVE CHART)
+
+Add a dynamic sentence ABOVE the chart:
+
+Template:
+
+"Availability has {{increased / decreased / stabilized}} over the past 30 days, indicating {{softening / strengthening / stable}} demand."
+
+Rules:
+
+Compute:
+current_avg = avg availability last 7 days
+prior_avg = avg availability previous 23 days
+
+delta = current_avg - prior_avg
+
+IF delta > +0.05:
+  increased → softening demand
+
+IF delta between -0.05 and +0.05:
+  stabilized → stable demand
+
+IF delta < -0.05:
+  decreased → strengthening demand
+
+---
+
+6. DO NOT ADD
+
+- No additional charts
+- No pricing trend chart
+- No dashboards or multi-panel layouts
+- No hardcoded language
+
+---
+
+7. FINAL CHECK
+
+Ensure:
+- All values are computed dynamically from DB
+- Interpretation text updates automatically
+- Page remains fast and readable
+- This adds direction, not complexity
+
+---
+
+END STATE
+
+The page now shows:
+snapshot (availability %) + direction (30-day trend)
+
+This is the only addition needed right now.
