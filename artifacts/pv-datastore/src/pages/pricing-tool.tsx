@@ -590,7 +590,15 @@ export default function PricingToolPage() {
   // the auto-refine effect re-runs even when the form payload hasn't changed.
   const [refreshNonce, setRefreshNonce] = useState(0);
 
+  // Gate auto-refine on explicit user intent. The page used to fire a fetch
+  // on mount using the default form values and then auto-scroll to the
+  // result, which made it look like the page "jumped to a price" before the
+  // user had a chance to enter their property. Now we wait for either an
+  // input change OR a click on the explicit Calculate button.
+  const [userInteracted, setUserInteracted] = useState(false);
+
   const setField = useCallback(<K extends keyof FormValues>(key: K, value: FormValues[K]) => {
+    setUserInteracted(true);
     setForm(prev => ({ ...prev, [key]: value }));
   }, []);
 
@@ -649,6 +657,9 @@ export default function PricingToolPage() {
   // header surfaces a subtle "Updating…" pill instead of a blocking spinner.
   useEffect(() => {
     if (loadingMeta) return;
+    // Hold fire until the user has either touched an input or pressed the
+    // explicit Calculate button. Prevents the on-mount jump-to-price.
+    if (!userInteracted) return;
 
     const handle = setTimeout(() => {
       abortRef.current?.abort();
@@ -730,6 +741,7 @@ export default function PricingToolPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     loadingMeta,
+    userInteracted,
     form.neighborhood, form.buildingName, form.bedrooms, form.bathrooms,
     form.size, effectiveDistanceM, form.beachfront,
     form.viewType, form.month, form.rooftopPool, form.privatePlungePool,
@@ -742,6 +754,7 @@ export default function PricingToolPage() {
 
   // ── Secondary amenity toggle ──
   const toggleSecondary = useCallback((key: string) => {
+    setUserInteracted(true);
     setForm(prev => {
       const has = prev.secondaryAmenities.includes(key);
       return { ...prev, secondaryAmenities: has ? prev.secondaryAmenities.filter(k => k !== key) : [...prev.secondaryAmenities, key] };
@@ -1181,20 +1194,49 @@ export default function PricingToolPage() {
               </AnimatePresence>
             </div>
 
-            {/* Pricing now updates live as the form changes — no submit button.
-                A small status line confirms the engine is reacting so the user
-                doesn't wonder whether their last toggle landed. */}
-            <div className="pt-5 flex items-center gap-2 text-xs text-muted-foreground">
-              <BarChart3 className="w-3.5 h-3.5" style={{ color: "rgba(0,194,168,0.6)" }} />
-              {isLoading
-                ? <span className="inline-flex items-center gap-1.5">
-                    <Loader2 className="w-3 h-3 animate-spin" style={{ color: "#00C2A8" }} />
-                    {t("Updating estimate…", "Actualizando estimación…")}
-                  </span>
-                : compsResult
-                  ? t("Live estimate — every change refines it instantly.",
-                      "Estimación en vivo — cada cambio la refina al instante.")
-                  : t("Building your estimate…", "Generando tu estimación…")}
+            {/* Pricing updates live once the user has engaged. Before any
+                interaction we show an explicit Calculate button so the page
+                doesn't jump to a price built from defaults. After the first
+                fetch every subsequent change refines the number in place. */}
+            <div className="pt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <BarChart3 className="w-3.5 h-3.5" style={{ color: "rgba(0,194,168,0.6)" }} />
+                {isLoading
+                  ? <span className="inline-flex items-center gap-1.5">
+                      <Loader2 className="w-3 h-3 animate-spin" style={{ color: "#00C2A8" }} />
+                      {t("Updating estimate…", "Actualizando estimación…")}
+                    </span>
+                  : compsResult
+                    ? t("Live estimate — every change refines it instantly.",
+                        "Estimación en vivo — cada cambio la refina al instante.")
+                    : userInteracted
+                      ? t("Building your estimate…", "Generando tu estimación…")
+                      : t("Enter your property details, then calculate your recommended price.",
+                          "Ingresa los detalles de tu propiedad y luego calcula tu precio recomendado.")}
+              </div>
+              {!compsResult && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserInteracted(true);
+                    setRefreshNonce(n => n + 1);
+                  }}
+                  disabled={isLoading}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: "linear-gradient(135deg, #00C2A8 0%, #00A892 100%)",
+                    color: "#0F2A36",
+                    boxShadow: "0 4px 14px rgba(0,194,168,0.25)",
+                  }}
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <BarChart3 className="w-4 h-4" />
+                  )}
+                  {t("Calculate recommended price", "Calcular precio recomendado")}
+                </button>
+              )}
             </div>
 
           </CardContent>
