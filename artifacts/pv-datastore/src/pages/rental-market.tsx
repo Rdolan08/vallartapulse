@@ -420,6 +420,174 @@ function PricingSignal({
   );
 }
 
+function SourceBreakdownCard({
+  data, t, sourceLabel,
+}: {
+  data: RentalMarketLive;
+  t: (en: string, es: string) => string;
+  sourceLabel: (s: string) => string;
+}) {
+  const total = data.bySource.reduce((acc, r) => acc + r.listingsPriced, 0);
+  const prices = data.bySource.map((r) => r.avgPriceUsd);
+  const minPrice = prices.length ? Math.min(...prices) : 0;
+  const maxPrice = prices.length ? Math.max(...prices) : 0;
+  const blendedAvg = total > 0
+    ? data.bySource.reduce((acc, r) => acc + r.avgPriceUsd * r.listingsPriced, 0) / total
+    : 0;
+
+  // Brand-ish colors per source
+  const sourceColor = (s: string) =>
+    s === "airbnb" ? "#FF5A5F" : s === "pvrpv" ? "#00C2A8" : s === "vrbo" ? "#3B82F6" : "#94A3B8";
+
+  return (
+    <Card className="glass-card">
+      <CardHeader>
+        <CardTitle className="font-display">
+          {t("Pricing by Source", "Precios por Fuente")}
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {t(
+            "Average nightly rate split across the platforms feeding the cohort.",
+            "Tarifa promedio por noche separada por las plataformas que alimentan la cohorte.",
+          )}
+        </p>
+      </CardHeader>
+
+      <CardContent className="pt-0 flex flex-col gap-5">
+        {/* Cohort summary chip row */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl bg-black/20 border border-white/[0.06] p-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("Total Priced", "Con Precio")}
+            </div>
+            <div className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+              {fmtNumber(total)}
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">
+              {t("listings", "anuncios")}
+            </div>
+          </div>
+          <div className="rounded-xl bg-black/20 border border-white/[0.06] p-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("Blended Avg", "Promedio Mezclado")}
+            </div>
+            <div className="text-xl font-bold text-primary tabular-nums mt-0.5">
+              {fmtUsd(blendedAvg)}
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">
+              {t("per night", "por noche")}
+            </div>
+          </div>
+          <div className="rounded-xl bg-black/20 border border-white/[0.06] p-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("Spread", "Rango")}
+            </div>
+            <div className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+              {fmtUsd(maxPrice - minPrice)}
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-0.5">
+              {fmtUsd(minPrice)} – {fmtUsd(maxPrice)}
+            </div>
+          </div>
+        </div>
+
+        {/* Visual market-share stacked bar */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("Market Share — Priced Cohort", "Cuota — Cohorte con Precio")}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {t("by listing count", "por cantidad de anuncios")}
+            </span>
+          </div>
+          <div className="flex h-3 w-full rounded-full overflow-hidden bg-black/30 border border-white/[0.04]">
+            {data.bySource.map((row) => {
+              const pct = total > 0 ? (row.listingsPriced / total) * 100 : 0;
+              return (
+                <div
+                  key={row.source}
+                  style={{ width: `${pct}%`, background: sourceColor(row.source) }}
+                  title={`${sourceLabel(row.source)} ${pct.toFixed(1)}%`}
+                />
+              );
+            })}
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+            {data.bySource.map((row) => {
+              const pct = total > 0 ? (row.listingsPriced / total) * 100 : 0;
+              return (
+                <div key={row.source} className="flex items-center gap-1.5 text-xs">
+                  <span
+                    className="w-2.5 h-2.5 rounded-sm"
+                    style={{ background: sourceColor(row.source) }}
+                  />
+                  <span className="font-medium text-foreground">{sourceLabel(row.source)}</span>
+                  <span className="text-muted-foreground tabular-nums">{pct.toFixed(1)}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Per-source detailed cards */}
+        <div className="flex flex-col gap-2.5">
+          {data.bySource.map((row) => {
+            const pct = total > 0 ? (row.listingsPriced / total) * 100 : 0;
+            const vsBlend = blendedAvg > 0 ? ((row.avgPriceUsd - blendedAvg) / blendedAvg) * 100 : 0;
+            return (
+              <div
+                key={row.source}
+                className="rounded-xl border border-white/[0.06] bg-black/20 p-3.5"
+              >
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ background: sourceColor(row.source) }}
+                    />
+                    <span className="font-semibold text-foreground">{sourceLabel(row.source)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      · {fmtNumber(row.listingsPriced)} {t("listings", "anuncios")}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-bold text-primary tabular-nums">
+                      {fmtUsd(row.avgPriceUsd)}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      /{t("nt", "nt")}
+                    </span>
+                  </div>
+                </div>
+                {/* Price bar relative to max */}
+                <div className="h-1.5 w-full bg-white/[0.04] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${maxPrice > 0 ? (row.avgPriceUsd / maxPrice) * 100 : 0}%`,
+                      background: sourceColor(row.source),
+                      opacity: 0.7,
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-1.5 text-[11px] text-muted-foreground">
+                  <span>
+                    {pct.toFixed(1)}% {t("of priced cohort", "de la cohorte")}
+                  </span>
+                  <span className={vsBlend >= 0 ? "text-emerald-400" : "text-amber-400"}>
+                    {vsBlend >= 0 ? "+" : ""}{vsBlend.toFixed(1)}% {t("vs blended", "vs mezclado")}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function PricingBreakdown({
   data, t,
 }: {
@@ -436,39 +604,7 @@ function PricingBreakdown({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* By source */}
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle className="font-display">
-            {t("Pricing by Source", "Precios por Fuente")}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            {t(
-              "Average nightly rate split across the platforms feeding the cohort.",
-              "Tarifa promedio por noche separada por las plataformas que alimentan la cohorte.",
-            )}
-          </p>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-muted-foreground border-b">
-              <tr>
-                <th className="py-2 text-left">{t("Source", "Fuente")}</th>
-                <th className="py-2 text-right">{t("Listings priced", "Anuncios con precio")}</th>
-                <th className="py-2 text-right">{t("Avg nightly", "Promedio noche")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.bySource.map((row) => (
-                <tr key={row.source} className="border-b last:border-0">
-                  <td className="py-3 font-medium">{sourceLabel(row.source)}</td>
-                  <td className="py-3 text-right">{fmtNumber(row.listingsPriced)}</td>
-                  <td className="py-3 text-right font-semibold text-primary">{fmtUsd(row.avgPriceUsd)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      <SourceBreakdownCard data={data} t={t} sourceLabel={sourceLabel} />
 
       {/* By configuration */}
       <Card className="glass-card">
