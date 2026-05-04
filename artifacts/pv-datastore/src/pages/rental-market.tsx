@@ -11,11 +11,19 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Level = "high" | "moderate" | "low" | "unknown";
 type DemandTrend = "increasing" | "stable" | "decreasing" | "unknown";
@@ -51,6 +59,7 @@ interface AvailabilityTrendPoint {
 
 interface AvailabilityTrendResponse {
   series: AvailabilityTrendPoint[];
+  neighborhoods?: string[];
 }
 
 interface RentalMarketLive {
@@ -140,6 +149,9 @@ export default function RentalMarket() {
   const { t, lang } = useLanguage();
   const [data, setData] = useState<RentalMarketLive | null>(null);
   const [trend, setTrend] = useState<AvailabilityTrendPoint[] | null>(null);
+  const [trendNeighborhoods, setTrendNeighborhoods] = useState<string[]>([]);
+  const [trendNeighborhood, setTrendNeighborhood] = useState<string>("all");
+  const [trendLoading, setTrendLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -149,13 +161,14 @@ export default function RentalMarket() {
     Promise.all([
       apiFetch<RentalMarketLive>("/api/metrics/rental-market-live"),
       apiFetch<AvailabilityTrendResponse>("/api/metrics/rental-availability-trend").catch(
-        () => ({ series: [] as AvailabilityTrendPoint[] }),
+        () => ({ series: [] as AvailabilityTrendPoint[], neighborhoods: [] as string[] }),
       ),
     ])
       .then(([d, tr]) => {
         if (cancelled) return;
         setData(d);
         setTrend(tr.series);
+        setTrendNeighborhoods(tr.neighborhoods ?? []);
         setError(null);
       })
       .catch((e: Error) => {
@@ -167,6 +180,50 @@ export default function RentalMarket() {
       });
     return () => { cancelled = true; };
   }, []);
+
+  // Refetch trend series when the neighborhood filter changes (skip the
+  // "all" default on initial mount — that's covered by the load above).
+  useEffect(() => {
+    if (trendNeighborhood === "all") return;
+    let cancelled = false;
+    setTrendLoading(true);
+    const qs = `?neighborhood=${encodeURIComponent(trendNeighborhood)}`;
+    apiFetch<AvailabilityTrendResponse>(`/api/metrics/rental-availability-trend${qs}`)
+      .then((tr) => {
+        if (cancelled) return;
+        setTrend(tr.series);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTrend([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTrendLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [trendNeighborhood]);
+
+  // When the user switches back to "all", reload the metro-wide series.
+  useEffect(() => {
+    if (trendNeighborhood !== "all") return;
+    if (loading) return; // initial load already populates the metro series
+    let cancelled = false;
+    setTrendLoading(true);
+    apiFetch<AvailabilityTrendResponse>("/api/metrics/rental-availability-trend")
+      .then((tr) => {
+        if (cancelled) return;
+        setTrend(tr.series);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTrend([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTrendLoading(false);
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trendNeighborhood]);
 
   const now = new Date();
   const currentMonthLabel =
@@ -214,7 +271,15 @@ export default function RentalMarket() {
             <TourismImpact data={data} t={t} lang={lang} />
           </div>
 
-          <AvailabilityTrendChart series={trend ?? []} t={t} lang={lang} />
+          <AvailabilityTrendChart
+            series={trend ?? []}
+            t={t}
+            lang={lang}
+            neighborhoods={trendNeighborhoods}
+            selected={trendNeighborhood}
+            onChange={setTrendNeighborhood}
+            loading={trendLoading}
+          />
 
           <PricingBreakdown data={data} t={t} />
 
@@ -837,8 +902,8 @@ function MarketSegmentation({
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           {t(
-            "Top neighborhoods by tracked listing count, with the same demand classification applied locally.",
-            "Principales colonias por número de anuncios rastreados, con la misma clasificación de demanda aplicada localmente.",
+            "Top neighborhoods by tracked listing count. Sell-through = share of past 30-day inventory that booked; higher = stronger demand.",
+            "Principales colonias por número de anuncios rastreados. Ventas = porcentaje del inventario de los últimos 30 días que se reservó; mayor = demanda más fuerte.",
           )}
         </p>
       </CardHeader>
@@ -848,7 +913,9 @@ function MarketSegmentation({
             <tr>
               <th className="px-6 py-3">{t("Neighborhood", "Colonia")}</th>
               <th className="px-6 py-3 text-right">{t("Listings", "Anuncios")}</th>
-              <th className="px-6 py-3 text-right">{t("Availability", "Disponibilidad")}</th>
+              <th className="px-6 py-3 text-right">
+                {t("Sell-through (past 30d)", "Ventas (últ. 30 días)")}
+              </th>
               <th className="px-6 py-3 text-right">{t("Avg Nightly", "Promedio Noche")}</th>
               <th className="px-6 py-3">{t("Signal", "Señal")}</th>
             </tr>
@@ -858,7 +925,9 @@ function MarketSegmentation({
               <tr key={n.neighborhood} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                 <td className="px-6 py-4 font-medium">{n.neighborhood}</td>
                 <td className="px-6 py-4 text-right">{fmtNumber(n.listingCount)}</td>
-                <td className="px-6 py-4 text-right">{fmtPct(n.availabilityRate, 1)}</td>
+                <td className="px-6 py-4 text-right">
+                  {n.availabilityRate == null ? "—" : fmtPct(1 - n.availabilityRate, 1)}
+                </td>
                 <td className="px-6 py-4 text-right">{fmtUsd(n.avgPriceUsd)}</td>
                 <td className="px-6 py-4">
                   <span className={
@@ -904,16 +973,16 @@ function MarketSegmentation({
 }
 
 function AvailabilityTrendChart({
-  series, t, lang,
+  series, t, lang, neighborhoods, selected, onChange, loading,
 }: {
   series: AvailabilityTrendPoint[];
   t: (en: string, es: string) => string;
   lang: "en" | "es";
+  neighborhoods: string[];
+  selected: string;
+  onChange: (v: string) => void;
+  loading: boolean;
 }) {
-  if (series.length === 0) {
-    return null;
-  }
-
   const valid = series.filter((p) => p.availabilityRate != null) as Array<{
     date: string;
     availabilityRate: number;
@@ -924,22 +993,27 @@ function AvailabilityTrendChart({
   // => bookings are landing close-in => strengthening demand.
   let interpEn = "Availability over the next 30 days is loading…";
   let interpEs = "La disponibilidad de los próximos 30 días está cargando…";
+  let fullPeriodAvg: number | null = null;
   if (valid.length >= 8) {
     const avg = (xs: { availabilityRate: number }[]) =>
       xs.reduce((s, p) => s + p.availabilityRate, 0) / xs.length;
     const nearTermAvg = avg(valid.slice(0, 7));
-    const fullPeriodAvg = avg(valid);
+    fullPeriodAvg = avg(valid);
     const delta = nearTermAvg - fullPeriodAvg;
 
+    const scope = selected === "all"
+      ? { en: "Availability over the next 30 days", es: "La disponibilidad de los próximos 30 días" }
+      : { en: `In ${selected}, availability over the next 30 days`, es: `En ${selected}, la disponibilidad de los próximos 30 días` };
+
     if (delta < -0.05) {
-      interpEn = "Near-term availability is tighter than later dates, indicating strengthening demand.";
-      interpEs = "La disponibilidad a corto plazo es más limitada que en fechas posteriores, lo que indica una demanda más fuerte.";
+      interpEn = `${scope.en.replace(/^./, (c) => c.toUpperCase())} is tighter near-term than later dates, indicating strengthening demand.`;
+      interpEs = `${scope.es.replace(/^./, (c) => c.toUpperCase())} es más limitada a corto plazo que en fechas posteriores, lo que indica una demanda más fuerte.`;
     } else if (delta > 0.05) {
-      interpEn = "Near-term availability is higher than later dates, indicating weaker short-term demand.";
-      interpEs = "La disponibilidad a corto plazo es mayor que en fechas posteriores, lo que indica una demanda a corto plazo más débil.";
+      interpEn = `${scope.en.replace(/^./, (c) => c.toUpperCase())} is higher near-term than later dates, indicating weaker short-term demand.`;
+      interpEs = `${scope.es.replace(/^./, (c) => c.toUpperCase())} es mayor a corto plazo que en fechas posteriores, lo que indica una demanda a corto plazo más débil.`;
     } else {
-      interpEn = "Availability over the next 30 days indicates stable demand.";
-      interpEs = "La disponibilidad de los próximos 30 días indica una demanda estable.";
+      interpEn = `${scope.en.replace(/^./, (c) => c.toUpperCase())} indicates stable demand.`;
+      interpEs = `${scope.es.replace(/^./, (c) => c.toUpperCase())} indica una demanda estable.`;
     }
   }
 
@@ -954,15 +1028,49 @@ function AvailabilityTrendChart({
     return `${m} ${d.getDate()}`;
   };
 
+  const avgPct = fullPeriodAvg != null ? Number((fullPeriodAvg * 100).toFixed(1)) : null;
+
   return (
     <Card className="glass-card">
       <CardHeader>
-        <CardTitle className="font-display text-base">
-          {t("Next 30 Days Availability", "Disponibilidad — Próximos 30 Días")}
-        </CardTitle>
-        <p className="text-sm mt-1">{t(interpEn, interpEs)}</p>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="font-display text-base">
+              {t("Next 30 Days Availability", "Disponibilidad — Próximos 30 Días")}
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                {t("(forward window)", "(ventana hacia adelante)")}
+              </span>
+            </CardTitle>
+            <p className="text-sm mt-1">{t(interpEn, interpEs)}</p>
+          </div>
+          <div className="shrink-0">
+            <Select value={selected} onValueChange={onChange}>
+              <SelectTrigger className="w-[200px] h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {t("All neighborhoods", "Todos los barrios")}
+                </SelectItem>
+                {neighborhoods.map((n) => (
+                  <SelectItem key={n} value={n}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
+        {valid.length === 0 ? (
+          <div className="h-64 w-full flex items-center justify-center text-sm text-muted-foreground">
+            {loading
+              ? t("Loading…", "Cargando…")
+              : t(
+                  "No forward availability data for this neighborhood yet.",
+                  "Aún no hay datos de disponibilidad futura para este barrio.",
+                )}
+          </div>
+        ) : (
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>

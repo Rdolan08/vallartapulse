@@ -353,28 +353,57 @@ router.get("/metrics/rental-market-live", async (req, res) => {
 
 /**
  * GET /api/metrics/rental-availability-trend
- * Daily availability rate for the last 30 days, computed from rental_prices_by_date.
- * Returns a flat array sorted ascending by date.
+ * Daily availability rate for the next 30 days, computed from rental_prices_by_date.
+ *
+ * Query params:
+ *   neighborhood (optional) — filter to a single normalized neighborhood. When
+ *                             omitted (or "all"), returns the metro-wide series.
+ *
+ * Response:
+ *   { series: [{ date, availabilityRate }], neighborhoods: string[] }
+ *
+ * `neighborhoods` is the list of normalized names with >=5 distinct listings
+ * in the next-30-day window — i.e. exactly the menu the dropdown should show.
+ * Returned regardless of filter so a single fetch hydrates both the chart and
+ * the picker on first load.
  */
 router.get("/metrics/rental-availability-trend", async (req, res) => {
   try {
+    const raw = typeof req.query.neighborhood === "string" ? req.query.neighborhood.trim() : "";
+    const neighborhood = raw && raw.toLowerCase() !== "all" ? raw : null;
+
     // Forward-looking window: availability of inventory for the next 30 nights
     // starting today. (Backward dates have no data because rental_prices_by_date
     // tracks bookable future inventory, not historical occupancy.)
-    const result = await db.execute(sql`
-      SELECT
-        date::date                                                        AS date,
-        COUNT(*)                                                          AS total_rows,
-        COUNT(*) FILTER (WHERE availability_status = 'available')::float
-          / NULLIF(COUNT(*), 0)                                           AS availability_rate
-      FROM rental_prices_by_date
-      WHERE date >= CURRENT_DATE
-        AND date <  CURRENT_DATE + INTERVAL '30 days'
-      GROUP BY date
-      ORDER BY date ASC;
-    `);
+    const seriesResult = neighborhood
+      ? await db.execute(sql`
+          SELECT
+            rpbd.date::date                                                        AS date,
+            COUNT(*)                                                               AS total_rows,
+            COUNT(*) FILTER (WHERE rpbd.availability_status = 'available')::float
+              / NULLIF(COUNT(*), 0)                                                AS availability_rate
+          FROM rental_prices_by_date rpbd
+          JOIN rental_listings rl ON rl.id = rpbd.listing_id
+          WHERE rpbd.date >= CURRENT_DATE
+            AND rpbd.date <  CURRENT_DATE + INTERVAL '30 days'
+            AND rl.neighborhood_normalized = ${neighborhood}
+          GROUP BY rpbd.date
+          ORDER BY rpbd.date ASC;
+        `)
+      : await db.execute(sql`
+          SELECT
+            date::date                                                        AS date,
+            COUNT(*)                                                          AS total_rows,
+            COUNT(*) FILTER (WHERE availability_status = 'available')::float
+              / NULLIF(COUNT(*), 0)                                           AS availability_rate
+          FROM rental_prices_by_date
+          WHERE date >= CURRENT_DATE
+            AND date <  CURRENT_DATE + INTERVAL '30 days'
+          GROUP BY date
+          ORDER BY date ASC;
+        `);
 
-    const series = result.rows.map((r) => {
+    const series = seriesResult.rows.map((r) => {
       const row = r as Record<string, unknown>;
       const d = row.date as string | Date;
       const iso = d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
@@ -385,7 +414,26 @@ router.get("/metrics/rental-availability-trend", async (req, res) => {
       };
     });
 
-    res.json({ series });
+    // Neighborhoods with enough forward inventory to be a meaningful filter
+    // (>=5 distinct listings in the next-30-day window).
+    const nbResult = await db.execute(sql`
+      SELECT rl.neighborhood_normalized AS neighborhood,
+             COUNT(DISTINCT rl.id)::bigint AS listings
+      FROM rental_prices_by_date rpbd
+      JOIN rental_listings rl ON rl.id = rpbd.listing_id
+      WHERE rpbd.date >= CURRENT_DATE
+        AND rpbd.date <  CURRENT_DATE + INTERVAL '30 days'
+        AND rl.neighborhood_normalized IS NOT NULL
+        AND rl.neighborhood_normalized <> ''
+      GROUP BY rl.neighborhood_normalized
+      HAVING COUNT(DISTINCT rl.id) >= 5
+      ORDER BY listings DESC, rl.neighborhood_normalized ASC;
+    `);
+    const neighborhoods = nbResult.rows
+      .map((r) => String((r as Record<string, unknown>).neighborhood ?? ""))
+      .filter(Boolean);
+
+    res.json({ series, neighborhoods });
   } catch (err) {
     req.log.error({ err }, "Failed to fetch rental availability trend");
     res.status(500).json({ error: "Internal server error" });
