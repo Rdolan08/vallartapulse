@@ -920,28 +920,26 @@ function AvailabilityTrendChart({
   }>;
 
   // Forward-looking window: compare near-term availability (next 7 nights)
-  // against the rest of the 30-day window (nights 8-30). Near-term tighter
-  // than far-out => bookings are landing => strengthening demand.
-  let interpEn = "Insufficient data to characterize the 30-day availability outlook.";
-  let interpEs = "Datos insuficientes para caracterizar la perspectiva de 30 días.";
+  // against the full 30-day window. Near-term tighter than the full window
+  // => bookings are landing close-in => strengthening demand.
+  let interpEn = "Availability over the next 30 days is loading…";
+  let interpEs = "La disponibilidad de los próximos 30 días está cargando…";
   if (valid.length >= 8) {
-    const nearTerm = valid.slice(0, 7);
-    const farOut = valid.slice(7);
     const avg = (xs: { availabilityRate: number }[]) =>
       xs.reduce((s, p) => s + p.availabilityRate, 0) / xs.length;
-    const nearAvg = avg(nearTerm);
-    const farAvg = avg(farOut);
-    const delta = nearAvg - farAvg;
+    const nearTermAvg = avg(valid.slice(0, 7));
+    const fullPeriodAvg = avg(valid);
+    const delta = nearTermAvg - fullPeriodAvg;
 
-    if (delta > 0.05) {
-      interpEn = "Near-term availability runs higher than the rest of the 30-day window, indicating softening demand.";
-      interpEs = "La disponibilidad a corto plazo es mayor que el resto de la ventana de 30 días, lo que indica una demanda más débil.";
-    } else if (delta < -0.05) {
-      interpEn = "Near-term availability is tighter than nights further out, indicating strengthening demand.";
-      interpEs = "La disponibilidad a corto plazo es más limitada que las noches más lejanas, lo que indica una demanda más fuerte.";
+    if (delta < -0.05) {
+      interpEn = "Near-term availability is tighter than later dates, indicating strengthening demand.";
+      interpEs = "La disponibilidad a corto plazo es más limitada que en fechas posteriores, lo que indica una demanda más fuerte.";
+    } else if (delta > 0.05) {
+      interpEn = "Near-term availability is higher than later dates, indicating weaker short-term demand.";
+      interpEs = "La disponibilidad a corto plazo es mayor que en fechas posteriores, lo que indica una demanda a corto plazo más débil.";
     } else {
-      interpEn = "Availability is broadly stable across the next 30 nights, indicating stable demand.";
-      interpEs = "La disponibilidad es en general estable durante las próximas 30 noches, lo que indica una demanda estable.";
+      interpEn = "Availability over the next 30 days indicates stable demand.";
+      interpEs = "La disponibilidad de los próximos 30 días indica una demanda estable.";
     }
   }
 
@@ -960,7 +958,7 @@ function AvailabilityTrendChart({
     <Card className="glass-card">
       <CardHeader>
         <CardTitle className="font-display text-base">
-          {t("30-Day Availability Trend", "Tendencia de Disponibilidad de 30 Días")}
+          {t("Next 30 Days Availability", "Disponibilidad — Próximos 30 Días")}
         </CardTitle>
         <p className="text-sm mt-1">{t(interpEn, interpEs)}</p>
       </CardHeader>
