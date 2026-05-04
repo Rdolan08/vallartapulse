@@ -972,20 +972,23 @@ function AvailabilityTrendChart({
                   <stop offset="100%" stopColor="#5eead4" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} opacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
               <XAxis
                 dataKey="date"
                 tickFormatter={fmtAxisDate}
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                stroke="hsl(var(--border))"
-                tickMargin={8}
+                tick={{ fontSize: 11, fill: "rgba(245,247,250,0.7)", fontWeight: 500, style: { textShadow: "none" } }}
+                stroke="rgba(255,255,255,0.08)"
+                tickLine={false}
+                tickMargin={10}
                 minTickGap={24}
               />
               <YAxis
                 domain={[0, 100]}
                 tickFormatter={(v: number) => `${v}%`}
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                stroke="hsl(var(--border))"
+                tick={{ fontSize: 11, fill: "rgba(245,247,250,0.7)", fontWeight: 500, style: { textShadow: "none" } }}
+                stroke="rgba(255,255,255,0.08)"
+                tickLine={false}
+                axisLine={false}
                 width={44}
               />
               <Tooltip
