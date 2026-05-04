@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api-base";
 import { AlertTriangle, ArrowRight, ChevronDown, ChevronUp, Clock, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -919,26 +919,29 @@ function AvailabilityTrendChart({
     availabilityRate: number;
   }>;
 
-  let interpEn = "Insufficient data to characterize the 30-day availability trend.";
-  let interpEs = "Datos insuficientes para caracterizar la tendencia de 30 días.";
+  // Forward-looking window: compare near-term availability (next 7 nights)
+  // against the rest of the 30-day window (nights 8-30). Near-term tighter
+  // than far-out => bookings are landing => strengthening demand.
+  let interpEn = "Insufficient data to characterize the 30-day availability outlook.";
+  let interpEs = "Datos insuficientes para caracterizar la perspectiva de 30 días.";
   if (valid.length >= 8) {
-    const recent7 = valid.slice(-7);
-    const prior = valid.slice(0, -7);
+    const nearTerm = valid.slice(0, 7);
+    const farOut = valid.slice(7);
     const avg = (xs: { availabilityRate: number }[]) =>
       xs.reduce((s, p) => s + p.availabilityRate, 0) / xs.length;
-    const currentAvg = avg(recent7);
-    const priorAvg = avg(prior);
-    const delta = currentAvg - priorAvg;
+    const nearAvg = avg(nearTerm);
+    const farAvg = avg(farOut);
+    const delta = nearAvg - farAvg;
 
     if (delta > 0.05) {
-      interpEn = "Availability has increased over the past 30 days, indicating softening demand.";
-      interpEs = "La disponibilidad ha aumentado en los últimos 30 días, lo que indica una demanda más débil.";
+      interpEn = "Near-term availability runs higher than the rest of the 30-day window, indicating softening demand.";
+      interpEs = "La disponibilidad a corto plazo es mayor que el resto de la ventana de 30 días, lo que indica una demanda más débil.";
     } else if (delta < -0.05) {
-      interpEn = "Availability has decreased over the past 30 days, indicating strengthening demand.";
-      interpEs = "La disponibilidad ha disminuido en los últimos 30 días, lo que indica una demanda más fuerte.";
+      interpEn = "Near-term availability is tighter than nights further out, indicating strengthening demand.";
+      interpEs = "La disponibilidad a corto plazo es más limitada que las noches más lejanas, lo que indica una demanda más fuerte.";
     } else {
-      interpEn = "Availability has stabilized over the past 30 days, indicating stable demand.";
-      interpEs = "La disponibilidad se ha estabilizado en los últimos 30 días, lo que indica una demanda estable.";
+      interpEn = "Availability is broadly stable across the next 30 nights, indicating stable demand.";
+      interpEs = "La disponibilidad es en general estable durante las próximas 30 noches, lo que indica una demanda estable.";
     }
   }
 
@@ -964,8 +967,14 @@ function AvailabilityTrendChart({
       <CardContent>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+              <defs>
+                <linearGradient id="availTrendFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#5eead4" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#5eead4" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} opacity={0.5} />
               <XAxis
                 dataKey="date"
                 tickFormatter={fmtAxisDate}
@@ -991,15 +1000,16 @@ function AvailabilityTrendChart({
                   fontSize: 12,
                 }}
               />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="rate"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
+                stroke="#5eead4"
+                strokeWidth={2.5}
+                fill="url(#availTrendFill)"
                 dot={false}
-                activeDot={{ r: 4 }}
+                activeDot={{ r: 5, fill: "#5eead4", stroke: "#0f172a", strokeWidth: 2 }}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </CardContent>

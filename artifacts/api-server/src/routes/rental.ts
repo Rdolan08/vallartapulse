@@ -358,6 +358,9 @@ router.get("/metrics/rental-market-live", async (req, res) => {
  */
 router.get("/metrics/rental-availability-trend", async (req, res) => {
   try {
+    // Forward-looking window: availability of inventory for the next 30 nights
+    // starting today. (Backward dates have no data because rental_prices_by_date
+    // tracks bookable future inventory, not historical occupancy.)
     const result = await db.execute(sql`
       SELECT
         date::date                                                        AS date,
@@ -365,8 +368,8 @@ router.get("/metrics/rental-availability-trend", async (req, res) => {
         COUNT(*) FILTER (WHERE availability_status = 'available')::float
           / NULLIF(COUNT(*), 0)                                           AS availability_rate
       FROM rental_prices_by_date
-      WHERE date >= CURRENT_DATE - INTERVAL '30 days'
-        AND date <  CURRENT_DATE
+      WHERE date >= CURRENT_DATE
+        AND date <  CURRENT_DATE + INTERVAL '30 days'
       GROUP BY date
       ORDER BY date ASC;
     `);
