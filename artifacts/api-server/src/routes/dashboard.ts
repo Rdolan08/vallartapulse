@@ -86,49 +86,92 @@ router.get("/dashboard/summary", async (req, res) => {
       .from(rentalMarketMetricsTable)
       .groupBy(rentalMarketMetricsTable.year, rentalMarketMetricsTable.month);
 
-    const [latestRental] = filterYear && filterMonth
-      ? await db
-          .select({
-            avgNightlyRateUsd: sql<number>`avg(${rentalMarketMetricsTable.avgNightlyRateUsd})`,
-            totalListings: sql<number>`sum(${rentalMarketMetricsTable.activeListings})`,
-            avgOccupancy: sql<number>`avg(${rentalMarketMetricsTable.occupancyRate})`,
-            year: rentalMarketMetricsTable.year,
-            month: rentalMarketMetricsTable.month,
-          })
-          .from(rentalMarketMetricsTable)
-          .where(
-            and(
-              eq(rentalMarketMetricsTable.year, filterYear),
-              eq(rentalMarketMetricsTable.month, filterMonth)
-            )
-          )
-          .groupBy(rentalMarketMetricsTable.year, rentalMarketMetricsTable.month)
-          .limit(1)
-      : filterYear
-      ? await rentalBase
-          .where(eq(rentalMarketMetricsTable.year, filterYear))
-          .orderBy(desc(rentalMarketMetricsTable.month))
-          .limit(1)
-      : await rentalBase
-          .orderBy(desc(rentalMarketMetricsTable.year), desc(rentalMarketMetricsTable.month))
-          .limit(1);
+    // Try the exact requested (year, month) first, but if that month has no
+    // ingested rows yet (e.g. mid-month with the metrics table only updated
+    // monthly), gracefully fall back to the most-recent available month so
+    // the dashboard never shows hardcoded placeholder numbers.
+    let latestRental: {
+      avgNightlyRateUsd: number;
+      totalListings: number;
+      avgOccupancy: number;
+      year: number | null;
+      month: number | null;
+    } | undefined;
 
-    const [prevRental] = latestRental
-      ? await db
+    if (filterYear && filterMonth) {
+      [latestRental] = await db
+        .select({
+          avgNightlyRateUsd: sql<number>`avg(${rentalMarketMetricsTable.avgNightlyRateUsd})`,
+          totalListings: sql<number>`sum(${rentalMarketMetricsTable.activeListings})`,
+          avgOccupancy: sql<number>`avg(${rentalMarketMetricsTable.occupancyRate})`,
+          year: rentalMarketMetricsTable.year,
+          month: rentalMarketMetricsTable.month,
+        })
+        .from(rentalMarketMetricsTable)
+        .where(
+          and(
+            eq(rentalMarketMetricsTable.year, filterYear),
+            eq(rentalMarketMetricsTable.month, filterMonth)
+          )
+        )
+        .groupBy(rentalMarketMetricsTable.year, rentalMarketMetricsTable.month)
+        .limit(1);
+    }
+
+    // Fall back to most-recent-available month if exact-match returned nothing
+    // (or if no filter was supplied at all).
+    if (!latestRental) {
+      [latestRental] = await (filterYear
+        ? rentalBase.where(eq(rentalMarketMetricsTable.year, filterYear))
+        : rentalBase
+      )
+        .orderBy(desc(rentalMarketMetricsTable.year), desc(rentalMarketMetricsTable.month))
+        .limit(1);
+    }
+
+    // Last-resort fallback: if even the per-year query is empty, grab the
+    // newest row from any year so the headline still reflects real data.
+    if (!latestRental) {
+      [latestRental] = await rentalBase
+        .orderBy(desc(rentalMarketMetricsTable.year), desc(rentalMarketMetricsTable.month))
+        .limit(1);
+    }
+
+    // Prev-year: try exact same month one year prior; if missing (e.g. fewer
+    // historical rows for that month), fall back to the most-recent month of
+    // the prior year so the YoY delta is grounded in real data.
+    let prevRental: { avgNightlyRateUsd: number; totalListings: number } | undefined;
+    if (latestRental) {
+      const prevYear = (latestRental.year ?? 2025) - 1;
+      const targetMonth = latestRental.month ?? 1;
+      [prevRental] = await db
+        .select({
+          avgNightlyRateUsd: sql<number>`avg(${rentalMarketMetricsTable.avgNightlyRateUsd})`,
+          totalListings: sql<number>`sum(${rentalMarketMetricsTable.activeListings})`,
+        })
+        .from(rentalMarketMetricsTable)
+        .where(
+          and(
+            eq(rentalMarketMetricsTable.year, prevYear),
+            eq(rentalMarketMetricsTable.month, targetMonth)
+          )
+        )
+        .groupBy(rentalMarketMetricsTable.year, rentalMarketMetricsTable.month)
+        .limit(1);
+
+      if (!prevRental) {
+        [prevRental] = await db
           .select({
             avgNightlyRateUsd: sql<number>`avg(${rentalMarketMetricsTable.avgNightlyRateUsd})`,
             totalListings: sql<number>`sum(${rentalMarketMetricsTable.activeListings})`,
           })
           .from(rentalMarketMetricsTable)
-          .where(
-            and(
-              eq(rentalMarketMetricsTable.year, (latestRental.year ?? 2025) - 1),
-              eq(rentalMarketMetricsTable.month, latestRental.month ?? 1)
-            )
-          )
+          .where(eq(rentalMarketMetricsTable.year, prevYear))
           .groupBy(rentalMarketMetricsTable.year, rentalMarketMetricsTable.month)
-          .limit(1)
-      : [null];
+          .orderBy(desc(rentalMarketMetricsTable.month))
+          .limit(1);
+      }
+    }
 
     // Safety query
     const safetyBase = db
