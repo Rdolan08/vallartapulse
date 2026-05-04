@@ -6,7 +6,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api-base";
-import { AlertTriangle, ArrowRight, Clock, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronDown, ChevronUp, Clock, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 type Level = "high" | "moderate" | "low" | "unknown";
 type DemandTrend = "increasing" | "stable" | "decreasing" | "unknown";
@@ -33,6 +42,15 @@ interface BedBathRow {
   listingCount: number;
   avgPriceUsd: number | null;
   mostPopular: boolean;
+}
+
+interface AvailabilityTrendPoint {
+  date: string;
+  availabilityRate: number | null;
+}
+
+interface AvailabilityTrendResponse {
+  series: AvailabilityTrendPoint[];
 }
 
 interface RentalMarketLive {
@@ -121,16 +139,23 @@ function fmtAge(hours: number | null): { en: string; es: string } {
 export default function RentalMarket() {
   const { t, lang } = useLanguage();
   const [data, setData] = useState<RentalMarketLive | null>(null);
+  const [trend, setTrend] = useState<AvailabilityTrendPoint[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    apiFetch<RentalMarketLive>("/api/metrics/rental-market-live")
-      .then((d) => {
+    Promise.all([
+      apiFetch<RentalMarketLive>("/api/metrics/rental-market-live"),
+      apiFetch<AvailabilityTrendResponse>("/api/metrics/rental-availability-trend").catch(
+        () => ({ series: [] as AvailabilityTrendPoint[] }),
+      ),
+    ])
+      .then(([d, tr]) => {
         if (cancelled) return;
         setData(d);
+        setTrend(tr.series);
         setError(null);
       })
       .catch((e: Error) => {
@@ -188,6 +213,8 @@ export default function RentalMarket() {
             <PricingSignal data={data} t={t} />
             <TourismImpact data={data} t={t} lang={lang} />
           </div>
+
+          <AvailabilityTrendChart series={trend ?? []} t={t} lang={lang} />
 
           <PricingBreakdown data={data} t={t} />
 
@@ -788,6 +815,8 @@ function MarketSegmentation({
   t: (en: string, es: string) => string;
   lang: "en" | "es";
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (data.neighborhoods.length === 0) {
     return null;
   }
@@ -796,6 +825,9 @@ function MarketSegmentation({
     ({ high: "Soft demand", moderate: "Balanced", low: "Strong demand", unknown: "—" }[lvl]);
   const labelEs = (lvl: Level) =>
     ({ high: "Demanda débil", moderate: "Equilibrada", low: "Demanda fuerte", unknown: "—" }[lvl]);
+
+  const visible = expanded ? data.neighborhoods : data.neighborhoods.slice(0, 5);
+  const hasMore = data.neighborhoods.length > 5;
 
   return (
     <Card className="glass-card overflow-hidden">
@@ -822,7 +854,7 @@ function MarketSegmentation({
             </tr>
           </thead>
           <tbody>
-            {data.neighborhoods.map((n) => (
+            {visible.map((n) => (
               <tr key={n.neighborhood} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                 <td className="px-6 py-4 font-medium">{n.neighborhood}</td>
                 <td className="px-6 py-4 text-right">{fmtNumber(n.listingCount)}</td>
@@ -842,6 +874,135 @@ function MarketSegmentation({
           </tbody>
         </table>
       </div>
+      {hasMore && (
+        <div className="px-6 py-3 border-t bg-secondary/20 flex justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs gap-1"
+          >
+            {expanded ? (
+              <>
+                <ChevronUp className="w-3.5 h-3.5" />
+                {t("Show less", "Mostrar menos")}
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-3.5 h-3.5" />
+                {t(
+                  `Show more (${data.neighborhoods.length - 5} more)`,
+                  `Mostrar más (${data.neighborhoods.length - 5} más)`,
+                )}
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function AvailabilityTrendChart({
+  series, t, lang,
+}: {
+  series: AvailabilityTrendPoint[];
+  t: (en: string, es: string) => string;
+  lang: "en" | "es";
+}) {
+  if (series.length === 0) {
+    return null;
+  }
+
+  const valid = series.filter((p) => p.availabilityRate != null) as Array<{
+    date: string;
+    availabilityRate: number;
+  }>;
+
+  let interpEn = "Insufficient data to characterize the 30-day availability trend.";
+  let interpEs = "Datos insuficientes para caracterizar la tendencia de 30 días.";
+  if (valid.length >= 8) {
+    const recent7 = valid.slice(-7);
+    const prior = valid.slice(0, -7);
+    const avg = (xs: { availabilityRate: number }[]) =>
+      xs.reduce((s, p) => s + p.availabilityRate, 0) / xs.length;
+    const currentAvg = avg(recent7);
+    const priorAvg = avg(prior);
+    const delta = currentAvg - priorAvg;
+
+    if (delta > 0.05) {
+      interpEn = "Availability has increased over the past 30 days, indicating softening demand.";
+      interpEs = "La disponibilidad ha aumentado en los últimos 30 días, lo que indica una demanda más débil.";
+    } else if (delta < -0.05) {
+      interpEn = "Availability has decreased over the past 30 days, indicating strengthening demand.";
+      interpEs = "La disponibilidad ha disminuido en los últimos 30 días, lo que indica una demanda más fuerte.";
+    } else {
+      interpEn = "Availability has stabilized over the past 30 days, indicating stable demand.";
+      interpEs = "La disponibilidad se ha estabilizado en los últimos 30 días, lo que indica una demanda estable.";
+    }
+  }
+
+  const chartData = valid.map((p) => ({
+    date: p.date,
+    rate: Number((p.availabilityRate * 100).toFixed(1)),
+  }));
+
+  const fmtAxisDate = (iso: string) => {
+    const d = new Date(iso + "T00:00:00");
+    const m = (lang === "es" ? MONTH_NAMES_ES : MONTH_NAMES_EN)[d.getMonth()].slice(0, 3);
+    return `${m} ${d.getDate()}`;
+  };
+
+  return (
+    <Card className="glass-card">
+      <CardHeader>
+        <CardTitle className="font-display text-base">
+          {t("30-Day Availability Trend", "Tendencia de Disponibilidad de 30 Días")}
+        </CardTitle>
+        <p className="text-sm mt-1">{t(interpEn, interpEs)}</p>
+      </CardHeader>
+      <CardContent>
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={fmtAxisDate}
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                stroke="hsl(var(--border))"
+                tickMargin={8}
+                minTickGap={24}
+              />
+              <YAxis
+                domain={[0, 100]}
+                tickFormatter={(v: number) => `${v}%`}
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                stroke="hsl(var(--border))"
+                width={44}
+              />
+              <Tooltip
+                formatter={(v: number) => [`${v.toFixed(1)}%`, t("Availability", "Disponibilidad")]}
+                labelFormatter={(l: string) => fmtAxisDate(l)}
+                contentStyle={{
+                  backgroundColor: "hsl(var(--popover))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="rate"
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
     </Card>
   );
 }

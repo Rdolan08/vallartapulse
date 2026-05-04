@@ -351,4 +351,42 @@ router.get("/metrics/rental-market-live", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/metrics/rental-availability-trend
+ * Daily availability rate for the last 30 days, computed from rental_prices_by_date.
+ * Returns a flat array sorted ascending by date.
+ */
+router.get("/metrics/rental-availability-trend", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        date::date                                                        AS date,
+        COUNT(*)                                                          AS total_rows,
+        COUNT(*) FILTER (WHERE availability_status = 'available')::float
+          / NULLIF(COUNT(*), 0)                                           AS availability_rate
+      FROM rental_prices_by_date
+      WHERE date >= CURRENT_DATE - INTERVAL '30 days'
+        AND date <  CURRENT_DATE
+      GROUP BY date
+      ORDER BY date ASC;
+    `);
+
+    const series = result.rows.map((r) => {
+      const row = r as Record<string, unknown>;
+      const d = row.date as string | Date;
+      const iso = d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
+      const rate = row.availability_rate == null ? null : Number(row.availability_rate);
+      return {
+        date: iso,
+        availabilityRate: rate != null && Number.isFinite(rate) ? rate : null,
+      };
+    });
+
+    res.json({ series });
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch rental availability trend");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
